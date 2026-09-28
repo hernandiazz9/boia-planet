@@ -1,0 +1,23 @@
+{
+  "name": "@boia/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "db:test": "node src/cli/db-test.ts",
+    "db:types": "node src/cli/gen-types.ts"
+  },
+  "dependencies": {
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@boia/contracts": "workspace:*",
+    "@boia/world": "workspace:*",
+    "@types/pg": "8.23.1",
+    "prettier": "3.9.9"
+  }
+}

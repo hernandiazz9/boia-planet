@@ -1,0 +1,1309 @@
+// Generado por `pnpm db:types` desde supabase/migrations. No editar a mano.
+
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+export type Database = {
+  public: {
+    Tables: {
+      achievements: {
+        Row: {
+          coins: number;
+          cosmetic_key: string | null;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          ends_at: string | null;
+          icon_key: string | null;
+          id: string;
+          is_active: boolean;
+          is_sample: boolean;
+          is_secret: boolean;
+          key: string;
+          key_version: number;
+          points: number;
+          scope: Database['public']['Enums']['achievement_scope'];
+          season_id: string | null;
+          starts_at: string | null;
+          supersedes_id: string | null;
+          title: string;
+          trigger_params: Json;
+          trigger_type: Database['public']['Enums']['achievement_trigger'];
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          coins?: number;
+          cosmetic_key?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          ends_at?: string | null;
+          icon_key?: string | null;
+          id?: string;
+          is_active?: boolean;
+          is_sample?: boolean;
+          is_secret?: boolean;
+          key: string;
+          key_version?: number;
+          points?: number;
+          scope?: Database['public']['Enums']['achievement_scope'];
+          season_id?: string | null;
+          starts_at?: string | null;
+          supersedes_id?: string | null;
+          title: string;
+          trigger_params?: Json;
+          trigger_type: Database['public']['Enums']['achievement_trigger'];
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          coins?: number;
+          cosmetic_key?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          ends_at?: string | null;
+          icon_key?: string | null;
+          id?: string;
+          is_active?: boolean;
+          is_sample?: boolean;
+          is_secret?: boolean;
+          key?: string;
+          key_version?: number;
+          points?: number;
+          scope?: Database['public']['Enums']['achievement_scope'];
+          season_id?: string | null;
+          starts_at?: string | null;
+          supersedes_id?: string | null;
+          title?: string;
+          trigger_params?: Json;
+          trigger_type?: Database['public']['Enums']['achievement_trigger'];
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'achievements_season_id_fkey';
+            columns: ['season_id'];
+            isOneToOne: false;
+            referencedRelation: 'seasons';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'achievements_supersedes_id_fkey';
+            columns: ['supersedes_id'];
+            isOneToOne: false;
+            referencedRelation: 'achievements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      audit_log: {
+        Row: {
+          action: string;
+          actor_id: string | null;
+          actor_role: string;
+          created_at: string;
+          entity_id: string | null;
+          entity_type: string;
+          id: number;
+          new_value: Json | null;
+          old_value: Json | null;
+          reason: string | null;
+        };
+        Insert: {
+          action: string;
+          actor_id?: string | null;
+          actor_role: string;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type: string;
+          id?: never;
+          new_value?: Json | null;
+          old_value?: Json | null;
+          reason?: string | null;
+        };
+        Update: {
+          action?: string;
+          actor_id?: string | null;
+          actor_role?: string;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type?: string;
+          id?: never;
+          new_value?: Json | null;
+          old_value?: Json | null;
+          reason?: string | null;
+        };
+        Relationships: [];
+      };
+      bottle_reads: {
+        Row: {
+          bottle_id: string;
+          read_at: string;
+          reader_id: string;
+        };
+        Insert: {
+          bottle_id: string;
+          read_at?: string;
+          reader_id: string;
+        };
+        Update: {
+          bottle_id?: string;
+          read_at?: string;
+          reader_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'bottle_reads_bottle_id_fkey';
+            columns: ['bottle_id'];
+            isOneToOne: false;
+            referencedRelation: 'bottles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      bottle_reports: {
+        Row: {
+          bottle_id: string;
+          created_at: string;
+          id: string;
+          reason: string | null;
+          reporter_id: string;
+          resolution: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+        };
+        Insert: {
+          bottle_id: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+          reporter_id: string;
+          resolution?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+        };
+        Update: {
+          bottle_id?: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+          reporter_id?: string;
+          resolution?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'bottle_reports_bottle_id_fkey';
+            columns: ['bottle_id'];
+            isOneToOne: false;
+            referencedRelation: 'bottles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      bottles: {
+        Row: {
+          created_at: string;
+          id: string;
+          message: string;
+          moderated_at: string | null;
+          moderated_by: string | null;
+          season_id: string | null;
+          status: Database['public']['Enums']['bottle_status'];
+          updated_at: string;
+          user_id: string;
+          version: number;
+          x: number;
+          y: number;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          message: string;
+          moderated_at?: string | null;
+          moderated_by?: string | null;
+          season_id?: string | null;
+          status?: Database['public']['Enums']['bottle_status'];
+          updated_at?: string;
+          user_id: string;
+          version?: number;
+          x: number;
+          y: number;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          message?: string;
+          moderated_at?: string | null;
+          moderated_by?: string | null;
+          season_id?: string | null;
+          status?: Database['public']['Enums']['bottle_status'];
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+          x?: number;
+          y?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'bottles_season_id_fkey';
+            columns: ['season_id'];
+            isOneToOne: false;
+            referencedRelation: 'seasons';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      carnet_answers: {
+        Row: {
+          answer: string;
+          created_at: string;
+          question_id: string;
+          question_version: number;
+          updated_at: string;
+          user_id: string;
+          version: number;
+        };
+        Insert: {
+          answer: string;
+          created_at?: string;
+          question_id: string;
+          question_version: number;
+          updated_at?: string;
+          user_id: string;
+          version?: number;
+        };
+        Update: {
+          answer?: string;
+          created_at?: string;
+          question_id?: string;
+          question_version?: number;
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'carnet_answers_question_id_fkey';
+            columns: ['question_id'];
+            isOneToOne: false;
+            referencedRelation: 'carnet_questions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'carnet_answers_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'carnets';
+            referencedColumns: ['user_id'];
+          },
+        ];
+      };
+      carnet_questions: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          position: number;
+          prompt: string;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          created_at?: string;
+          id: string;
+          is_active?: boolean;
+          position: number;
+          prompt: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          position?: number;
+          prompt?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [];
+      };
+      carnets: {
+        Row: {
+          avatar_key: string | null;
+          created_at: string;
+          member_since: string;
+          nickname: string;
+          updated_at: string;
+          user_id: string;
+          version: number;
+        };
+        Insert: {
+          avatar_key?: string | null;
+          created_at?: string;
+          member_since?: string;
+          nickname: string;
+          updated_at?: string;
+          user_id: string;
+          version?: number;
+        };
+        Update: {
+          avatar_key?: string | null;
+          created_at?: string;
+          member_since?: string;
+          nickname?: string;
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+        };
+        Relationships: [];
+      };
+      coin_balances: {
+        Row: {
+          coins: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          coins?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          coins?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      event_secrets: {
+        Row: {
+          event_id: string;
+          notes: string | null;
+          secret_address: string | null;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          event_id: string;
+          notes?: string | null;
+          secret_address?: string | null;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          event_id?: string;
+          notes?: string | null;
+          secret_address?: string | null;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'event_secrets_event_id_fkey';
+            columns: ['event_id'];
+            isOneToOne: true;
+            referencedRelation: 'events';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      events: {
+        Row: {
+          activities: Json;
+          archived_at: string | null;
+          cancelled_island_mode: Database['public']['Enums']['cancelled_island_mode'] | null;
+          cancelled_message: string | null;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          ends_at: string | null;
+          excluded_from_home: boolean;
+          format: string;
+          id: string;
+          is_sample: boolean;
+          island_id: string | null;
+          lineup: Json;
+          poster_key: string | null;
+          postponed_message: string | null;
+          published_at: string | null;
+          sale_starts_at: string | null;
+          slug: string;
+          starts_at: string | null;
+          state: Database['public']['Enums']['event_state'];
+          state_locked: boolean;
+          ticket_provider: string | null;
+          ticket_provider_event_id: string | null;
+          ticket_url: string | null;
+          timezone: string;
+          title: string;
+          updated_at: string;
+          venue_public: string | null;
+          version: number;
+        };
+        Insert: {
+          activities?: Json;
+          archived_at?: string | null;
+          cancelled_island_mode?: Database['public']['Enums']['cancelled_island_mode'] | null;
+          cancelled_message?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          ends_at?: string | null;
+          excluded_from_home?: boolean;
+          format?: string;
+          id?: string;
+          is_sample?: boolean;
+          island_id?: string | null;
+          lineup?: Json;
+          poster_key?: string | null;
+          postponed_message?: string | null;
+          published_at?: string | null;
+          sale_starts_at?: string | null;
+          slug: string;
+          starts_at?: string | null;
+          state?: Database['public']['Enums']['event_state'];
+          state_locked?: boolean;
+          ticket_provider?: string | null;
+          ticket_provider_event_id?: string | null;
+          ticket_url?: string | null;
+          timezone?: string;
+          title: string;
+          updated_at?: string;
+          venue_public?: string | null;
+          version?: number;
+        };
+        Update: {
+          activities?: Json;
+          archived_at?: string | null;
+          cancelled_island_mode?: Database['public']['Enums']['cancelled_island_mode'] | null;
+          cancelled_message?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          ends_at?: string | null;
+          excluded_from_home?: boolean;
+          format?: string;
+          id?: string;
+          is_sample?: boolean;
+          island_id?: string | null;
+          lineup?: Json;
+          poster_key?: string | null;
+          postponed_message?: string | null;
+          published_at?: string | null;
+          sale_starts_at?: string | null;
+          slug?: string;
+          starts_at?: string | null;
+          state?: Database['public']['Enums']['event_state'];
+          state_locked?: boolean;
+          ticket_provider?: string | null;
+          ticket_provider_event_id?: string | null;
+          ticket_url?: string | null;
+          timezone?: string;
+          title?: string;
+          updated_at?: string;
+          venue_public?: string | null;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'events_island_id_fkey';
+            columns: ['island_id'];
+            isOneToOne: false;
+            referencedRelation: 'islands';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      home_blocks: {
+        Row: {
+          block_type: Database['public']['Enums']['home_block_type'];
+          config: Json;
+          created_at: string;
+          id: string;
+          is_sample: boolean;
+          is_visible: boolean;
+          position: number;
+          updated_at: string;
+          updated_by: string | null;
+          version: number;
+          visible_from: string | null;
+          visible_until: string | null;
+        };
+        Insert: {
+          block_type: Database['public']['Enums']['home_block_type'];
+          config?: Json;
+          created_at?: string;
+          id?: string;
+          is_sample?: boolean;
+          is_visible?: boolean;
+          position: number;
+          updated_at?: string;
+          updated_by?: string | null;
+          version?: number;
+          visible_from?: string | null;
+          visible_until?: string | null;
+        };
+        Update: {
+          block_type?: Database['public']['Enums']['home_block_type'];
+          config?: Json;
+          created_at?: string;
+          id?: string;
+          is_sample?: boolean;
+          is_visible?: boolean;
+          position?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+          version?: number;
+          visible_from?: string | null;
+          visible_until?: string | null;
+        };
+        Relationships: [];
+      };
+      home_revisions: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          is_sample: boolean;
+          note: string | null;
+          number: number;
+          published_at: string | null;
+          published_by: string | null;
+          snapshot: Json;
+          status: Database['public']['Enums']['revision_status'];
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          is_sample?: boolean;
+          note?: string | null;
+          number: number;
+          published_at?: string | null;
+          published_by?: string | null;
+          snapshot: Json;
+          status?: Database['public']['Enums']['revision_status'];
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          is_sample?: boolean;
+          note?: string | null;
+          number?: number;
+          published_at?: string | null;
+          published_by?: string | null;
+          snapshot?: Json;
+          status?: Database['public']['Enums']['revision_status'];
+        };
+        Relationships: [];
+      };
+      islands: {
+        Row: {
+          archived_at: string | null;
+          created_at: string;
+          id: string;
+          is_sample: boolean;
+          name: string;
+          slug: string;
+          summary: string | null;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          archived_at?: string | null;
+          created_at?: string;
+          id?: string;
+          is_sample?: boolean;
+          name: string;
+          slug: string;
+          summary?: string | null;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          archived_at?: string | null;
+          created_at?: string;
+          id?: string;
+          is_sample?: boolean;
+          name?: string;
+          slug?: string;
+          summary?: string | null;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [];
+      };
+      ledger_transactions: {
+        Row: {
+          achievement_id: string | null;
+          coins_delta: number;
+          compensates_id: string | null;
+          cosmetic_key: string | null;
+          created_at: string;
+          created_by: string | null;
+          event_id: string | null;
+          id: string;
+          kind: Database['public']['Enums']['ledger_kind'];
+          metadata: Json;
+          points_delta: number;
+          purchase_id: string | null;
+          reason: string | null;
+          season_id: string | null;
+          source_ref: string | null;
+          user_id: string;
+        };
+        Insert: {
+          achievement_id?: string | null;
+          coins_delta?: number;
+          compensates_id?: string | null;
+          cosmetic_key?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          event_id?: string | null;
+          id: string;
+          kind: Database['public']['Enums']['ledger_kind'];
+          metadata?: Json;
+          points_delta?: number;
+          purchase_id?: string | null;
+          reason?: string | null;
+          season_id?: string | null;
+          source_ref?: string | null;
+          user_id: string;
+        };
+        Update: {
+          achievement_id?: string | null;
+          coins_delta?: number;
+          compensates_id?: string | null;
+          cosmetic_key?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          event_id?: string | null;
+          id?: string;
+          kind?: Database['public']['Enums']['ledger_kind'];
+          metadata?: Json;
+          points_delta?: number;
+          purchase_id?: string | null;
+          reason?: string | null;
+          season_id?: string | null;
+          source_ref?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'ledger_transactions_achievement_id_fkey';
+            columns: ['achievement_id'];
+            isOneToOne: false;
+            referencedRelation: 'achievements';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ledger_transactions_compensates_id_fkey';
+            columns: ['compensates_id'];
+            isOneToOne: true;
+            referencedRelation: 'ledger_transactions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ledger_transactions_event_id_fkey';
+            columns: ['event_id'];
+            isOneToOne: false;
+            referencedRelation: 'events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ledger_transactions_purchase_id_fkey';
+            columns: ['purchase_id'];
+            isOneToOne: false;
+            referencedRelation: 'purchases';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ledger_transactions_season_id_fkey';
+            columns: ['season_id'];
+            isOneToOne: false;
+            referencedRelation: 'seasons';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      point_balances: {
+        Row: {
+          points: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          points?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          points?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      purchases: {
+        Row: {
+          cancelled_at: string | null;
+          confirmed_at: string | null;
+          created_at: string;
+          event_id: string;
+          id: string;
+          provider: string;
+          provider_order_id: string | null;
+          quantity: number;
+          refunded_at: string | null;
+          status: Database['public']['Enums']['purchase_status'];
+          updated_at: string;
+          user_id: string | null;
+          version: number;
+        };
+        Insert: {
+          cancelled_at?: string | null;
+          confirmed_at?: string | null;
+          created_at?: string;
+          event_id: string;
+          id?: string;
+          provider: string;
+          provider_order_id?: string | null;
+          quantity?: number;
+          refunded_at?: string | null;
+          status?: Database['public']['Enums']['purchase_status'];
+          updated_at?: string;
+          user_id?: string | null;
+          version?: number;
+        };
+        Update: {
+          cancelled_at?: string | null;
+          confirmed_at?: string | null;
+          created_at?: string;
+          event_id?: string;
+          id?: string;
+          provider?: string;
+          provider_order_id?: string | null;
+          quantity?: number;
+          refunded_at?: string | null;
+          status?: Database['public']['Enums']['purchase_status'];
+          updated_at?: string;
+          user_id?: string | null;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'purchases_event_id_fkey';
+            columns: ['event_id'];
+            isOneToOne: false;
+            referencedRelation: 'events';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      season_points: {
+        Row: {
+          points: number;
+          season_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          points?: number;
+          season_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          points?: number;
+          season_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'season_points_season_id_fkey';
+            columns: ['season_id'];
+            isOneToOne: false;
+            referencedRelation: 'seasons';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      seasons: {
+        Row: {
+          active_world_revision_id: string | null;
+          created_at: string;
+          ends_at: string | null;
+          id: string;
+          is_active: boolean;
+          is_sample: boolean;
+          name: string;
+          slug: string;
+          starts_at: string | null;
+          updated_at: string;
+          version: number;
+          world_draft: Json;
+        };
+        Insert: {
+          active_world_revision_id?: string | null;
+          created_at?: string;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          is_sample?: boolean;
+          name: string;
+          slug: string;
+          starts_at?: string | null;
+          updated_at?: string;
+          version?: number;
+          world_draft?: Json;
+        };
+        Update: {
+          active_world_revision_id?: string | null;
+          created_at?: string;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          is_sample?: boolean;
+          name?: string;
+          slug?: string;
+          starts_at?: string | null;
+          updated_at?: string;
+          version?: number;
+          world_draft?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'seasons_active_world_revision_id_fkey';
+            columns: ['active_world_revision_id'];
+            isOneToOne: false;
+            referencedRelation: 'world_revisions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      site_settings: {
+        Row: {
+          active_home_revision_id: string | null;
+          id: boolean;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          active_home_revision_id?: string | null;
+          id?: boolean;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          active_home_revision_id?: string | null;
+          id?: boolean;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'site_settings_active_home_revision_id_fkey';
+            columns: ['active_home_revision_id'];
+            isOneToOne: false;
+            referencedRelation: 'home_revisions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      staff_roles: {
+        Row: {
+          granted_at: string;
+          granted_by: string | null;
+          role: Database['public']['Enums']['staff_role'];
+          updated_at: string;
+          user_id: string;
+          version: number;
+        };
+        Insert: {
+          granted_at?: string;
+          granted_by?: string | null;
+          role: Database['public']['Enums']['staff_role'];
+          updated_at?: string;
+          user_id: string;
+          version?: number;
+        };
+        Update: {
+          granted_at?: string;
+          granted_by?: string | null;
+          role?: Database['public']['Enums']['staff_role'];
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+        };
+        Relationships: [];
+      };
+      stamps: {
+        Row: {
+          event_id: string;
+          granted_at: string;
+          purchase_id: string;
+          revoked_at: string | null;
+          revoked_by_tx: string | null;
+          tx_id: string;
+          user_id: string;
+        };
+        Insert: {
+          event_id: string;
+          granted_at?: string;
+          purchase_id: string;
+          revoked_at?: string | null;
+          revoked_by_tx?: string | null;
+          tx_id: string;
+          user_id: string;
+        };
+        Update: {
+          event_id?: string;
+          granted_at?: string;
+          purchase_id?: string;
+          revoked_at?: string | null;
+          revoked_by_tx?: string | null;
+          tx_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'stamps_event_id_fkey';
+            columns: ['event_id'];
+            isOneToOne: false;
+            referencedRelation: 'events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'stamps_purchase_id_fkey';
+            columns: ['purchase_id'];
+            isOneToOne: false;
+            referencedRelation: 'purchases';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'stamps_revoked_by_tx_fkey';
+            columns: ['revoked_by_tx'];
+            isOneToOne: false;
+            referencedRelation: 'ledger_transactions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'stamps_tx_id_fkey';
+            columns: ['tx_id'];
+            isOneToOne: true;
+            referencedRelation: 'ledger_transactions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_achievements: {
+        Row: {
+          achievement_id: string;
+          awarded_at: string;
+          revoked_at: string | null;
+          revoked_by_tx: string | null;
+          tx_id: string;
+          user_id: string;
+        };
+        Insert: {
+          achievement_id: string;
+          awarded_at?: string;
+          revoked_at?: string | null;
+          revoked_by_tx?: string | null;
+          tx_id: string;
+          user_id: string;
+        };
+        Update: {
+          achievement_id?: string;
+          awarded_at?: string;
+          revoked_at?: string | null;
+          revoked_by_tx?: string | null;
+          tx_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_achievements_achievement_id_fkey';
+            columns: ['achievement_id'];
+            isOneToOne: false;
+            referencedRelation: 'achievements';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_achievements_revoked_by_tx_fkey';
+            columns: ['revoked_by_tx'];
+            isOneToOne: false;
+            referencedRelation: 'ledger_transactions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_achievements_tx_id_fkey';
+            columns: ['tx_id'];
+            isOneToOne: true;
+            referencedRelation: 'ledger_transactions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_cosmetics: {
+        Row: {
+          cosmetic_key: string;
+          revoked_at: string | null;
+          revoked_by_tx: string | null;
+          tx_id: string;
+          unlocked_at: string;
+          user_id: string;
+        };
+        Insert: {
+          cosmetic_key: string;
+          revoked_at?: string | null;
+          revoked_by_tx?: string | null;
+          tx_id: string;
+          unlocked_at?: string;
+          user_id: string;
+        };
+        Update: {
+          cosmetic_key?: string;
+          revoked_at?: string | null;
+          revoked_by_tx?: string | null;
+          tx_id?: string;
+          unlocked_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_cosmetics_revoked_by_tx_fkey';
+            columns: ['revoked_by_tx'];
+            isOneToOne: false;
+            referencedRelation: 'ledger_transactions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_cosmetics_tx_id_fkey';
+            columns: ['tx_id'];
+            isOneToOne: true;
+            referencedRelation: 'ledger_transactions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      world_objects: {
+        Row: {
+          category: string;
+          created_at: string;
+          data: Json;
+          deleted_at: string | null;
+          enabled: boolean;
+          id: string;
+          is_sample: boolean;
+          island_id: string | null;
+          object_key: string;
+          season_id: string;
+          updated_at: string;
+          updated_by: string | null;
+          version: number;
+        };
+        Insert: {
+          category: string;
+          created_at?: string;
+          data: Json;
+          deleted_at?: string | null;
+          enabled?: boolean;
+          id?: string;
+          is_sample?: boolean;
+          island_id?: string | null;
+          object_key: string;
+          season_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version?: number;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          data?: Json;
+          deleted_at?: string | null;
+          enabled?: boolean;
+          id?: string;
+          is_sample?: boolean;
+          island_id?: string | null;
+          object_key?: string;
+          season_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'world_objects_island_id_fkey';
+            columns: ['island_id'];
+            isOneToOne: false;
+            referencedRelation: 'islands';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'world_objects_season_id_fkey';
+            columns: ['season_id'];
+            isOneToOne: false;
+            referencedRelation: 'seasons';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      world_revisions: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          is_sample: boolean;
+          note: string | null;
+          number: number;
+          published_at: string | null;
+          published_by: string | null;
+          schema_version: number;
+          season_id: string;
+          snapshot: Json;
+          status: Database['public']['Enums']['revision_status'];
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          is_sample?: boolean;
+          note?: string | null;
+          number: number;
+          published_at?: string | null;
+          published_by?: string | null;
+          schema_version?: number;
+          season_id: string;
+          snapshot: Json;
+          status?: Database['public']['Enums']['revision_status'];
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          is_sample?: boolean;
+          note?: string | null;
+          number?: number;
+          published_at?: string | null;
+          published_by?: string | null;
+          schema_version?: number;
+          season_id?: string;
+          snapshot?: Json;
+          status?: Database['public']['Enums']['revision_status'];
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'world_revisions_season_id_fkey';
+            columns: ['season_id'];
+            isOneToOne: false;
+            referencedRelation: 'seasons';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+    };
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
+    Enums: {
+      achievement_scope: 'global' | 'season';
+      achievement_trigger:
+        | 'visit_island'
+        | 'find_buoy'
+        | 'collect_objects'
+        | 'complete_circuit'
+        | 'time_played'
+        | 'buy_ticket'
+        | 'rescue_character'
+        | 'deliver_character';
+      bottle_status: 'active' | 'retired' | 'removed';
+      cancelled_island_mode: 'memory' | 'notice';
+      event_state:
+        'draft' | 'coming_soon' | 'on_sale' | 'sold_out' | 'postponed' | 'cancelled' | 'finished';
+      home_block_type:
+        | 'hero'
+        | 'priority_event'
+        | 'upcoming_events'
+        | 'artists'
+        | 'philosophy'
+        | 'photos'
+        | 'store'
+        | 'contact'
+        | 'footer';
+      ledger_kind:
+        'world_reward' | 'achievement' | 'stamp' | 'cosmetic' | 'adjustment' | 'compensation';
+      purchase_status: 'pending' | 'confirmed' | 'refunded' | 'cancelled';
+      revision_status: 'draft' | 'published';
+      staff_role: 'editor' | 'admin' | 'owner';
+    };
+    CompositeTypes: { [_ in never]: never };
+  };
+};
+
+type PublicSchema = Database['public'];
+
+export type Tables<T extends keyof PublicSchema['Tables']> = PublicSchema['Tables'][T]['Row'];
+export type TablesInsert<T extends keyof PublicSchema['Tables']> =
+  PublicSchema['Tables'][T]['Insert'];
+export type TablesUpdate<T extends keyof PublicSchema['Tables']> =
+  PublicSchema['Tables'][T]['Update'];
+export type Enums<T extends keyof PublicSchema['Enums']> = PublicSchema['Enums'][T];
+
+export const Constants = {
+  public: {
+    Enums: {
+      achievement_scope: ['global', 'season'],
+      achievement_trigger: [
+        'visit_island',
+        'find_buoy',
+        'collect_objects',
+        'complete_circuit',
+        'time_played',
+        'buy_ticket',
+        'rescue_character',
+        'deliver_character',
+      ],
+      bottle_status: ['active', 'retired', 'removed'],
+      cancelled_island_mode: ['memory', 'notice'],
+      event_state: [
+        'draft',
+        'coming_soon',
+        'on_sale',
+        'sold_out',
+        'postponed',
+        'cancelled',
+        'finished',
+      ],
+      home_block_type: [
+        'hero',
+        'priority_event',
+        'upcoming_events',
+        'artists',
+        'philosophy',
+        'photos',
+        'store',
+        'contact',
+        'footer',
+      ],
+      ledger_kind: [
+        'world_reward',
+        'achievement',
+        'stamp',
+        'cosmetic',
+        'adjustment',
+        'compensation',
+      ],
+      purchase_status: ['pending', 'confirmed', 'refunded', 'cancelled'],
+      revision_status: ['draft', 'published'],
+      staff_role: ['editor', 'admin', 'owner'],
+    },
+  },
+} as const;
