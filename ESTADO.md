@@ -4,6 +4,35 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-28 — encargo 01: pipeline de arte del barco en Blender
+
+Qué existe:
+- Blender 5.2.2 LTS en `/Applications/Blender.app`, instalado con `brew install --cask blender`.
+- `tools/blender/`: `rig.py` con la cámara y el render compartidos, `ship.py` con el barco procedural, `render.py` para el lote y el manifiesto, `calibrate.py`, `check.py` y `manifest.schema.json`.
+- `art/barco/`: 56 PNG de 256×256 y `manifest.json`. Son 3 skins × 8 direcciones × con y sin pasajera, más 8 fotogramas de balanceo en base/S. Todo lleva estado `muestra`.
+- `tools/viewer/index.html`: visor estático.
+- `tools/blender/styles/NN_*.py`: 8 pruebas de estilo de la lámina de conceptos de Hernán, con sus hojas en `docs/informes/img/01-estilo-*.png`. Son exploración: no alimentan `art/`.
+
+Comandos y cuánto tardan:
+```
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/calibrate.py        # ~2 s; ratio=1.9998
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/render.py -- --all  # ~6 s de reloj, 56 imágenes
+python3 tools/blender/check.py [--diff [DIR]]   # ~8 s; exit 0 y "56 imágenes, manifest válido"
+python3 -m http.server 8080                     # desde la raíz; visor en http://localhost:8080/tools/viewer/
+```
+Para comprobar la reproducibilidad, se renderiza otra vez con `--out tools/blender/out/rerun` y después se corre `check.py --diff`. Hoy da 0 píxeles distintos y archivos idénticos byte a byte.
+
+Desviaciones:
+- La cámara va a 30° de elevación y no a 26,57°. Sólo 30° da la proporción 2:1 que mide la calibración; con 26,57° el cubo da 2,2355. D-13 lo confirma.
+- El sol no proyecta sombras: con el contorno de casco invertido, todo quedaba en sombra.
+- Se añadió el anclaje `bow` y el vector `bow_screen` al manifiesto.
+
+Sin probar:
+- El visor en teléfono real.
+- La opinión de Álvaro sobre el diseño y el estilo.
+
+Detalle: `docs/informes/2026-09-28-01-arte-barco-blender.md`.
+
 ## 2026-09-28 — encargo 02: spec v15 consolidada
 
 **Existe ahora** (commits `75f7f61` y el que aplica D-13 a D-17):
