@@ -1,6 +1,6 @@
 # Plan 001 — Playable demo of BOIA.PLANET (phase 1 + phase 2 foundations)
 
-Status: active
+Status: done
 Created: 2026-09-28
 Base branch: main
 Goal: Reach the first milestone Álvaro can open on his phone: cinematic entry (planet → sea → landing), HTML landing with tickets, and a navigable world with the real ship sprites, a tutorial buoy and one event island by proximity; plus the data layer, auth and the essential Admin so that events, home blocks and the world are data, not code. Scope, stack and every product decision are fixed in docs/DECISIONES.md (D-01…D-18); the consolidated spec is docs/spec/ (REQ-* ids). Nothing here goes beyond Launch 1 (D-02).
@@ -148,7 +148,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: 8 styles × 24 sprites in art/barco/estilos/<id>/ (labels from barcos.json), style_label/style_variants in manifest, /juego selector + ?estilo= persisted in localStorage boia:estilo-barco; sheet docs/informes/img/p001-t11-barco-estilos.png → 2ce57f2
 
 ## T12 — Demo pass: see it working end to end
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T00, T03, T04, T05, T11
 - Goal: Hernán wants to see a working visual demo before any mail, auth or admin work. Glue what T01–T05 and T11 produced into one flow that runs with sample data only: `/` plays the entry (planet → sea → landing), EXPLORAR EL UNIVERSO enters /juego with the ship, the tutorial boia, rocks, coasts and the event island whose proximity opens the sample event panel; minimap, compass, menu and the ship-style selector work; Tickets opens the sample panel. No Supabase, no mail. Fix any gap between the pieces (loaders, routes, missing wiring) without redesigning them. This includes REQ-ENT-012, left open by T03: EXPLORAR moves from the entry scene into /juego without restarting the world (same sea and ship, no second intro). One command runs it locally and reachable from a phone on the same Wi-Fi (Next dev on 0.0.0.0, the LAN URL printed). Two additions Hernán asked for: (1) extend the «Mi Barco» section that T05 already created in apps/web/app/juego/menu/sections/ (it holds T11's style selector today) into the «Barco» section listing the 8 ship styles from T11 and the skins base/fiesta/noche (a skin shows only for the styles that have it), with a preview of each, applying the choice to the ship at once and persisting it locally; it replaces T11's test selector as the main way to switch (keep `?estilo=` working). (2) On the landing, «Ver todos los artistas» opens the full list of the 26 artists of v14 §18.1 (names verbatim, genres as in the spec, neutral avatars), as a panel or page that works without JS and without WebGL, reachable by a deep link.
 - Context: the Outcome lines of T01–T05 and T11 in this plan; ESTADO.md sections of plan 001; apps/web/**, packages/engine/**, packages/world/**, art/**. For the «Barco» section use docs/barcos/barcos.json: `estilo` as the display name (`nombre` is null until Álvaro names them), `aspecto` as the description, swatches from `paleta` (resolved like tools/barcos/guia_colores.py does), and respect `notas_render` (B01 has no colour skins, no fiesta for B06, B05 needs remodelling for themed skins).
@@ -158,7 +158,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm e2e` → exit 0, including a new end-to-end demo spec on mobile 360×640 and desktop: first visit ends on the landing without a click; EXPLORAR reaches /juego; driving the ship toward the event island opens its panel; choosing another style and skin in the menu's «Barco» section changes the ship and survives a reload; «Ver todos los artistas» shows all 26 artists
   - `pnpm demo` (added by this task) starts the app and prints a localhost and a LAN URL; stopping it leaves nothing running
   - Screenshots or a short recording of the flow on desktop and mobile saved in docs/informes/img/ (paths in the final message); ESTADO.md top section says in 3 lines how to open the demo on a computer and on a phone
-- Outcome:
+- Outcome: end-to-end demo: EXPLORAR hands the live Pixi scene to /juego, «Barco» menu (9 styles, skins, swatches), /artistas with the 26 artists, `pnpm demo` with LAN URL; 302 tests, e2e 42; screenshots p001-t12-*.png → 454c866
 
 ## T10 — Wire the public app to published data and the ticketing adapter
 - Status: skipped (Hernán: visual demo first; depends on T07)
@@ -200,8 +200,11 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T11: style ids are slugs (boceto-lapiz … pixel-art); ?estilo= wins over the saved choice; canonical_order() sorts mesh elements for byte-identical renders; style ships use the default ship's scale so they show 49–57 px (agent)
 - 2026-09-28 T05: joystick zone = bottom 45 % (muestra), HUD never enters it; discovery on entering the proximity radius; tank mode per D-14; English shown disabled (D-03); discoveries in memory only; T11's selector moved into «Mi Barco» because it sat in the joystick zone; small edits outside scope in packages/engine/src/game.ts and package.json (agent)
 - 2026-09-28 T03: hero fills the screen with content at the bottom; seen flag in localStorage boia.intro.v1, replay via /?intro=1 or «Ver la introducción»; lightweight landing if the scene is not ready in 2 s; /api/art cached 1 h in production; T02 landing tests now run as return visits (agent)
+- 2026-09-28 T12: EXPLORAR reuses the entry scene's Pixi app, canvas and sea in /juego (ship sprite recreated); section label «Barco» (id barco) with 9 styles incl. default Toon; notas_render rules applied while the notes exist; TS port of guia_colores constant reader, checked against Python; skin in boia:skin-barco; «Ver todos los artistas» → static /artistas; `pnpm demo` fails clearly if the port is busy; allowedDevOrigins adds 127.0.0.1 (agent)
 
 ## Proposals (new scope)
+- 2026-09-28 T12: WebGL handoff untested on iOS Safari and real phones
+- 2026-09-28: reopen T07 (auth, WIP branch kept), T08, T09, T10 in the next plan when Hernán wants them
 - 2026-09-28 T03: real-phone checks (ENT 04/05, REQ-ENT-018/021/022, Instagram in-app browser, screen reader) and the 2 s budget on real 4G are for Hernán; art direction pending Álvaro
 - 2026-09-28 T11: the 7 world manifests carry a stale sources_sha256 (PNGs identical); the next committed `render.py --all` refreshes them
 - 2026-09-28 T04: /juego copy lives in the component, not apps/web/lib/i18n; rewards/achievements emitted but not stored or shown; bottom coast drawn by code; drawRock in packages/engine/src/views.ts unused
@@ -231,3 +234,6 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 20:59 T11 done · branch worktree-agent-a8b7248d022f3bd2d (1 conflict round) → 2ce57f2
 - 2026-09-28 21:13 T05 done · branch worktree-agent-ab0317b3ea5c0aa70 → e2dc04c
 - 2026-09-28 21:17 T03 done · branch worktree-agent-adb4fa92632f4004f (1 conflict round) → 2e80904
+- 2026-09-28 21:19 T12 launched · attempt 1 · agent a6d553ceaeb9d3761
+- 2026-09-28 21:43 T12 done · branch worktree-agent-a6d553ceaeb9d3761 → 454c866
+- 2026-09-28 21:44 plan done · pnpm test green on main
