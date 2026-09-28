@@ -83,7 +83,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T22 — Mi Carnet and bottles
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T16, T17
 - Goal: Mi Carnet (REQ-IDE-010…022) as a menu section and a shareable view: nickname (created as a guest, no mail), neutral avatar or photo from device, «Miembro desde», the 5 questions of §44.1 verbatim, rank, points, achievements, ship and cosmetics, stamps. Bottles (REQ-IDE-040…044): write one active bottle of up to 140 characters at a valid sea spot next to the ship, edit or remove it, read bottles found in the sea (author nickname and «VER SU CARNET», the bottle stays), report; no points or coins for bottles. In this version bottles live in the browser (D-20): seed a few `muestra` bottles from other fictional crew so reading works.
 - Context: docs/spec/05-identidad-y-comunidad.md (REQ-IDE-*), v14 §44.1 for the 5 questions (verbatim); packages/store (T16); packages/engine (T17 worlds, sea validity); apps/web/app/juego/menu/sections/ (T05); apps/web/app/(landing) only for a carnet deep link if needed.
@@ -91,7 +91,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test` → exit 0; adds tests: a bottle on land is rejected; second active bottle replaces or is refused per spec; reading never removes it; the carnet shows the 5 questions verbatim from their source
   - `pnpm e2e` → exit 0; a spec creates a nickname, fills the carnet, drops a bottle, reloads and finds it, reads a seeded bottle and opens its author's carnet
-- Outcome:
+- Outcome: Mi Carnet (menu section + /carnet, /carnet/<id>, ?menu=carnet), bottles in the sea via Game.setBottles (found at 150 u), second active bottle refused, seeded crew bottles; all web repo access through apps/web/app/juego/repo.ts gameRepository(); REQ-IDE-051 copy «solo en este navegador», no share button → f6adabd
 
 ## T23 — Minigames: Vigilancia del faro and Cañón contra tiburones
 - Status: running (attempt 1)
@@ -204,8 +204,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T17: world order URL > visitor choice > admin active world > default behind WorldChoice; a world's ship style applies only when none is chosen; setWorld keeps ship position and rewards; per-object runtime state (e.g. dialogue seen) resets on a switch (agent)
 - 2026-09-28 T16: one JSON doc in localStorage, schema v1; reward ids `world_reward:<ref>[@day|@season:<world>]`, `achievement:<id>`, `stamp:<purchaseId>`…; daily = Europe/Madrid day, season = active world; sandbox purchase grants stamp, not the ticket achievement (T25); nicknames unique case-insensitive; writing/reporting a bottle needs a Carnet; spring event linked to island `allday` (agent)
 - 2026-09-28 T15: check.py only accepts L1/L2/diferido, so brought-forward items are L1 with D-20 in the source; final-version REQs left intact and test-version exceptions added as separate L1 REQs naming what retires them (agent)
+- 2026-09-29 T22: bottles drawn via Game.setBottles (not setWorld) so dialogues/effects don't restart; sample bottles moved into open sea by a fixed rule; «Compartir» removed per REQ-IDE-051 (deviation from «shareable view» until a server exists) (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T22: move apps/web/app/juego/repo.ts to apps/web/lib so landing/admin share it; photo upload from device untested
 - 2026-09-28 T15: mundos/arcilla/diseno.md still marks Faro and Cañón as L2 empty lots; update when placing them (T18/T20)
 - 2026-09-28 T17: per-object runtime state (dialogue already seen) should persist across world switches via the store
 - Deferred to the final version (Hernán, 2026-09-28): Supabase as the shared backend (bottles, admin edits and progress shared between visitors; migrations from T06 applied to the cloud project), public auth by mail code + magic link and guest merge (plan 001 T07, WIP branch worktree-agent-a208530713932c80c), real Admin login with password + TOTP and roles (plan 001 T08), the visual drag-and-drop world editor (plan 001 T09), real ticketing (Fourvenues-shaped webhook, stamp on confirmed payment, D-06) replacing the sandbox, PostHog EU project and key, server-side validation of minigame rewards, real links and copy from Álvaro, Álvaro's approval of D-19/D-20, the intro and the art direction, the act-2 auto-advance of the intro (implemented, off), domain and accounts in BOIA's name (REQ-PRO-021)
@@ -220,3 +222,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 23:47 T16 done · branch worktree-agent-a2d18b0ece93c7b3a (1 conflict round) → 8d8b2b7
 - 2026-09-28 23:49 T22 launched · attempt 1 · agent afaff0ae95b07a142
 - 2026-09-28 23:54 T15 done · branch worktree-agent-a652f8d4e7651fde5 (1 conflict round) → 9aab31b
+- 2026-09-28 23:55 T23 launched · attempt 1 · agent a154f90bd0f0e1afa
+- 2026-09-29 00:25 T22 done · branch worktree-agent-afaff0ae95b07a142 (1 conflict round) → f6adabd
