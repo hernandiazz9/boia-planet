@@ -91,7 +91,7 @@ Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 34 requisitos: 33 L1, 1 L2
 | REQ-MUN-005 | Ciclo de día y noche | P1, P3 | L2 | Cambiar la hora del ciclo desde la configuración | [provisional] Alcance: D-02 no lo nombra |
 | REQ-MUN-006 | Joystick donde toca el dedo | §6.2, P1, P3, D-12 | L1 | Test táctil en físicos: el joystick nace en el punto tocado, en cualquier punto de la zona de juego | D-12 cambia el «al tocar el barco» del P1 |
 | REQ-MUN-007 | Drift con segundo dedo | §6.2, P1, P3 | L1 | Test táctil en físicos: el segundo dedo activa el drift | — |
-| REQ-MUN-008 | Teclado y drift en escritorio | P1, P3 | L1 | Test de teclado: mover, drift y cambio de sensibilidad | — |
+| REQ-MUN-008 | Teclado de dos modos y drift en escritorio | P1, P3, D-14 | L1 | Test de teclado en ambos modos: mover, drift, sensibilidad y preferencia guardada | — |
 | REQ-MUN-009 | Física independiente de los FPS | P3 | L1 | Test del motor a 30 y 60 FPS con la misma trayectoria | — |
 | REQ-MUN-010 | Sin aceleración bloqueada | P3 | L1 | Tests de dedo perdido y pestaña oculta; un barco en tierra vuelve a agua segura | — |
 | REQ-MUN-011 | Costas, límite superior y zona no publicada | §49.7, P3 | L1 | Test de colisión con costas y de retorno desde la zona no publicada | — |
@@ -115,7 +115,7 @@ Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 34 requisitos: 33 L1, 1 L2
 | REQ-MUN-029 | Barco y 3 skins en 8 direcciones | §49.17, D-05 | L1 | Revisión de ART 01 | — |
 | REQ-MUN-030 | Orientación correcta sin espejar | §49.17 | L1 | Revisión de las 8 direcciones; ningún sprite volteado en vertical | — |
 | REQ-MUN-031 | Manifiesto por recurso | §49.17, D-05 | L1 | Validador de manifiestos en las pruebas automáticas | — |
-| REQ-MUN-032 | Sprites reproducibles desde Blender | §34, D-05 | L1 | El comando de Blender sin interfaz regenera los sprites desde el repositorio | — |
+| REQ-MUN-032 | Sprites reproducibles desde Blender | §34, D-05, D-13 | L1 | El comando de Blender sin interfaz regenera los sprites desde el repositorio | — |
 | REQ-MUN-033 | Revisión de skins y sustitución | §49.17 · alias ART 01 | L1 | Revisión por skin, prueba de sustitución y restauración, guía entregada | alias ART 01 |
 | REQ-MUN-034 | Formatos de assets | §34, §48.8 | L1 | El validador rechaza formatos fuera del contrato | — |
 

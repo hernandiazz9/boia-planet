@@ -1,6 +1,6 @@
 # 00 · Índice de la especificación v15
 
-**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-12 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
+**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-17 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
 
 ## Cómo se usa
 
@@ -137,6 +137,7 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | P1, P2, P3: acceso por enlace de email de un solo uso | Código OTP de 6 dígitos y enlace mágico en el mismo correo | D-10 | REQ-IDE-002 |
 | §49.13: segundo factor | TOTP obligatorio | D-10 | REQ-ADM-002 |
 | P1, P3: el control táctil nace al tocar el barco | Nace donde toca el primer dedo, en cualquier punto de la zona de juego | D-12 | REQ-MUN-006 |
+| P1, P3: teclado en escritorio, sin más detalle | Dos modos: dirección de pantalla por defecto y control de tanque en Controles | D-14 | REQ-MUN-008 |
 
 ### Método y formato (D-11 y encargo 02)
 

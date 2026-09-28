@@ -16,7 +16,7 @@ El mundo es 2D/2.5D con sprites por capas; el 3D sólo existe offline, en Blende
 
 - **REQ-MUN-006** `L1` — Crear el joystick táctil donde toca el primer dedo, en cualquier punto de la zona de juego, con origen en ese punto. *Fuente: §6.2, P1, P3, D-12*
 - **REQ-MUN-007** `L1` — Activar el drift y un giro más rápido con un segundo dedo. *Fuente: §6.2, P1, P3*
-- **REQ-MUN-008** `L1` — Ofrecer en escritorio control por teclado, una alternativa para el drift y sensibilidad ajustable. *Fuente: P1, P3*
+- **REQ-MUN-008** `L1` — Ofrecer en escritorio teclado con dos modos (dirección de pantalla por defecto y control de tanque elegible en Controles, con la preferencia guardada), una alternativa para el drift y sensibilidad ajustable. *Fuente: P1, P3, D-14*
 - **REQ-MUN-009** `L1` — Calcular movimiento, colisiones y física con independencia de la tasa de imágenes. *Fuente: P3*
 - **REQ-MUN-010** `L1` — Detener la aceleración al perder un dedo o cambiar de pestaña, y devolver el barco a agua segura si queda en una posición inválida. *Fuente: P3*
 
@@ -79,8 +79,8 @@ El barco es el riesgo número uno del arte (D-05). Es modular: cambiar la bander
 - **REQ-MUN-029** `L1` — Producir un barco base y al menos 3 skins distinguibles, cada una en 8 direcciones y en los estados del contrato: giro, parada, drift, regreso y con la Boya Fiestera a bordo. *Fuente: §49.17, D-05*
 - **REQ-MUN-030** `L1` — Mantener coherentes proa, popa, cubierta, mástil, sombra y pasajera al ir hacia abajo, de vuelta o marcha atrás; nunca invertir verticalmente un sprite y, si hay marcha atrás, distinguir la dirección del casco de la del desplazamiento. *Fuente: §49.17*
 - **REQ-MUN-031** `L1` — Acompañar cada recurso con un manifiesto (ID, versión, archivo o atlas, fotogramas, direcciones, escala, anclajes, pivote y licencia u origen) y separar la geometría de juego de la imagen. *Fuente: §49.17, D-05*
-- **REQ-MUN-032** `L1` — Generar los sprites que rotan con scripts de Blender sin interfaz reproducibles desde el repositorio (sombreado toon con contorno, cámara ortográfica dimétrica 2:1, PNG con alfa y manifiesto), y hacer islas, decoración y personajes que no rotan como ilustración 2D de una sola vista. *Fuente: §34, D-05*
+- **REQ-MUN-032** `L1` — Generar los sprites que rotan con scripts de Blender sin interfaz reproducibles desde el repositorio (sombreado toon con contorno, cámara ortográfica a 30° de elevación que da la proyección 2:1, PNG con alfa y manifiesto), y hacer islas, decoración y personajes que no rotan como ilustración 2D de una sola vista. *Fuente: §34, D-05, D-13*
 - **REQ-MUN-033** `L1` — Revisar cada skin en 8 direcciones, giros, parada, drift, regreso y rescate; sustituir barco, isla y obstáculo en una prueba de Admin, verificar anclajes y colisiones, restaurar la versión anterior y entregar fuentes editables y una guía para añadir una variante. *Fuente: §49.17 · alias ART 01*
 - **REQ-MUN-034** `L1` — Aceptar sólo los formatos del contrato de assets: SVG o PNG para logo e iconos, sprites o atlas para barco y personajes, WebP o PNG por capas para islas, WebP o JPG para fotos y carteles, y audio web para efectos (plop, ping, boost, choque, logro) y música con derechos. *Fuente: §34, §48.8*
 
-Tres skins es el mínimo de arranque, no el límite del catálogo; las skins comparten física, hitbox y reglas competitivas (REQ-IDE-032).
+Tres skins es el mínimo de arranque, no el límite del catálogo; las skins comparten física, hitbox y reglas competitivas (REQ-IDE-032). El barco mide unos 48 px de eslora en pantalla, valor de muestra que se revisa en el hito 1 (D-15).

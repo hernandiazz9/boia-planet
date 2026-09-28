@@ -5,7 +5,7 @@
 - `python3 tools/spec/check.py` sale con 0 e imprime «279 requisitos, 0 duplicados, centinelas 10/10» en 0,05 s. `python3 tools/spec/test_check.py`: 18 pruebas de mutación, 18 OK, exit 0, 1 s.
 - Marcas: 24 `[pendiente Álvaro]`, 2 `[pendiente Hernán]` y 20 `[provisional]`. De las provisionales, 18 son por alcance que D-02 no nombra y 2 por contradicciones nuevas.
 - Contradicciones de la v14 que D-08 no cubre: 2 (cocodrilo del circuito, §13 frente a §48.5; qué es «Inicio», §19 frente a §4.4). Van resueltas por precedencia y marcadas.
-- Tamaño: 25.966 palabras por `wc -w` (22.086 sin separadores de tabla). Supera las 12.000–18.000 esperables y roza la v14 (24.818). Causa y opciones en la pregunta 5.
+- Tamaño: 26.114 palabras por `wc -w` (22.229 sin separadores de tabla). Supera las 12.000–18.000 esperables y roza la v14 (24.818). Causa y opciones en la pregunta 5.
 - El prompt esperaba «centinelas 7/7», pero su propia lista suma 10 cadenas. El check imprime 10/10 (pregunta 6).
 - Dos revisores independientes cruzaron la v14 entera contra la spec: 18 hallazgos, todos incorporados antes del commit.
 - Por decidir: alcance de 18 REQ (pregunta 1), 2 contradicciones (2 y 3), dónde se lleva el estado de cada REQ (4) y el tamaño (5).
@@ -17,7 +17,7 @@ Nada que probar: es documentación. Las preguntas 1 a 6 son para el orquestador,
 Consolidar la v14 en `docs/spec/` (12 archivos, un requisito por ID, con fuente, alcance y criterio) y escribir `tools/spec/check.py`.
 
 ## Hecho
-Commits: `75f7f61` con `docs/spec/**`, `tools/spec/check.py` y `tools/spec/test_check.py`; el commit siguiente, con este informe y mi sección de `ESTADO.md`.
+Commits: `75f7f61` con `docs/spec/**`, `tools/spec/check.py` y `tools/spec/test_check.py`; `7db7879` con este informe y mi sección de `ESTADO.md`; y un tercero que aplica D-13 a D-17 y actualiza ambos.
 
 | Archivo | Contenido | REQ |
 |---|---|---|
@@ -36,7 +36,14 @@ Commits: `75f7f61` con `docs/spec/**`, `tools/spec/check.py` y `tools/spec/test_
 
 - **`tools/spec/check.py`** usa sólo la biblioteca estándar. Comprueba los 12 archivos, el formato de cada definición, que cada REQ esté en el archivo de su área, que no haya IDs repetidos, que cada REQ tenga una fila en 09 con la misma fuente, el mismo alcance y las mismas marcas, que no haya referencias a REQ inexistentes, que cada alias de la v14 esté en un solo REQ y que existan los centinelas. Imprime el conteo por área, alcance y marca.
 - **`tools/spec/test_check.py`** copia la spec a un directorio temporal, rompe una cosa distinta en cada prueba y exige exit 1 con el mensaje exacto.
-- **D-12 cambió durante la sesión.** El joystick ahora nace donde toca el primer dedo; está aplicado en REQ-MUN-006 y en el apéndice de desviaciones.
+- **D-12 a D-17 llegaron durante la sesión** y están aplicados:
+  - D-12, el joystick nace donde toca el primer dedo: REQ-MUN-006.
+  - D-13, cámara a 30°: REQ-MUN-032.
+  - D-14, teclado con dos modos: REQ-MUN-008.
+  - D-15, barco de unos 48 px de muestra: nota en 03.
+  - D-16 y D-17, arte desde el repositorio y Postgres local: nota de entorno en 08.
+
+  D-13 a D-17 entraron en `DECISIONES.md` con el commit `5c28de1`, después de mi primer commit, y se aplicaron en el tercero.
 - **Secciones que el prompt no asignaba:** §28, §33, §45–47 y §49.18 van en 01; §34, §35 y §49.14, en 03. Está documentado en 00.
 - **Distinto de lo pedido:**
   - En 09, «texto en una línea» es un título corto. El texto normativo completo vive sólo en el archivo del área, para no duplicar 279 frases.
@@ -48,7 +55,7 @@ Commits: `75f7f61` con `docs/spec/**`, `tools/spec/check.py` y `tools/spec/test_
 ```
 python3 tools/spec/check.py        # exit 0 · 0,05 s
 python3 tools/spec/test_check.py   # Ran 18 tests · OK · exit 0 · 1,0 s
-wc -w docs/spec/*.md               # 25966 total
+wc -w docs/spec/*.md               # 26114 total
 ```
 
 Conteo por área y alcance (salida de check.py):
@@ -97,8 +104,8 @@ Palabras por archivo:
 
 | Archivo | `wc -w` | Sin separadores |
 |---|---|---|
-| 00 a 08 (nueve archivos) | 15.098 | 13.718 |
-| 09-requisitos | 8.030 | 5.758 |
+| 00 a 08 (nueve archivos) | 15.238 | 13.853 |
+| 09-requisitos | 8.038 | 5.766 |
 | 10-filosofia | 1.700 | 1.546 |
 | 11-glosario | 1.138 | 1.064 |
 
@@ -154,7 +161,7 @@ Nada de front.
    - (a) En un archivo aparte, por ejemplo `docs/seguimiento.md`, fuera de la spec para que ésta no cambie con cada encargo. Es lo que recomiendo.
    - (b) En una columna más en 09, lo que obliga a tocar el check.
    - (c) Sólo en los informes.
-5. **Tamaño.** Son 25.966 palabras frente a las 12.000–18.000 esperables. Las causas:
+5. **Tamaño.** Son 26.114 palabras frente a las 12.000–18.000 esperables. Las causas:
    - cada uno de los 279 REQ atómicos aparece dos veces, como definición y como fila;
    - la filosofía va textual (1.546);
    - el apéndice de desviaciones ocupa unas 1.000.

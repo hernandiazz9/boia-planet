@@ -10,6 +10,8 @@ La v14 separa MOTOR BOIA (movimiento, cámara, colisiones, proximidad, interacci
 - **REQ-ARQ-002** `L1` — Usar Supabase (Postgres con RLS, Auth por email, Storage, Edge Functions para webhooks y validaciones, pg_cron para los estados de evento) y Vercel para apps/web. *Fuente: D-04*
 - **REQ-ARQ-003** `L1` — Separar aplicación pública, Admin, motor, contratos, datos del mundo, reglas, adaptadores e infraestructura; ningún componente de UI escribe saldos, roles, sellos ni estados de compra. *Fuente: §24, P2*
 
+Entorno de desarrollo (D-16, D-17): hasta que exista la biblioteca de assets del editor, la web sirve `art/` desde el repositorio y Storage entra con el editor. Esquema, migraciones (SQL plano en `supabase/migrations/`) y pruebas de RLS corren contra el PostgreSQL 17 local con un shim compatible con Supabase; Auth, Storage y Edge Functions se prueban contra un proyecto Supabase de desarrollo en la nube.
+
 ## Entidades
 
 Entidades con ID estable y versión (P2). Las de L2 se diseñan sólo si omitirlas obligaría a migrar datos (D-02).
