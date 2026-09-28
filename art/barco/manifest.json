@@ -13,7 +13,7 @@
       "tools/blender/ship.py",
       "tools/blender/render.py"
     ],
-    "sources_sha256": "ce6df989e5e1e2633787d1627c1c22ed81d99efe617dfd439bbfa19b8fc6768a",
+    "sources_sha256": "e22218079937634412dd172c4f73a2b618592beecb3db79fdd99643037fd0462",
     "blender": "5.2.2 LTS",
     "engine": "BLENDER_EEVEE",
     "samples": 16,
@@ -880,6 +880,65 @@
           229.08
         ]
       }
+    }
+  ],
+  "style_label": "Toon (actual)",
+  "style_variants": [
+    {
+      "id": "boceto-lapiz",
+      "label": "Boceto a lápiz",
+      "barco": "B01",
+      "description": "Remolcador dibujado a lápiz sobre papel: casco claro, tramado gris en las sombras, neumáticos en el costado y cajas en cubierta.",
+      "manifest": "estilos/boceto-lapiz/manifest.json"
+    },
+    {
+      "id": "acuarela",
+      "label": "Acuarela ilustrada",
+      "barco": "B02",
+      "description": "Remolcador de casco azul con franja y toldo crema, chimenea negra, macetas con plantas y bandera naranja con olas.",
+      "manifest": "estilos/acuarela/manifest.json"
+    },
+    {
+      "id": "low-poly",
+      "label": "Low-poly",
+      "barco": "B03",
+      "description": "Remolcador de facetas limpias: casco rojo y blanco, caseta blanca con techo azul, cajas de colores y bandera roja con olas.",
+      "manifest": "estilos/low-poly/manifest.json"
+    },
+    {
+      "id": "semi-realista",
+      "label": "Semi-realista",
+      "barco": "B04",
+      "description": "Remolcador veterano: casco verde azulado gastado con óxido, neumáticos negros, caseta crema, chimenea roja y blanca y bandera azul.",
+      "manifest": "estilos/semi-realista/manifest.json"
+    },
+    {
+      "id": "arcilla",
+      "label": "Arcilla, maqueta",
+      "barco": "B05",
+      "description": "Remolcador de juguete blando: casco verde redondo con franja naranja, caseta con techo de paja y palmera, guirnalda de farolillos y bandera naranja.",
+      "manifest": "estilos/arcilla/manifest.json"
+    },
+    {
+      "id": "cartoon-30",
+      "label": "Cartoon años 30",
+      "barco": "B06",
+      "description": "Remolcador de dibujo animado antiguo: casco negro con franja roja y crema, chimenea alta, ojos de buey que parecen ojos, semitono de imprenta y bandera roja.",
+      "manifest": "estilos/cartoon-30/manifest.json"
+    },
+    {
+      "id": "cel-shaded",
+      "label": "Cel-shaded cómic",
+      "barco": "B07",
+      "description": "Remolcador de cómic con tinta de tres grosores: casco azul cielo con obra viva azul profundo y franja blanca, caseta blanca con techo azul y bandera azul con olas blancas.",
+      "manifest": "estilos/cel-shaded/manifest.json"
+    },
+    {
+      "id": "pixel-art",
+      "label": "Pixel art",
+      "barco": "B08",
+      "description": "Remolcador en pixel art de 64 px de arte con contorno de 1 px: casco rojo y blanco, caseta blanca, chimenea roja, cajas de madera y bandera roja.",
+      "manifest": "estilos/pixel-art/manifest.json"
     }
   ]
 }

@@ -5,9 +5,12 @@
     Blender -b -P tools/blender/render.py -- --only isla-evento --only costa
     Blender -b -P tools/blender/render.py -- --skin base --skin noche     # barco parcial, sin manifiesto
     Blender -b -P tools/blender/render.py -- --all --style muestra         # estilo: tools/blender/styles/<nombre>.py
+    Blender -b -P tools/blender/render.py -- --ship-style pixel-art        # sólo el barco en un estilo de exploración
 
 Salida (en --out, por defecto art/), una carpeta por recurso:
     barco/          <skin>/<dir>.png, <skin>/<dir>_p.png (con pasajera), base/S_bob_<n>.png
+                    estilos/<estilo>/ el mismo juego sólo con la skin base, en cada estilo de
+                    exploración (ship_styles.py), con su manifest.json; el raíz los lista en style_variants
     isla-evento/, isla-pequena/, roca-a/, roca-b/    base.png
     boia-tutorial/  idle_<n>.png (bucle de reposo)
     costa/          izquierda.png, derecha.png (losas que se repiten en vertical)
@@ -27,6 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import rig    # noqa: E402
 import ship   # noqa: E402
+import ship_styles  # noqa: E402
 import style  # noqa: E402
 import world  # noqa: E402
 
@@ -39,6 +43,9 @@ ANCHOR_NAMES = ["pivot", "mast_top", "slot_passenger", "wake_origin", "bow"]
 RESOURCES = ["barco", "isla-evento", "isla-pequena", "boia-tutorial", "roca-a", "roca-b", "costa", "planeta"]
 COMMAND = "Blender -b -P tools/blender/render.py -- --all"
 LICENSE = "muestra interna"
+STYLES_SUBDIR = "estilos"           # art/barco/estilos/<id>/: el barco en los estilos de exploración (T11)
+STYLE_LABEL = "Toon (actual)"
+STUDY_VERSION = "0.1.0"
 
 
 def rel(path):
@@ -78,11 +85,14 @@ def write_manifest(out_dir, manifest):
         f.write("\n")
 
 
-def render_to(scene, path, stats):
+def render_to(scene, path, stats, render_fn=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    scene.render.filepath = path
     t0 = time.perf_counter()
-    bpy.ops.render.render(write_still=True)
+    if render_fn:
+        render_fn(scene, path)
+    else:
+        scene.render.filepath = path
+        bpy.ops.render.render(write_still=True)
     dt = time.perf_counter() - t0
     stats.append({"file": path, "seconds": round(dt, 3), "bytes": os.path.getsize(path)})
 
@@ -102,15 +112,10 @@ def unit(dx, dy):
     return [round(dx / n, 4), round(dy / n, 4)]
 
 
-def render_ship(skins, out_dir, stats, full, style_name):
-    scene = rig.reset_scene()
-    rig.setup_render(scene)
-    cam = rig.add_camera(scene)
-    rig.add_sun(scene)
-    s = ship.build_ship()
+def render_frames(scene, cam, s, skins, apply_skin, out_dir, stats, render_fn=None):
+    """Las imágenes de un barco: por skin, 8 direcciones sin y con pasajera; y el balanceo base/S."""
     images = []
     directions = {}
-
     for d in ship.DIRECTIONS:
         ship.set_direction(s, d)
         ship.set_bob(s, None, BOB_FRAMES)
@@ -120,64 +125,105 @@ def render_ship(skins, out_dir, stats, full, style_name):
         directions[d] = {"yaw_deg": round(ship.yaw_for(d), 3), "bow_screen": unit(bx - wx, by - wy), "anchors": anc}
 
     for skin in skins:
-        s["materials"].apply_skin(skin)
+        apply_skin(skin)
         for passenger in (False, True):
             ship.set_passenger(s, passenger)
             for d in ship.DIRECTIONS:
                 ship.set_direction(s, d)
                 ship.set_bob(s, None, BOB_FRAMES)
                 name = "%s/%s%s.png" % (skin, d, "_p" if passenger else "")
-                render_to(scene, os.path.join(out_dir, name), stats)
+                render_to(scene, os.path.join(out_dir, name), stats, render_fn)
                 images.append({"file": name, "skin": skin, "direction": d, "frame": 0, "passenger": passenger})
 
     if BOB_SKIN in skins:
-        s["materials"].apply_skin(BOB_SKIN)
+        apply_skin(BOB_SKIN)
         ship.set_passenger(s, False)
         ship.set_direction(s, BOB_DIRECTION)
         for k in range(BOB_FRAMES):
             ship.set_bob(s, k, BOB_FRAMES)
             name = "%s/%s_bob_%d.png" % (BOB_SKIN, BOB_DIRECTION, k)
-            render_to(scene, os.path.join(out_dir, name), stats)
+            render_to(scene, os.path.join(out_dir, name), stats, render_fn)
             images.append({"file": name, "skin": BOB_SKIN, "direction": BOB_DIRECTION, "frame": k,
                            "passenger": False, "animation": "bob", "anchors": anchors_px(scene, cam, s)})
         ship.set_bob(s, None, BOB_FRAMES)
+    return images, directions
 
+
+def ship_manifest(style_name, skins, directions, images, gen, version):
+    return {
+        "id": ASSET_ID,
+        "kind": "ship",
+        "version": version,
+        "status": "muestra",
+        "license": LICENSE,
+        "style": style_name,
+        "generator": gen,
+        "image": {"width": rig.RESOLUTION, "height": rig.RESOLUTION, "format": "png", "mode": "RGBA",
+                  "transparent_border_px": 4},
+        "projection": {
+            "type": "dimetric-2:1",
+            "camera_elevation_deg": rig.CAMERA_ELEVATION_DEG,
+            "camera_azimuth_deg": rig.CAMERA_AZIMUTH_DEG,
+            "ortho_scale": rig.ORTHO_SCALE,
+            "pixels_per_unit": round(rig.pixels_per_unit(), 4),
+            "pivot_px": list(rig.PIVOT_PX),
+        },
+        "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; "
+                       "el centro del píxel (i,j) está en (i+0.5, j+0.5)",
+        "anchors_doc": {
+            "pivot": "punto de contacto con el agua bajo el centro del casco; fijo en todas las imágenes",
+            "mast_top": "tope del mástil (ancla de la bandera)",
+            "slot_passenger": "pie de la pasajera sobre la cubierta",
+            "wake_origin": "popa a la altura del agua: origen de la estela",
+            "bow": "roda a la altura del agua; bow - wake_origin da el rumbo del casco en pantalla",
+        },
+        "skins": list(skins),
+        "direction_order": ship.DIRECTIONS,
+        "directions": directions,
+        "animations": {"bob": {"skin": BOB_SKIN, "direction": BOB_DIRECTION, "frames": BOB_FRAMES,
+                               "fps": BOB_FPS, "loop": True, "passenger": False}},
+        "images": images,
+    }
+
+
+def style_variants():
+    """Índice de los estilos alternativos del barco, en el manifiesto raíz (T11)."""
+    return [{"id": st["id"], "label": st["label"], "barco": st["barco"], "description": st["description"],
+             "manifest": "%s/%s/manifest.json" % (STYLES_SUBDIR, st["id"])}
+            for st in ship_styles.STUDIES]
+
+
+def render_ship(skins, out_dir, stats, full, style_name):
+    scene = rig.reset_scene()
+    rig.setup_render(scene)
+    cam = rig.add_camera(scene)
+    rig.add_sun(scene)
+    s = ship.build_ship()
+    images, directions = render_frames(scene, cam, s, skins, s["materials"].apply_skin, out_dir, stats)
     if full:
-        manifest = {
-            "id": ASSET_ID,
-            "kind": "ship",
-            "version": ship.SHIP_VERSION,
-            "status": "muestra",
-            "license": LICENSE,
-            "style": style_name,
-            "generator": generator(ASSET_ID, style_name),
-            "image": {"width": rig.RESOLUTION, "height": rig.RESOLUTION, "format": "png", "mode": "RGBA",
-                      "transparent_border_px": 4},
-            "projection": {
-                "type": "dimetric-2:1",
-                "camera_elevation_deg": rig.CAMERA_ELEVATION_DEG,
-                "camera_azimuth_deg": rig.CAMERA_AZIMUTH_DEG,
-                "ortho_scale": rig.ORTHO_SCALE,
-                "pixels_per_unit": round(rig.pixels_per_unit(), 4),
-                "pivot_px": list(rig.PIVOT_PX),
-            },
-            "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; "
-                           "el centro del píxel (i,j) está en (i+0.5, j+0.5)",
-            "anchors_doc": {
-                "pivot": "punto de contacto con el agua bajo el centro del casco; fijo en todas las imágenes",
-                "mast_top": "tope del mástil (ancla de la bandera)",
-                "slot_passenger": "pie de la pasajera sobre la cubierta",
-                "wake_origin": "popa a la altura del agua: origen de la estela",
-                "bow": "roda a la altura del agua; bow - wake_origin da el rumbo del casco en pantalla",
-            },
-            "skins": list(ship.SKINS),
-            "direction_order": ship.DIRECTIONS,
-            "directions": directions,
-            "animations": {"bob": {"skin": BOB_SKIN, "direction": BOB_DIRECTION, "frames": BOB_FRAMES,
-                                   "fps": BOB_FPS, "loop": True, "passenger": False}},
-            "images": images,
-        }
+        manifest = ship_manifest(style_name, ship.SKINS, directions, images, generator(ASSET_ID, style_name),
+                                 ship.SHIP_VERSION)
+        manifest["style_label"] = STYLE_LABEL
+        manifest["style_variants"] = style_variants()
         write_manifest(out_dir, manifest)
+    return len(images)
+
+
+def render_ship_study(sid, out_dir, stats):
+    """El barco de un estilo de exploración: skin base, mismos fotogramas y anclajes, su manifiesto."""
+    scene, cam, s, render_fn = ship_styles.build(sid)
+    images, directions = render_frames(scene, cam, s, [BOB_SKIN], lambda skin: None, out_dir, stats, render_fn)
+    scripts = ["tools/blender/rig.py", ship_styles.script_path(sid), "tools/blender/ship.py",
+               "tools/blender/ship_styles.py", "tools/blender/render.py"]
+    gen = {
+        "scripts": scripts,
+        "sources_sha256": sources_sha256(scripts),
+        "blender": rig.blender_version(),
+        "engine": "BLENDER_EEVEE",
+        "samples": scene.eevee.taa_render_samples,
+        "command": COMMAND,
+    }
+    write_manifest(out_dir, ship_manifest(sid, [BOB_SKIN], directions, images, gen, STUDY_VERSION))
     return len(images)
 
 
@@ -234,11 +280,13 @@ def main():
     ap.add_argument("--only", action="append", choices=RESOURCES, help="sólo este recurso (repetible)")
     ap.add_argument("--skin", action="append", choices=sorted(ship.SKINS), help="barco parcial, sin manifiesto")
     ap.add_argument("--style", default=style.DEFAULT, choices=style.available())
+    ap.add_argument("--ship-style", action="append", choices=ship_styles.IDS,
+                    help="sólo el barco en este estilo de exploración (repetible); con el barco completo van todos")
     ap.add_argument("--out", default=os.path.join(REPO, "art"), help="carpeta raíz; cada recurso va en <out>/<id>")
     ap.add_argument("--stats", default=os.path.join(HERE, "out", "render_stats.json"))
     a = ap.parse_args(argv)
-    if not a.all and not a.skin and not a.only:
-        ap.error("usá --all, --only <recurso> o al menos un --skin")
+    if not a.all and not a.skin and not a.only and not a.ship_style:
+        ap.error("usá --all, --only <recurso>, --ship-style <estilo> o al menos un --skin")
     S = style.load(a.style)
     ship.use_style(a.style)
     root = os.path.abspath(a.out)
@@ -251,6 +299,10 @@ def main():
         full = ASSET_ID in todo
         counts[ASSET_ID] = render_ship(list(ship.SKINS) if full else a.skin, os.path.join(root, ASSET_ID),
                                        stats, full, S.NAME)
+    studies = ship_styles.IDS if ASSET_ID in todo else (a.ship_style or [])
+    for sid in studies:
+        key = "%s/%s/%s" % (ASSET_ID, STYLES_SUBDIR, sid)
+        counts[key] = render_ship_study(sid, os.path.join(root, ASSET_ID, STYLES_SUBDIR, sid), stats)
     for rid in todo:
         if rid != ASSET_ID:
             counts[rid] = render_world(rid, S, os.path.join(root, rid), stats)

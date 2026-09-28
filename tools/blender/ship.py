@@ -317,8 +317,21 @@ def build_rigging(mats, parent):
     return objs
 
 
+PASSENGER_ROLES = ["buoy_a", "buoy_b", "hat", "face"]
+
+
 def build_passenger(mats, slot):
     """Placeholder de la Boia Fiestera: cilindro con cara y gorro de fiesta."""
+    return [link_object(name, bm, [mats[r] for r in roles], slot, mats.outline, outline=outline)
+            for name, bm, roles, outline in passenger_meshes()]
+
+
+def passenger_meshes():
+    """Geometría de la pasajera, sin materiales: [(nombre, bmesh, roles, contorno)].
+
+    La comparten ship.py y los estilos de ship_styles.py; cada estilo pone sus materiales.
+    """
+    out = []
     R, segs = 0.16, 12
     zs = [0.0, 0.13, 0.29, 0.40]
     roles = ["buoy_a", "buoy_b", "hat", "face"]
@@ -342,7 +355,7 @@ def build_passenger(mats, slot):
                                 matrix=Matrix.Translation((0.0, 0.02, 0.52)) @ Matrix.Rotation(math.radians(12), 4, "X"))
     for f in faces_of(hat["verts"]):
         f.material_index = ri["hat"]
-    body = link_object("passenger", bm, [mats[r] for r in roles], slot, mats.outline)
+    out.append(("passenger", bm, roles, True))
 
     # Cara mirando a proa (+X): dos ojos y una sonrisa de puntos. Sin contorno.
     bm = bmesh.new()
@@ -356,8 +369,8 @@ def build_passenger(mats, slot):
         y, z = 0.058 * math.cos(phi), 0.19 + 0.045 * math.sin(phi)
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.014,
                                    matrix=Matrix.Translation((math.sqrt(R * R - y * y) + 0.004, y, z)))
-    face = link_object("passenger_face", bm, [mats["face"]], slot, mats.outline, outline=False)
-    return [body, face]
+    out.append(("passenger_face", bm, ["face"], False))
+    return out
 
 
 def empty(name, parent, loc):

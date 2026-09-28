@@ -21,3 +21,14 @@ export { MemoryRewardStore, rewardKey, type RewardStore } from './world/rewards'
 export { DEV_ART_URL, type ArtUrl } from './world/assets';
 export { simulate, type SimulationOptions, type TraceStep } from './world/simulate';
 export { resolveObjectVisual, shipArtScale, type ObjectVisual } from './world/visual';
+export {
+  SHIP_STYLE_PARAM,
+  SHIP_STYLE_STORAGE_KEY,
+  loadShipStyle,
+  readShipStyleIndex,
+  requestedShipStyle,
+  resolveShipStyle,
+  type LoadedShipStyle,
+  type ShipStyleIndex,
+  type ShipStyleOption,
+} from './ship-style';

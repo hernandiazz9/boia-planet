@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
 import { demoWorld } from './demo-world';
 import './juego.css';
+import { ShipStyleSelector, loadStyledShip, type ShipStyleState } from './ship-style-selector';
 import { EventPanel, MenuAnchor, MinimapPlaceholder, plop } from './world-ui';
 
 const MANIFEST_URL = '/api/art/barco/manifest.json?optional=1';
@@ -22,6 +23,7 @@ export function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stats, setStats] = useState<GameStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shipStyle, setShipStyle] = useState<ShipStyleState | null>(null);
   const [menuPulse, setMenuPulse] = useState(0);
   const [minimapPulse, setMinimapPulse] = useState(0);
   const [panel, setPanel] = useState<{ objectId: string; eventId: string } | null>(null);
@@ -34,12 +36,15 @@ export function GameCanvas() {
     let game: Game | null = null;
 
     (async () => {
-      const { createGame, loadShipManifest } = await import('@boia/engine');
+      const { createGame } = await import('@boia/engine');
       const query = new URLSearchParams(window.location.search);
       // `?barco=provisional` fuerza el barco dibujado por código, para comparar.
       const forceProvisional = query.get('barco') === 'provisional';
-      const manifest = forceProvisional ? null : await loadShipManifest(MANIFEST_URL);
+      // `?estilo=<id>` (o el último elegido) elige el estilo del barco (T11).
+      const styled = forceProvisional ? null : await loadStyledShip(MANIFEST_URL);
+      const manifest = styled?.manifest ?? null;
       if (cancelled) return;
+      setShipStyle(styled?.style ?? null);
       const onWorldEvent = (e: WorldEvent) => {
         switch (e.type) {
           case 'dialogue_line':
@@ -162,6 +167,7 @@ export function GameCanvas() {
           onClose={() => setPanel(null)}
         />
       )}
+      <ShipStyleSelector state={shipStyle} />
       {error && (
         <p style={{ position: 'absolute', bottom: 16, left: 16, right: 16, textAlign: 'center' }}>
           {error}

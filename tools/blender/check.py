@@ -205,9 +205,9 @@ def diff_pixels(a, b, threshold=0):
     return n
 
 
-def expected_files():
+def expected_files(skins=SKINS):
     files = []
-    for skin in SKINS:
+    for skin in skins:
         for p in ("", "_p"):
             for d in DIRECTIONS:
                 files.append("%s/%s%s.png" % (skin, d, p))
@@ -223,7 +223,18 @@ def expected_heading_deg(direction, elevation_deg):
     return math.degrees(math.atan2(sy, sx)) % 360.0
 
 
-def check_ship(ship_dir, diff_dir=None):
+def pngs_on_disk(root, skip_dirs=()):
+    """PNG bajo `root` (rutas relativas), sin entrar en las subcarpetas de primer nivel `skip_dirs`."""
+    out = []
+    for dp, dns, fns in os.walk(root):
+        if dp == root:
+            dns[:] = [d for d in dns if d not in skip_dirs]
+        out += [os.path.relpath(os.path.join(dp, fn), root) for fn in fns if fn.endswith(".png")]
+    return sorted(out)
+
+
+def check_ship(ship_dir, diff_dir=None, skins=SKINS, skip_dirs=()):
+    """Un juego de sprites del barco: el del estilo actual (3 skins) o el de un estilo de exploración (base)."""
     class _A:
         pass
     a = _A()
@@ -238,13 +249,14 @@ def check_ship(ship_dir, diff_dir=None):
         man = json.load(f)
     fails += validate(man, schema, schema)
 
-    exp = expected_files()
+    exp = expected_files(skins)
+    if man.get("skins") != list(skins):
+        fails.append("skins %r; se esperaba %r" % (man.get("skins"), list(skins)))
     listed = [im["file"] for im in man.get("images", [])]
     if sorted(listed) != sorted(exp):
         fails.append("el manifiesto lista %d imágenes; faltan %s; sobran %s" % (
             len(listed), sorted(set(exp) - set(listed))[:5], sorted(set(listed) - set(exp))[:5]))
-    on_disk = sorted(os.path.relpath(os.path.join(dp, fn), a.dir)
-                     for dp, _, fns in os.walk(a.dir) for fn in fns if fn.endswith(".png"))
+    on_disk = pngs_on_disk(a.dir, skip_dirs)
     if on_disk != sorted(exp):
         fails.append("en disco hay %d PNG; faltan %s; sobran %s" % (
             len(on_disk), sorted(set(exp) - set(on_disk))[:5], sorted(set(on_disk) - set(exp))[:5]))
@@ -301,7 +313,7 @@ def check_ship(ship_dir, diff_dir=None):
         headings.append((d, ang, err))
         if abs(err) > HEADING_TOL_DEG:
             fails.append("%s: la proa apunta a %.1f° en pantalla; se esperaba %.1f°" % (d, ang, want))
-        for skin in SKINS:
+        for skin in skins:
             for name, key in (("%s/%s.png" % (skin, d), "mast_top"), ("%s/%s_p.png" % (skin, d), "slot_passenger")):
                 if name in pngs and not pngs[name].near_opaque(anc[key], ANCHOR_NEAR_PX):
                     fails.append("%s: el anclaje %s %r no cae sobre el barco" % (name, key, anc[key]))
@@ -319,7 +331,7 @@ def check_ship(ship_dir, diff_dir=None):
 
     # La pasajera se ve en todas las direcciones y skins.
     pvis = []
-    for skin in SKINS:
+    for skin in skins:
         for d in DIRECTIONS:
             a0, a1 = pngs.get("%s/%s.png" % (skin, d)), pngs.get("%s/%s_p.png" % (skin, d))
             if a0 and a1:
@@ -361,6 +373,52 @@ def check_ship(ship_dir, diff_dir=None):
     if sizes:
         info.append("PNG: media %d bytes, mín %d, máx %d" % (sum(sizes) // len(sizes), min(sizes), max(sizes)))
     return fails, info, len(pngs)
+
+
+# --- El barco en los estilos de exploración (T11) ----------------------------
+STYLES_SUBDIR = "estilos"
+STYLE_SKINS = ["base"]
+
+
+def check_ship_styles(rid, ship_dir, diff_root=None):
+    """Cada entrada de `style_variants` del manifiesto raíz: su carpeta estilos/<id>/ con un
+    manifiesto de barco completo (skin base) cuyo `style` es el id. No puede haber carpetas sin listar."""
+    with open(os.path.join(ship_dir, "manifest.json"), encoding="utf-8") as f:
+        root = json.load(f)
+    variants = root.get("style_variants", [])
+    results = []
+    listed = []
+    for v in variants:
+        sid = v.get("id", "?")
+        label = "%s/%s/%s" % (rid, STYLES_SUBDIR, sid)
+        listed.append(sid)
+        want = "%s/%s/manifest.json" % (STYLES_SUBDIR, sid)
+        if v.get("manifest") != want:
+            results.append((label, "ship", ["style_variants: manifest %r; se esperaba %r" % (v.get("manifest"), want)],
+                            [], 0))
+            continue
+        sdir = os.path.join(ship_dir, STYLES_SUBDIR, sid)
+        if not os.path.exists(os.path.join(sdir, "manifest.json")):
+            results.append((label, "ship", ["falta %s" % os.path.relpath(os.path.join(sdir, "manifest.json"), REPO)],
+                            [], 0))
+            continue
+        diff = os.path.join(diff_root, STYLES_SUBDIR, sid) if diff_root else None
+        fails, info, n = check_ship(sdir, diff, skins=STYLE_SKINS)
+        with open(os.path.join(sdir, "manifest.json"), encoding="utf-8") as f:
+            man = json.load(f)
+        if man.get("style") != sid:
+            fails.append("style %r; se esperaba %r (el id de style_variants)" % (man.get("style"), sid))
+        if man.get("status") != "muestra":
+            fails.append("status %r; los estilos de exploración son muestra" % man.get("status"))
+        results.append((label, "ship", fails, info, n))
+    if len(set(listed)) != len(listed) or root.get("style") in listed:
+        results.append(("%s/%s" % (rid, STYLES_SUBDIR), "ship", ["style_variants: ids repetidos %r" % listed], [], 0))
+    sub = os.path.join(ship_dir, STYLES_SUBDIR)
+    extra = sorted(set(os.listdir(sub)) - set(listed)) if os.path.isdir(sub) else []
+    if extra:
+        results.append(("%s/%s" % (rid, STYLES_SUBDIR), "ship", ["carpetas sin listar en style_variants: %s" % extra],
+                        [], 0))
+    return results
 
 
 # --- Recursos del mundo (sprite, tile, layers) --------------------------------
@@ -683,19 +741,21 @@ def main():
         with open(os.path.join(res_dir, "manifest.json"), encoding="utf-8") as f:
             kind = json.load(f).get("kind", "ship")
         if kind == "ship":
-            fails, info, n = check_ship(res_dir, diff_dir)
+            results = [(rid, kind) + check_ship(res_dir, diff_dir, skip_dirs=(STYLES_SUBDIR,))]
+            results += check_ship_styles(rid, res_dir, diff_dir)
         else:
-            fails, info, n = check_world(res_dir, schema, diff_dir, found)
-        for line in info:
-            print("%s: %s" % (rid, line))
-        for f in fails:
-            print("FALLO %s: %s" % (rid, f))
-        if fails:
-            print("%s (%s): %d fallos" % (rid, kind, len(fails)))
-        else:
-            print("%s (%s): %d %s, manifest válido" % (rid, kind, n, "imagen" if n == 1 else "imágenes"))
-            counts[rid] = n
-        total_fails += len(fails)
+            results = [(rid, kind) + check_world(res_dir, schema, diff_dir, found)]
+        for label, kind_, fails, info, n in results:
+            for line in info:
+                print("%s: %s" % (label, line))
+            for f in fails:
+                print("FALLO %s: %s" % (label, f))
+            if fails:
+                print("%s (%s): %d fallos" % (label, kind_, len(fails)))
+            else:
+                print("%s (%s): %d %s, manifest válido" % (label, kind_, n, "imagen" if n == 1 else "imágenes"))
+                counts[label] = n
+            total_fails += len(fails)
     if total_fails:
         print("%d fallos" % total_fails)
         return 1
