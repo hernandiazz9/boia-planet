@@ -25,7 +25,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T16 — Local repository: persistence in the browser behind a swappable interface
-- Status: running (attempt 1)
+- Status: done
 - Depends on: none
 - Goal: One data layer for the whole demo, with the shapes of packages/db (T06) and an interface Supabase can implement later: guest identity with nickname (no mail), progress (discoveries, idempotent reward ledger with stable ids, points and coins as separate balances derived from the ledger, never written directly), achievements, cosmetics, carnet (5 questions of REQ-IDE, member-since, stamps), bottles (one active per identity, 140 chars, position, reports, removal), and content (events with the seven states, home blocks, artists, photo albums, texts, worlds and their objects, active world) as sample data plus admin overrides. Storage in IndexedDB or localStorage with a schema version and migrations, tolerant of blocked or cleared storage (falls back to memory and says so). A React-free core in a new package so engine, landing, juego and admin share it.
 - Context: packages/db/src/database.types.ts and supabase/migrations (T06 shapes and invariants: ledger ids chosen by the server, balances derived); packages/contracts (EVENT_STATES, HOME_BLOCK_TYPES); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-*), 06-comercial.md, 08-arquitectura-y-datos.md; the plan 001 WIP branch `worktree-agent-a208530713932c80c` (guest identity and merge ideas; read only, do not merge it).
@@ -33,7 +33,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test` → exit 0; adds tests: a reward with the same id is granted once; balances cannot be set directly; one active bottle per identity and the 140-char limit; admin overrides win over sample content and can be reset; a schema-version bump migrates old data; blocked storage falls back to memory
   - `pnpm typecheck && pnpm lint` → exit 0
-- Outcome:
+- Outcome: packages/store (@boia/store): async repository, localStorage `boia.store` v1 with memory fallback; ledger ids chosen by the repository, balances derived; carnet, bottles, stamps, admin overrides per place (shared) and per (world, place) skins, append-only audit, reset per area; sample content incl. 3 fictional crew; NOT yet wired into apps/web (add to package.json + transpilePackages) → 8d8b2b7
 
 ## T17 — Multiple worlds in the engine
 - Status: done
@@ -83,7 +83,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T22 — Mi Carnet and bottles
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T16, T17
 - Goal: Mi Carnet (REQ-IDE-010…022) as a menu section and a shareable view: nickname (created as a guest, no mail), neutral avatar or photo from device, «Miembro desde», the 5 questions of §44.1 verbatim, rank, points, achievements, ship and cosmetics, stamps. Bottles (REQ-IDE-040…044): write one active bottle of up to 140 characters at a valid sea spot next to the ship, edit or remove it, read bottles found in the sea (author nickname and «VER SU CARNET», the bottle stays), report; no points or coins for bottles. In this version bottles live in the browser (D-20): seed a few `muestra` bottles from other fictional crew so reading works.
 - Context: docs/spec/05-identidad-y-comunidad.md (REQ-IDE-*), v14 §44.1 for the 5 questions (verbatim); packages/store (T16); packages/engine (T17 worlds, sea validity); apps/web/app/juego/menu/sections/ (T05); apps/web/app/(landing) only for a carnet deep link if needed.
@@ -202,6 +202,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28: one shared map for all worlds: a place is one point with a stable id; each world supplies its skin, name and texts per place id; moving a place moves it in every world; new islands = one place + files named by world under art/mundos/<world-id>/<place-id>/, checked by `pnpm world:check` (Hernán)
 - 2026-09-28: island names = shared name + optional per-world override; renaming offers «solo en este mundo» or «en todos los mundos» (clears overrides); event/ticket islands start with the same name everywhere, others may use per-world real coastal names (Hernán, clarified)
 - 2026-09-28 T17: world order URL > visitor choice > admin active world > default behind WorldChoice; a world's ship style applies only when none is chosen; setWorld keeps ship position and rewards; per-object runtime state (e.g. dialogue seen) resets on a switch (agent)
+- 2026-09-28 T16: one JSON doc in localStorage, schema v1; reward ids `world_reward:<ref>[@day|@season:<world>]`, `achievement:<id>`, `stamp:<purchaseId>`…; daily = Europe/Madrid day, season = active world; sandbox purchase grants stamp, not the ticket achievement (T25); nicknames unique case-insensitive; writing/reporting a bottle needs a Carnet; spring event linked to island `allday` (agent)
 
 ## Proposals (new scope)
 - 2026-09-28 T17: per-object runtime state (dialogue already seen) should persist across world switches via the store
@@ -213,3 +214,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 23:30 T16 launched · attempt 1 · agent a2d18b0ece93c7b3a
 - 2026-09-28 23:30 T17 launched · attempt 1 · agent a1f17bda51cab8097
 - 2026-09-28 23:45 T17 done · branch worktree-agent-a1f17bda51cab8097 → ce3827b
+- 2026-09-28 23:47 T15 launched · attempt 1 · agent a652f8d4e7651fde5
+- 2026-09-28 23:47 T16 done · branch worktree-agent-a2d18b0ece93c7b3a (1 conflict round) → 8d8b2b7
