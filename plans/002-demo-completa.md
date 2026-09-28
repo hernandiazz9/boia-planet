@@ -8,7 +8,7 @@ Test command: pnpm test
 Worktree setup: pnpm install
 Max parallel agents: 3
 
-Agent notes: do not invoke the project skills `encargo` or `orquestador` (the encargo skill cds into the main checkout); follow this prompt instead. Each task adds its own section at the top of ESTADO.md in the existing format (`## <date> — plan 002 Txx: <title>`, what exists, commands, deviations, untested); on a merge conflict there, keep every section, newest on top. Spanish copy and docs use the name "Boia" (D-18). All copy, numbers and art are `muestra` until Álvaro approves. Hernán may have a dev server of the main checkout on port 3000: never kill it and never use port 3000 (use 3100+). No Supabase, no mail, no network services: persistence goes through the local repository from T16.
+Agent notes: do not invoke the project skills `encargo` or `orquestador` (the encargo skill cds into the main checkout); follow this prompt instead. Each task adds its own section at the top of ESTADO.md in the existing format (`## <date> — plan 002 Txx: <title>`, what exists, commands, deviations, untested); on a merge conflict there, keep every section, newest on top. Spanish copy and docs use the name "Boia" (D-18). All copy, numbers and art are `muestra` until Álvaro approves. The first task wiring @boia/store into apps/web adds it to apps/web/package.json and to transpilePackages in apps/web/next.config.ts; any task may make that two-line change even if outside its Scope. Hernán may have a dev server of the main checkout on port 3000: never kill it and never use port 3000 (use 3100+). No Supabase, no mail, no network services: persistence goes through the local repository from T16.
 
 ## Tasks
 
@@ -48,7 +48,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: shared map (packages/world/src/worlds/map.ts) + per-world skins (skin.ts) composing WorldConfig; names shared + per-world override, renamePlace scope {world}|'all'; placeholder:sin-skin; `pnpm world:check`; ?mundo=, WorldChoice interface (URL > boia:mundo > boia:mundo-activo > default); game.setWorld live; test world `prueba` → ce3827b
 
 ## T15 — Decision D-20 and spec updates for the complete demo
-- Status: running (attempt 1)
+- Status: done
 - Depends on: none
 - Goal: Record Hernán's decisions of 2026-09-28 as D-20 in docs/DECISIONES.md (existing format, author Hernán, Álvaro's approval pending where identity/business is touched), with seven points: (1) the test version brings forward from L2 the two minigames (faro, cañón), a second world and seasons-as-worlds: two worlds, Arcilla (B05) and Acuarela (B02), each with its own islands, story and ship style, following the one-map-many-worlds exploration in mundos/; (2) until Supabase exists, all persistence (progress, carnet, bottles, admin edits) lives in the visitor's browser behind a repository interface, so bottles are only visible to their author in this version; (3) without a ticketing provider, «Comprar entrada» grants the purchase stamp directly (sandbox, clearly labelled); (4) the Admin is reachable in the test version with a «Probar admin» button, without login, clearly marked as a demo; (5) the intro title «BOIA» becomes 3D letters rendered in Blender that move like messenger.abeto.co (D-05 holds: no 3D in the browser; this amends the flat wordmark of D-19 and REQ-ENT-003); (6) after EXPLORAR the camera pulls back a little and the ship starts at a port (El Varadero in Arcilla), where the first encounters and the Boia Fiestera mission begin. (7) one shared map for all worlds: a place is one point with a stable id and each world supplies its own skin, name and texts; moving a place moves it in every world; new islands are added once with files named by world; names are shared with optional per-world overrides, and renaming lets you choose «only this world» or «every world»; event/ticket islands start with the same name in every world, the others may take per-world names of real coastal places. Also list in D-20, as «Para la versión final», everything deferred (see the plan's Proposals: Supabase shared backend, mail auth, Admin TOTP, visual editor, real ticketing, PostHog key, server-side minigame validation, Álvaro's approvals and real links, intro auto-advance, domain and accounts). Update the affected REQ lines in docs/spec/ (same IDs and line format; mark the L2 items brought forward as `L1-demo` or note D-20 in the source, whichever tools/spec/check.py accepts), and add P-items for Álvaro.
 - Context: docs/DECISIONES.md (D-02, D-05, D-08, D-16, D-19 format); docs/spec/02-entrada-y-landing.md, 03-mundo-y-motor.md, 04-aventura.md, 05-identidad-y-comunidad.md, 06-comercial.md, 07-admin.md; mundos/README.md and mundos/arcilla/diseno.md; tools/spec/check.py.
@@ -56,7 +56,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `python3 tools/spec/check.py` → exit 0 and `python3 tools/spec/test_check.py` → exit 0
   - `grep -n "D-20" docs/DECISIONES.md` → the decision with its seven points, the «Para la versión final» list and the pending-Álvaro note
-- Outcome:
+- Outcome: D-20 (7 points, «Para la versión final» 11 items, pending Álvaro), P10–P13; minigames REQ-AVE-035…039 now L1; test-version exceptions REQ-ARQ-025, IDE-051, COM-035, ADM-039; REQ-MUN-035…037 shared map/worlds; 286 REQ → 9aab31b
 
 ## T20 — Arcilla world in the game: every island and encounter
 - Status: pending
@@ -94,7 +94,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T23 — Minigames: Vigilancia del faro and Cañón contra tiburones
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T16, T17
 - Goal: The two minigames of REQ-AVE-036/037 behind the INICIAR_MINIJUEGO extension point, started by `start_minigame` with ids `faro` and `canon`: faro — sweep the beam, identify pirate flags, raise the alarm, end after 5 pirates or when time, errors or ships run out; cañón — aim by dragging, fire balls in an arc, end after scaring 3 sharks or when time or ammo run out, no wounds shown. Rewards per once/daily/season policy validated locally with session, seed and duration (REQ-AVE-038; the server check comes with Supabase). Touch and keyboard, reduced motion, pause on tab hide, exit back to the sea where you were. Art: simple vector or reuse of world art in each world's style (no Blender needed); `muestra`.
 - Context: docs/spec/04-aventura.md (REQ-AVE-036…038), docs/DECISIONES.md D-09; packages/engine (start_minigame extension point from T04), packages/store (T16 ledger).
@@ -203,8 +203,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28: island names = shared name + optional per-world override; renaming offers «solo en este mundo» or «en todos los mundos» (clears overrides); event/ticket islands start with the same name everywhere, others may use per-world real coastal names (Hernán, clarified)
 - 2026-09-28 T17: world order URL > visitor choice > admin active world > default behind WorldChoice; a world's ship style applies only when none is chosen; setWorld keeps ship position and rewards; per-object runtime state (e.g. dialogue seen) resets on a switch (agent)
 - 2026-09-28 T16: one JSON doc in localStorage, schema v1; reward ids `world_reward:<ref>[@day|@season:<world>]`, `achievement:<id>`, `stamp:<purchaseId>`…; daily = Europe/Madrid day, season = active world; sandbox purchase grants stamp, not the ticket achievement (T25); nicknames unique case-insensitive; writing/reporting a bottle needs a Carnet; spring event linked to island `allday` (agent)
+- 2026-09-28 T15: check.py only accepts L1/L2/diferido, so brought-forward items are L1 with D-20 in the source; final-version REQs left intact and test-version exceptions added as separate L1 REQs naming what retires them (agent)
 
 ## Proposals (new scope)
+- 2026-09-28 T15: mundos/arcilla/diseno.md still marks Faro and Cañón as L2 empty lots; update when placing them (T18/T20)
 - 2026-09-28 T17: per-object runtime state (dialogue already seen) should persist across world switches via the store
 - Deferred to the final version (Hernán, 2026-09-28): Supabase as the shared backend (bottles, admin edits and progress shared between visitors; migrations from T06 applied to the cloud project), public auth by mail code + magic link and guest merge (plan 001 T07, WIP branch worktree-agent-a208530713932c80c), real Admin login with password + TOTP and roles (plan 001 T08), the visual drag-and-drop world editor (plan 001 T09), real ticketing (Fourvenues-shaped webhook, stamp on confirmed payment, D-06) replacing the sandbox, PostHog EU project and key, server-side validation of minigame rewards, real links and copy from Álvaro, Álvaro's approval of D-19/D-20, the intro and the art direction, the act-2 auto-advance of the intro (implemented, off), domain and accounts in BOIA's name (REQ-PRO-021)
 
@@ -216,3 +218,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 23:45 T17 done · branch worktree-agent-a1f17bda51cab8097 → ce3827b
 - 2026-09-28 23:47 T15 launched · attempt 1 · agent a652f8d4e7651fde5
 - 2026-09-28 23:47 T16 done · branch worktree-agent-a2d18b0ece93c7b3a (1 conflict round) → 8d8b2b7
+- 2026-09-28 23:49 T22 launched · attempt 1 · agent afaff0ae95b07a142
+- 2026-09-28 23:54 T15 done · branch worktree-agent-a652f8d4e7651fde5 (1 conflict round) → 9aab31b
