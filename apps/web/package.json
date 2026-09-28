@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
-    "build": "next build",
+    "build": "next build && node scripts/landing-budget.mjs",
+    "budget": "node scripts/landing-budget.mjs",
+    "e2e": "playwright test",
     "start": "next start --hostname 0.0.0.0 --port 3000",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@boia/contracts": "workspace:*",
     "@boia/engine": "workspace:*",
     "@boia/world": "workspace:*",
     "next": "15.5.26",
@@ -17,6 +20,8 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0"
   }

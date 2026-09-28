@@ -1,0 +1,136 @@
+'use client';
+
+import type { FunnelEventProps } from '@boia/contracts/analytics';
+import { useEffect } from 'react';
+import { track } from '../../../lib/analytics';
+
+type PanelSource = FunnelEventProps['tickets_panel_open']['source'];
+type ExploreSource = FunnelEventProps['explore_start']['source'];
+type ClickOutSource = FunnelEventProps['ticket_click_out']['source'];
+
+const PANEL_HASH = '#tickets';
+
+/**
+ * Mejora progresiva de la landing, sin pintar nada: analítica del embudo y
+ * panel de Tickets (abrir, cerrar, foco, Escape, Atrás). Todo lo que hace
+ * aquí también funciona, más tosco, sin JavaScript.
+ */
+export function LandingClient() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const panel = document.getElementById('tickets');
+    const title = document.getElementById('tickets-title');
+    const background = ['.site-header', '#contenido', '.site-footer']
+      .map((s) => document.querySelector<HTMLElement>(s))
+      .filter((el): el is HTMLElement => el !== null);
+    if (!panel) return;
+
+    // A partir de aquí manda la clase `is-open`, no :target.
+    root.classList.add('js');
+
+    let open = false;
+    let pushedByUs = false;
+    let opener: HTMLElement | null = null;
+
+    const show = (source: PanelSource) => {
+      if (open) return;
+      open = true;
+      panel.classList.add('is-open');
+      for (const el of background) el.inert = true;
+      root.classList.add('panel-open');
+      title?.focus();
+      track('tickets_panel_open', { source });
+    };
+
+    const hide = () => {
+      if (!open) return;
+      open = false;
+      panel.classList.remove('is-open');
+      for (const el of background) el.inert = false;
+      root.classList.remove('panel-open');
+      opener?.focus();
+      opener = null;
+    };
+
+    const requestClose = () => {
+      if (location.hash !== PANEL_HASH) return hide();
+      if (pushedByUs) {
+        pushedByUs = false;
+        history.back(); // popstate cierra
+      } else {
+        history.replaceState(history.state, '', location.pathname + location.search);
+        hide();
+      }
+    };
+
+    const syncFromUrl = () => {
+      if (location.hash === PANEL_HASH) show('deep_link');
+      else hide();
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
+
+      const openLink = target.closest<HTMLElement>('[data-tickets-open]');
+      if (openLink) {
+        e.preventDefault();
+        opener = openLink;
+        if (location.hash !== PANEL_HASH) {
+          history.pushState(history.state, '', PANEL_HASH);
+          pushedByUs = true;
+        }
+        show((openLink.dataset.ticketsOpen as PanelSource | undefined) ?? 'hero');
+        return;
+      }
+
+      if (target.closest('[data-tickets-close]')) {
+        e.preventDefault();
+        requestClose();
+        return;
+      }
+
+      const tracked = target.closest<HTMLElement>('[data-track]');
+      if (tracked?.dataset.track === 'explore_start') {
+        track('explore_start', {
+          source: (tracked.dataset.source as ExploreSource | undefined) ?? 'hero',
+        });
+      } else if (tracked?.dataset.track === 'ticket_click_out' && tracked.dataset.eventId) {
+        track('ticket_click_out', {
+          eventId: tracked.dataset.eventId,
+          source: (tracked.dataset.source as ClickOutSource | undefined) ?? 'tickets_panel',
+        });
+      }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) requestClose();
+    };
+
+    // Toque fuera de la hoja: cierra.
+    const onBackdrop = (e: MouseEvent) => {
+      if (e.target === panel) requestClose();
+    };
+
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+    panel.addEventListener('click', onBackdrop);
+    window.addEventListener('popstate', syncFromUrl);
+    window.addEventListener('hashchange', syncFromUrl);
+
+    track('landing_view', { intro: 'none' });
+    syncFromUrl();
+
+    return () => {
+      document.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKey);
+      panel.removeEventListener('click', onBackdrop);
+      window.removeEventListener('popstate', syncFromUrl);
+      window.removeEventListener('hashchange', syncFromUrl);
+      hide();
+      root.classList.remove('js');
+    };
+  }, []);
+
+  return null;
+}

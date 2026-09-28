@@ -10,6 +10,7 @@
     "dev": "pnpm --filter @boia/web dev",
     "build": "pnpm --filter @boia/web build",
     "start": "pnpm --filter @boia/web start",
+    "e2e": "pnpm --filter @boia/web e2e",
     "test": "vitest run",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "pnpm -r --parallel typecheck",
