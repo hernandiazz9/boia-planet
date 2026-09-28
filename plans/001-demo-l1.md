@@ -88,7 +88,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: WorldObject = asset + geometry + behaviors catalog v1; SAMPLE_WORLD in packages/world (boia tutorial, event island panel, rocks, coasts); ship 48 px with bob; 179 tests → bf8ef99
 
 ## T03 — Cinematic entry: planet → sea → landing
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T00, T01, T02
 - Goal: The automatic entry of v14 §4.4 and §47-B: planet illustrated in 2D layers, continuous approach, reveal of the isometric sea with islands and the ship, landing content appears over the same scene. No click, no language or login screen. Skip control (idempotent), reduced-motion variant (static scene + short fade), lightweight fallback when assets or the renderer fail, no replay on deep links or return visits. Target ~3 s, measured. Acceptance ENT 01–06 as far as they can be automated; the rest listed for Hernán to check on real phones.
 - Context: docs/DECISIONES.md; docs/spec/02-entrada-y-landing.md (REQ-ENT-*); apps/web/app/**; packages/engine/** (camera and scene handoff); planet layers and islands produced by T01 under art/ (read their manifests); the Outcome lines of T01 and T02.
@@ -97,7 +97,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm test` → exit 0; adds a state-machine test: skip twice, back, route change and tab hide never duplicate the world or start a game
   - `pnpm e2e` → exit 0: first visit ends on an interactive landing without a click; with `prefers-reduced-motion` no camera movement; with the engine bundle blocked the landing still shows the island illustration and working Tickets
   - Recordings of desktop and mobile viewport saved under docs/informes/img/ (paths listed in the final message)
-- Outcome:
+- Outcome: ~3 s planet → sea → landing with skip, reduced motion, 2 s fallback, seen flag boia.intro.v1 (/?intro=1 replays); engine exports ./intro, ./intro/scene; recordings p001-t03-*.webm/png; landing 161.9 kB gzip → 2e80904
 
 ## T08 — Admin base: login with TOTP, roles, audit, events and home blocks
 - Status: skipped (Hernán: visual demo first; depends on T07)
@@ -148,9 +148,9 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: 8 styles × 24 sprites in art/barco/estilos/<id>/ (labels from barcos.json), style_label/style_variants in manifest, /juego selector + ?estilo= persisted in localStorage boia:estilo-barco; sheet docs/informes/img/p001-t11-barco-estilos.png → 2ce57f2
 
 ## T12 — Demo pass: see it working end to end
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T00, T03, T04, T05, T11
-- Goal: Hernán wants to see a working visual demo before any mail, auth or admin work. Glue what T01–T05 and T11 produced into one flow that runs with sample data only: `/` plays the entry (planet → sea → landing), EXPLORAR EL UNIVERSO enters /juego with the ship, the tutorial boia, rocks, coasts and the event island whose proximity opens the sample event panel; minimap, compass, menu and the ship-style selector work; Tickets opens the sample panel. No Supabase, no mail. Fix any gap between the pieces (loaders, routes, missing wiring) without redesigning them. One command runs it locally and reachable from a phone on the same Wi-Fi (Next dev on 0.0.0.0, the LAN URL printed). Two additions Hernán asked for: (1) extend the «Mi Barco» section that T05 already created in apps/web/app/juego/menu/sections/ (it holds T11's style selector today) into the «Barco» section listing the 8 ship styles from T11 and the skins base/fiesta/noche (a skin shows only for the styles that have it), with a preview of each, applying the choice to the ship at once and persisting it locally; it replaces T11's test selector as the main way to switch (keep `?estilo=` working). (2) On the landing, «Ver todos los artistas» opens the full list of the 26 artists of v14 §18.1 (names verbatim, genres as in the spec, neutral avatars), as a panel or page that works without JS and without WebGL, reachable by a deep link.
+- Goal: Hernán wants to see a working visual demo before any mail, auth or admin work. Glue what T01–T05 and T11 produced into one flow that runs with sample data only: `/` plays the entry (planet → sea → landing), EXPLORAR EL UNIVERSO enters /juego with the ship, the tutorial boia, rocks, coasts and the event island whose proximity opens the sample event panel; minimap, compass, menu and the ship-style selector work; Tickets opens the sample panel. No Supabase, no mail. Fix any gap between the pieces (loaders, routes, missing wiring) without redesigning them. This includes REQ-ENT-012, left open by T03: EXPLORAR moves from the entry scene into /juego without restarting the world (same sea and ship, no second intro). One command runs it locally and reachable from a phone on the same Wi-Fi (Next dev on 0.0.0.0, the LAN URL printed). Two additions Hernán asked for: (1) extend the «Mi Barco» section that T05 already created in apps/web/app/juego/menu/sections/ (it holds T11's style selector today) into the «Barco» section listing the 8 ship styles from T11 and the skins base/fiesta/noche (a skin shows only for the styles that have it), with a preview of each, applying the choice to the ship at once and persisting it locally; it replaces T11's test selector as the main way to switch (keep `?estilo=` working). (2) On the landing, «Ver todos los artistas» opens the full list of the 26 artists of v14 §18.1 (names verbatim, genres as in the spec, neutral avatars), as a panel or page that works without JS and without WebGL, reachable by a deep link.
 - Context: the Outcome lines of T01–T05 and T11 in this plan; ESTADO.md sections of plan 001; apps/web/**, packages/engine/**, packages/world/**, art/**. For the «Barco» section use docs/barcos/barcos.json: `estilo` as the display name (`nombre` is null until Álvaro names them), `aspecto` as the description, swatches from `paleta` (resolved like tools/barcos/guia_colores.py does), and respect `notas_render` (B01 has no colour skins, no fiesta for B06, B05 needs remodelling for themed skins).
 - Scope: may touch ESTADO.md (own top section), apps/web/**, packages/engine/**, packages/world/**, root package.json (scripts only) / must not touch supabase/**, packages/db/**, tools/blender/**, art/**, docs/spec/**.
 - Done when:
@@ -199,8 +199,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28: Hernán stopped the watchdog timer; no new watchdogs are started for the rest of this plan (orchestrator)
 - 2026-09-28 T11: style ids are slugs (boceto-lapiz … pixel-art); ?estilo= wins over the saved choice; canonical_order() sorts mesh elements for byte-identical renders; style ships use the default ship's scale so they show 49–57 px (agent)
 - 2026-09-28 T05: joystick zone = bottom 45 % (muestra), HUD never enters it; discovery on entering the proximity radius; tank mode per D-14; English shown disabled (D-03); discoveries in memory only; T11's selector moved into «Mi Barco» because it sat in the joystick zone; small edits outside scope in packages/engine/src/game.ts and package.json (agent)
+- 2026-09-28 T03: hero fills the screen with content at the bottom; seen flag in localStorage boia.intro.v1, replay via /?intro=1 or «Ver la introducción»; lightweight landing if the scene is not ready in 2 s; /api/art cached 1 h in production; T02 landing tests now run as return visits (agent)
 
 ## Proposals (new scope)
+- 2026-09-28 T03: real-phone checks (ENT 04/05, REQ-ENT-018/021/022, Instagram in-app browser, screen reader) and the 2 s budget on real 4G are for Hernán; art direction pending Álvaro
 - 2026-09-28 T11: the 7 world manifests carry a stale sources_sha256 (PNGs identical); the next committed `render.py --all` refreshes them
 - 2026-09-28 T04: /juego copy lives in the component, not apps/web/lib/i18n; rewards/achievements emitted but not stored or shown; bottom coast drawn by code; drawRock in packages/engine/src/views.ts unused
 - 2026-09-28 T01: coast corners, bottom coast and a separate flag sprite are missing
@@ -228,3 +230,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 20:49 T05 launched · attempt 1 · agent ab0317b3ea5c0aa70
 - 2026-09-28 20:59 T11 done · branch worktree-agent-a8b7248d022f3bd2d (1 conflict round) → 2ce57f2
 - 2026-09-28 21:13 T05 done · branch worktree-agent-ab0317b3ea5c0aa70 → e2dc04c
+- 2026-09-28 21:17 T03 done · branch worktree-agent-adb4fa92632f4004f (1 conflict round) → 2e80904
