@@ -1,6 +1,12 @@
 import { z } from 'zod';
+import { Behavior, COLLISION_DEFAULTS } from './behaviors';
 
-/** Versión del esquema del mundo. Sube cuando cambie de forma incompatible. */
+/**
+ * Versión del esquema del mundo. Sube cuando cambie de forma incompatible.
+ * El catálogo de comportamientos v1 (T04) sigue en 0: los objetos de muestra
+ * de la base (T06) ya usaban sus tipos (`dialogue`, `proximity`, `content`,
+ * `collision` con `mode`) y siguen siendo válidos.
+ */
 export const WORLD_SCHEMA_VERSION = 0;
 
 const finite = z.number().finite();
@@ -65,12 +71,9 @@ export const ObjectGeometry = z.object({
   activation: CollisionShape.optional(),
 });
 
-/** Tipo abierto: el catálogo de comportamientos (§48.3) llega en otro encargo. */
-export const BehaviorRef = z.object({
-  type: z.string().min(1),
-  params: z.record(z.string(), z.unknown()).default({}),
-});
-export type BehaviorRef = z.infer<typeof BehaviorRef>;
+/** Un comportamiento del catálogo (`./behaviors`) con sus parámetros. */
+export const BehaviorRef = Behavior;
+export type BehaviorRef = Behavior;
 
 export const ObjectState = z.object({
   visible: z.boolean().default(true),
@@ -80,17 +83,45 @@ export const ObjectState = z.object({
   repeatable: z.boolean().default(true),
 });
 
-export const WorldObject = z.object({
-  identity: ObjectIdentity,
-  appearance: ObjectAppearance,
-  position: ObjectPosition,
-  geometry: ObjectGeometry,
-  behaviors: z.array(BehaviorRef).default([]),
-  params: z.record(z.string(), z.unknown()).optional(),
-  content: z.record(z.string(), z.unknown()).optional(),
-  state: ObjectState.optional(),
-  reward: z.record(z.string(), z.unknown()).optional(),
-});
+export const WorldObject = z
+  .object({
+    identity: ObjectIdentity,
+    appearance: ObjectAppearance,
+    position: ObjectPosition,
+    geometry: ObjectGeometry,
+    behaviors: z.array(Behavior).default([]),
+    params: z.record(z.string(), z.unknown()).optional(),
+    content: z.record(z.string(), z.unknown()).optional(),
+    state: ObjectState.optional(),
+    reward: z.record(z.string(), z.unknown()).optional(),
+  })
+  .superRefine((o, ctx) => {
+    // Lo que el motor necesita para ejecutar cada comportamiento (§48.8).
+    const issue = (i: number, message: string) =>
+      ctx.addIssue({ code: 'custom', message, path: ['behaviors', i] });
+    const g = o.geometry;
+    o.behaviors.forEach((b, i) => {
+      if (b.type === 'collision' && !g.collision && !g.activation) {
+        issue(i, 'COLISIÓN necesita geometry.collision o geometry.activation');
+      }
+      if (b.type === 'proximity' && !b.params.radius && !g.proximityRadius) {
+        issue(i, 'PROXIMIDAD necesita un radio (params.radius o geometry.proximityRadius)');
+      }
+      if (b.type === 'collectible' && !b.params.radius && !g.activation && !g.collision) {
+        issue(i, 'RECOGIBLE necesita un radio de recogida');
+      }
+    });
+    const solid = o.behaviors.filter(
+      (b) => b.type === 'collision' && (b.params.solid ?? COLLISION_DEFAULTS[b.params.mode].solid),
+    );
+    if (solid.length > 1) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'un objeto admite como mucho una COLISIÓN sólida',
+        path: ['behaviors'],
+      });
+    }
+  });
 export type WorldObject = z.infer<typeof WorldObject>;
 export type WorldObjectInput = z.input<typeof WorldObject>;
 
@@ -102,6 +133,11 @@ export const WorldConfig = z
     /** Donde aparece el barco; si falta, centro del borde inferior. */
     spawn: z.object({ x: finite, y: finite, heading: finite.default(-Math.PI / 2) }).optional(),
     sectors: z.array(Sector).default([]),
+    /**
+     * Arte de las costas laterales (manifiesto `kind: tile` con variantes
+     * izquierda y derecha). Sin él, costas dibujadas por código.
+     */
+    coast: z.object({ asset: z.string().min(1) }).optional(),
     objects: z.array(WorldObject).default([]),
   })
   .superRefine((w, ctx) => {

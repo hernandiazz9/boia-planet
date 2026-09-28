@@ -1,16 +1,31 @@
 'use client';
 
-import type { Game, GameStats } from '@boia/engine';
+import { EVENT_STATE_BEHAVIOR } from '@boia/contracts';
+import type { Game, GameStats, WorldEvent } from '@boia/engine';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
 import { demoWorld } from './demo-world';
+import './juego.css';
+import { EventPanel, MenuAnchor, MinimapPlaceholder, plop } from './world-ui';
 
 const MANIFEST_URL = '/api/art/barco/manifest.json?optional=1';
+
+/** Eventos de muestra (T02) hasta que haya capa de datos. */
+const findEvent = (id: string | undefined) => SAMPLE_CONTENT.events.find((e) => e.id === id);
+const ticketAvailable = (id: string) => {
+  const e = findEvent(id);
+  return !!e && EVENT_STATE_BEHAVIOR[e.state].purchasable;
+};
 
 export function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stats, setStats] = useState<GameStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [menuPulse, setMenuPulse] = useState(0);
+  const [minimapPulse, setMinimapPulse] = useState(0);
+  const [panel, setPanel] = useState<{ objectId: string; eventId: string } | null>(null);
+  const [ticketFor, setTicketFor] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -20,17 +35,49 @@ export function GameCanvas() {
 
     (async () => {
       const { createGame, loadShipManifest } = await import('@boia/engine');
+      const query = new URLSearchParams(window.location.search);
       // `?barco=provisional` fuerza el barco dibujado por código, para comparar.
-      const forceProvisional =
-        new URLSearchParams(window.location.search).get('barco') === 'provisional';
+      const forceProvisional = query.get('barco') === 'provisional';
       const manifest = forceProvisional ? null : await loadShipManifest(MANIFEST_URL);
       if (cancelled) return;
-      const g = await createGame(canvas, { world: demoWorld, manifest, onStats: setStats });
+      const onWorldEvent = (e: WorldEvent) => {
+        switch (e.type) {
+          case 'dialogue_line':
+            plop();
+            if (e.cue === 'pulse_menu') setMenuPulse((n) => n + 1);
+            if (e.cue === 'pulse_minimap') setMinimapPulse((n) => n + 1);
+            break;
+          case 'content_open':
+            if (e.target === 'event' && e.ref && findEvent(e.ref)) {
+              setPanel({ objectId: e.objectId, eventId: e.ref });
+            }
+            break;
+          case 'content_close':
+            setPanel((p) => (p?.objectId === e.objectId ? null : p));
+            break;
+          case 'ticket':
+            setTicketFor(e.eventId);
+            break;
+          default:
+            break;
+        }
+      };
+      const g = await createGame(canvas, {
+        world: demoWorld,
+        manifest,
+        onStats: setStats,
+        onWorldEvent,
+        runtime: { ticketAvailable },
+        // `?arte=marcadores`: el mismo mundo sin arte, para ver que se comporta igual.
+        ...(query.get('arte') === 'marcadores' ? { artUrl: null } : {}),
+      });
       if (cancelled) {
         g.destroy();
         return;
       }
       game = g;
+      // `?pasajera=1` muestra el slot TRIPULANTE (oculto hasta la misión Fiestera).
+      if (query.get('pasajera') === '1') g.setPassenger(true);
       // Acceso para pruebas desde la consola; no existe en producción.
       if (process.env.NODE_ENV !== 'production') {
         (window as Window & { __boiaGame?: Game }).__boiaGame = g;
@@ -45,6 +92,8 @@ export function GameCanvas() {
       game?.destroy();
     };
   }, []);
+
+  const panelEvent = panel ? findEvent(panel.eventId) : undefined;
 
   return (
     <div
@@ -68,9 +117,8 @@ export function GameCanvas() {
           position: 'absolute',
           top: 'max(8px, env(safe-area-inset-top))',
           left: 'max(8px, env(safe-area-inset-left))',
-          right: 'max(8px, env(safe-area-inset-right))',
           display: 'flex',
-          justifyContent: 'space-between',
+          gap: 8,
           alignItems: 'flex-start',
           pointerEvents: 'none',
           font: '600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
@@ -103,6 +151,17 @@ export function GameCanvas() {
           Inicio
         </Link>
       </div>
+      <div className="juego-side">
+        <MinimapPlaceholder pulse={minimapPulse} />
+        <MenuAnchor pulse={menuPulse} />
+      </div>
+      {panelEvent && (
+        <EventPanel
+          event={panelEvent}
+          showTicket={ticketFor === panelEvent.id}
+          onClose={() => setPanel(null)}
+        />
+      )}
       {error && (
         <p style={{ position: 'absolute', bottom: 16, left: 16, right: 16, textAlign: 'center' }}>
           {error}

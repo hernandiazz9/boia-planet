@@ -1,0 +1,702 @@
+import {
+  type Behavior,
+  type BehaviorParams,
+  type BehaviorTrigger,
+  COLLISION_DEFAULTS,
+  type CollisionMode,
+  type Rect,
+  type WorldConfig,
+  type WorldObject,
+} from '@boia/world';
+import type { ShipConfig } from '../ship/config';
+import { type CircleObstacle, type ShipState, collideShip } from '../ship/controller';
+import type { WorldEvent } from './events';
+import { MemoryRewardStore, type RewardStore, rewardKey } from './rewards';
+
+/**
+ * Motor de comportamientos del mundo (v14 §48): ejecuta el catálogo de
+ * `@boia/world` sobre los objetos de un `WorldConfig`, sin Pixi ni DOM. No
+ * conoce el asset de ningún objeto: dos objetos con la misma geometría y los
+ * mismos comportamientos se comportan igual lleven la imagen que lleven.
+ *
+ * Cada paso fijo: `shipConfig()` da la física del barco con los efectos
+ * activos (ralentizar, boost); después de mover el barco, `step()` resuelve
+ * colisiones, contacto, recogida y proximidad, avanza temporizadores y
+ * encola `WorldEvent`s, que la aplicación lee con `drainEvents()`.
+ */
+
+/**
+ * Registro de minijuegos para INICIAR_MINIJUEGO. Vacío en L1 (D-08, REQ-MUN-026):
+ * el comportamiento existe y emite `minigame` con `available: false`.
+ */
+export const MINIGAMES: ReadonlyMap<string, unknown> = new Map();
+
+export interface RuntimeOptions {
+  /** Temporada activa, para las recompensas «una por temporada». */
+  seasonId?: string;
+  /** Sesión de juego, para las recompensas «una por sesión». */
+  sessionId?: string;
+  rewards?: RewardStore;
+  /** Semilla de SPAWN; la misma semilla da las mismas apariciones. */
+  seed?: number;
+  /** Si el evento está a la venta (TICKET desaparece en histórico). */
+  ticketAvailable?: (eventId: string) => boolean;
+  minigames?: ReadonlyMap<string, unknown>;
+}
+
+/** u extra para dar por terminado un contacto (evita parpadeo en el borde). */
+const CONTACT_SLOP = 1;
+const CONTACT_RELEASE = 6;
+/** Radio de alejamiento de un diálogo sin proximidad: radio de contacto + esto. */
+const DIALOGUE_LEAVE_MARGIN = 120;
+
+const ACTION_TYPES = new Set<Behavior['type']>([
+  'dialogue',
+  'reward',
+  'content',
+  'ticket',
+  'checkpoint',
+  'teleport',
+  'achievement',
+  'start_minigame',
+]);
+
+interface Action {
+  index: number;
+  behavior: Behavior;
+  on: BehaviorTrigger;
+}
+
+interface CollisionRule {
+  mode: CollisionMode;
+  intensity: number;
+  duration: number;
+  solid: boolean;
+  radius: number;
+}
+
+interface Obj {
+  id: string;
+  object: WorldObject;
+  x: number;
+  y: number;
+  present: boolean;
+  collision: CollisionRule | null;
+  /** Radio de contacto (activación o colisión). */
+  touchRadius: number | null;
+  inContact: boolean;
+  proximityRadius: number | null;
+  hysteresis: number;
+  inProximity: boolean;
+  collect: { radius: number; respawn: number | null } | null;
+  respawnIn: number | null;
+  spawn: BehaviorParams<'spawn'> | null;
+  spawnPhase: 'alive' | 'waiting' | null;
+  spawnTimer: number;
+  actions: Action[];
+  dialogueDone: boolean;
+  openContent: Map<number, { target: string; ref?: string }>;
+}
+
+interface Effect {
+  source: string;
+  factor: number;
+  remaining: number;
+}
+
+interface ActiveDialogue {
+  obj: Obj;
+  params: BehaviorParams<'dialogue'>;
+  index: number;
+  timer: number;
+  reaction: string | null;
+}
+
+export interface DialogueView {
+  objectId: string;
+  text: string;
+  index: number;
+  count: number;
+  /** Mostrando la reacción por alejarse. */
+  reaction: boolean;
+}
+
+export interface ObjectRuntimeState {
+  id: string;
+  x: number;
+  y: number;
+  present: boolean;
+  inProximity: boolean;
+}
+
+function defaultTrigger(o: WorldObject): BehaviorTrigger {
+  if (o.behaviors.some((b) => b.type === 'collectible')) return 'collect';
+  if (proximityRadiusOf(o) !== null) return 'proximity_enter';
+  return 'contact';
+}
+
+function proximityRadiusOf(o: WorldObject): number | null {
+  const p = o.behaviors.find((b) => b.type === 'proximity');
+  return (
+    (p?.type === 'proximity' ? p.params.radius : undefined) ?? o.geometry.proximityRadius ?? null
+  );
+}
+
+function collisionRuleOf(o: WorldObject): CollisionRule | null {
+  const radius = o.geometry.collision?.radius ?? o.geometry.activation?.radius;
+  if (radius === undefined) return null;
+  // Una sola regla por objeto: la primera COLISIÓN del catálogo.
+  const b = o.behaviors.find((x) => x.type === 'collision');
+  if (b?.type !== 'collision') return null;
+  const d = COLLISION_DEFAULTS[b.params.mode];
+  return {
+    mode: b.params.mode,
+    intensity: b.params.intensity ?? d.intensity,
+    duration: b.params.duration,
+    solid: b.params.solid ?? d.solid,
+    radius,
+  };
+}
+
+/** Obstáculos sólidos iniciales de un mundo (objetos activos con COLISIÓN sólida). */
+export function solidObstaclesOf(world: WorldConfig): CircleObstacle[] {
+  return new WorldRuntime(world).solidObstacles();
+}
+
+export class WorldRuntime {
+  readonly bounds: Rect;
+  private readonly objs: Obj[] = [];
+  private readonly byId = new Map<string, Obj>();
+  private readonly queue: WorldEvent[] = [];
+  private readonly effects: Effect[] = [];
+  private active: ActiveDialogue | null = null;
+  private readonly rewards: RewardStore;
+  private readonly scope: { seasonId: string; sessionId: string };
+  private readonly ticketAvailable: (eventId: string) => boolean;
+  private readonly minigames: ReadonlyMap<string, unknown>;
+  private seed: number;
+  private shipRadius = 0;
+  /** s simulados. */
+  time = 0;
+
+  constructor(world: WorldConfig, opts: RuntimeOptions = {}) {
+    this.bounds = world.bounds;
+    this.rewards = opts.rewards ?? new MemoryRewardStore();
+    this.scope = { seasonId: opts.seasonId ?? 'default', sessionId: opts.sessionId ?? 'session' };
+    this.ticketAvailable = opts.ticketAvailable ?? (() => true);
+    this.minigames = opts.minigames ?? MINIGAMES;
+    this.seed = (opts.seed ?? 1) >>> 0 || 1;
+
+    for (const o of world.objects) {
+      if (!o.identity.active) continue;
+      const on = defaultTrigger(o);
+      const prox = o.behaviors.find((b) => b.type === 'proximity');
+      const collectible = o.behaviors.find((b) => b.type === 'collectible');
+      const spawn = o.behaviors.find((b) => b.type === 'spawn');
+      const touch = o.geometry.activation?.radius ?? o.geometry.collision?.radius ?? null;
+      const obj: Obj = {
+        id: o.identity.id,
+        object: o,
+        x: o.position.x,
+        y: o.position.y,
+        present: o.state?.visible ?? true,
+        collision: collisionRuleOf(o),
+        touchRadius: touch,
+        inContact: false,
+        proximityRadius: proximityRadiusOf(o),
+        hysteresis: prox?.type === 'proximity' ? prox.params.hysteresis : 12,
+        inProximity: false,
+        collect:
+          collectible?.type === 'collectible'
+            ? {
+                radius: collectible.params.radius ?? touch ?? 16,
+                respawn: collectible.params.respawn ?? null,
+              }
+            : null,
+        respawnIn: null,
+        spawn: spawn?.type === 'spawn' ? spawn.params : null,
+        spawnPhase: null,
+        spawnTimer: 0,
+        actions: o.behaviors.flatMap((behavior, index) =>
+          ACTION_TYPES.has(behavior.type)
+            ? [{ index, behavior, on: ('on' in behavior.params && behavior.params.on) || on }]
+            : [],
+        ),
+        dialogueDone: false,
+        openContent: new Map(),
+      };
+      if (obj.spawn) this.rollSpawn(obj, false);
+      this.objs.push(obj);
+      this.byId.set(obj.id, obj);
+    }
+  }
+
+  // --- Lectura -------------------------------------------------------------
+
+  drainEvents(): WorldEvent[] {
+    return this.queue.splice(0, this.queue.length);
+  }
+
+  objectState(id: string): ObjectRuntimeState | undefined {
+    const o = this.byId.get(id);
+    return o && { id, x: o.x, y: o.y, present: o.present, inProximity: o.inProximity };
+  }
+
+  objectStates(): ObjectRuntimeState[] {
+    return this.objs.map((o) => this.objectState(o.id)!);
+  }
+
+  dialogue(): DialogueView | null {
+    const a = this.active;
+    if (!a) return null;
+    return {
+      objectId: a.obj.id,
+      text: a.reaction ?? a.params.lines[a.index]!.text,
+      index: a.index,
+      count: a.params.lines.length,
+      reaction: a.reaction !== null,
+    };
+  }
+
+  /** Multiplicador actual de la velocidad máxima por efectos activos. */
+  speedFactor(): number {
+    return this.effects.reduce((k, e) => k * e.factor, 1);
+  }
+
+  /** Física del barco para el próximo paso, con ralentizar y boost aplicados. */
+  shipConfig(base: ShipConfig): ShipConfig {
+    const k = this.speedFactor();
+    if (k === 1) return base;
+    return {
+      ...base,
+      maxSpeed: base.maxSpeed * k,
+      acceleration: base.acceleration * Math.max(1, k),
+    };
+  }
+
+  solidObstacles(): CircleObstacle[] {
+    const out: CircleObstacle[] = [];
+    for (const o of this.objs) {
+      const c = o.collision;
+      if (!o.present || !c?.solid) continue;
+      out.push({
+        x: o.x,
+        y: o.y,
+        radius: c.radius,
+        restitution: c.mode === 'bounce' ? c.intensity : 0,
+      });
+    }
+    return out;
+  }
+
+  // --- Acciones del jugador sobre el diálogo --------------------------------
+
+  /** Toque sobre el bocadillo: siguiente línea, o cierra si era la última. */
+  advanceDialogue(): boolean {
+    const a = this.active;
+    if (!a) return false;
+    if (a.reaction !== null) this.endDialogue('interrupted');
+    else if (a.index < a.params.lines.length - 1) this.showLine(a, a.index + 1);
+    else this.endDialogue('completed');
+    return true;
+  }
+
+  /** Saltar: cierra el diálogo entero. */
+  skipDialogue(): boolean {
+    const a = this.active;
+    if (!a) return false;
+    this.endDialogue(a.reaction !== null ? 'interrupted' : 'skipped');
+    return true;
+  }
+
+  // --- Paso de simulación ---------------------------------------------------
+
+  /**
+   * Un paso fijo, después de `stepShip`. Resuelve costas y obstáculos sólidos
+   * (con la restitución de cada uno), contacto, recogida y proximidad, y
+   * avanza efectos, apariciones y diálogo. Muta `ship`.
+   */
+  step(ship: ShipState, cfg: ShipConfig, dt: number): void {
+    this.time += dt;
+    this.shipRadius = cfg.radius;
+    this.tickEffects(dt);
+    this.tickObjects(dt);
+    this.tickDialogue(ship, dt);
+
+    collideShip(ship, { bounds: this.bounds, obstacles: this.solidObstacles() }, cfg, dt);
+
+    const r = cfg.radius;
+    for (const o of this.objs) {
+      if (!o.present) continue;
+      const d = Math.hypot(ship.x - o.x, ship.y - o.y);
+
+      if (o.touchRadius !== null) {
+        const reach = o.touchRadius + r + CONTACT_SLOP;
+        if (!o.inContact && d <= reach) {
+          o.inContact = true;
+          this.emit({
+            type: 'contact',
+            objectId: o.id,
+            ...(o.collision ? { mode: o.collision.mode } : {}),
+          });
+          this.applyCollision(o, ship, cfg);
+          this.fire(o, 'contact', ship, cfg);
+        } else if (o.inContact && d > reach + CONTACT_RELEASE) {
+          o.inContact = false;
+        }
+      }
+
+      if (o.collect && d <= o.collect.radius + r) {
+        this.collect(o);
+        this.fire(o, 'collect', ship, cfg);
+        continue;
+      }
+
+      if (o.proximityRadius !== null) {
+        if (!o.inProximity && d <= o.proximityRadius) {
+          o.inProximity = true;
+          this.emit({ type: 'proximity_enter', objectId: o.id });
+          this.fire(o, 'proximity_enter', ship, cfg);
+        } else if (o.inProximity && d > o.proximityRadius + o.hysteresis) {
+          this.leaveProximity(o, ship, cfg);
+        }
+      }
+    }
+  }
+
+  // --- Internos ---------------------------------------------------------------
+
+  private emit(e: WorldEvent): void {
+    this.queue.push(e);
+  }
+
+  private rand(): number {
+    this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
+    return this.seed / 4294967296;
+  }
+
+  private leaveProximity(o: Obj, ship: ShipState | null, cfg: ShipConfig | null): void {
+    o.inProximity = false;
+    this.emit({ type: 'proximity_exit', objectId: o.id });
+    for (const [index, c] of o.openContent) {
+      this.emit({
+        type: 'content_close',
+        objectId: o.id,
+        target: c.target,
+        ...(c.ref ? { ref: c.ref } : {}),
+      });
+      o.openContent.delete(index);
+    }
+    if (ship && cfg) this.fire(o, 'proximity_exit', ship, cfg);
+  }
+
+  private setPresent(o: Obj, present: boolean): void {
+    if (o.present === present) return;
+    o.present = present;
+    o.inContact = false;
+    if (present) {
+      this.emit({ type: 'appeared', objectId: o.id, x: o.x, y: o.y });
+    } else {
+      if (o.inProximity) this.leaveProximity(o, null, null);
+      if (this.active?.obj === o) this.endDialogue('interrupted');
+      this.emit({ type: 'disappeared', objectId: o.id });
+    }
+  }
+
+  private rollSpawn(o: Obj, emit: boolean): void {
+    const s = o.spawn!;
+    const appear = this.rand() < s.probability;
+    if (appear && s.positions.length > 0) {
+      const p =
+        s.positions[
+          Math.min(s.positions.length - 1, Math.floor(this.rand() * s.positions.length))
+        ]!;
+      o.x = p.x;
+      o.y = p.y;
+    }
+    if (emit) this.setPresent(o, appear);
+    else o.present = appear;
+    if (appear && s.lifetime !== undefined) {
+      o.spawnPhase = 'alive';
+      o.spawnTimer = s.lifetime;
+    } else if (!appear && s.every !== undefined) {
+      o.spawnPhase = 'waiting';
+      o.spawnTimer = s.every;
+    } else {
+      o.spawnPhase = null;
+    }
+  }
+
+  private tickObjects(dt: number): void {
+    for (const o of this.objs) {
+      if (o.respawnIn !== null) {
+        o.respawnIn -= dt;
+        if (o.respawnIn <= 1e-9) {
+          o.respawnIn = null;
+          this.setPresent(o, true);
+        }
+      }
+      if (o.spawnPhase === null) continue;
+      o.spawnTimer -= dt;
+      if (o.spawnTimer > 1e-9) continue;
+      if (o.spawnPhase === 'alive') {
+        this.setPresent(o, false);
+        if (o.spawn!.every !== undefined) {
+          o.spawnPhase = 'waiting';
+          o.spawnTimer = o.spawn!.every;
+        } else {
+          o.spawnPhase = null;
+        }
+      } else {
+        this.rollSpawn(o, true);
+      }
+    }
+  }
+
+  private collect(o: Obj): void {
+    this.emit({ type: 'collected', objectId: o.id });
+    this.setPresent(o, false);
+    if (o.spawn?.every !== undefined) {
+      o.spawnPhase = 'waiting';
+      o.spawnTimer = o.spawn.every;
+    } else if (o.collect!.respawn !== null) {
+      o.spawnPhase = null;
+      o.respawnIn = o.collect!.respawn;
+    } else {
+      o.spawnPhase = null;
+    }
+  }
+
+  private tickEffects(dt: number): void {
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const e = this.effects[i]!;
+      e.remaining -= dt;
+      if (e.remaining <= 1e-9) this.effects.splice(i, 1);
+    }
+  }
+
+  private addEffect(source: string, factor: number, duration: number): void {
+    const existing = this.effects.find((e) => e.source === source);
+    if (existing) {
+      existing.factor = factor;
+      existing.remaining = duration;
+    } else if (duration > 0) {
+      this.effects.push({ source, factor, remaining: duration });
+    }
+  }
+
+  private boost(
+    source: string,
+    ship: ShipState,
+    cfg: ShipConfig,
+    fraction: number,
+    duration: number,
+  ) {
+    const factor = 1 + fraction;
+    this.addEffect(source, factor, duration);
+    // Impulso inmediato hacia la proa hasta la nueva velocidad máxima.
+    const fx = Math.cos(ship.heading);
+    const fy = Math.sin(ship.heading);
+    const vF = ship.vx * fx + ship.vy * fy;
+    const target = cfg.maxSpeed * factor;
+    if (vF < target) {
+      ship.vx += fx * (target - vF);
+      ship.vy += fy * (target - vF);
+    }
+    this.emit({ type: 'effect', objectId: source, effect: 'boost', factor, duration });
+  }
+
+  private applyCollision(o: Obj, ship: ShipState, cfg: ShipConfig): void {
+    const c = o.collision;
+    if (!c) return;
+    switch (c.mode) {
+      case 'slow': {
+        const factor = 1 - c.intensity;
+        this.addEffect(o.id, factor, c.duration);
+        this.emit({ type: 'effect', objectId: o.id, effect: 'slow', factor, duration: c.duration });
+        break;
+      }
+      case 'boost':
+        this.boost(o.id, ship, cfg, c.intensity, c.duration);
+        break;
+      case 'brake': {
+        const factor = 1 - c.intensity;
+        ship.vx *= factor;
+        ship.vy *= factor;
+        this.emit({ type: 'effect', objectId: o.id, effect: 'brake', factor, duration: 0 });
+        break;
+      }
+      case 'block':
+      case 'bounce':
+        break;
+    }
+  }
+
+  private fire(o: Obj, trigger: BehaviorTrigger, ship: ShipState, cfg: ShipConfig): void {
+    for (const a of o.actions) {
+      if (a.on === trigger) this.run(o, a, ship, cfg);
+    }
+  }
+
+  private run(o: Obj, a: Action, ship: ShipState, cfg: ShipConfig): void {
+    const b = a.behavior;
+    switch (b.type) {
+      case 'dialogue':
+        this.startDialogue(o, b.params);
+        break;
+      case 'reward': {
+        const key = rewardKey(b.params.frequency, o.id, a.index, this.scope);
+        if (key !== null) {
+          if (this.rewards.has(key)) break;
+          this.rewards.add(key);
+        }
+        this.emit({
+          type: 'reward',
+          objectId: o.id,
+          kind: b.params.kind,
+          amount: b.params.amount,
+          ...(b.params.ref ? { ref: b.params.ref } : {}),
+          frequency: b.params.frequency,
+          key,
+        });
+        break;
+      }
+      case 'content': {
+        const ref = b.params.ref ? { ref: b.params.ref } : {};
+        if (b.params.closeOnExit) o.openContent.set(a.index, { target: b.params.target, ...ref });
+        this.emit({ type: 'content_open', objectId: o.id, target: b.params.target, ...ref });
+        break;
+      }
+      case 'ticket':
+        if (this.ticketAvailable(b.params.eventId)) {
+          this.emit({ type: 'ticket', objectId: o.id, eventId: b.params.eventId });
+        }
+        break;
+      case 'checkpoint':
+        this.emit({
+          type: 'checkpoint',
+          objectId: o.id,
+          ...(b.params.circuitId ? { circuitId: b.params.circuitId } : {}),
+          order: b.params.order,
+        });
+        if (b.params.boost > 0) this.boost(o.id, ship, cfg, b.params.boost, b.params.duration);
+        break;
+      case 'teleport': {
+        const p = this.safePoint(b.params.x, b.params.y);
+        ship.x = p.x;
+        ship.y = p.y;
+        ship.vx = 0;
+        ship.vy = 0;
+        if (b.params.heading !== undefined) ship.heading = b.params.heading;
+        this.emit({ type: 'teleport', objectId: o.id, x: p.x, y: p.y });
+        break;
+      }
+      case 'achievement':
+        this.emit({
+          type: 'achievement',
+          objectId: o.id,
+          trigger: b.params.trigger,
+          amount: b.params.amount,
+        });
+        break;
+      case 'start_minigame': {
+        const gameId = b.params.gameId;
+        this.emit({
+          type: 'minigame',
+          objectId: o.id,
+          ...(gameId ? { gameId } : {}),
+          available: gameId !== undefined && this.minigames.has(gameId),
+        });
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Punto de agua navegable más cercano a (x, y): dentro de los límites y
+   * fuera de todo obstáculo sólido. Un teletransporte nunca deja el barco en
+   * tierra (§48.3).
+   */
+  safePoint(x: number, y: number): { x: number; y: number } {
+    const r = this.shipRadius;
+    const b = this.bounds;
+    let px = x;
+    let py = y;
+    for (let pass = 0; pass < 4; pass++) {
+      px = Math.min(Math.max(px, b.left + r), b.right - r);
+      py = Math.min(Math.max(py, b.top + r), b.bottom - r);
+      let moved = false;
+      for (const o of this.solidObstacles()) {
+        const dx = px - o.x;
+        const dy = py - o.y;
+        const d = Math.hypot(dx, dy);
+        const min = o.radius + r + CONTACT_SLOP;
+        if (d >= min) continue;
+        const nx = d > 1e-6 ? dx / d : 0;
+        const ny = d > 1e-6 ? dy / d : 1;
+        px = o.x + nx * min;
+        py = o.y + ny * min;
+        moved = true;
+      }
+      if (!moved) break;
+    }
+    return { x: px, y: py };
+  }
+
+  private startDialogue(o: Obj, params: BehaviorParams<'dialogue'>): void {
+    if (params.lines.length === 0) return;
+    if (params.once && o.dialogueDone) return;
+    if (this.active?.obj === o && this.active.reaction === null) return;
+    if (this.active) this.endDialogue('interrupted');
+    this.active = { obj: o, params, index: 0, timer: 0, reaction: null };
+    this.showLine(this.active, 0);
+  }
+
+  private showLine(a: ActiveDialogue, index: number): void {
+    a.index = index;
+    a.timer = 0;
+    const line = a.params.lines[index]!;
+    this.emit({
+      type: 'dialogue_line',
+      objectId: a.obj.id,
+      index,
+      count: a.params.lines.length,
+      text: line.text,
+      ...(line.cue ? { cue: line.cue } : {}),
+    });
+  }
+
+  private endDialogue(reason: 'completed' | 'skipped' | 'interrupted'): void {
+    const a = this.active;
+    if (!a) return;
+    if (reason !== 'interrupted') a.obj.dialogueDone = true;
+    this.active = null;
+    this.emit({ type: 'dialogue_end', objectId: a.obj.id, reason });
+  }
+
+  private tickDialogue(ship: ShipState, dt: number): void {
+    const a = this.active;
+    if (!a) return;
+    // El barco se aleja con el diálogo a medias: reacción juguetona (§7).
+    if (a.reaction === null) {
+      const o = a.obj;
+      const leave =
+        o.proximityRadius !== null
+          ? o.proximityRadius + o.hysteresis
+          : (o.touchRadius ?? 0) + this.shipRadius + DIALOGUE_LEAVE_MARGIN;
+      if (Math.hypot(ship.x - o.x, ship.y - o.y) > leave) {
+        a.reaction = a.params.leaveReaction;
+        a.timer = 0;
+        this.emit({ type: 'dialogue_reaction', objectId: o.id, text: a.reaction });
+        return;
+      }
+    }
+    a.timer += dt;
+    if (a.timer < a.params.interval - 1e-9) return;
+    if (a.reaction !== null) this.endDialogue('interrupted');
+    else if (a.index < a.params.lines.length - 1) this.showLine(a, a.index + 1);
+    else this.endDialogue('completed');
+  }
+}

@@ -24,12 +24,26 @@ describe('WorldConfig v0', () => {
     expect(w.sectors).toEqual([]);
   });
 
-  it('acepta comportamientos de tipo abierto con parámetros', () => {
+  it('acepta comportamientos del catálogo y rellena sus parámetros por defecto', () => {
     const w = parseWorldConfig({
       ...base,
-      objects: [{ ...minimalObject, behaviors: [{ type: 'rebotar', params: { fuerza: 0.4 } }] }],
+      objects: [
+        { ...minimalObject, behaviors: [{ type: 'collision', params: { mode: 'bounce' } }] },
+      ],
     });
-    expect(w.objects[0]!.behaviors[0]).toEqual({ type: 'rebotar', params: { fuerza: 0.4 } });
+    expect(w.objects[0]!.behaviors[0]).toEqual({
+      type: 'collision',
+      params: { mode: 'bounce', duration: 2 },
+    });
+  });
+
+  it('rechaza un comportamiento que el motor no conoce (REQ-MUN-027)', () => {
+    expect(
+      WorldConfig.safeParse({
+        ...base,
+        objects: [{ ...minimalObject, behaviors: [{ type: 'rebotar', params: {} }] }],
+      }).success,
+    ).toBe(false);
   });
 
   it.each(['identity', 'appearance', 'position', 'geometry'] as const)(

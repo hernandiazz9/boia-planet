@@ -8,3 +8,16 @@ export {
 export { loadShipManifest, type LoadedShipManifest } from './manifest-loader';
 export { DEFAULT_SHIP_CONFIG, type ShipConfig } from './ship/config';
 export { DEFAULT_JOYSTICK, type JoystickConfig } from './input/controls';
+export type { WorldEvent, WorldEventType } from './world/events';
+export {
+  MINIGAMES,
+  WorldRuntime,
+  solidObstaclesOf,
+  type DialogueView,
+  type ObjectRuntimeState,
+  type RuntimeOptions,
+} from './world/runtime';
+export { MemoryRewardStore, rewardKey, type RewardStore } from './world/rewards';
+export { DEV_ART_URL, type ArtUrl } from './world/assets';
+export { simulate, type SimulationOptions, type TraceStep } from './world/simulate';
+export { resolveObjectVisual, shipArtScale, type ObjectVisual } from './world/visual';

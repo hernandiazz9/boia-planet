@@ -37,6 +37,8 @@ const ImageEntry = z.object({
   direction: DirectionSchema,
   frame: z.number().int().nonnegative().default(0),
   passenger: z.boolean().default(false),
+  /** Fotograma de una animación (p. ej. `bob`); sin valor, imagen fija. */
+  animation: z.string().optional(),
   pivot: Point.optional(),
   mast_top: Point.optional(),
   slot_passenger: Point.optional(),
@@ -50,6 +52,9 @@ const RawManifest = z.object({
   license: z.string().min(1),
   images: z.array(ImageEntry).min(1),
   anchors: z.partialRecord(DirectionSchema, ShipAnchors).optional(),
+  animations: z
+    .record(z.string(), z.object({ fps: z.number().positive(), loop: z.boolean().default(true) }))
+    .default({}),
   directions: z.partialRecord(DirectionSchema, z.object({ anchors: ShipAnchors })).optional(),
 });
 
@@ -59,6 +64,7 @@ export interface ShipImage {
   direction: Direction;
   frame: number;
   passenger: boolean;
+  animation?: string;
 }
 
 export interface ShipManifest {
@@ -67,6 +73,8 @@ export interface ShipManifest {
   license: string;
   images: ShipImage[];
   anchors: Record<Direction, ShipAnchors>;
+  /** Animaciones declaradas (p. ej. `bob`, el balanceo en parado). */
+  animations: Record<string, { fps: number; loop: boolean }>;
 }
 
 export type ManifestResult = { ok: true; manifest: ShipManifest } | { ok: false; error: string };
@@ -95,14 +103,16 @@ export function parseShipManifest(input: unknown): ManifestResult {
       id: m.id,
       version: String(m.version),
       license: m.license,
-      images: m.images.map(({ file, skin, direction, frame, passenger }) => ({
+      images: m.images.map(({ file, skin, direction, frame, passenger, animation }) => ({
         file,
         skin,
         direction,
         frame,
         passenger,
+        ...(animation ? { animation } : {}),
       })),
       anchors: anchors as Record<Direction, ShipAnchors>,
+      animations: m.animations,
     },
   };
 }
@@ -116,6 +126,29 @@ export function findShipImage(
 ): ShipImage | undefined {
   return m.images.find(
     (i) =>
-      i.skin === skin && i.direction === direction && i.frame === 0 && i.passenger === passenger,
+      !i.animation &&
+      i.skin === skin &&
+      i.direction === direction &&
+      i.frame === 0 &&
+      i.passenger === passenger,
   );
+}
+
+/** Fotogramas de una animación de una skin y dirección, en orden. Vacío si no existe. */
+export function findShipAnimation(
+  m: ShipManifest,
+  animation: string,
+  skin: string,
+  direction: Direction,
+  passenger = false,
+): ShipImage[] {
+  return m.images
+    .filter(
+      (i) =>
+        i.animation === animation &&
+        i.skin === skin &&
+        i.direction === direction &&
+        i.passenger === passenger,
+    )
+    .sort((a, b) => a.frame - b.frame);
 }

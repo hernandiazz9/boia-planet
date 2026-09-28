@@ -1,30 +1,43 @@
-import { DIRECTIONS, type Direction, type Vec2, findShipImage, screenToWorld } from '@boia/world';
+import {
+  DIRECTIONS,
+  type Direction,
+  type Vec2,
+  findShipAnimation,
+  findShipImage,
+  screenToWorld,
+} from '@boia/world';
 import { Assets, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { LoadedShipManifest } from '../manifest-loader';
+import { shipArtScale } from '../world/visual';
 import { DirectionPicker } from './direction';
 import {
   BOIA_NAVY,
   BOIA_ORANGE,
   SAIL_WHITE,
-  SHIP_LENGTH,
+  SHIP_SIZE_FACTOR,
   provisionalShipView,
 } from './provisional';
 
-/**
- * Escala de los PNG para que la eslora (roda–popa en la vista W, que no se
- * acorta) mida `SHIP_LENGTH`. Sin anclaje `bow`, 0,35. muestra
- */
-function manifestScale(loaded: LoadedShipManifest): number {
-  const w = loaded.manifest.anchors.W;
-  if (!w.bow) return 0.35;
-  const len = Math.hypot(w.bow.x - w.wake_origin.x, w.bow.y - w.wake_origin.y);
-  return len > 1 ? SHIP_LENGTH / len : 0.35;
-}
+/** Bajo esta velocidad (u/s) el barco está parado y se balancea. muestra */
+export const IDLE_SPEED = 4;
+/** Balanceo por código en las vistas sin fotogramas `bob`: px y s por ciclo. muestra */
+const BOB_AMPLITUDE = 0.9;
+const BOB_PERIOD = 2.2;
 
 interface Frame {
   node: Container;
   /** `wake_origin` en px de pantalla relativos al pivote. */
   wakeOrigin: Vec2;
+  /** `slot_passenger` (pie de la pasajera) en px de pantalla relativos al pivote. */
+  passengerSlot: Vec2;
+  /** Sprites del manifiesto: imagen fija, con pasajera y balanceo. */
+  sprite?: Sprite;
+  still?: Texture;
+  withPassenger?: Texture | null;
+  bob?: Texture[];
+  bobFps?: number;
+  /** Barco provisional: figura de la pasajera dibujada sobre el slot. */
+  passengerNode?: Container;
 }
 
 /**
@@ -34,9 +47,12 @@ interface Frame {
 export class ShipSprite {
   readonly view = new Container();
   readonly source: 'manifest' | 'provisional';
+  /** Cuerpo del barco: se desplaza con el balanceo; `view` queda en el pivote. */
+  private readonly body = new Container();
   private readonly frames: Map<Direction, Frame>;
   private readonly picker: DirectionPicker;
   private shown: Direction | null = null;
+  private passenger = false;
 
   private constructor(
     frames: Map<Direction, Frame>,
@@ -46,9 +62,10 @@ export class ShipSprite {
     this.frames = frames;
     this.source = source;
     this.picker = new DirectionPicker(heading);
+    this.view.addChild(this.body);
     for (const f of frames.values()) {
       f.node.visible = false;
-      this.view.addChild(f.node);
+      this.body.addChild(f.node);
     }
     this.update(heading);
   }
@@ -72,7 +89,25 @@ export class ShipSprite {
         .lineTo(v.mast[1].x, v.mast[1].y)
         .stroke({ width: 3, color: BOIA_NAVY, cap: 'round' });
       g.poly(v.flag).fill({ color: BOIA_ORANGE }).stroke({ width: 1, color: BOIA_NAVY });
-      frames.set(d, { node: g, wakeOrigin: v.anchors.wake_origin });
+      // Slot TRIPULANTE: una figura sencilla, oculta hasta la misión Fiestera.
+      const k = SHIP_SIZE_FACTOR;
+      const slot = v.anchors.slot_passenger;
+      const p = new Graphics()
+        .roundRect(slot.x - 4 * k, slot.y - 16 * k, 8 * k, 14 * k, 3 * k)
+        .fill({ color: BOIA_ORANGE })
+        .stroke({ width: 1.2, color: BOIA_NAVY })
+        .circle(slot.x, slot.y - 19 * k, 4 * k)
+        .fill({ color: 0xf2c9a0 })
+        .stroke({ width: 1.2, color: BOIA_NAVY });
+      p.visible = false;
+      const node = new Container();
+      node.addChild(g, p);
+      frames.set(d, {
+        node,
+        wakeOrigin: v.anchors.wake_origin,
+        passengerSlot: slot,
+        passengerNode: p,
+      });
     }
     return new ShipSprite(frames, 'provisional', heading);
   }
@@ -83,24 +118,37 @@ export class ShipSprite {
     heading: number,
   ): Promise<ShipSprite | null> {
     const skin = loaded.skin ?? 'base';
-    const scale = loaded.displayScale ?? manifestScale(loaded);
+    const scale = loaded.displayScale ?? shipArtScale(loaded.manifest);
+    const m = loaded.manifest;
+    const load = (file: string): Promise<Texture> =>
+      Assets.load(new URL(file, loaded.baseUrl).href);
     const frames = new Map<Direction, Frame>();
     try {
       await Promise.all(
         DIRECTIONS.map(async (d) => {
-          const img = findShipImage(loaded.manifest, skin, d, false);
+          const img = findShipImage(m, skin, d, false);
           if (!img) throw new Error(`falta ${skin}/${d}`);
-          const texture: Texture = await Assets.load(new URL(img.file, loaded.baseUrl).href);
-          const a = loaded.manifest.anchors[d];
-          const s = new Sprite(texture);
-          s.anchor.set(a.pivot.x / texture.width, a.pivot.y / texture.height);
+          const withP = findShipImage(m, skin, d, true);
+          const bob = findShipAnimation(m, 'bob', skin, d, false);
+          const [texture, passengerTexture, ...bobTextures] = await Promise.all([
+            load(img.file),
+            withP ? load(withP.file) : Promise.resolve(null),
+            ...bob.map((b) => load(b.file)),
+          ]);
+          const a = m.anchors[d];
+          const s = new Sprite(texture!);
+          s.anchor.set(a.pivot.x / texture!.width, a.pivot.y / texture!.height);
           s.scale.set(scale);
+          const rel = (p: Vec2) => ({ x: (p.x - a.pivot.x) * scale, y: (p.y - a.pivot.y) * scale });
           frames.set(d, {
             node: s,
-            wakeOrigin: {
-              x: (a.wake_origin.x - a.pivot.x) * scale,
-              y: (a.wake_origin.y - a.pivot.y) * scale,
-            },
+            sprite: s,
+            still: texture!,
+            withPassenger: passengerTexture,
+            bob: bobTextures.filter((t): t is Texture => t !== null),
+            bobFps: m.animations.bob?.fps ?? 8,
+            wakeOrigin: rel(a.wake_origin),
+            passengerSlot: rel(a.slot_passenger),
           });
         }),
       );
@@ -115,12 +163,48 @@ export class ShipSprite {
     return this.picker.current;
   }
 
-  update(heading: number): void {
+  /**
+   * Elige la vista por el rumbo y, con `time` (s) y `speed` (u/s), balancea el
+   * barco parado: los fotogramas `bob` del manifiesto donde existen (vista S)
+   * y un vaivén de ±1 px por código en el resto.
+   */
+  update(heading: number, time = 0, speed = Infinity): void {
     const d = this.picker.pick(heading);
-    if (d === this.shown) return;
-    if (this.shown) this.frames.get(this.shown)!.node.visible = false;
-    this.frames.get(d)!.node.visible = true;
-    this.shown = d;
+    if (d !== this.shown) {
+      if (this.shown) this.frames.get(this.shown)!.node.visible = false;
+      this.frames.get(d)!.node.visible = true;
+      this.shown = d;
+    }
+    const f = this.frames.get(d)!;
+    const idle = speed < IDLE_SPEED;
+    let framesBob = false;
+    if (f.sprite && f.still) {
+      let t = f.still;
+      if (this.passenger && f.withPassenger) t = f.withPassenger;
+      else if (idle && f.bob && f.bob.length > 0) {
+        t = f.bob[Math.floor(time * (f.bobFps ?? 8)) % f.bob.length]!;
+        framesBob = true;
+      }
+      if (f.sprite.texture !== t) f.sprite.texture = t;
+    }
+    if (f.passengerNode) f.passengerNode.visible = this.passenger;
+    // El vaivén se atenúa al arrancar, sin salto.
+    const k = framesBob ? 0 : Math.max(0, 1 - speed / (IDLE_SPEED * 10));
+    this.body.y = Math.sin((time * 2 * Math.PI) / BOB_PERIOD) * BOB_AMPLITUDE * k;
+  }
+
+  /** Slot TRIPULANTE: visible sólo con la Boia Fiestera a bordo (§8.2, REQ-AVE-007). */
+  setPassenger(on: boolean): void {
+    this.passenger = on;
+  }
+
+  get hasPassenger(): boolean {
+    return this.passenger;
+  }
+
+  /** `slot_passenger` de la vista actual, en px de pantalla relativos al pivote. */
+  passengerSlot(): Vec2 {
+    return this.frames.get(this.picker.current)!.passengerSlot;
   }
 
   /** `wake_origin` de la vista actual, en coordenadas de mundo relativas al barco. */

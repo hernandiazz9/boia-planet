@@ -11,13 +11,19 @@ export const BOIA_ORANGE = 0xf26a1b;
 export const BOIA_NAVY = 0x12233f;
 export const SAIL_WHITE = 0xf5efe4;
 
-/** Eslora del barco en unidades de mundo; también fija la escala de los sprites del 01. muestra */
-export const SHIP_LENGTH = 64;
+/**
+ * Eslora del barco en unidades de mundo (≈ px de pantalla): ~48 (D-15, antes
+ * 64). También fija la escala de los sprites del 01 y, con ella, la de todo el
+ * arte del mundo, que está a la densidad del barco. muestra
+ */
+export const SHIP_LENGTH = 48;
+/** Proporción respecto al barco provisional original de 64 u. */
+export const SHIP_SIZE_FACTOR = SHIP_LENGTH / 64;
 const LENGTH = SHIP_LENGTH;
-const BEAM = 26;
-const DECK_Z = 11;
-const MAST_Z = 66;
-const BOOM_Z = 20;
+const BEAM = 26 * SHIP_SIZE_FACTOR;
+const DECK_Z = 11 * SHIP_SIZE_FACTOR;
+const MAST_Z = 66 * SHIP_SIZE_FACTOR;
+const BOOM_Z = 20 * SHIP_SIZE_FACTOR;
 
 /** Casco en coordenadas locales: f hacia la proa, s a estribor. */
 const HULL: readonly (readonly [number, number])[] = [
@@ -100,14 +106,15 @@ export function provisionalShipView(direction: Direction): ProvisionalShipView {
   const mast: [Vec2, Vec2] = [project(mastF, 0, DECK_Z), project(mastF, 0, MAST_Z)];
   // Vela con algo de embolsado a babor para que se lea también de proa.
   const sail = [
-    project(mastF, 0, MAST_Z - 4),
+    project(mastF, 0, MAST_Z - 4 * SHIP_SIZE_FACTOR),
     project(mastF, 0, BOOM_Z),
-    project(-LENGTH * 0.34, -5, BOOM_Z),
+    project(-LENGTH * 0.34, -5 * SHIP_SIZE_FACTOR, BOOM_Z),
   ];
+  const k = SHIP_SIZE_FACTOR;
   const flag = [
     project(mastF, 0, MAST_Z),
-    project(mastF - 14, -1, MAST_Z - 4),
-    project(mastF, 0, MAST_Z - 9),
+    project(mastF - 14 * k, -1, MAST_Z - 4 * k),
+    project(mastF, 0, MAST_Z - 9 * k),
   ];
   const prow = [
     project(LENGTH * 0.5, 0, DECK_Z),

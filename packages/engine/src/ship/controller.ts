@@ -28,6 +28,8 @@ export interface CircleObstacle {
   x: number;
   y: number;
   radius: number;
+  /** Restitución propia (rebote); sin valor, `cfg.obstacleRestitution`. */
+  restitution?: number;
 }
 
 export interface ShipEnvironment {
@@ -155,8 +157,9 @@ export function collideShip(
     s.y = o.y + ny * minDist;
     const vn = s.vx * nx + s.vy * ny;
     if (vn < 0) {
-      s.vx -= (1 + cfg.obstacleRestitution) * vn * nx;
-      s.vy -= (1 + cfg.obstacleRestitution) * vn * ny;
+      const e = o.restitution ?? cfg.obstacleRestitution;
+      s.vx -= (1 + e) * vn * nx;
+      s.vy -= (1 + e) * vn * ny;
     }
     hit = true;
   }

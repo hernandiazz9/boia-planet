@@ -25,7 +25,7 @@ export interface ShipConfig {
     lateralGrip: number;
     gripToForward: number;
   };
-  /** Radio de colisión en u. muestra */
+  /** Radio de colisión en u; sigue a la eslora de 48 u (D-15). muestra */
   radius: number;
   /** Restitución contra las costas: casi desliza. muestra */
   wallRestitution: number;
@@ -49,7 +49,7 @@ export const DEFAULT_SHIP_CONFIG: ShipConfig = {
   lateralGrip: 6,
   gripToForward: 0.8,
   drift: { turnMultiplier: 1.8, lateralGrip: 1.1, gripToForward: 0.35 },
-  radius: 18,
+  radius: 13.5,
   wallRestitution: 0.15,
   obstacleRestitution: 0.45,
   openEdgeCurrent: 260,

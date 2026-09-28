@@ -9,6 +9,8 @@ export function bindInput(
   canvas: HTMLCanvasElement,
   touch: TouchControls,
   keys: KeyboardControls,
+  /** Si devuelve true, el toque es de la interfaz del mundo (p. ej. un bocadillo) y no crea joystick. */
+  claim?: (x: number, y: number) => boolean,
 ): () => void {
   const local = (e: PointerEvent) => {
     const r = canvas.getBoundingClientRect();
@@ -18,6 +20,7 @@ export function bindInput(
   const onDown = (e: PointerEvent) => {
     e.preventDefault();
     const p = local(e);
+    if (claim?.(p.x, p.y)) return;
     touch.down(e.pointerId, p.x, p.y);
     try {
       canvas.setPointerCapture(e.pointerId);

@@ -1,0 +1,100 @@
+import { type WorldObject, worldToScreen } from '@boia/world';
+import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { BOIA_NAVY, BOIA_ORANGE } from '../ship/provisional';
+import { type LoadedArt, loadTextures } from './assets';
+import type { ObjectRuntimeState } from './runtime';
+import type { ObjectVisual } from './visual';
+
+/** Marcador dibujado por código para un objeto sin arte: base 2:1 sobre el agua. */
+function drawPlaceholder(shape: string, r: number): Graphics {
+  const g = new Graphics();
+  g.ellipse(0, 0, r * 1.08, r * 0.54).fill({ color: 0xd9f3f7, alpha: 0.45 });
+  switch (shape) {
+    case 'isla':
+      g.ellipse(0, -r * 0.08, r, r * 0.5).fill({ color: 0xe7c88f });
+      g.ellipse(-r * 0.1, -r * 0.2, r * 0.7, r * 0.35).fill({ color: 0x8fbf6a });
+      break;
+    case 'boia':
+      g.ellipse(0, -r * 0.3, r, r * 0.6)
+        .fill({ color: BOIA_ORANGE })
+        .stroke({ width: 1.5, color: BOIA_NAVY });
+      g.rect(-r * 0.15, -r * 2.2, r * 0.3, r * 1.9).fill({ color: BOIA_NAVY });
+      break;
+    default:
+      // Roca, obstáculo y cualquier otra categoría.
+      g.ellipse(0, -r * 0.18, r, r * 0.5).fill({ color: 0x3b4a5c });
+      g.ellipse(-r * 0.1, -r * 0.38, r * 0.72, r * 0.42).fill({ color: 0x55677b });
+      g.ellipse(-r * 0.25, -r * 0.52, r * 0.3, r * 0.16).fill({ color: 0x8397ab });
+  }
+  return g;
+}
+
+/**
+ * Vista Pixi de un objeto del mundo: sprite (con bucle si el asset lo trae)
+ * o marcador. Sigue la posición y la presencia que da el runtime.
+ */
+export class ObjectView {
+  readonly view = new Container();
+  private readonly sprite: Sprite | null;
+
+  private constructor(
+    readonly object: WorldObject,
+    readonly visual: ObjectVisual,
+    private readonly frames: Texture[],
+  ) {
+    if (visual.kind === 'sprite' && frames.length > 0) {
+      const s = new Sprite(frames[0]!);
+      const t = frames[0]!;
+      s.anchor.set(visual.pivot.x / t.width, visual.pivot.y / t.height);
+      s.scale.set(visual.scale);
+      this.sprite = s;
+      this.view.addChild(s);
+    } else {
+      this.sprite = null;
+      const r = visual.kind === 'placeholder' ? visual.radius : 20;
+      const shape = visual.kind === 'placeholder' ? visual.shape : object.identity.category;
+      this.view.addChild(drawPlaceholder(shape, r));
+    }
+    this.sync({
+      id: object.identity.id,
+      x: object.position.x,
+      y: object.position.y,
+      present: true,
+      inProximity: false,
+    });
+  }
+
+  static async create(
+    object: WorldObject,
+    visual: ObjectVisual,
+    art: ReadonlyMap<string, LoadedArt>,
+  ): Promise<ObjectView> {
+    let frames: Texture[] = [];
+    if (visual.kind === 'sprite') {
+      const a = art.get(visual.assetId);
+      try {
+        if (a) frames = await loadTextures(a.baseUrl, visual.frames);
+      } catch (err) {
+        console.warn(`[boia] imágenes de «${visual.assetId}» incompletas; marcador`, err);
+        frames = [];
+      }
+    }
+    return new ObjectView(object, visual, frames);
+  }
+
+  sync(state: ObjectRuntimeState): void {
+    const p = worldToScreen(state);
+    this.view.position.set(p.x, p.y);
+    this.view.zIndex = state.y;
+    this.view.visible = state.present;
+  }
+
+  /** Avanza el bucle del asset (`t` en s de juego). */
+  animate(t: number): void {
+    const v = this.visual;
+    if (!this.sprite || v.kind !== 'sprite' || this.frames.length < 2 || v.fps <= 0) return;
+    const n = this.frames.length;
+    const i = Math.floor(t * v.fps);
+    this.sprite.texture = this.frames[v.loop ? i % n : Math.min(i, n - 1)]!;
+  }
+}
