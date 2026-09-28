@@ -32,8 +32,18 @@ evento objetivo dependen de Álvaro (P2, P3).
 
 ## Decisiones del orquestador
 
-Las de fondo están en `docs/DECISIONES.md` (D-01 a D-11), con fecha. Aquí sólo
+Las de fondo están en `docs/DECISIONES.md` (D-01 a D-12), con fecha. Aquí sólo
 las de mecánica del método:
+
+- 2026-09-28 · **A partir de la ronda 2 el proyecto pasa a la skill
+  `/orchestrator`** (inglés, `~/.claude/skills/orchestrator`, lotes de ~10
+  tareas grandes que corren solas en worktrees e integran en main). Lo pidió
+  Hernán para llegar antes a la demo. El borrador del primer lote está en
+  `plans/001-demo-l1.md` (`Status: draft`); se activa cuando cierren 01, 02 y
+  03 y `pnpm test` esté en verde en main. El repo ya tiene `.claude/settings.json`
+  con `baseRef: head`, `.worktreeinclude` y `.claude/worktrees/` ignorado.
+  Este `docs/PLAN.md` y los encargos quedan como registro de la ronda 1; la
+  memoria viva pasa a `plans/`.
 
 - 2026-09-28 · Los encargos 01 (arte) y 02 (spec) van en paralelo: 01 toca
   `tools/blender/`, `tools/viewer/`, `art/`; 02 toca `docs/spec/` y

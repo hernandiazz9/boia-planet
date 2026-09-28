@@ -1,0 +1,4 @@
+# Archivos ignorados por git que un worktree nuevo necesita (los copia Claude Code).
+# Datos pesados y modelos NO van aquí: se leen del checkout principal por ruta absoluta.
+.env.local
+apps/web/.env.local

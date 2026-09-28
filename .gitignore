@@ -11,3 +11,6 @@ coverage/
 tools/blender/out/
 *.blend1
 __pycache__/
+
+# worktrees de los agentes del /orchestrator
+.claude/worktrees/
