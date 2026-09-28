@@ -112,7 +112,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T05 — Minimap, compass, on-board menu shell, settings, notification queue
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T00, T04, T02
 - Goal: v14 §10, §19, §20, §14: minimap 96 px on mobile (D-07), tap to expand with island names, 500 ms long-press to drag with snap to safe zones and persisted position, compass to the next undiscovered target; on-board menu with the seven icons of §19 (sections can be stubs), settings with language, music and SFX separately, and the keyboard mode of D-14 (screen-direction by default, tank control as an option, persisted); notification queue (one at a time, 4 s, top, navy/orange, short sound).
 - Context: docs/DECISIONES.md (D-07, D-14); docs/spec/03-mundo-y-motor.md, docs/spec/05-identidad-y-comunidad.md (menu, settings, notifications); packages/engine/** (KeyboardControls already exists), apps/web/app/juego/**.
@@ -120,7 +120,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test` → exit 0; adds tests for minimap snap zones, persisted position, the notification queue never showing two at once, and both keyboard modes
   - `pnpm e2e` → exit 0: on a 360×640 viewport the minimap occupies ≤ 22 % of the width and no HUD element overlaps the joystick zone
-- Outcome:
+- Outcome: minimap (4 safe zones, persisted), compass, on-board menu with one module per section in apps/web/app/juego/menu/sections/ (T11 selector moved into «Mi Barco»), settings incl. keyboard modes, notice queue; @boia/engine/ui subpath; 235 tests, e2e 18 → e2dc04c
 
 ## T09 — Visual world editor
 - Status: skipped (Hernán: visual demo first; depends on T07)
@@ -150,7 +150,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 ## T12 — Demo pass: see it working end to end
 - Status: pending
 - Depends on: T00, T03, T04, T05, T11
-- Goal: Hernán wants to see a working visual demo before any mail, auth or admin work. Glue what T01–T05 and T11 produced into one flow that runs with sample data only: `/` plays the entry (planet → sea → landing), EXPLORAR EL UNIVERSO enters /juego with the ship, the tutorial boia, rocks, coasts and the event island whose proximity opens the sample event panel; minimap, compass, menu and the ship-style selector work; Tickets opens the sample panel. No Supabase, no mail. Fix any gap between the pieces (loaders, routes, missing wiring) without redesigning them. One command runs it locally and reachable from a phone on the same Wi-Fi (Next dev on 0.0.0.0, the LAN URL printed). Two additions Hernán asked for: (1) a «Barco» section in the on-board menu from T05 listing the 8 ship styles from T11 and the skins base/fiesta/noche (a skin shows only for the styles that have it), with a preview of each, applying the choice to the ship at once and persisting it locally; it replaces T11's test selector as the main way to switch (keep `?estilo=` working). (2) On the landing, «Ver todos los artistas» opens the full list of the 26 artists of v14 §18.1 (names verbatim, genres as in the spec, neutral avatars), as a panel or page that works without JS and without WebGL, reachable by a deep link.
+- Goal: Hernán wants to see a working visual demo before any mail, auth or admin work. Glue what T01–T05 and T11 produced into one flow that runs with sample data only: `/` plays the entry (planet → sea → landing), EXPLORAR EL UNIVERSO enters /juego with the ship, the tutorial boia, rocks, coasts and the event island whose proximity opens the sample event panel; minimap, compass, menu and the ship-style selector work; Tickets opens the sample panel. No Supabase, no mail. Fix any gap between the pieces (loaders, routes, missing wiring) without redesigning them. One command runs it locally and reachable from a phone on the same Wi-Fi (Next dev on 0.0.0.0, the LAN URL printed). Two additions Hernán asked for: (1) extend the «Mi Barco» section that T05 already created in apps/web/app/juego/menu/sections/ (it holds T11's style selector today) into the «Barco» section listing the 8 ship styles from T11 and the skins base/fiesta/noche (a skin shows only for the styles that have it), with a preview of each, applying the choice to the ship at once and persisting it locally; it replaces T11's test selector as the main way to switch (keep `?estilo=` working). (2) On the landing, «Ver todos los artistas» opens the full list of the 26 artists of v14 §18.1 (names verbatim, genres as in the spec, neutral avatars), as a panel or page that works without JS and without WebGL, reachable by a deep link.
 - Context: the Outcome lines of T01–T05 and T11 in this plan; ESTADO.md sections of plan 001; apps/web/**, packages/engine/**, packages/world/**, art/**. For the «Barco» section use docs/barcos/barcos.json: `estilo` as the display name (`nombre` is null until Álvaro names them), `aspecto` as the description, swatches from `paleta` (resolved like tools/barcos/guia_colores.py does), and respect `notas_render` (B01 has no colour skins, no fiesta for B06, B05 needs remodelling for themed skins).
 - Scope: may touch ESTADO.md (own top section), apps/web/**, packages/engine/**, packages/world/**, root package.json (scripts only) / must not touch supabase/**, packages/db/**, tools/blender/**, art/**, docs/spec/**.
 - Done when:
@@ -198,6 +198,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28: Hernán's other session finished; its docs/barcos and tools/barcos changes committed to main as dd156a7 to unblock integration (Hernán)
 - 2026-09-28: Hernán stopped the watchdog timer; no new watchdogs are started for the rest of this plan (orchestrator)
 - 2026-09-28 T11: style ids are slugs (boceto-lapiz … pixel-art); ?estilo= wins over the saved choice; canonical_order() sorts mesh elements for byte-identical renders; style ships use the default ship's scale so they show 49–57 px (agent)
+- 2026-09-28 T05: joystick zone = bottom 45 % (muestra), HUD never enters it; discovery on entering the proximity radius; tank mode per D-14; English shown disabled (D-03); discoveries in memory only; T11's selector moved into «Mi Barco» because it sat in the joystick zone; small edits outside scope in packages/engine/src/game.ts and package.json (agent)
 
 ## Proposals (new scope)
 - 2026-09-28 T11: the 7 world manifests carry a stale sources_sha256 (PNGs identical); the next committed `render.py --all` refreshes them
@@ -226,3 +227,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 20:47 T04 done · branch worktree-agent-a97cca5e60498bba8 → bf8ef99
 - 2026-09-28 20:49 T05 launched · attempt 1 · agent ab0317b3ea5c0aa70
 - 2026-09-28 20:59 T11 done · branch worktree-agent-a8b7248d022f3bd2d (1 conflict round) → 2ce57f2
+- 2026-09-28 21:13 T05 done · branch worktree-agent-ab0317b3ea5c0aa70 → e2dc04c
