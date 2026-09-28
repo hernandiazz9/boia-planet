@@ -6,13 +6,14 @@ Base branch: main
 Goal: Reach the first milestone Álvaro can open on his phone: cinematic entry (planet → sea → landing), HTML landing with tickets, and a navigable world with the real ship sprites, a tutorial buoy and one event island by proximity; plus the data layer, auth and the essential Admin so that events, home blocks and the world are data, not code. Scope, stack and every product decision are fixed in docs/DECISIONES.md (D-01…D-18); the consolidated spec is docs/spec/ (REQ-* ids). Nothing here goes beyond Launch 1 (D-02).
 Test command: pnpm test
 Worktree setup: pnpm install
+Max parallel agents: 3
 
 Agent notes: do not invoke the project skills `encargo` or `orquestador` (the encargo skill cds into the main checkout); follow this prompt instead. Each task adds its own section at the top of ESTADO.md in the existing format (`## <date> — plan 001 T0x: <title>`, what exists, commands, deviations, untested); on a merge conflict there, keep every section, newest on top. Spanish copy and docs use the name "Boia" (D-18, from T00).
 
 ## Tasks
 
 ## T00 — Rename "boya" to "boia" across the repo
-- Status: pending
+- Status: done
 - Depends on: none
 - Goal: Hernán decided the Valencian spelling everywhere: the in-game buoy word and the character become "boia" ("Boia Fiestera", "boia tutorial"), plural "boies"; the local folder path `boya.planet` becomes `boia.planet` in every reference. Replace in all tracked text files: Boya→Boia, boya→boia, BOYA→BOIA, boyas→boies, Boyas→Boies, BOYAS→BOIES (keep surrounding Spanish grammar correct: articles stay feminine; adapt any other derived form by hand and list it). Leave `docs/fuente/v14-maestro.md` verbatim (historic source) and never touch `plans/`. Add decision D-18 to docs/DECISIONES.md in its existing format: the name is "Boia"/"boies"; v14 keeps the old spelling as a historic text; the folder /Users/heralc/Desktop/boya.planet will be renamed by Hernán after plan 001 ends (so the path references now point to /Users/heralc/Desktop/boia.planet ahead of that rename). Unrelated words that merely contain "boy" (e.g. the artist "Bdboy") stay untouched.
 - Context: `git grep -I -i -n boya -- ':!docs/fuente/v14-maestro.md'` (~61 hits: docs/spec/**, docs/DECISIONES.md, docs/PLAN.md, docs/prompts/01*, docs/informes/**, CLAUDE.md, .claude/skills/encargo/SKILL.md line 15 path, tools/blender/ship.py lines 4 and 429); docs/DECISIONES.md format; tools/spec/check.py (spec consistency check).
@@ -23,19 +24,18 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `python3 tools/blender/check.py` → exit 0 (re-render with render.py only if ship.py's change affects output)
   - `pnpm test` → exit 0
   - docs/DECISIONES.md contains D-18; ESTADO.md has the new top section
-- Outcome:
+- Outcome: 17 files renamed to boia/boies, D-18 added, v14 untouched → f6ebab0
 
-## T01 — World art batch v0 from the Blender pipeline
+## T06 — Supabase schema, migrations, RLS
 - Status: pending
 - Depends on: T00
-- Goal: Produce, with the same headless Blender pipeline, camera (30°, D-13) and style parameter as the ship, the first swappable world assets the demo needs: one large event island, one small secondary island, the tutorial buoy (idle loop), two rocks, a coastline set for the left and right world edges, and the intro planet as 2D layers (globe, sea band, clouds, a recognisable island shape for continuity, v14 §4.4). Every resource gets its own manifest (id, version, files, frames, scale, anchors, pivot, footprint/hitbox hint, license `muestra`) per v14 §49.17, validated by the existing check. Style: the current `muestra` style of art/barco, selectable so a later style change is a re-render (tools/blender/styles/).
-- Context: docs/DECISIONES.md (D-05, D-13, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, styles); tools/blender/** (rig.py, ship.py, render.py, check.py, styles/); v14 §4.4, §9, §34, §49.17 in docs/fuente/v14-maestro.md.
-- Scope: may touch ESTADO.md (own top section), tools/blender/**, art/** (new folders only; art/barco/** only if a shared manifest field is added, re-rendered and re-checked) / must not touch apps/**, packages/**, docs/spec/**.
+- Goal: The data layer of docs/spec/08-arquitectura-y-datos.md for Launch 1: users and carnets (5 public questions, member-since date), events with the seven states of §49.4 and island separated from event, islands, world objects and versioned world snapshots (draft/published), home blocks, achievements with trigger conditions, points and coins ledger (idempotent transactions with stable ids), bottles, audit log. No Docker on this Mac (D-17): migrations are plain SQL in supabase/migrations/ and are tested against the local Homebrew PostgreSQL 17 (port 5432, database `boia_planet_test`, created and dropped by the test harness) with a Supabase-compatible shim (roles anon/authenticated/service_role, schema auth with auth.uid() reading request.jwt.claims). Migrations cumulative; seed data labeled `muestra`; RLS so that no client can write balances, roles, stamps or purchase states.
+- Context: docs/DECISIONES.md (D-04, D-09, D-10, D-17); docs/spec/08-arquitectura-y-datos.md, docs/spec/06-comercial.md (event states table), docs/spec/07-admin.md; skills `supabase` and `supabase-postgres-best-practices` (load them before writing SQL).
+- Scope: may touch ESTADO.md (own top section), supabase/**, packages/db/** (new), root package.json (scripts only) / must not touch apps/web/app/**, packages/engine/**, packages/world/**. Never touch other databases on the local server.
 - Done when:
-  - `/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/render.py -- --all` → exit 0, twice, outputs byte-identical (report the diff command)
-  - `python3 tools/blender/check.py` → exit 0 and reports every manifest valid (ship plus the new resources, with counts)
-  - `python3 tools/blender/calibrate.py` (or its Blender invocation) → ratio 2.0 ± 0.04
-  - A contact sheet of all new assets over water at game scale saved in docs/informes/img/ (path in the final message)
+  - `pnpm db:test` (added by this task) → exit 0: applies every migration to an empty `boia_planet_test`, then re-applies the new ones on top of seeded data without a destructive reset
+  - `pnpm test --filter db` → exit 0: RLS tests prove an anonymous or member role cannot insert into ledger, stamps, roles or event state; a second identical reward transaction id is rejected
+  - `pnpm typecheck` → exit 0 with generated types committed
 - Outcome:
 
 ## T02 — Landing by blocks, tickets panel, analytics
@@ -51,16 +51,28 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - axe-core on `/` → 0 serious or critical violations
 - Outcome:
 
-## T03 — Cinematic entry: planet → sea → landing
+## T01 — World art batch v0 from the Blender pipeline
 - Status: pending
-- Depends on: T00, T01, T02
-- Goal: The automatic entry of v14 §4.4 and §47-B: planet illustrated in 2D layers, continuous approach, reveal of the isometric sea with islands and the ship, landing content appears over the same scene. No click, no language or login screen. Skip control (idempotent), reduced-motion variant (static scene + short fade), lightweight fallback when assets or the renderer fail, no replay on deep links or return visits. Target ~3 s, measured. Acceptance ENT 01–06 as far as they can be automated; the rest listed for Hernán to check on real phones.
-- Context: docs/DECISIONES.md; docs/spec/02-entrada-y-landing.md (REQ-ENT-*); apps/web/app/**; packages/engine/** (camera and scene handoff); planet layers and islands produced by T01 under art/ (read their manifests); the Outcome lines of T01 and T02.
-- Scope: may touch ESTADO.md (own top section), apps/web/**, packages/engine/src/intro/** (new) / must not touch packages/world/**, art/**, docs/spec/**.
+- Depends on: T00
+- Goal: Produce, with the same headless Blender pipeline, camera (30°, D-13) and style parameter as the ship, the first swappable world assets the demo needs: one large event island, one small secondary island, the tutorial buoy (idle loop), two rocks, a coastline set for the left and right world edges, and the intro planet as 2D layers (globe, sea band, clouds, a recognisable island shape for continuity, v14 §4.4). Every resource gets its own manifest (id, version, files, frames, scale, anchors, pivot, footprint/hitbox hint, license `muestra`) per v14 §49.17, validated by the existing check. Style: the current `muestra` style of art/barco, selectable so a later style change is a re-render (tools/blender/styles/).
+- Context: docs/DECISIONES.md (D-05, D-13, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, styles); tools/blender/** (rig.py, ship.py, render.py, check.py, styles/); v14 §4.4, §9, §34, §49.17 in docs/fuente/v14-maestro.md.
+- Scope: may touch ESTADO.md (own top section), tools/blender/**, art/** (new folders only; art/barco/** only if a shared manifest field is added, re-rendered and re-checked) / must not touch apps/**, packages/**, docs/spec/**.
 - Done when:
-  - `pnpm test` → exit 0; adds a state-machine test: skip twice, back, route change and tab hide never duplicate the world or start a game
-  - `pnpm e2e` → exit 0: first visit ends on an interactive landing without a click; with `prefers-reduced-motion` no camera movement; with the engine bundle blocked the landing still shows the island illustration and working Tickets
-  - Recordings of desktop and mobile viewport saved under docs/informes/img/ (paths listed in the final message)
+  - `/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/render.py -- --all` → exit 0, twice, outputs byte-identical (report the diff command)
+  - `python3 tools/blender/check.py` → exit 0 and reports every manifest valid (ship plus the new resources, with counts)
+  - `python3 tools/blender/calibrate.py` (or its Blender invocation) → ratio 2.0 ± 0.04
+  - A contact sheet of all new assets over water at game scale saved in docs/informes/img/ (path in the final message)
+- Outcome:
+
+## T07 — Public auth (OTP + magic link), guest session, idempotent merge
+- Status: pending
+- Depends on: T00, T06, T02
+- Goal: D-10: sign in by email with a 6-digit code and a magic link in the same mail; guest identity stored locally with a server-side anonymous id; on sign-in, merge guest progress by ids (union of discoveries, rewards synced once per id, never importing local balances as truth); return to the same panel after verification; "Continuar sin registrarme" always available.
+- Context: docs/DECISIONES.md (D-09, D-10, D-17); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-* for §49.10), docs/spec/08-arquitectura-y-datos.md; supabase/**, packages/db/**, apps/web/**. Auth runs against the cloud dev project `boia-planet-dev` (D-17): if `.env.local` has no Supabase URL and keys, stop with STATUS: blocked and ask Hernán to create the project and load the keys with the `pedir-token` skill; never create accounts or paste secrets.
+- Scope: may touch ESTADO.md (own top section), apps/web/app/(auth)/** (new), apps/web/lib/auth/** (new), packages/db/**, supabase/** (new migrations only) / must not touch packages/engine/**, apps/web/app/juego/**.
+- Done when:
+  - `pnpm test` → exit 0; adds tests: merging the same guest twice grants each reward once; a tampered local balance is ignored; OTP and link both create the same session
+  - `pnpm e2e` → exit 0 against the dev project: request a code, read it through the Supabase admin API in the test (service key from .env.local, never logged), sign in, land on the originating panel
 - Outcome:
 
 ## T04 — World objects and behavior catalog v1, tutorial buoy, test island
@@ -75,38 +87,16 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm typecheck && pnpm lint` → exit 0
 - Outcome:
 
-## T05 — Minimap, compass, on-board menu shell, settings, notification queue
+## T03 — Cinematic entry: planet → sea → landing
 - Status: pending
-- Depends on: T00, T04, T02
-- Goal: v14 §10, §19, §20, §14: minimap 96 px on mobile (D-07), tap to expand with island names, 500 ms long-press to drag with snap to safe zones and persisted position, compass to the next undiscovered target; on-board menu with the seven icons of §19 (sections can be stubs), settings with language, music and SFX separately, and the keyboard mode of D-14 (screen-direction by default, tank control as an option, persisted); notification queue (one at a time, 4 s, top, navy/orange, short sound).
-- Context: docs/DECISIONES.md (D-07, D-14); docs/spec/03-mundo-y-motor.md, docs/spec/05-identidad-y-comunidad.md (menu, settings, notifications); packages/engine/** (KeyboardControls already exists), apps/web/app/juego/**.
-- Scope: may touch ESTADO.md (own top section), packages/engine/src/ui/** (new), packages/engine/src/input/** (keyboard mode only), apps/web/app/juego/** / must not touch packages/world/**, apps/web/app/(landing)/**, docs/spec/**.
+- Depends on: T00, T01, T02
+- Goal: The automatic entry of v14 §4.4 and §47-B: planet illustrated in 2D layers, continuous approach, reveal of the isometric sea with islands and the ship, landing content appears over the same scene. No click, no language or login screen. Skip control (idempotent), reduced-motion variant (static scene + short fade), lightweight fallback when assets or the renderer fail, no replay on deep links or return visits. Target ~3 s, measured. Acceptance ENT 01–06 as far as they can be automated; the rest listed for Hernán to check on real phones.
+- Context: docs/DECISIONES.md; docs/spec/02-entrada-y-landing.md (REQ-ENT-*); apps/web/app/**; packages/engine/** (camera and scene handoff); planet layers and islands produced by T01 under art/ (read their manifests); the Outcome lines of T01 and T02.
+- Scope: may touch ESTADO.md (own top section), apps/web/**, packages/engine/src/intro/** (new) / must not touch packages/world/**, art/**, docs/spec/**.
 - Done when:
-  - `pnpm test` → exit 0; adds tests for minimap snap zones, persisted position, the notification queue never showing two at once, and both keyboard modes
-  - `pnpm e2e` → exit 0: on a 360×640 viewport the minimap occupies ≤ 22 % of the width and no HUD element overlaps the joystick zone
-- Outcome:
-
-## T06 — Supabase schema, migrations, RLS
-- Status: pending
-- Depends on: T00
-- Goal: The data layer of docs/spec/08-arquitectura-y-datos.md for Launch 1: users and carnets (5 public questions, member-since date), events with the seven states of §49.4 and island separated from event, islands, world objects and versioned world snapshots (draft/published), home blocks, achievements with trigger conditions, points and coins ledger (idempotent transactions with stable ids), bottles, audit log. No Docker on this Mac (D-17): migrations are plain SQL in supabase/migrations/ and are tested against the local Homebrew PostgreSQL 17 (port 5432, database `boia_planet_test`, created and dropped by the test harness) with a Supabase-compatible shim (roles anon/authenticated/service_role, schema auth with auth.uid() reading request.jwt.claims). Migrations cumulative; seed data labeled `muestra`; RLS so that no client can write balances, roles, stamps or purchase states.
-- Context: docs/DECISIONES.md (D-04, D-09, D-10, D-17); docs/spec/08-arquitectura-y-datos.md, docs/spec/06-comercial.md (event states table), docs/spec/07-admin.md; skills `supabase` and `supabase-postgres-best-practices` (load them before writing SQL).
-- Scope: may touch ESTADO.md (own top section), supabase/**, packages/db/** (new), root package.json (scripts only) / must not touch apps/web/app/**, packages/engine/**, packages/world/**. Never touch other databases on the local server.
-- Done when:
-  - `pnpm db:test` (added by this task) → exit 0: applies every migration to an empty `boia_planet_test`, then re-applies the new ones on top of seeded data without a destructive reset
-  - `pnpm test --filter db` → exit 0: RLS tests prove an anonymous or member role cannot insert into ledger, stamps, roles or event state; a second identical reward transaction id is rejected
-  - `pnpm typecheck` → exit 0 with generated types committed
-- Outcome:
-
-## T07 — Public auth (OTP + magic link), guest session, idempotent merge
-- Status: pending
-- Depends on: T00, T06, T02
-- Goal: D-10: sign in by email with a 6-digit code and a magic link in the same mail; guest identity stored locally with a server-side anonymous id; on sign-in, merge guest progress by ids (union of discoveries, rewards synced once per id, never importing local balances as truth); return to the same panel after verification; "Continuar sin registrarme" always available.
-- Context: docs/DECISIONES.md (D-09, D-10, D-17); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-* for §49.10), docs/spec/08-arquitectura-y-datos.md; supabase/**, packages/db/**, apps/web/**. Auth runs against the cloud dev project `boia-planet-dev` (D-17): if `.env.local` has no Supabase URL and keys, stop with STATUS: blocked and ask Hernán to create the project and load the keys with the `pedir-token` skill; never create accounts or paste secrets.
-- Scope: may touch ESTADO.md (own top section), apps/web/app/(auth)/** (new), apps/web/lib/auth/** (new), packages/db/**, supabase/** (new migrations only) / must not touch packages/engine/**, apps/web/app/juego/**.
-- Done when:
-  - `pnpm test` → exit 0; adds tests: merging the same guest twice grants each reward once; a tampered local balance is ignored; OTP and link both create the same session
-  - `pnpm e2e` → exit 0 against the dev project: request a code, read it through the Supabase admin API in the test (service key from .env.local, never logged), sign in, land on the originating panel
+  - `pnpm test` → exit 0; adds a state-machine test: skip twice, back, route change and tab hide never duplicate the world or start a game
+  - `pnpm e2e` → exit 0: first visit ends on an interactive landing without a click; with `prefers-reduced-motion` no camera movement; with the engine bundle blocked the landing still shows the island illustration and working Tickets
+  - Recordings of desktop and mobile viewport saved under docs/informes/img/ (paths listed in the final message)
 - Outcome:
 
 ## T08 — Admin base: login with TOTP, roles, audit, events and home blocks
@@ -121,6 +111,17 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `grep -r` for secrets in repo and client bundle → none (report the command)
 - Outcome:
 
+## T05 — Minimap, compass, on-board menu shell, settings, notification queue
+- Status: pending
+- Depends on: T00, T04, T02
+- Goal: v14 §10, §19, §20, §14: minimap 96 px on mobile (D-07), tap to expand with island names, 500 ms long-press to drag with snap to safe zones and persisted position, compass to the next undiscovered target; on-board menu with the seven icons of §19 (sections can be stubs), settings with language, music and SFX separately, and the keyboard mode of D-14 (screen-direction by default, tank control as an option, persisted); notification queue (one at a time, 4 s, top, navy/orange, short sound).
+- Context: docs/DECISIONES.md (D-07, D-14); docs/spec/03-mundo-y-motor.md, docs/spec/05-identidad-y-comunidad.md (menu, settings, notifications); packages/engine/** (KeyboardControls already exists), apps/web/app/juego/**.
+- Scope: may touch ESTADO.md (own top section), packages/engine/src/ui/** (new), packages/engine/src/input/** (keyboard mode only), apps/web/app/juego/** / must not touch packages/world/**, apps/web/app/(landing)/**, docs/spec/**.
+- Done when:
+  - `pnpm test` → exit 0; adds tests for minimap snap zones, persisted position, the notification queue never showing two at once, and both keyboard modes
+  - `pnpm e2e` → exit 0: on a 360×640 viewport the minimap occupies ≤ 22 % of the width and no HUD element overlaps the joystick zone
+- Outcome:
+
 ## T09 — Visual world editor
 - Status: pending
 - Depends on: T00, T04, T08
@@ -130,6 +131,20 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test` → exit 0; adds tests: validation rules above; publish is atomic (a failing validation leaves the published version untouched); restore does not revert ledger or profiles
   - `pnpm e2e` → exit 0: create an island with a test asset, add proximity + content behaviors, preview, publish, swap the obstacle asset keeping its slow behavior, restore
+- Outcome:
+
+## T11 — Ship in the 8 exploration styles, selectable in the game
+- Status: pending
+- Depends on: T00, T01
+- Goal: Turn the 8 style studies in tools/blender/styles/ (01_boceto_lapiz … 08_pixel_art, today exploration only, not feeding art/) into ship sprite sets rendered by the same pipeline and camera (30°, D-13): per style, the `base` skin with the same frames as today's ship (8 directions × with/without passenger, plus the idle bob frames); fiesta/noche stay only in the current style. They live in art/barco/ under a style dimension, with manifest entries validated by check.py and labelled `muestra`. The game lets you switch the ship's style (a small test selector in /juego plus `?estilo=<id>`, persisted locally); the default stays the current style. Purpose: compare the 8 styles with Álvaro in-game.
+- Context: docs/DECISIONES.md (D-13, D-15, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, the 8-style exploration and its sheets docs/informes/img/01-estilo-*.png); tools/blender/** (render.py, ship.py, check.py, styles/); art/barco/manifest.json; the ship sprite loader in packages/engine (encargo 03 serves art/ through /api/art/..., see docs/informes/2026-09-28-03-monorepo-y-motor-base.md); apps/web/app/juego/**; T01's Outcome line (its manifest and style changes).
+- Scope: may touch ESTADO.md (own top section), tools/blender/**, art/barco/**, the ship sprite loading code in packages/engine/** (only what picking a style needs), apps/web/app/juego/** (style selector only) / must not touch art/ outside barco, apps/web/app/(landing)/**, packages/world/**, docs/spec/**.
+- Done when:
+  - `/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/render.py -- --all` → exit 0, twice, outputs byte-identical (report the diff command)
+  - `python3 tools/blender/check.py` → exit 0 and reports every style's ship manifest valid, with counts
+  - `pnpm test` → exit 0; adds tests: every style id in the manifest resolves all 8 directions; an unknown `?estilo=` falls back to the default
+  - `pnpm typecheck && pnpm lint` → exit 0
+  - A contact sheet of the ship in all 8 styles at game scale over water saved in docs/informes/img/ (path in the final message)
 - Outcome:
 
 ## T10 — Wire the public app to published data and the ticketing adapter
@@ -152,7 +167,13 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28: every task depends on T00 so the rename never conflicts with parallel work (orchestrator)
 - 2026-09-28: each task updates ESTADO.md itself (no per-task informe required); conflicts there are resolved keeping all sections (Hernán)
 - 2026-09-28: draft preconditions checked: encargos 01 and 02 committed, every Context path exists, `pnpm test` green on main, fresh worktree probe ok at c8c63a9 (orchestrator)
+- 2026-09-28: plan changed on Hernán's request: new T11 renders the ship in the 8 exploration styles and makes them selectable in /juego (Hernán); only the `base` skin per style to keep art/ size and render time bounded (orchestrator)
+- 2026-09-28: up to 3 agents run at once instead of 2 (Hernán)
+- 2026-09-28: tasks reordered by critical path (T06 → T07 → T08 → T09 → T10 first); ready tasks launch in this order (orchestrator)
+- 2026-09-28 T00: D-18 and ESTADO describe the old spelling as "la grafía con y" so the Done-when grep stays empty; docs/PLAN.md slug now `objetos-y-boia-tutorial` (agent)
 
 ## Proposals (new scope)
 
 ## Log
+- 2026-09-28 19:50 T00 launched · attempt 1 · agent a01f4f1d6cbbc33b0
+- 2026-09-28 19:55 T00 done · branch worktree-agent-a01f4f1d6cbbc33b0 → f6ebab0
