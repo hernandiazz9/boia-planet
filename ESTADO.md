@@ -4,6 +4,57 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-28 — plan 002 T16: repositorio local, persistencia en el navegador tras una interfaz sustituible
+
+Una sola capa de datos para toda la demo, sin React: `packages/store` (`@boia/store`). Hoy guarda en el navegador (D-20); Supabase implementará la misma interfaz más adelante. API completa en `packages/store/README.md` y comentada en `src/repository.ts`.
+
+Qué existe:
+- `BoiaRepository` (`src/repository.ts`): `identity` (invitado sin email), `carnet`, `progress`, `purchases`, `bottles`, `content`, `admin`, más `status()`, `revision()` y `subscribe()`. Todo es asíncrono. `status`, `revision` y `subscribe` se pueden pasar sueltas (`useSyncExternalStore(repo.subscribe, repo.revision)`).
+- `createLocalRepository(opts)` y `browserRepository(opts)`, uno por pestaña. En el servidor, `browserRepository` da uno nuevo en memoria en cada llamada. Opciones: `validate.bottlePosition`, `validate.placePatch` y `validate.skinPatch`, para que el motor o `@boia/world` rechacen tierra o lugares inválidos con su motivo. También `sample` (sustituir partes de la muestra, p. ej. las botellas con coordenadas del motor) y `now`.
+- Libro con las reglas de T06 (`src/ledger.ts`):
+  - ids estables elegidos por el repositorio: `world_reward:<sourceRef>[@día|@season:<mundo>]`, `achievement:<id>`, `cosmetic:<id>`, `stamp:<purchaseId>` y `compensation:<txId>`;
+  - puntos y monedas derivados, nunca guardados ni asignables;
+  - las compensaciones invierten la original una sola vez;
+  - nunca hay saldo negativo;
+  - al cargar, el libro se vuelve a pasar por las reglas, así que un libro retocado a mano no fabrica saldo.
+- Recompensas con política `once`, `daily` (día de Europe/Madrid) o `season` (mundo activo). Los logros llevan el premio de su definición y, si la tiene, su cosmético. Los secretos no se ven hasta obtenerlos. Cosméticos con monedas y equipado por ranura; descubrimientos, descuentos encontrados (con estado vigente o caducado), misiones, récords locales, contadores y preferencias.
+- Compra de prueba `purchases.confirmSandbox`: el sello entra una vez por id de compra y nunca dos por evento. Sólo se compra un evento a la venta. El descuento tiene que estar encontrado, vigente y ser de ese evento.
+- Carnet: apodo de 2 a 30 caracteres, único sin distinguir mayúsculas; «Miembro desde»; foto como data URL con límite; las 5 preguntas en `@boia/contracts` (`CARNET_QUESTIONS`). Una prueba las compara con la migración de T06. `CarnetView` trae puntos, rango, logros, sellos y cosméticos. Tres miembros ficticios de muestra, con Carnet y botella.
+- Botellas:
+  - una activa por identidad; de 1 a 140 caracteres contados como Postgres;
+  - hace falta Carnet para escribir y reportar;
+  - leer no la quita y queda registrado; un reporte por persona;
+  - retirada por moderación, también de las de muestra;
+  - no dan puntos.
+- Contenido con muestra más cambios del Admin, que siempre ganan. Áreas con id: `events`, `homeBlocks`, `artists`, `albums`, `photos`, `promotions`, `discounts`, `achievements`, `cosmetics` y `ranks`. Además, `places` (cambio compartido por id de lugar: x, y, params, enabled; vale en todos los mundos), `skins` (por mundo y lugar: nombre, textos, arte, oculto), `texts` y `activeWorld`. `content.home()` devuelve el `HomeContent` de `@boia/contracts`.
+- Admin (`admin.*`):
+  - operaciones: `upsert` validado (rechaza con motivo), papelera (`remove` y `restore`), `reorder`, `setPlace` y `setSkin` (mezclan con el cambio anterior), `setText`, `setActiveWorld`, moderación de botellas y reportes, y `compensate`;
+  - `reset(area | 'all')` y `overridden(area)`;
+  - auditoría local sólo de añadir, con autor `admin-demo`, fecha, motivo, antes y después.
+- Almacenamiento (`src/storage.ts`, `src/migrations.ts`):
+  - un documento JSON en `localStorage['boia.store']` con `schemaVersion` 1 y migraciones paso a paso (hoy ninguna);
+  - si falla, sigue en memoria y lo dice con `status().issue` y `message` (textos `muestra`). Motivos: `unavailable`, `blocked`, `quota` (a mitad de visita), `corrupt` y `migration_failed` (se copia en `boia.store.backup` y se empieza de cero), y `newer_schema` (no se toca);
+  - otra pestaña que cambia los datos provoca recarga y aviso con `external: true`.
+- `@boia/contracts`: nuevos `carnet.ts` (preguntas, límites y `charLength`) y `progress.ts` (`LEDGER_KINDS`, `ACHIEVEMENT_TRIGGERS`, `BOTTLE_STATUSES` y `PURCHASE_STATUSES`; una prueba los compara con `Constants` de `@boia/db`). En `content.ts`: `albumSchema`, `discountSchema` y `discountStatus`.
+
+Comandos:
+```
+pnpm test --filter store          # 5 archivos, 44 pruebas
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; tras unir T17: 37 archivos, 392 pruebas
+```
+
+Desviaciones:
+- localStorage, no IndexedDB: el documento es pequeño, la lectura es síncrona y es lo que ya usa la demo.
+- La muestra de contenido está copiada de `apps/web/lib/landing/sample-content.ts`, que la landing sigue usando hasta que lea de `@boia/store`. El evento de primavera va a la isla `allday` del mapa compartido, no a la `isla-primavera` del mundo de plan 001.
+- Un logro se concede una vez por id, sea cual sea su versión (la base de datos lo permite por versión). Una compra del mismo evento con otro id no da segundo sello: devuelve `already_stamped` en vez de fallar, como haría la base de datos.
+- `confirmSandbox` concede el sello, pero no el logro de entrada: eso lo decide quien llama (T25).
+- Las posiciones de las botellas de muestra salen de `mapa.json` (u_maq × 24,87). Si el mapa del motor de T17 usa otro origen, se pasan otras con `sample.bottles`.
+- `pnpm-lock.yaml` cambia por el paquete nuevo.
+
+Sin probar:
+- En un navegador real: el evento `storage` entre pestañas, Safari en modo privado y la cuota llena. En las pruebas se simulan con almacenamientos falsos.
+- Nadie consume todavía el paquete. El primero tiene que añadir `@boia/store` a `apps/web/package.json` y a `transpilePackages`.
+
 ## 2026-09-28 — plan 002 T17: varios mundos en el motor
 
 Un mapa compartido y varios mundos encima (D-20, Hernán). Todo es `muestra`.
