@@ -1,7 +1,12 @@
 import { type Direction, type WorldConfig, worldToScreen } from '@boia/world';
 import { Application, Container } from 'pixi.js';
 import { Camera } from './camera';
-import { KeyboardControls, TouchControls, readShipInput } from './input/controls';
+import {
+  type KeyboardMode,
+  KeyboardControls,
+  TouchControls,
+  readShipInput,
+} from './input/controls';
 import { bindInput } from './input/dom';
 import { FixedStepLoop, lerp } from './loop';
 import type { LoadedShipManifest } from './manifest-loader';
@@ -42,6 +47,8 @@ export interface GameOptions {
   onWorldEvent?: (e: WorldEvent) => void;
   /** Se llama ~4 veces por segundo con los datos del HUD. */
   onStats?: (s: GameStats) => void;
+  /** Modo del teclado (D-14); por defecto, dirección de pantalla. */
+  keyboardMode?: KeyboardMode;
 }
 
 export interface GameStats {
@@ -52,6 +59,8 @@ export interface GameStats {
   direction: Direction;
   x: number;
   y: number;
+  /** Rumbo del casco en el plano del agua (rad). */
+  heading: number;
   shipSource: 'manifest' | 'provisional';
   /** Multiplicador de velocidad por efectos (ralentizar, boost). */
   speedFactor: number;
@@ -66,6 +75,8 @@ export interface Game {
   skipDialogue(): void;
   /** Slot TRIPULANTE del barco (Boia Fiestera a bordo). */
   setPassenger(on: boolean): void;
+  /** Cambia el modo del teclado en caliente (D-14). */
+  setKeyboardMode(mode: KeyboardMode): void;
   destroy(): void;
 }
 
@@ -131,7 +142,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   objects.addChild(sprite.view);
 
   const touch = new TouchControls();
-  const keys = new KeyboardControls();
+  const keys = new KeyboardControls(opts.keyboardMode);
   const joystick = new JoystickOverlay(touch.cfg.radius);
   const bubble = new BubbleView();
   app.stage.addChild(water.view, worldLayer, bubble.view, joystick.view);
@@ -171,13 +182,14 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     direction: sprite.direction,
     x: ship.x,
     y: ship.y,
+    heading: ship.heading,
     shipSource: sprite.source,
     speedFactor: runtime.speedFactor(),
   });
 
   const simulate = (dt: number) => {
     Object.assign(prev, ship);
-    const input = readShipInput(touch, keys);
+    const input = readShipInput(touch, keys, ship.heading);
     stepShip(ship, input, runtime.shipConfig(cfg), dt);
     runtime.step(ship, cfg, dt);
     const o = sprite.wakeOriginOffset();
@@ -262,6 +274,9 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     advanceDialogue: () => void runtime.advanceDialogue(),
     skipDialogue: () => void runtime.skipDialogue(),
     setPassenger: (on) => sprite.setPassenger(on),
+    setKeyboardMode: (mode) => {
+      keys.mode = mode;
+    },
     destroy() {
       if (destroyed) return;
       destroyed = true;

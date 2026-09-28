@@ -56,6 +56,10 @@ export async function loadStyledShip(
   };
 }
 
+/**
+ * Desde T05 vive dentro de la sección «Mi Barco» del Menú de a bordo: flotando
+ * abajo a la izquierda tapaba la zona del joystick. T12 lo sustituye.
+ */
 export function ShipStyleSelector({ state }: { state: ShipStyleState | null }) {
   if (!state || state.index.options.length < 2) return null;
   const choose = (id: string) => {
@@ -66,28 +70,13 @@ export function ShipStyleSelector({ state }: { state: ShipStyleState | null }) {
   };
   const current = state.index.options.find((o) => o.id === state.current);
   return (
-    <label
-      style={{
-        position: 'absolute',
-        left: 'max(8px, env(safe-area-inset-left))',
-        bottom: 'max(8px, env(safe-area-inset-bottom))',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        background: 'rgba(18,35,63,.55)',
-        padding: '4px 8px',
-        borderRadius: 6,
-        font: '600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
-        textShadow: '0 1px 2px rgba(0,0,0,.6)',
-      }}
-      title={current?.description}
-    >
-      barco
+    <label className="juego-field" title={current?.description}>
+      <span>Estilo del barco (prueba)</span>
       <select
         data-testid="ship-style"
         value={state.current}
         onChange={(e) => choose(e.target.value)}
-        style={{ font: 'inherit', fontSize: 16, maxWidth: '60vw' }}
+        style={{ fontSize: 16 }}
       >
         {state.index.options.map((o) => (
           <option key={o.id} value={o.id}>
@@ -95,6 +84,7 @@ export function ShipStyleSelector({ state }: { state: ShipStyleState | null }) {
           </option>
         ))}
       </select>
+      {current?.description ? <small>{current.description}</small> : null}
     </label>
   );
 }

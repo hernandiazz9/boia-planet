@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { KeyboardControls, TouchControls, readShipInput } from './controls';
+import { wrapAngle } from '../math';
+import { DEFAULT_SHIP_CONFIG } from '../ship/config';
+import { createShipState, stepShip } from '../ship/controller';
+import {
+  DEFAULT_KEYBOARD_MODE,
+  KeyboardControls,
+  TANK_TURN_THROTTLE,
+  TouchControls,
+  isKeyboardMode,
+  readShipInput,
+} from './controls';
 
 describe('joystick táctil', () => {
   it('nace donde toca el primer dedo, con zona muerta y radio', () => {
@@ -89,5 +99,103 @@ describe('teclado', () => {
     t.down(1, 0, 0);
     t.move(1, 60, 0);
     expect(readShipInput(t, k)).toMatchObject({ dirX: 1, dirY: 0 });
+  });
+});
+
+describe('modos de teclado (D-14)', () => {
+  /** Navega `seconds` con el teclado tal como está y devuelve el barco. */
+  function sail(k: KeyboardControls, heading: number, seconds: number) {
+    const ship = createShipState(0, 0, heading);
+    const t = new TouchControls();
+    const dt = 1 / 60;
+    for (let i = 0; i < seconds * 60; i++) {
+      stepShip(ship, readShipInput(t, k, ship.heading), DEFAULT_SHIP_CONFIG, dt);
+    }
+    return ship;
+  }
+
+  it('por defecto es dirección de pantalla; sólo hay dos modos válidos', () => {
+    expect(DEFAULT_KEYBOARD_MODE).toBe('screen');
+    expect(new KeyboardControls().mode).toBe(DEFAULT_KEYBOARD_MODE);
+    expect(isKeyboardMode('screen')).toBe(true);
+    expect(isKeyboardMode('tank')).toBe(true);
+    expect(isKeyboardMode('joystick')).toBe(false);
+    expect(isKeyboardMode(undefined)).toBe(false);
+  });
+
+  it('pantalla: arriba lleva el barco hacia arriba sea cual sea su rumbo', () => {
+    const k = new KeyboardControls('screen');
+    k.down('ArrowUp');
+    // Mirando al este, a la derecha de la pantalla.
+    expect(readShipInput(new TouchControls(), k, 0)).toMatchObject({ dirX: 0, dirY: -1 });
+    const ship = sail(k, 0, 3);
+    expect(wrapAngle(ship.heading - -Math.PI / 2)).toBeCloseTo(0, 3);
+    expect(ship.y).toBeLessThan(-50);
+  });
+
+  it('tanque: arriba avanza en el rumbo actual, no hacia arriba', () => {
+    const k = new KeyboardControls('tank');
+    k.down('ArrowUp');
+    const i = readShipInput(new TouchControls(), k, 0);
+    expect(i).toMatchObject({ dirX: 1, dirY: 0, throttle: 1, drift: false });
+    const ship = sail(k, 0, 2);
+    expect(ship.heading).toBeCloseTo(0, 9);
+    expect(ship.x).toBeGreaterThan(50);
+    expect(Math.abs(ship.y)).toBeLessThan(1e-6);
+  });
+
+  it('tanque: derecha gira en sentido horario, izquierda al revés, sin soltar el rumbo', () => {
+    const right = new KeyboardControls('tank');
+    right.down('ArrowUp');
+    right.down('KeyD');
+    const r = readShipInput(new TouchControls(), right, 0);
+    expect(r.dirY).toBeGreaterThan(0); // horario en pantalla = hacia el espectador
+    const after = sail(right, 0, 0.5);
+    expect(after.heading).toBeGreaterThan(0.3);
+
+    const left = new KeyboardControls('tank');
+    left.down('ArrowUp');
+    left.down('ArrowLeft');
+    expect(sail(left, 0, 0.5).heading).toBeLessThan(-0.3);
+
+    // Sin tecla de giro el rumbo se queda donde lo dejó el giro.
+    right.up('KeyD');
+    const held = readShipInput(new TouchControls(), right, 1.234);
+    expect(Math.atan2(held.dirY, held.dirX)).toBeCloseTo(1.234, 9);
+  });
+
+  it('tanque: girar sin acelerar da un empuje mínimo; abajo suelta; Shift, drift', () => {
+    const k = new KeyboardControls('tank');
+    const t = new TouchControls();
+    expect(readShipInput(t, k, 0)).toEqual({ dirX: 0, dirY: 0, throttle: 0, drift: false });
+    k.down('ArrowRight');
+    expect(readShipInput(t, k, 0).throttle).toBe(TANK_TURN_THROTTLE);
+    k.down('ArrowDown');
+    expect(readShipInput(t, k, 0).throttle).toBe(0);
+    k.up('ArrowDown');
+    k.down('ArrowUp');
+    k.down('ShiftLeft');
+    expect(readShipInput(t, k, 0)).toMatchObject({ throttle: 1, drift: true });
+  });
+
+  it('el joystick manda también en modo tanque', () => {
+    const k = new KeyboardControls('tank');
+    k.down('ArrowUp');
+    const t = new TouchControls();
+    t.down(1, 0, 0);
+    t.move(1, 0, -60);
+    expect(readShipInput(t, k, 0)).toMatchObject({ dirX: 0, dirY: -1 });
+  });
+
+  it('cambiar de modo en caliente cambia la lectura de las mismas teclas', () => {
+    const k = new KeyboardControls();
+    k.down('ArrowRight');
+    const t = new TouchControls();
+    expect(readShipInput(t, k, -Math.PI / 2)).toMatchObject({ dirX: 1, dirY: 0, throttle: 1 });
+    k.mode = 'tank';
+    const i = readShipInput(t, k, -Math.PI / 2);
+    expect(i.throttle).toBe(TANK_TURN_THROTTLE);
+    expect(i.dirX).toBeGreaterThan(0);
+    expect(i.dirY).toBeLessThan(0);
   });
 });

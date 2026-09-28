@@ -1,0 +1,365 @@
+/* HUD (T05): minimapa, brújula, ancla, avisos, Menú de a bordo y mapa ampliado.
+   Cada elemento del HUD se coloca con `hudLayout` (px CSS, estilo en línea). */
+
+.juego-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font:
+    14px/1.4 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  color: #fff;
+}
+.juego-hud > * {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.juego-hud-button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: #12233f;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.juego-home {
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  background: rgba(18, 35, 63, 0.7);
+}
+.juego-compass.is-selected {
+  border-color: #f26a1b;
+}
+.juego-hud .juego-stats {
+  pointer-events: none;
+  padding: 5px 7px;
+  border-radius: 8px;
+  background: rgba(18, 35, 63, 0.55);
+  overflow: hidden;
+  white-space: nowrap;
+  font:
+    600 10px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.juego-minimap {
+  padding: 0;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: #2a3b2a;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow 120ms;
+}
+.juego-minimap svg {
+  display: block;
+}
+.juego-minimap.is-dragging {
+  z-index: 3;
+  border-color: #f26a1b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  cursor: grabbing;
+}
+
+/* Aviso: arriba, azul marino y naranja, uno a la vez (REQ-IDE-026). */
+.juego-hud .juego-notice-region {
+  pointer-events: none;
+  z-index: 4;
+}
+.juego-notice {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  border: 0;
+  border-left: 6px solid #f26a1b;
+  border-radius: 12px;
+  background: #12233f;
+  color: #fff;
+  text-align: left;
+  font: inherit;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  animation: juego-notice-in 220ms ease-out;
+  cursor: pointer;
+}
+.juego-notice-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f26a1b;
+}
+.juego-notice-title {
+  font-weight: 700;
+  line-height: 1.25;
+}
+.juego-notice-body {
+  font-size: 12px;
+  opacity: 0.8;
+}
+@keyframes juego-notice-in {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .juego-notice {
+    animation: none;
+  }
+}
+
+/* --- Menú de a bordo y mapa ampliado --- */
+
+.juego-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  background: rgba(8, 18, 34, 0.45);
+  font:
+    15px/1.45 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.juego-menu,
+.juego-map {
+  box-sizing: border-box;
+  width: min(560px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  border-radius: 16px;
+  background: #fffaf0;
+  color: #12233f;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+  outline: none;
+}
+.juego-menu {
+  display: flex;
+  flex-direction: column;
+  height: min(640px, 100%);
+  overflow: hidden;
+}
+.juego-menu-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: #12233f;
+  border-radius: 16px 16px 0 0;
+  overflow-x: auto;
+}
+.juego-menu-icon {
+  /* Siete iconos y la separación caben en 320 px: encogen hasta 36 px. */
+  flex: 1 1 44px;
+  min-width: 36px;
+  max-width: 56px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.juego-menu-icon:hover,
+.juego-menu-icon:focus-visible {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+.juego-menu-icon.is-active {
+  opacity: 1;
+  background: #f26a1b;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+}
+.juego-menu-sep {
+  flex: 0 0 auto;
+  width: 2px;
+  height: 28px;
+  margin: 0 4px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.3);
+}
+.juego-close {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.juego-menu-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 8px 14px 20px 18px;
+}
+.juego-menu-body > .juego-sheet-head {
+  position: sticky;
+  top: 0;
+  margin: 0 -14px 4px -18px;
+  padding: 0 14px 0 18px;
+  background: #fffaf0;
+}
+.juego-menu-body h2,
+.juego-sheet-head h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.juego-menu-body h3 {
+  margin: 16px 0 4px;
+  font-size: 16px;
+}
+.juego-menu-body p,
+.juego-menu-body ul {
+  margin: 0 0 10px;
+}
+.juego-menu-body ul {
+  padding-left: 20px;
+}
+.juego-muted {
+  font-size: 13px;
+  opacity: 0.65;
+}
+.juego-button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #f26a1b;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+}
+.juego-button:disabled {
+  opacity: 0.5;
+}
+.juego-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(18, 35, 63, 0.18);
+  border-radius: 12px;
+}
+.juego-field legend,
+.juego-field > span {
+  font-weight: 700;
+}
+.juego-field select {
+  min-height: 44px;
+  font: inherit;
+}
+.juego-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-height: 44px;
+  padding: 4px 0;
+}
+.juego-choice input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: #f26a1b;
+}
+.juego-range {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+}
+.juego-range input {
+  flex: 1;
+  accent-color: #f26a1b;
+}
+
+.juego-map {
+  padding: 8px 14px 14px;
+}
+.juego-sheet-head {
+  display: flex;
+  align-items: center;
+}
+.juego-sheet-head h2 {
+  margin: 0;
+}
+.juego-map-canvas {
+  margin: 0 auto;
+  max-width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.juego-map-canvas svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.juego-map-label {
+  cursor: pointer;
+}
+.juego-map-list {
+  margin: 10px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.juego-map-list button {
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid rgba(18, 35, 63, 0.18);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.juego-map-list li + li {
+  margin-top: 6px;
+}
+.juego-map-list button[aria-pressed='true'] {
+  border-color: #f26a1b;
+  background: rgba(242, 106, 27, 0.12);
+}
+.juego-map-unknown,
+.juego-map-hint {
+  font-size: 13px;
+  opacity: 0.7;
+}
+.juego-map-hint {
+  margin: 6px 0 0;
+}

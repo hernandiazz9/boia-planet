@@ -7,7 +7,13 @@ export {
 } from './game';
 export { loadShipManifest, type LoadedShipManifest } from './manifest-loader';
 export { DEFAULT_SHIP_CONFIG, type ShipConfig } from './ship/config';
-export { DEFAULT_JOYSTICK, type JoystickConfig } from './input/controls';
+export {
+  DEFAULT_JOYSTICK,
+  DEFAULT_KEYBOARD_MODE,
+  KEYBOARD_MODES,
+  type JoystickConfig,
+  type KeyboardMode,
+} from './input/controls';
 export type { WorldEvent, WorldEventType } from './world/events';
 export {
   MINIGAMES,

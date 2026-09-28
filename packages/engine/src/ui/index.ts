@@ -1,0 +1,17 @@
+/**
+ * HUD del juego sin Pixi ni DOM: colocación, minimapa, brújula, avisos y
+ * ajustes. Se importa como `@boia/engine/ui` para que la interfaz HTML no
+ * arrastre el motor (que se carga aparte, con import dinámico).
+ */
+export * from './discovery';
+export * from './hud-layout';
+export * from './minimap';
+export * from './notifications';
+export * from './settings';
+export * from './storage';
+export {
+  DEFAULT_KEYBOARD_MODE,
+  KEYBOARD_MODES,
+  isKeyboardMode,
+  type KeyboardMode,
+} from '../input/controls';
