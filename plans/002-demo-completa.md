@@ -116,7 +116,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T27 — Intro: 3D «BOIA» letters rendered in Blender
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T18
 - Goal: Model «BOIA» as 3D letters in Blender in BOIA's identity (extruded, soft bevel, brand orange/navy, `muestra`), animate them like the title of messenger.abeto.co (letters rise one by one, bob and wobble independently, subtle turn catching the light), render as a light image sequence or sprite sheet with a seamless idle loop and an exit move, and use them as the title of act 2 over the mini-world (replacing the flat wordmark). Reduced motion shows a still frame. The landing critical path stays within T14's budget (≤ 192 KB gzip); the sequence loads after the mini-world.
 - Context: T14's intro (packages/engine/src/intro/**, apps/web/lib/intro/**, intro config); docs/propuestas/2026-09-28-intro-mini-mundo.md; D-19/D-20; tools/blender/** pipeline; docs/barcos/barcos.json brand colours.
@@ -126,7 +126,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; `pnpm e2e` → exit 0 (intro specs updated: title visible, reduced motion still frame)
   - `pnpm build` → landing critical path ≤ 192 KB gzip (report the number)
   - A recording of the new title on mobile and desktop in docs/informes/img/ (paths in the final message)
-- Outcome:
+- Outcome: Blender renders each letter at 17 turn angles in one 203 KB WebP sheet (tools/blender/intro/titulo.py, Cycles CPU, own PNG writer); rise/bob/wobble/exit computed in the browser on a 2D canvas (titlePoses), intro config v3; text fallback kept; landing 168.5 kB; recordings p002-t27-titulo-* → f0d9a26
 
 ## T24 — Acuarela world in the game and world switching
 - Status: pending
@@ -208,8 +208,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T25: sample prices in lib/ticketing/pricing.ts (events have no price field); discounts never typed, best active found discount applies; checkout loads on click; no-JS link still goes to the sample ticketing URL (agent)
 - 2026-09-29 T23: sessions in memory (reload invalidates), hidden tab pauses and voids the reward, record_only best kept in device storage, alarm on empty sea = false alarm, escaped pirate not an error (agent)
 - 2026-09-29 T18: canonical meshes and no SSS for world art so renders are byte-identical; puerto sprite is the central paseo, costa_sur tiles fill the bottom edge; orchestrator authorized the one-line skip of art/mundos in packages/engine swap.test.ts to keep main green (agent / orchestrator)
+- 2026-09-29 T27: only the light is pre-rendered (17 angles per letter) and motion is computed in the browser, so the loop is seamless and tunable without re-rendering; letters use Blender's Inter font, orange faces and navy sides; swap.test.ts now skips art/ folders without their own manifest.json (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T27: the title sheet is upscaled ~1.6× on 3× DPR phones; consider a 2× sheet; letters use Inter until BOIA's real wordmark font is provided
 - 2026-09-29 T18: no art yet for secrets, season buoys on the top edge, circuit grandstand and judge; 16 older manifests carry a stale sources_sha256 until the next --all
 - 2026-09-29 T23: minimap logs negative-size SVG errors while resizing (pre-existing); full e2e flaky at 5 workers under load (passes with --workers=2)
 - 2026-09-29 T25: add a price field to events in the store/contracts (today prices live in lib/ticketing/pricing.ts)
@@ -234,3 +236,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 00:41 T25 done · branch worktree-agent-a8b91419ffa46292b → a450c34
 - 2026-09-29 01:00 T23 done · branch worktree-agent-a154f90bd0f0e1afa (1 conflict round) → e2c8abf
 - 2026-09-29 01:40 T18 done · branch worktree-agent-a8860dac8c735eeac (1 merge round) → 0ae2ee4
+- 2026-09-29 01:27 T20 launched · attempt 1 · agent a105e608c994e8161
+- 2026-09-29 01:27 T19 launched · attempt 1 · agent ac12551dbf19cf19b
+- 2026-09-29 01:27 T27 launched · attempt 1 · agent a919e19d514682d6b
+- 2026-09-29 01:53 T27 done · branch worktree-agent-a919e19d514682d6b → f0d9a26
