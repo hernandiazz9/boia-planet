@@ -1,4 +1,4 @@
-import { type Direction, type WorldConfig, worldToScreen } from '@boia/world';
+import { type Direction, type SeaPalette, type WorldConfig, worldToScreen } from '@boia/world';
 import { Application, Container } from 'pixi.js';
 import { Camera } from './camera';
 import {
@@ -28,6 +28,7 @@ import { BubbleView } from './world/bubble';
 import { createCoastView } from './world/coast-view';
 import type { WorldEvent } from './world/events';
 import { ObjectView } from './world/object-view';
+import { MemoryRewardStore } from './world/rewards';
 import { type RuntimeOptions, WorldRuntime, solidObstaclesOf } from './world/runtime';
 import { bubbleAnchor, resolveObjectVisual, shipArtScale } from './world/visual';
 
@@ -43,6 +44,8 @@ export interface GameOptions {
   artUrl?: ArtUrl | null;
   /** Opciones del motor de comportamientos (temporada, sesión, recompensas…). */
   runtime?: RuntimeOptions;
+  /** Colores del mar del mundo (T17). Sin valor, los de la demo. */
+  sea?: SeaPalette;
   /** Cada evento del mundo, en orden, una vez por imagen. */
   onWorldEvent?: (e: WorldEvent) => void;
   /** Se llama ~4 veces por segundo con los datos del HUD. */
@@ -82,6 +85,14 @@ export interface GameStats {
 export interface Game {
   stats(): GameStats;
   readonly runtime: WorldRuntime;
+  /**
+   * Cambia de mundo en caliente (T17): otro `WorldConfig` sobre el mismo mapa
+   * compartido. El barco sigue donde está, con su rumbo y su pasajera; las
+   * recompensas ya concedidas siguen concedidas (van por id de lugar, con el
+   * mismo almacén). `sea` pone los colores del mar del mundo nuevo. Resuelve
+   * `true` si quedó el pedido y `false` si otra petición lo adelantó.
+   */
+  setWorld(world: WorldConfig, opts?: { sea?: SeaPalette }): Promise<boolean>;
   /** Bocadillo: siguiente línea (o cierra la última). */
   advanceDialogue(): void;
   /** Bocadillo: cierra el diálogo entero. */
@@ -114,8 +125,14 @@ export function obstaclesFromWorld(world: WorldConfig): CircleObstacle[] {
 
 export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): Promise<Game> {
   const cfg: ShipConfig = { ...DEFAULT_SHIP_CONFIG, ...opts.ship };
-  const world = opts.world;
-  const runtime = new WorldRuntime(world, opts.runtime);
+  let world = opts.world;
+  // Un solo almacén de recompensas para todos los mundos de la partida: el
+  // progreso va por id de lugar y sobrevive al cambio de mundo.
+  const runtimeOpts: RuntimeOptions = {
+    ...opts.runtime,
+    rewards: opts.runtime?.rewards ?? new MemoryRewardStore(),
+  };
+  let runtime = new WorldRuntime(world, runtimeOpts);
   const spawn = world.spawn ?? {
     x: (world.bounds.left + world.bounds.right) / 2,
     y: world.bounds.bottom - 200,
@@ -154,22 +171,30 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
 
   // Arte del mundo a la escala del barco (T01: misma densidad de píxeles).
   const artScale = opts.manifest?.displayScale ?? shipArtScale(opts.manifest?.manifest);
-  const assetIds = world.objects.map((o) => o.appearance.asset);
-  if (world.coast) assetIds.push(world.coast.asset);
-  const art = opts.artUrl === null ? new Map() : await loadArt(assetIds, opts.artUrl);
-  const manifests = manifestsOf(art);
-  const objectViews = await Promise.all(
-    world.objects
-      .filter((o) => o.identity.active)
-      .map((o) => ObjectView.create(o, resolveObjectVisual(o, manifests, artScale), art)),
-  );
-  const coasts = await createCoastView(
-    world.bounds,
-    world.coast ? art.get(world.coast.asset) : undefined,
-    artScale,
-  );
+  const buildWorld = async (w: WorldConfig) => {
+    const assetIds = w.objects.map((o) => o.appearance.asset);
+    if (w.coast) assetIds.push(w.coast.asset);
+    const art = opts.artUrl === null ? new Map() : await loadArt(assetIds, opts.artUrl);
+    const manifests = manifestsOf(art);
+    const objectViews = await Promise.all(
+      w.objects
+        .filter((o) => o.identity.active)
+        .map((o) => ObjectView.create(o, resolveObjectVisual(o, manifests, artScale), art)),
+    );
+    const coasts = await createCoastView(
+      w.bounds,
+      w.coast ? art.get(w.coast.asset) : undefined,
+      artScale,
+    );
+    return { objectViews, coasts };
+  };
+  const built = await buildWorld(world);
+  const objectViews = built.objectViews;
+  let coasts = built.coasts;
 
-  const water = surface?.water ?? new Water();
+  const water = surface?.water ?? new Water(opts.sea);
+  // La superficie adoptada trae el mar de la entrada: toma los colores de este mundo.
+  if (surface?.water && opts.sea) water.setPalette(opts.sea);
   // El mar de la entrada llega con su escala y su fundido: vuelve a escala de juego.
   water.view.scale.set(1);
   water.view.alpha = 1;
@@ -206,7 +231,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   };
   window.addEventListener('keydown', onKey);
 
-  const views = new Map(objectViews.map((v) => [v.object.identity.id, v]));
+  let views = new Map(objectViews.map((v) => [v.object.identity.id, v]));
   const loop = new FixedStepLoop(60);
   const camera = new Camera(ship.x, ship.y);
   const wake = new WakeSystem();
@@ -312,9 +337,37 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
 
   let destroyed = false;
   let shipRequest = 0;
+  let worldRequest = 0;
   return {
     stats,
-    runtime,
+    get runtime() {
+      return runtime;
+    },
+    async setWorld(next, worldOpts = {}) {
+      const request = ++worldRequest;
+      const nextBuilt = await buildWorld(next);
+      if (destroyed || request !== worldRequest) {
+        for (const v of nextBuilt.objectViews) v.view.destroy({ children: true });
+        nextBuilt.coasts.destroy({ children: true });
+        return false;
+      }
+      // Lo que el mundo de antes tenía pendiente sale antes del cambio.
+      for (const e of runtime.drainEvents()) opts.onWorldEvent?.(e);
+      for (const v of views.values()) {
+        objects.removeChild(v.view);
+        v.view.destroy({ children: true });
+      }
+      worldLayer.removeChild(coasts);
+      coasts.destroy({ children: true });
+      coasts = nextBuilt.coasts;
+      worldLayer.addChildAt(coasts, 0);
+      for (const v of nextBuilt.objectViews) objects.addChild(v.view);
+      views = new Map(nextBuilt.objectViews.map((v) => [v.object.identity.id, v]));
+      world = next;
+      runtime = new WorldRuntime(next, runtimeOpts);
+      if (worldOpts.sea) water.setPalette(worldOpts.sea);
+      return true;
+    },
     advanceDialogue: () => void runtime.advanceDialogue(),
     skipDialogue: () => void runtime.skipDialogue(),
     setPassenger: (on) => sprite.setPassenger(on),

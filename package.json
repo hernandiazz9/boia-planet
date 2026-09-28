@@ -17,6 +17,7 @@
     "typecheck": "pnpm -r --parallel typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "world:check": "node --import ./packages/world/scripts/ts-resolve.mjs packages/world/src/cli/world-check.ts",
     "db:test": "pnpm --filter @boia/db db:test",
     "db:types": "pnpm --filter @boia/db db:types"
   },

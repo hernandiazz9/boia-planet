@@ -5,3 +5,4 @@ export * from './manifest';
 export * from './behaviors';
 export * from './art';
 export * from './sample-world';
+export * from './worlds';

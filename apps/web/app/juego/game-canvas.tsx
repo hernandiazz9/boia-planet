@@ -21,23 +21,25 @@ import {
   saveMinimapZone,
   saveSettings,
 } from '@boia/engine/ui';
+import { type ComposedWorld, chooseWorld as chooseWorldIn } from '@boia/world';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ShipCatalog } from '../../lib/barco/catalog';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
 import { claimWorld } from '../../lib/world-handoff';
-import { demoWorld } from './demo-world';
+import { worlds } from './demo-world';
 import { Compass, MenuAnchor } from './hud-buttons';
 import './hud.css';
 import './juego.css';
 import { OnboardMenu } from './menu/onboard-menu';
-import type { MenuContext, ShipMenu } from './menu/types';
+import type { MenuContext, ShipMenu, WorldMenu } from './menu/types';
 import { ExpandedMap, Minimap } from './minimap';
 import { discoveryNotice, noticeFromWorldEvent } from './notice-copy';
 import { NoticeToast, useNoticeQueue } from './notices';
 import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
 import { applyAudioSettings, chime, plop } from './sound';
 import { useViewport } from './use-viewport';
+import { currentWorld, syncWorldParam, visitorWorldChoice } from './world-choice';
 import { EventPanel } from './world-ui';
 
 const MANIFEST_URL = '/api/art/barco/manifest.json?optional=1';
@@ -48,10 +50,6 @@ const ticketAvailable = (id: string) => {
   const e = findEvent(id);
   return !!e && EVENT_STATE_BEHAVIOR[e.state].purchasable;
 };
-
-/** Lo que el minimapa dibuja y la brújula persigue: sale de los datos del mundo. */
-const TARGETS = discoveryTargets(demoWorld);
-const MARKERS = mapMarkers(demoWorld);
 
 export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,9 +73,21 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [zonePref, setZonePref] = useState<MinimapZone | null>(null);
 
-  // Descubrimiento, brújula y avisos.
+  // Mundo que se juega (T17). Arranca con el por defecto; al montar se elige el
+  // de la URL o el guardado. Lo que el minimapa dibuja y la brújula persigue
+  // sale de sus datos.
+  const [world, setWorld] = useState<ComposedWorld>(() => worlds.get(worlds.defaultId));
+  const [worldPending, setWorldPending] = useState(false);
+  // El motor ya arrancó: se puede cambiar de mundo.
+  const [worldReady, setWorldReady] = useState(false);
+  const targets = useMemo(() => discoveryTargets(world.config), [world]);
+  const markers = useMemo(() => mapMarkers(world.config), [world]);
+
+  // Descubrimiento, brújula y avisos. Lo descubierto va por id de lugar: sobrevive
+  // al cambio de mundo, también si un mundo oculta el lugar (REQ-AVE-011).
+  const foundRef = useRef(new Set<string>());
   const trackerRef = useRef<DiscoveryTracker | null>(null);
-  trackerRef.current ??= new DiscoveryTracker(TARGETS);
+  trackerRef.current ??= new DiscoveryTracker(targets);
   const tracker = trackerRef.current;
   const [discovered, setDiscovered] = useState<readonly string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -96,13 +106,27 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
 
   const onStats = (s: GameStats) => {
     setStats(s);
-    const fresh = tracker.update(s);
+    const t = trackerRef.current!;
+    const fresh = t.update(s);
     if (fresh.length) {
-      setDiscovered(tracker.discovered());
-      for (const t of fresh) if (t.kind === 'island') notify(discoveryNotice(t));
+      for (const f of fresh) foundRef.current.add(f.id);
+      setDiscovered(t.discovered());
+      for (const f of fresh) if (f.kind === 'island') notify(discoveryNotice(f));
     }
-    setSelectedId(tracker.selected?.id ?? null);
+    setSelectedId(t.selected?.id ?? null);
   };
+
+  /** Pasa la interfaz a otro mundo: objetivos nuevos, lo descubierto y lo elegido se quedan. */
+  const adoptWorld = useCallback((w: ComposedWorld) => {
+    const selected = trackerRef.current?.selected?.id ?? null;
+    const next = new DiscoveryTracker(discoveryTargets(w.config), foundRef.current);
+    next.select(selected);
+    trackerRef.current = next;
+    setWorld(w);
+    setDiscovered(next.discovered());
+    setSelectedId(next.selected?.id ?? null);
+    setPanel(null);
+  }, []);
 
   const onWorldEvent = (e: WorldEvent) => {
     const n = noticeFromWorldEvent(e);
@@ -148,6 +172,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     setZonePref(loadMinimapZone(store));
 
     const query = new URLSearchParams(window.location.search);
+    // `?mundo=<id>`, el elegido en este navegador o el activo del Admin (T17).
+    const initial = currentWorld(window.location.search);
+    adoptWorld(initial);
     // `?evento=<id>`: al entrar desde un evento, la brújula señala su isla.
     const fromEvent = query.get('evento');
     if (fromEvent && trackerRef.current?.selectEvent(fromEvent)) {
@@ -158,11 +185,16 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       const { createGame, loadShipStyle } = await import('@boia/engine');
       // `?barco=provisional` fuerza el barco dibujado por código, para comparar.
       const forceProvisional = query.get('barco') === 'provisional';
-      // `?estilo=<id>` (o el último elegido) y la skin guardada eligen el aspecto (T11, T12).
+      // `?estilo=<id>` (o el último elegido) y la skin guardada eligen el aspecto (T11, T12);
+      // si no hay ninguno, el barco del mundo (T17).
       const want = requestedLook(window.location.search, shipCatalog);
       const styled = forceProvisional
         ? null
-        : await loadShipStyle(MANIFEST_URL, want.style, want.skin);
+        : await loadShipStyle(
+            MANIFEST_URL,
+            want.style ?? initial.theme.ship.style,
+            want.skin ?? initial.theme.ship.skin ?? null,
+          );
       const manifest = styled?.loaded ?? null;
       if (cancelled) return;
       // Un ?estilo= válido queda guardado; uno desconocido no pisa lo guardado.
@@ -181,7 +213,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         canvas.before(target);
       }
       const created = await createGame(target, {
-        world: demoWorld,
+        world: initial.config,
+        sea: initial.theme.sea,
         manifest,
         surface,
         keyboardMode: settingsRef.current.keyboardMode,
@@ -208,6 +241,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       if (process.env.NODE_ENV !== 'production') {
         (window as Window & { __boiaGame?: Game }).__boiaGame = created;
       }
+      setWorldReady(true);
     })().catch((err: unknown) => {
       console.error(err);
       if (!cancelled) setError('No se pudo arrancar el motor en este navegador.');
@@ -218,11 +252,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       gameRef.current = null;
       g?.destroy();
     };
-  }, [shipCatalog]);
+  }, [shipCatalog, adoptWorld]);
 
   // Sección «Barco»: aplica estilo y skin al barco en el agua, sin recargar.
+  // `remember: false` (el barco por defecto de un mundo) no lo guarda como elección.
   const shipRequest = useRef(0);
-  const chooseShip = (want: ShipLook) => {
+  const chooseShip = (want: ShipLook, remember = true) => {
     const g = gameRef.current;
     if (!g) return;
     const request = ++shipRequest.current;
@@ -235,6 +270,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       if (!ok || request !== shipRequest.current || gameRef.current !== g) return;
       const look = { style: r.style.id, skin: r.skin };
       setShipLook(look);
+      if (!remember) return;
       rememberLook(look);
       syncStyleParam(look.style);
     })()
@@ -243,6 +279,41 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         if (request === shipRequest.current) setShipPending(false);
       });
   };
+
+  // Cambio de mundo (T17): mismo mapa, otra piel. El barco sigue donde está.
+  const worldRequest = useRef(0);
+  const chooseWorld = (id: string) => {
+    const g = gameRef.current;
+    if (!g || id === world.id) return;
+    const next = chooseWorldIn(worlds, visitorWorldChoice(), id);
+    if (!next) return;
+    const request = ++worldRequest.current;
+    setWorldPending(true);
+    g.setWorld(next.config, { sea: next.theme.sea })
+      .then((ok) => {
+        if (!ok || request !== worldRequest.current || gameRef.current !== g) return;
+        adoptWorld(next);
+        syncWorldParam(next.id);
+        // Sin barco elegido (ni en la URL ni guardado), el del mundo nuevo.
+        const want = requestedLook(window.location.search, shipCatalog);
+        if (want.style === null && shipLook) {
+          chooseShip(
+            { style: next.theme.ship.style, skin: next.theme.ship.skin ?? shipLook.skin },
+            false,
+          );
+        }
+      })
+      .catch((err: unknown) => console.warn('[boia] no se pudo cambiar de mundo', err))
+      .finally(() => {
+        if (request === worldRequest.current) setWorldPending(false);
+      });
+  };
+
+  // Cambio de mundo para pruebas desde la consola; no existe en producción.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    (window as Window & { __boiaWorld?: (id: string) => void }).__boiaWorld = chooseWorld;
+  });
 
   const updateSettings = (change: (s: Settings) => Settings) => {
     const next = parseSettings(change(settingsRef.current));
@@ -259,8 +330,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   };
 
   const selectTarget = (id: string | null) => {
-    tracker.select(id);
-    setSelectedId(tracker.selected?.id ?? null);
+    const t = trackerRef.current!;
+    t.select(id);
+    setSelectedId(t.selected?.id ?? null);
   };
 
   const panelEvent = panel ? findEvent(panel.eventId) : undefined;
@@ -269,9 +341,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const target = ship ? tracker.nextTarget(ship) : null;
   const discoveredSet = new Set(discovered);
   const mapData = {
-    world: demoWorld,
-    markers: MARKERS,
-    targets: TARGETS,
+    world: world.config,
+    markers,
+    targets,
     discovered: discoveredSet,
     selectedId,
     ship,
@@ -282,7 +354,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         settings,
         updateSettings,
         achievements,
-        discovered: TARGETS.filter((t) => discoveredSet.has(t.id)),
+        discovered: targets.filter((t) => discoveredSet.has(t.id)),
         minimapZone: layout.minimapZone,
         minimapZones: safeMinimapZones(vp!),
         setMinimapZone,
@@ -292,6 +364,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           pending: shipPending,
           choose: chooseShip,
         } satisfies ShipMenu,
+        world: {
+          worlds: worlds.list(),
+          current: world.id,
+          pending: worldPending || !worldReady,
+          choose: chooseWorld,
+        } satisfies WorldMenu,
         game,
         close: () => setMenuOpen(false),
       }
@@ -303,7 +381,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       data-world={adopted === null ? undefined : adopted ? 'adoptado' : 'nuevo'}
       data-ship-style={shipLook?.style}
       data-ship-skin={shipLook?.skin}
+      data-mundo={world.id}
       style={{
+        ...({
+          '--mundo-acento': world.theme.ui.accent,
+          '--mundo-sobre-acento': world.theme.ui.onAccent,
+        } as CSSProperties),
         position: 'fixed',
         inset: 0,
         overflow: 'hidden',
@@ -311,7 +394,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         userSelect: 'none',
         WebkitUserSelect: 'none',
         WebkitTouchCallout: 'none',
-        background: '#0f5f7d',
+        background: world.theme.sea.base,
       }}
     >
       <canvas ref={canvasRef} className="juego-canvas" />

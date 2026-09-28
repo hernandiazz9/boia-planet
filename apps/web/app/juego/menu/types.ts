@@ -1,5 +1,6 @@
 import type { Game } from '@boia/engine';
 import type { DiscoveryTarget, MinimapZone, Notice, Settings } from '@boia/engine/ui';
+import type { WorldSummary } from '@boia/world';
 import type { ComponentType, ReactNode } from 'react';
 import type { ShipCatalog } from '../../../lib/barco/catalog';
 import type { ShipLook } from '../ship-look';
@@ -34,9 +35,27 @@ export interface MenuContext {
   setMinimapZone: (z: MinimapZone) => void;
   /** Sección «Barco»: estilos y skins, lo aplicado y cómo cambiarlo. */
   ship: ShipMenu;
+  /** Mundos (T17): cuáles hay, cuál se juega y cómo cambiar. La sección es de T24. */
+  world: WorldMenu;
   /** El motor, si ya arrancó (p. ej. para aplicar un cambio al barco). */
   game: Game | null;
   close: () => void;
+}
+
+/** Cambio de mundo (T17), para la sección «Mundos» de T24. */
+export interface WorldMenu {
+  /** Mundos registrados, en orden, con su línea de historia y su barco. */
+  worlds: readonly WorldSummary[];
+  /** Id del mundo que se juega. */
+  current: string;
+  /** Hay un cambio cargándose. */
+  pending: boolean;
+  /**
+   * Cambia de mundo al momento, sin recargar: el barco sigue donde está y lo
+   * descubierto y las recompensas se conservan por id de lugar. Se guarda en
+   * este navegador.
+   */
+  choose: (id: string) => void;
 }
 
 /** Estado de la sección «Barco» (T12). */

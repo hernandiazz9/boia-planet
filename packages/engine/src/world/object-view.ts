@@ -10,6 +10,29 @@ function drawPlaceholder(shape: string, r: number): Graphics {
   const g = new Graphics();
   g.ellipse(0, 0, r * 1.08, r * 0.54).fill({ color: 0xd9f3f7, alpha: 0.45 });
   switch (shape) {
+    case 'sin-skin': {
+      // Lugar sin skin en este mundo (T17): a propósito llamativo, para que se vea
+      // que falta arte. Huella a escala, rayada, con un aro discontinuo.
+      g.clear();
+      g.ellipse(0, 0, r, r * 0.5).fill({ color: 0xff2bd6, alpha: 0.35 });
+      for (let x = -r; x < r; x += Math.max(6, r / 4)) {
+        g.moveTo(x, -r * 0.5).lineTo(x + r * 0.5, r * 0.5);
+      }
+      g.stroke({ width: 2, color: 0xff2bd6, alpha: 0.6 });
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+        const b = a + Math.PI / 16;
+        g.moveTo(Math.cos(a) * r, Math.sin(a) * r * 0.5).lineTo(
+          Math.cos(b) * r,
+          Math.sin(b) * r * 0.5,
+        );
+      }
+      g.stroke({ width: 3, color: 0xffffff });
+      // Un «!» encima de la huella.
+      const top = -r * 0.5 - 10;
+      g.rect(-2.5, top - 30, 5, 20).fill({ color: 0xff2bd6 });
+      g.circle(0, top - 3, 3.5).fill({ color: 0xff2bd6 });
+      break;
+    }
     case 'isla':
       g.ellipse(0, -r * 0.08, r, r * 0.5).fill({ color: 0xe7c88f });
       g.ellipse(-r * 0.1, -r * 0.2, r * 0.7, r * 0.35).fill({ color: 0x8fbf6a });

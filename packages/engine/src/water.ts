@@ -1,3 +1,4 @@
+import { DEFAULT_SEA, type SeaPalette } from '@boia/world';
 import { Container, Texture, TilingSprite } from 'pixi.js';
 
 /**
@@ -61,19 +62,33 @@ export class Water {
   readonly view = new Container();
   private readonly deep: TilingSprite;
   private readonly crests: TilingSprite;
+  private palette: SeaPalette;
 
-  constructor() {
+  /** `palette`: los colores del mar del mundo (T17); por defecto, los de la demo. */
+  constructor(palette: SeaPalette = DEFAULT_SEA) {
+    this.palette = palette;
     this.deep = new TilingSprite({
-      texture: waveLayer(11, 38, '#2a8fae', 0.55, '#0f5f7d'),
+      texture: waveLayer(11, 38, palette.wave, 0.55, palette.base),
       width: 1,
       height: 1,
     });
     this.crests = new TilingSprite({
-      texture: waveLayer(29, 16, '#d9f3f7', 0.55),
+      texture: waveLayer(29, 16, palette.crest, 0.55),
       width: 1,
       height: 1,
     });
     this.view.addChild(this.deep, this.crests);
+  }
+
+  /** Cambia los colores del mar en caliente (cambio de mundo). */
+  setPalette(palette: SeaPalette): void {
+    const p = this.palette;
+    if (p.base === palette.base && p.wave === palette.wave && p.crest === palette.crest) return;
+    this.palette = palette;
+    const old = [this.deep.texture, this.crests.texture];
+    this.deep.texture = waveLayer(11, 38, palette.wave, 0.55, palette.base);
+    this.crests.texture = waveLayer(29, 16, palette.crest, 0.55);
+    for (const t of old) t.destroy(true);
   }
 
   /** `camX/camY`: posición de la cámara en px de pantalla; `t` en segundos. */

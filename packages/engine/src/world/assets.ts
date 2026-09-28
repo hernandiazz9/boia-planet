@@ -11,7 +11,8 @@ export interface LoadedArt {
 export type ArtUrl = (assetId: string) => string;
 
 export const DEV_ART_URL: ArtUrl = (id) =>
-  `/api/art/${encodeURIComponent(id)}/manifest.json?optional=1`;
+  // Los assets de un mundo son carpetas anidadas: `mundos/<mundo>/<lugar>` (T17).
+  `/api/art/${id.split('/').map(encodeURIComponent).join('/')}/manifest.json?optional=1`;
 
 /**
  * Descarga y valida los manifiestos de los assets pedidos. Los que faltan o

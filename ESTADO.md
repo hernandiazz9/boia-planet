@@ -4,6 +4,43 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-28 — plan 002 T17: varios mundos en el motor
+
+Un mapa compartido y varios mundos encima (D-20, Hernán). Todo es `muestra`.
+
+Qué existe:
+- `packages/world/src/worlds/`:
+  - `map.ts`: `SharedMap` (id, bounds, `spawn`, `port`, `introLanding`, sectores, `places`) y `Place` (id estable, nombre común, categoría, posición, geometría, comportamientos y parámetros). La cabecera explica cómo pasa `mundos/arcilla/mapa.json` a este modelo (para T20).
+  - `skin.ts`: `WorldSkin` (estilo de barco de `art/barco`, paleta del mar, acento de la interfaz, ranura de música, costa, `places` por id y `names`, los nombres propios del mundo) y `PlaceSkin` (asset, textos, bocadillos que sustituyen a los del DIÁLOGO, escala y `hidden: true`). Sin `asset`, el arte es `mundos/<mundo>/<lugar>`, es decir, `art/mundos/<mundo>/<lugar>/manifest.json`.
+  - `compose.ts`: mapa + skin → el `WorldConfig` de siempre, con el id del lugar como id del objeto. Un lugar sin skin sale con `placeholder:sin-skin` (el motor lo pinta en magenta rayado con un «!») y mantiene su comportamiento. Una skin o un nombre de un lugar desconocido lanza `SkinError`, y también unos bocadillos para un lugar sin DIÁLOGO. `renamePlace(…, scope)`: `{ world }` pone el nombre propio de ese mundo; `'all'` cambia el común y quita los propios de todos.
+  - `registry.ts`: `WorldRegistry` (valida al registrar y compone una sola vez; `get`, `resolve`, `list` para los selectores y `renamePlace`, que devuelve un registro nuevo). `catalog.ts`: `WORLD_REGISTRY` con `muestra` (por defecto, el mundo de plan 001, barco `muestra`) y `prueba` (mismo mapa, barco `acuarela`, otro mar, las rocas cambiadas y dos nombres propios; sólo para probar el cambio).
+  - `selection.ts`: `WorldChoice` (`get`/`set`), `storedWorldChoice(storage, key)` y `activeWorld`. Orden: `?mundo=`, luego lo que eligió el visitante (`boia:mundo`), luego el mundo activo del Admin (`boia:mundo-activo`), luego el por defecto. Un id desconocido se salta. T16/T26 pueden respaldarlo con el repositorio sin cambiar la interfaz.
+  - `check.ts` + `src/cli/world-check.ts`: `pnpm world:check`.
+- `SAMPLE_WORLD` sigue exportado: ahora es el mundo `muestra` compuesto, idéntico al de antes salvo el nombre de las rocas («Roca»).
+- Motor: `game.setWorld(config, { sea })` cambia de mundo en caliente. El barco sigue donde está y las recompensas siguen cobradas, porque hay un único `RewardStore` por partida y va por id de lugar. `GameOptions.sea` y `Water.setPalette` dan el mar de cada mundo. `DEV_ART_URL` acepta ids anidados (`mundos/a/b`).
+- `/juego`: al montar elige el mundo con `world-choice.ts`. Si no hay estilo en la URL ni guardado, el barco es el del mundo. El root lleva `data-mundo`, `--mundo-acento`/`--mundo-sobre-acento` y el fondo del mar del mundo. Lo descubierto se guarda por id y sobrevive al cambio. `MenuContext.world` (`worlds`, `current`, `pending`, `choose`) queda listo para la sección «Mundos» de T24. Cambiar de mundo con el barco del mundo no lo guarda como elección.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 32 archivos, 348 pruebas (antes 324)
+pnpm world:check                           # exit 0; tabla por mundo (muestra y prueba, 7 lugares cada uno)
+node --import ./packages/world/scripts/ts-resolve.mjs packages/world/src/cli/world-check.ts \
+  --registro packages/world/src/worlds/fixtures/sin-skin.ts   # exit 1: prueba/isla-pequena-1 sin skin
+E2E_PORT=3117 pnpm e2e                     # los specs de siempre
+```
+Para verlo: `/juego?mundo=prueba`. En desarrollo, `__boiaWorld('muestra')` en la consola cambia de mundo en caliente. Comprobado en el navegador (`next dev`, puerto 3121): el barco se queda en el mismo punto; cambian las rocas, el mar y el barco (acuarela ↔ muestra); la URL y `boia:mundo` se ponen al día; `boia:estilo-barco` no se toca; la consola queda sin errores.
+
+Desviaciones:
+- `world:check` corre con el TypeScript de Node 24 y un hook de resolución (`packages/world/scripts/ts-resolve.mjs`) para las importaciones sin extensión. En `packages/world` no puede haber sintaxis que no se pueda borrar sin más (parameter properties, enums).
+- Si un lugar no tiene arte, `world:check` lo cuenta como fallo (`sin-arte`), igual que si no tiene skin, porque se ve con un marcador.
+- Los nombres propios van en `WorldSkin.names`, aparte del arte: poner un nombre en un mundo no hace que el lugar pase a «con skin».
+
+Sin probar:
+- La entrada (T14) sigue pintando el mundo por defecto aunque el visitante haya elegido otro. `(landing)` no entra en el alcance: es de T27. `introLanding` está en el mapa, pero la configuración de la entrada todavía no lo lee.
+- No hay música: la ranura `music` es sólo un dato.
+- Lo que el runtime guarda por objeto y no pasa por el `RewardStore` se reinicia al cambiar de mundo: diálogos «una vez» ya vistos, recogibles ya cogidos, efectos. En la prueba, la boia tutorial vuelve a hablar. Lo que sí sobrevive son las recompensas y lo descubierto. Cuando T16/T20 guarden ese estado en el repositorio, sólo hace falta pasarlo por id.
+- La primera pasada de `pnpm e2e` tuvo 3 fallos en escritorio por tiempo agotado, en la landing y la entrada, con la máquina a carga 64 por los encargos en paralelo. Repetida con `--workers=2`: exit 0, 50 pasadas y 10 omitidas.
+
 ## 2026-09-28 — plan 001 T14: intro «mini-mundo» en tres actos con botón y aterrizaje continuo
 
 La entrada de T03 (planeta genérico → mar, automática) queda sustituida por la de D-19, con la opción A de T13: el mundo real enrollado en una esfera falsa de Pixi.
