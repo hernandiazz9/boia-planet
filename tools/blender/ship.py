@@ -8,7 +8,6 @@ Uso suelto, para inspeccionar el modelo en Blender:
     Blender -b -P tools/blender/ship.py -- --skin noche --save tools/blender/out/ship.blend
 """
 import argparse
-import colorsys
 import math
 import os
 import sys
@@ -19,19 +18,22 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rig  # noqa: E402
+import style  # noqa: E402
+
+# Estilo activo (sombreado, contorno). render.py lo cambia con use_style().
+S = style.load(style.DEFAULT)
+
+
+def use_style(name):
+    global S
+    S = style.load(name)
+
 
 SHIP_VERSION = "0.1.0"
 
 # --- Paleta -----------------------------------------------------------------
 # Muestra: los valores exactos de marca BOIA no existen aún (pendiente Álvaro).
 BOIA_PALETTE_MUESTRA = {"orange": "#F26A1B", "navy": "#12233F"}
-
-OUTLINE_COLOR = "#161A2E"
-OUTLINE_WIDTH = 0.024          # unidades del mundo (≈1,9 px con la cámara de rig.py)
-SHADOW_TINT = "#3B3470"        # las sombras tiran a violeta: se lee como ilustración
-LIGHT_TINT = "#FFF6DC"
-TOON_STEPS = (0.12, 0.66)      # umbrales de iluminación (Shader to RGB): sombra | medio | luz
-SHARP_ANGLE_DEG = 38           # aristas más vivas que esto no se suavizan
 
 O, N = BOIA_PALETTE_MUESTRA["orange"], BOIA_PALETTE_MUESTRA["navy"]
 
@@ -113,136 +115,26 @@ def yaw_for(direction):
     return -45.0 - 45.0 * i + rig.CAMERA_AZIMUTH_DEG - 45.0
 
 
-# --- Color ------------------------------------------------------------------
-def hex_srgb(h):
-    h = h.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
-
-
-def srgb_to_linear(c):
-    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-
-
-def lin4(rgb):
-    return tuple(srgb_to_linear(c) for c in rgb) + (1.0,)
-
-
-def mix(a, b, t):
-    return tuple(x + (y - x) * t for x, y in zip(a, b))
-
-
-def toon_tones(hexcol):
-    """(sombra, medio, luz) en sRGB a partir del color base."""
-    base = hex_srgb(hexcol)
-    h, s, v = colorsys.rgb_to_hsv(*base)
-    darker = colorsys.hsv_to_rgb(h, min(1.0, s * 1.05), v * 0.70)
-    shadow = mix(darker, hex_srgb(SHADOW_TINT), 0.30)
-    light = mix(base, hex_srgb(LIGHT_TINT), 0.28)
-    return shadow, base, light
-
-
 # --- Materiales -------------------------------------------------------------
-def toon_material(name):
-    mat = bpy.data.materials.new(name)
-    mat.use_nodes = True
-    nt = mat.node_tree
-    nt.nodes.clear()
-    diffuse = nt.nodes.new("ShaderNodeBsdfDiffuse")
-    diffuse.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
-    to_rgb = nt.nodes.new("ShaderNodeShaderToRGB")
-    ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.name = "toon_ramp"
-    ramp.color_ramp.interpolation = "CONSTANT"
-    els = ramp.color_ramp.elements
-    els[0].position = 0.0
-    els[1].position = TOON_STEPS[0]
-    els.new(TOON_STEPS[1])
-    emit = nt.nodes.new("ShaderNodeEmission")
-    emit.inputs["Strength"].default_value = 1.0
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    nt.links.new(diffuse.outputs["BSDF"], to_rgb.inputs["Shader"])
-    nt.links.new(to_rgb.outputs["Color"], ramp.inputs["Fac"])
-    nt.links.new(ramp.outputs["Color"], emit.inputs["Color"])
-    nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
-    return mat
-
-
-def set_material_color(mat, spec):
-    if isinstance(spec, str):
-        spec = {"hex": spec}
-    if spec.get("flat"):
-        tones = (hex_srgb(spec["hex"]),) * 3
-    else:
-        tones = toon_tones(spec["hex"])
-    els = mat.node_tree.nodes["toon_ramp"].color_ramp.elements
-    for el, tone in zip(els, tones):
-        el.color = lin4(tone)
-
-
-def outline_material():
-    mat = bpy.data.materials.new("outline")
-    mat.use_nodes = True
-    nt = mat.node_tree
-    nt.nodes.clear()
-    emit = nt.nodes.new("ShaderNodeEmission")
-    emit.inputs["Color"].default_value = lin4(hex_srgb(OUTLINE_COLOR))
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
-    mat.use_backface_culling = True
-    return mat
-
-
 class Materials:
     def __init__(self):
         roles = sorted(set(SKINS["base"]) | set(PASSENGER_COLORS))
-        self.by_role = {r: toon_material(r) for r in roles}
-        self.outline = outline_material()
+        self.by_role = {r: S.toon_material(r) for r in roles}
+        self.outline = S.outline_material()
         for role, spec in PASSENGER_COLORS.items():
-            set_material_color(self.by_role[role], spec)
+            S.set_material_color(self.by_role[role], spec)
 
     def __getitem__(self, role):
         return self.by_role[role]
 
     def apply_skin(self, skin):
         for role, spec in SKINS[skin].items():
-            set_material_color(self.by_role[role], spec)
+            S.set_material_color(self.by_role[role], spec)
 
 
 # --- Utilidades de malla ----------------------------------------------------
 def link_object(name, bm, mats, parent, outline_mat, outline=True, thickness=0.0):
-    me = bpy.data.meshes.new(name)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-    # Sombreado suave con aristas vivas: los cortes del toon siguen la forma, no las caras.
-    for f in bm.faces:
-        f.smooth = True
-    sharp = math.radians(SHARP_ANGLE_DEG)
-    for e in bm.edges:
-        e.smooth = len(e.link_faces) == 2 and e.calc_face_angle(0.0) < sharp
-    bm.to_mesh(me)
-    bm.free()
-    for m in mats:
-        me.materials.append(m)
-    obj = bpy.data.objects.new(name, me)
-    bpy.context.scene.collection.objects.link(obj)
-    obj.parent = parent
-    if thickness:
-        mod = obj.modifiers.new("thickness", "SOLIDIFY")
-        mod.thickness = thickness
-        mod.offset = 0.0
-    if outline:
-        # Casco invertido: copia hacia fuera con normales giradas; sólo se ven
-        # sus caras traseras, que dibujan la silueta de cada pieza.
-        n = len(mats)
-        for _ in range(n):
-            me.materials.append(outline_mat)
-        mod = obj.modifiers.new("outline", "SOLIDIFY")
-        mod.thickness = OUTLINE_WIDTH
-        mod.offset = 1.0
-        mod.use_flip_normals = True
-        mod.use_even_offset = True
-        mod.material_offset = n
-        mod.material_offset_rim = n
-    return obj
+    return S.link_object(name, bm, mats, parent, outline_mat, outline=outline, thickness=thickness)
 
 
 def cylinder_between(bm, p0, p1, r, segments=8, r_top=None):

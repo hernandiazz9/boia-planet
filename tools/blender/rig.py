@@ -36,6 +36,21 @@ def pixels_per_unit():
     return RESOLUTION / ORTHO_SCALE
 
 
+def camera_up():
+    """Vector del mundo que en pantalla apunta hacia arriba (perpendicular a la mirada)."""
+    _, toward, _ = camera_basis()
+    el = math.radians(CAMERA_ELEVATION_DEG)
+    return Vector((-toward.x * math.sin(el), -toward.y * math.sin(el), math.cos(el)))
+
+
+def screen_offset_px(world_co, ppu=None):
+    """Desplazamiento en píxeles (x a la derecha, y hacia abajo) de un punto respecto al origen del mundo."""
+    ppu = ppu or pixels_per_unit()
+    right, _, _ = camera_basis()
+    p = Vector(world_co)
+    return (p.dot(right) * ppu, -p.dot(camera_up()) * ppu)
+
+
 def camera_basis():
     """Vectores del mundo: derecha de pantalla, hacia la cámara (horizontal), adelante de la cámara."""
     az = math.radians(CAMERA_AZIMUTH_DEG)
@@ -58,11 +73,11 @@ def reset_scene():
     return scene
 
 
-def setup_render(scene, transparent=True):
+def setup_render(scene, transparent=True, width=RESOLUTION, height=RESOLUTION):
     r = scene.render
     r.engine = "BLENDER_EEVEE"
-    r.resolution_x = RESOLUTION
-    r.resolution_y = RESOLUTION
+    r.resolution_x = width
+    r.resolution_y = height
     r.resolution_percentage = 100
     r.film_transparent = transparent
     r.filter_size = FILTER_SIZE_PX
@@ -84,17 +99,23 @@ def setup_render(scene, transparent=True):
     scene.view_settings.gamma = 1.0
 
 
-def add_camera(scene):
+def add_camera(scene, width=RESOLUTION, height=RESOLUTION, pivot_px=PIVOT_PX, ppu=None, origin=(0.0, 0.0, 0.0)):
+    """Cámara del juego. `origin` (punto del mundo) cae en el píxel `pivot_px` de una imagen width×height.
+
+    Sin `ppu`, la misma densidad que el barco (RESOLUTION / ORTHO_SCALE px por unidad).
+    """
     right, toward, forward = camera_basis()
-    ppu = pixels_per_unit()
+    ortho = ORTHO_SCALE * width / RESOLUTION if ppu is None else width / ppu
+    ppu = width / ortho
     el = math.radians(CAMERA_ELEVATION_DEG)
-    # El centro de la imagen mira a un punto sobre el origen; el origen cae en PIVOT_PX.
-    dy_px = PIVOT_PX[1] - RESOLUTION / 2.0          # cuántos píxeles por debajo del centro
-    dx_px = PIVOT_PX[0] - RESOLUTION / 2.0
-    target = Vector((0.0, 0.0, dy_px / (ppu * math.cos(el)))) - right * (dx_px / ppu)
+    # El centro de la imagen mira a un punto sobre el origen; el origen cae en pivot_px.
+    dy_px = pivot_px[1] - height / 2.0              # cuántos píxeles por debajo del centro
+    dx_px = pivot_px[0] - width / 2.0
+    target = Vector(origin) + Vector((0.0, 0.0, dy_px / (ppu * math.cos(el)))) - right * (dx_px / ppu)
     cam_data = bpy.data.cameras.new("camera")
     cam_data.type = "ORTHO"
-    cam_data.ortho_scale = ORTHO_SCALE
+    cam_data.sensor_fit = "HORIZONTAL"             # ortho_scale mide el ancho aunque la imagen sea apaisada o alta
+    cam_data.ortho_scale = ortho
     cam_data.clip_start = 0.1
     cam_data.clip_end = 100.0
     cam = bpy.data.objects.new("camera", cam_data)
@@ -121,7 +142,7 @@ def add_sun(scene):
 def project_px(scene, cam, world_co):
     """Coordenadas continuas en píxeles: (0,0) esquina superior izquierda, y hacia abajo."""
     v = world_to_camera_view(scene, cam, Vector(world_co))
-    return (v.x * RESOLUTION, (1.0 - v.y) * RESOLUTION)
+    return (v.x * scene.render.resolution_x, (1.0 - v.y) * scene.render.resolution_y)
 
 
 def blender_version():

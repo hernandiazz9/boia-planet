@@ -1,0 +1,159 @@
+{
+  "id": "planeta",
+  "kind": "layers",
+  "category": "planeta",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "muestra",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/style.py",
+      "tools/blender/styles/muestra.py",
+      "tools/blender/world.py",
+      "tools/blender/render.py"
+    ],
+    "sources_sha256": "521b67520c1d3c0a976161e191717ae6db577bd4b489c06ed43b2ee0dc6b9a9d",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 16,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma densidad que los sprites del barco: el motor dibuja este recurso con la misma escala que aplica al barco (D-15) y todo el arte queda proporcionado. Una unidad de Blender mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). En los círculos sobre el agua (hitbox_hint, proximity_hint) radius_px es el semieje horizontal; el vertical mide la mitad",
+  "layers": [
+    {
+      "id": "globo",
+      "file": "globo.png",
+      "order": 0,
+      "radius_px": 448.0,
+      "anchors": {
+        "centro": [
+          512.0,
+          512.0
+        ],
+        "polo": [
+          512.0,
+          124.02
+        ]
+      },
+      "anchors_on_art": [
+        "centro",
+        "polo"
+      ],
+      "width": 1024,
+      "height": 1024,
+      "pixels_per_unit": 17.92,
+      "transparent_border_px": 4
+    },
+    {
+      "id": "nubes",
+      "file": "nubes.png",
+      "order": 1,
+      "anchors": {
+        "centro": [
+          512.0,
+          512.0
+        ],
+        "polo": [
+          512.0,
+          124.02
+        ]
+      },
+      "anchors_on_art": [],
+      "clear_around": {
+        "anchor": "polo",
+        "radius_px": 40.0
+      },
+      "width": 1024,
+      "height": 1024,
+      "pixels_per_unit": 17.92,
+      "transparent_border_px": 4
+    },
+    {
+      "id": "banda-mar",
+      "file": "banda-mar.png",
+      "order": 2,
+      "width": 2048,
+      "height": 768,
+      "transparent_border_px": 0,
+      "pixels_per_unit": 44.1379,
+      "anchors": {
+        "polo": [
+          1024.0,
+          300.0
+        ],
+        "horizonte": [
+          1024.0,
+          152.17
+        ]
+      },
+      "anchors_on_art": [
+        "polo"
+      ]
+    },
+    {
+      "id": "isla",
+      "file": "isla.png",
+      "order": 3,
+      "width": 512,
+      "height": 288,
+      "transparent_border_px": 4,
+      "pixels_per_unit": 44.1379,
+      "anchors": {
+        "pivot": [
+          259.0,
+          162.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "matches": "isla-evento",
+      "place_on": {
+        "globo": "polo",
+        "banda-mar": "polo"
+      }
+    }
+  ],
+  "layers_doc": "Capas 2D de la entrada (v14 §4.4), renderizadas con la cámara del juego (30°, 45°). El globo tiene el polo norte en el origen del mundo: ahí se apoya la isla de evento, que desde 30° se ve 2:1 como en el juego. `isla` se coloca con su pivot sobre el ancla `polo` de `globo` o de `banda-mar`, escalada por pixels_per_unit de la capa destino / pixels_per_unit de `isla`; a pixels_per_unit del juego (la del barco) se sustituye por el sprite de isla-evento. `nubes` comparte lienzo con `globo`. `banda-mar` es el mismo globo de cerca: la curvatura arriba cede al mar plano.",
+  "anchors_doc": {
+    "centro": "centro del disco del globo",
+    "polo": "punto del globo (o de la banda) donde se apoya la isla de evento",
+    "horizonte": "punto más alto del borde del planeta en la banda",
+    "pivot": "pivote de la isla (el mismo punto que el pivot de isla-evento)"
+  },
+  "images": [
+    {
+      "file": "globo.png",
+      "frame": 0,
+      "layer": "globo"
+    },
+    {
+      "file": "nubes.png",
+      "frame": 0,
+      "layer": "nubes"
+    },
+    {
+      "file": "banda-mar.png",
+      "frame": 0,
+      "layer": "banda-mar"
+    },
+    {
+      "file": "isla.png",
+      "frame": 0,
+      "layer": "isla"
+    }
+  ]
+}

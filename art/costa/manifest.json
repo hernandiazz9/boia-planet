@@ -1,0 +1,85 @@
+{
+  "id": "costa",
+  "kind": "tile",
+  "category": "costa",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "muestra",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/style.py",
+      "tools/blender/styles/muestra.py",
+      "tools/blender/world.py",
+      "tools/blender/render.py"
+    ],
+    "sources_sha256": "521b67520c1d3c0a976161e191717ae6db577bd4b489c06ed43b2ee0dc6b9a9d",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 16,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma densidad que los sprites del barco: el motor dibuja este recurso con la misma escala que aplica al barco (D-15) y todo el arte queda proporcionado. Una unidad de Blender mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). En los círculos sobre el agua (hitbox_hint, proximity_hint) radius_px es el semieje horizontal; el vertical mide la mitad",
+  "image": {
+    "width": 448,
+    "height": 512,
+    "format": "png",
+    "mode": "RGBA",
+    "transparent_border_px": 0
+  },
+  "tile": {
+    "axis": "y",
+    "period_px": 512,
+    "period_units": 11.6,
+    "doc": "se repite en vertical sin costura; el lado de tierra llega opaco al borde y más allá se rellena con outer_fill; el lado del agua es transparente. collision_x_px: donde tiene que pararse el casco (orilla más saliente + espuma).",
+    "variants": {
+      "izquierda": {
+        "file": "izquierda.png",
+        "land_side": "left",
+        "shore_x_px": {
+          "mean": 320.0,
+          "min": 274.16,
+          "max": 341.13
+        },
+        "collision_x_px": 349.96,
+        "outer_fill": "#B1D181"
+      },
+      "derecha": {
+        "file": "derecha.png",
+        "land_side": "right",
+        "shore_x_px": {
+          "mean": 128.0,
+          "min": 101.48,
+          "max": 170.91
+        },
+        "collision_x_px": 92.65,
+        "outer_fill": "#B1D181"
+      }
+    }
+  },
+  "anchors_doc": {},
+  "images": [
+    {
+      "file": "izquierda.png",
+      "frame": 0,
+      "variant": "izquierda"
+    },
+    {
+      "file": "derecha.png",
+      "frame": 0,
+      "variant": "derecha"
+    }
+  ]
+}

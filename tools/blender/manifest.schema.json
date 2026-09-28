@@ -5,10 +5,12 @@
   "description": "Lo escribe tools/blender/render.py y lo valida tools/blender/check.py. Anclajes en píxeles continuos: (0,0) arriba a la izquierda, y hacia abajo.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "version", "status", "license", "generator", "image", "projection", "coordinates",
+  "required": ["id", "kind", "version", "status", "license", "style", "generator", "image", "projection", "coordinates",
                "anchors_doc", "skins", "direction_order", "directions", "animations", "images"],
   "properties": {
     "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "kind": {"const": "ship"},
+    "style": {"$ref": "#/$defs/slug"},
     "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
     "status": {"enum": ["muestra", "pendiente", "aprobado"]},
     "license": {"type": "string", "minLength": 1},
@@ -17,7 +19,7 @@
       "additionalProperties": false,
       "required": ["scripts", "sources_sha256", "blender", "engine", "samples", "command"],
       "properties": {
-        "scripts": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^tools/blender/[a-z_]+\\.py$"}},
+        "scripts": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^tools/blender/([a-z]+/)?[a-z0-9_]+\\.py$"}},
         "sources_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "blender": {"type": "string", "minLength": 1},
         "engine": {"type": "string", "minLength": 1},

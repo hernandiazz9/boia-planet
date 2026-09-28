@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "boia-planet/tools/blender/asset.schema.json",
+  "title": "Manifiesto de un recurso del mundo (isla, boia, roca, costa, planeta)",
+  "description": "Lo escribe tools/blender/render.py y lo valida tools/blender/check.py, que además exige los campos de cada kind: sprite (image, pivot_px, anchors, footprint, hitbox_hint), tile (image, tile), layers (layers). Campos de v14 §49.17: id, version, archivo (images), fotogramas (frame, animations), escala (scale), anclajes, pivote, licencia y origen (license, generator), más la huella y las pistas de colisión y proximidad. Anclajes en píxeles continuos: (0,0) arriba a la izquierda, y hacia abajo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "category", "version", "status", "license", "style", "generator", "projection", "scale",
+               "coordinates", "anchors_doc", "images"],
+  "properties": {
+    "id": {"$ref": "#/$defs/slug"},
+    "kind": {"enum": ["sprite", "tile", "layers"]},
+    "category": {"enum": ["isla", "boia", "roca", "costa", "planeta"]},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["muestra", "pendiente", "aprobado"]},
+    "license": {"type": "string", "minLength": 1},
+    "style": {"$ref": "#/$defs/slug"},
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scripts", "sources_sha256", "blender", "engine", "samples", "command"],
+      "properties": {
+        "scripts": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^tools/blender/([a-z]+/)?[a-z0-9_]+\\.py$"}},
+        "sources_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "blender": {"type": "string", "minLength": 1},
+        "engine": {"type": "string", "minLength": 1},
+        "samples": {"type": "integer", "minimum": 1},
+        "command": {"type": "string", "minLength": 1}
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "camera_elevation_deg", "camera_azimuth_deg", "pixels_per_unit"],
+      "properties": {
+        "type": {"const": "dimetric-2:1"},
+        "camera_elevation_deg": {"type": "number", "minimum": 0, "maximum": 90},
+        "camera_azimuth_deg": {"type": "number", "minimum": 0, "maximum": 360},
+        "pixels_per_unit": {"type": "number", "minimum": 0}
+      }
+    },
+    "scale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pixels_per_unit", "reference", "doc"],
+      "properties": {
+        "pixels_per_unit": {"type": "number", "minimum": 0},
+        "reference": {"$ref": "#/$defs/slug"},
+        "doc": {"type": "string", "minLength": 1}
+      }
+    },
+    "coordinates": {"type": "string", "minLength": 1},
+    "image": {"$ref": "#/$defs/imageInfo"},
+    "pivot_px": {"$ref": "#/$defs/point"},
+    "anchors": {"$ref": "#/$defs/anchors"},
+    "anchors_doc": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}},
+    "anchors_on_art": {"type": "array", "items": {"$ref": "#/$defs/slug"}},
+    "footprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "points_px", "doc"],
+      "properties": {
+        "shape": {"const": "polygon"},
+        "points_px": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/point"}},
+        "doc": {"type": "string", "minLength": 1}
+      }
+    },
+    "hitbox_hint": {"$ref": "#/$defs/circle"},
+    "proximity_hint": {"$ref": "#/$defs/circle"},
+    "animations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["frames", "fps", "loop"],
+        "properties": {
+          "frames": {"type": "integer", "minimum": 1},
+          "fps": {"type": "number", "minimum": 0},
+          "loop": {"type": "boolean"}
+        }
+      }
+    },
+    "tile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["axis", "period_px", "period_units", "doc", "variants"],
+      "properties": {
+        "axis": {"enum": ["x", "y"]},
+        "period_px": {"type": "integer", "minimum": 1},
+        "period_units": {"type": "number", "minimum": 0},
+        "doc": {"type": "string", "minLength": 1},
+        "variants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "land_side", "shore_x_px", "collision_x_px", "outer_fill"],
+            "properties": {
+              "file": {"$ref": "#/$defs/file"},
+              "land_side": {"enum": ["left", "right"]},
+              "shore_x_px": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["mean", "min", "max"],
+                "properties": {"mean": {"type": "number"}, "min": {"type": "number"}, "max": {"type": "number"}}
+              },
+              "collision_x_px": {"type": "number"},
+              "outer_fill": {"type": "string", "pattern": "^#[0-9A-F]{6}$"}
+            }
+          }
+        }
+      }
+    },
+    "layers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/layer"}},
+    "layers_doc": {"type": "string", "minLength": 1},
+    "images": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/image"}}
+  },
+  "$defs": {
+    "slug": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "file": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*\\.png$"},
+    "point": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+    "anchors": {"type": "object", "required": ["pivot"], "additionalProperties": {"$ref": "#/$defs/point"}},
+    "imageInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "format", "mode", "transparent_border_px"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "format": {"const": "png"},
+        "mode": {"const": "RGBA"},
+        "transparent_border_px": {"type": "integer", "minimum": 0}
+      }
+    },
+    "circle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "center_px", "radius_px", "radius_units"],
+      "properties": {
+        "shape": {"const": "circle"},
+        "center_px": {"$ref": "#/$defs/point"},
+        "radius_px": {"type": "number", "minimum": 0},
+        "radius_units": {"type": "number", "minimum": 0}
+      }
+    },
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "file", "order", "width", "height", "pixels_per_unit", "transparent_border_px", "anchors", "anchors_on_art"],
+      "properties": {
+        "id": {"$ref": "#/$defs/slug"},
+        "file": {"$ref": "#/$defs/file"},
+        "order": {"type": "integer", "minimum": 0},
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "pixels_per_unit": {"type": "number", "minimum": 0},
+        "transparent_border_px": {"type": "integer", "minimum": 0},
+        "radius_px": {"type": "number", "minimum": 0},
+        "anchors": {"type": "object", "additionalProperties": {"$ref": "#/$defs/point"}},
+        "anchors_on_art": {"type": "array", "items": {"$ref": "#/$defs/slug"}},
+        "clear_around": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["anchor", "radius_px"],
+          "properties": {"anchor": {"$ref": "#/$defs/slug"}, "radius_px": {"type": "number", "minimum": 0}}
+        },
+        "matches": {"$ref": "#/$defs/slug"},
+        "place_on": {"type": "object", "additionalProperties": {"$ref": "#/$defs/slug"}}
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "frame"],
+      "properties": {
+        "file": {"$ref": "#/$defs/file"},
+        "frame": {"type": "integer", "minimum": 0},
+        "animation": {"$ref": "#/$defs/slug"},
+        "lamp_on": {"type": "boolean"},
+        "variant": {"$ref": "#/$defs/slug"},
+        "layer": {"$ref": "#/$defs/slug"},
+        "anchors": {"$ref": "#/$defs/anchors"}
+      }
+    }
+  }
+}

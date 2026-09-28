@@ -1,15 +1,19 @@
 {
   "id": "barco",
+  "kind": "ship",
   "version": "0.1.0",
   "status": "muestra",
   "license": "muestra interna",
+  "style": "muestra",
   "generator": {
     "scripts": [
       "tools/blender/rig.py",
+      "tools/blender/style.py",
+      "tools/blender/styles/muestra.py",
       "tools/blender/ship.py",
       "tools/blender/render.py"
     ],
-    "sources_sha256": "0d2e975297dc5413a4a9fb1d48eb3c118453f8370b956ab964545610a4e487c0",
+    "sources_sha256": "ce6df989e5e1e2633787d1627c1c22ed81d99efe617dfd439bbfa19b8fc6768a",
     "blender": "5.2.2 LTS",
     "engine": "BLENDER_EEVEE",
     "samples": 16,

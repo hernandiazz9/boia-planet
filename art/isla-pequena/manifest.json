@@ -1,0 +1,221 @@
+{
+  "id": "isla-pequena",
+  "kind": "sprite",
+  "category": "isla",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "muestra",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/style.py",
+      "tools/blender/styles/muestra.py",
+      "tools/blender/world.py",
+      "tools/blender/render.py"
+    ],
+    "sources_sha256": "521b67520c1d3c0a976161e191717ae6db577bd4b489c06ed43b2ee0dc6b9a9d",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 16,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma densidad que los sprites del barco: el motor dibuja este recurso con la misma escala que aplica al barco (D-15) y todo el arte queda proporcionado. Una unidad de Blender mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). En los círculos sobre el agua (hitbox_hint, proximity_hint) radius_px es el semieje horizontal; el vertical mide la mitad",
+  "image": {
+    "width": 512,
+    "height": 320,
+    "format": "png",
+    "mode": "RGBA",
+    "transparent_border_px": 4
+  },
+  "pivot_px": [
+    244.0,
+    182.0
+  ],
+  "anchors": {
+    "pivot": [
+      244.0,
+      182.0
+    ],
+    "rotulo": [
+      244.0,
+      14.66
+    ]
+  },
+  "anchors_doc": {
+    "pivot": "centro de la isla a ras de agua; origen de la huella y de la proximidad",
+    "rotulo": "encima del punto más alto del arte: nombre o aviso de la isla"
+  },
+  "anchors_on_art": [
+    "pivot"
+  ],
+  "footprint": {
+    "shape": "polygon",
+    "points_px": [
+      [
+        438.54,
+        182.0
+      ],
+      [
+        422.98,
+        199.8
+      ],
+      [
+        403.41,
+        215.01
+      ],
+      [
+        381.63,
+        227.98
+      ],
+      [
+        357.19,
+        238.6
+      ],
+      [
+        330.57,
+        246.78
+      ],
+      [
+        303.32,
+        253.61
+      ],
+      [
+        275.42,
+        260.97
+      ],
+      [
+        244.0,
+        269.37
+      ],
+      [
+        206.51,
+        276.23
+      ],
+      [
+        165.15,
+        277.18
+      ],
+      [
+        127.1,
+        269.48
+      ],
+      [
+        99.39,
+        254.3
+      ],
+      [
+        83.45,
+        235.64
+      ],
+      [
+        75.12,
+        216.98
+      ],
+      [
+        70.01,
+        199.3
+      ],
+      [
+        67.9,
+        182.0
+      ],
+      [
+        71.89,
+        164.88
+      ],
+      [
+        83.84,
+        148.83
+      ],
+      [
+        102.03,
+        134.57
+      ],
+      [
+        123.46,
+        121.73
+      ],
+      [
+        147.45,
+        109.75
+      ],
+      [
+        175.67,
+        99.51
+      ],
+      [
+        208.72,
+        93.32
+      ],
+      [
+        244.0,
+        92.76
+      ],
+      [
+        277.89,
+        96.8
+      ],
+      [
+        309.79,
+        102.58
+      ],
+      [
+        342.44,
+        108.34
+      ],
+      [
+        377.51,
+        115.24
+      ],
+      [
+        411.26,
+        126.12
+      ],
+      [
+        435.7,
+        142.3
+      ],
+      [
+        444.66,
+        162.04
+      ]
+    ],
+    "doc": "orilla a ras de agua (sin la espuma), en px de la imagen, sentido horario en pantalla"
+  },
+  "hitbox_hint": {
+    "shape": "circle",
+    "center_px": [
+      244.0,
+      182.0
+    ],
+    "radius_px": 180.97,
+    "radius_units": 2.05
+  },
+  "proximity_hint": {
+    "shape": "circle",
+    "center_px": [
+      244.0,
+      182.0
+    ],
+    "radius_px": 398.12,
+    "radius_units": 4.51
+  },
+  "images": [
+    {
+      "file": "base.png",
+      "frame": 0
+    }
+  ]
+}

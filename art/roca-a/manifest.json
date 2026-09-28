@@ -1,0 +1,180 @@
+{
+  "id": "roca-a",
+  "kind": "sprite",
+  "category": "roca",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "muestra",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/style.py",
+      "tools/blender/styles/muestra.py",
+      "tools/blender/world.py",
+      "tools/blender/render.py"
+    ],
+    "sources_sha256": "521b67520c1d3c0a976161e191717ae6db577bd4b489c06ed43b2ee0dc6b9a9d",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 16,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma densidad que los sprites del barco: el motor dibuja este recurso con la misma escala que aplica al barco (D-15) y todo el arte queda proporcionado. Una unidad de Blender mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). En los círculos sobre el agua (hitbox_hint, proximity_hint) radius_px es el semieje horizontal; el vertical mide la mitad",
+  "image": {
+    "width": 192,
+    "height": 128,
+    "format": "png",
+    "mode": "RGBA",
+    "transparent_border_px": 4
+  },
+  "pivot_px": [
+    96.0,
+    75.0
+  ],
+  "anchors": {
+    "pivot": [
+      96.0,
+      75.0
+    ],
+    "rotulo": [
+      96.0,
+      12.03
+    ]
+  },
+  "anchors_doc": {
+    "pivot": "centro de la roca a ras de agua",
+    "rotulo": "encima del punto más alto"
+  },
+  "anchors_on_art": [
+    "pivot"
+  ],
+  "footprint": {
+    "shape": "polygon",
+    "points_px": [
+      [
+        149.23,
+        75.0
+      ],
+      [
+        145.05,
+        81.57
+      ],
+      [
+        137.68,
+        87.03
+      ],
+      [
+        129.4,
+        91.7
+      ],
+      [
+        119.5,
+        95.35
+      ],
+      [
+        108.44,
+        98.21
+      ],
+      [
+        96.0,
+        99.56
+      ],
+      [
+        83.3,
+        98.7
+      ],
+      [
+        71.52,
+        96.2
+      ],
+      [
+        59.6,
+        93.2
+      ],
+      [
+        49.14,
+        88.53
+      ],
+      [
+        42.8,
+        82.13
+      ],
+      [
+        41.67,
+        75.0
+      ],
+      [
+        44.3,
+        68.07
+      ],
+      [
+        51.58,
+        62.18
+      ],
+      [
+        62.43,
+        58.21
+      ],
+      [
+        72.52,
+        54.66
+      ],
+      [
+        82.94,
+        50.63
+      ],
+      [
+        96.0,
+        48.5
+      ],
+      [
+        109.92,
+        49.02
+      ],
+      [
+        123.33,
+        51.33
+      ],
+      [
+        134.76,
+        55.62
+      ],
+      [
+        143.48,
+        61.29
+      ],
+      [
+        148.78,
+        67.93
+      ]
+    ],
+    "doc": "cruce de la roca con el agua, en px de la imagen"
+  },
+  "hitbox_hint": {
+    "shape": "circle",
+    "center_px": [
+      96.0,
+      75.0
+    ],
+    "radius_px": 51.38,
+    "radius_units": 0.5821
+  },
+  "images": [
+    {
+      "file": "base.png",
+      "frame": 0
+    }
+  ]
+}
