@@ -1,0 +1,164 @@
+import type { Rect } from '@boia/world';
+import { clamp, damp, wrapAngle } from '../math';
+import type { ShipConfig } from './config';
+
+export interface ShipState {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** Rumbo del casco en el plano del agua (0 = este, π/2 = hacia el espectador). */
+  heading: number;
+  drifting: boolean;
+}
+
+/** Lo que pide el jugador en un paso, ya pasado a coordenadas de mundo. */
+export interface ShipInput {
+  /** Dirección deseada en el plano del agua; se normaliza. (0, 0) = sin rumbo. */
+  dirX: number;
+  dirY: number;
+  /** 0..1. 0 = soltar: frena suave. */
+  throttle: number;
+  drift: boolean;
+}
+
+export const IDLE_INPUT: ShipInput = { dirX: 0, dirY: 0, throttle: 0, drift: false };
+
+export interface CircleObstacle {
+  x: number;
+  y: number;
+  radius: number;
+}
+
+export interface ShipEnvironment {
+  bounds: Rect;
+  obstacles: readonly CircleObstacle[];
+}
+
+export function createShipState(x: number, y: number, heading = -Math.PI / 2): ShipState {
+  return { x, y, vx: 0, vy: 0, heading, drifting: false };
+}
+
+export function shipSpeed(s: ShipState): number {
+  return Math.hypot(s.vx, s.vy);
+}
+
+function approach(v: number, target: number, rate: number): number {
+  return v < target ? Math.min(target, v + rate) : Math.max(target, v - rate);
+}
+
+/** Integra un paso de física del barco (sin colisiones). Muta `s`. */
+export function stepShip(s: ShipState, input: ShipInput, cfg: ShipConfig, dt: number): void {
+  const len = Math.hypot(input.dirX, input.dirY);
+  const throttle = len > 1e-6 ? clamp(input.throttle, 0, 1) : 0;
+  const drifting = input.drift && throttle > 0;
+  s.drifting = drifting;
+
+  const speed = shipSpeed(s);
+  let align = 1;
+  if (throttle > 0) {
+    const target = Math.atan2(input.dirY, input.dirX);
+    const delta = wrapAngle(target - s.heading);
+    const speedFactor =
+      cfg.minTurnFactor + (1 - cfg.minTurnFactor) * clamp(speed / (0.5 * cfg.maxSpeed), 0, 1);
+    const maxTurn =
+      cfg.turnRate * (drifting ? cfg.drift.turnMultiplier : 1) * speedFactor * dt * throttle;
+    s.heading = wrapAngle(s.heading + clamp(delta, -maxTurn, maxTurn));
+    // Con el rumbo pedido muy de espaldas, gira antes de acelerar.
+    align = clamp((Math.cos(wrapAngle(target - s.heading)) + 0.5) / 1.5, 0.15, 1);
+  }
+
+  const fx = Math.cos(s.heading);
+  const fy = Math.sin(s.heading);
+  let vF = s.vx * fx + s.vy * fy;
+  let vL = -s.vx * fy + s.vy * fx;
+
+  // La quilla anula el deslizamiento lateral y devuelve parte como avance.
+  const grip = drifting ? cfg.drift.lateralGrip : cfg.lateralGrip;
+  const toForward = drifting ? cfg.drift.gripToForward : cfg.gripToForward;
+  const removed = vL * damp(grip, dt);
+  vL -= removed;
+  vF += Math.abs(removed) * toForward * (vF >= 0 ? 1 : -1);
+
+  if (throttle > 0) {
+    const targetSpeed = cfg.maxSpeed * throttle * align;
+    const rate = vF < targetSpeed ? cfg.acceleration : cfg.brakeDeceleration;
+    vF = approach(vF, targetSpeed, rate * dt);
+  } else {
+    vF = approach(vF, 0, cfg.brakeDeceleration * dt);
+  }
+
+  s.vx = fx * vF - fy * vL;
+  s.vy = fy * vF + fx * vL;
+  // Tope absoluto: ni el derrape ni deslizar por una costa superan la máxima.
+  const v = Math.hypot(s.vx, s.vy);
+  if (v > cfg.maxSpeed) {
+    s.vx *= cfg.maxSpeed / v;
+    s.vy *= cfg.maxSpeed / v;
+  }
+
+  s.x += s.vx * dt;
+  s.y += s.vy * dt;
+}
+
+/**
+ * Colisiones: costas laterales y borde inferior deslizan con poca
+ * restitución; el borde superior está abierto y, pasado, una corriente
+ * suave devuelve el barco (§49.7); los obstáculos circulares rebotan suave.
+ * Muta `s`. Devuelve si hubo contacto (para la estela y el sonido futuros).
+ */
+export function collideShip(
+  s: ShipState,
+  env: ShipEnvironment,
+  cfg: ShipConfig,
+  dt: number,
+): boolean {
+  const r = cfg.radius;
+  const b = env.bounds;
+  let hit = false;
+
+  if (s.x < b.left + r) {
+    s.x = b.left + r;
+    if (s.vx < 0) s.vx = -s.vx * cfg.wallRestitution;
+    hit = true;
+  } else if (s.x > b.right - r) {
+    s.x = b.right - r;
+    if (s.vx > 0) s.vx = -s.vx * cfg.wallRestitution;
+    hit = true;
+  }
+  if (s.y > b.bottom - r) {
+    s.y = b.bottom - r;
+    if (s.vy > 0) s.vy = -s.vy * cfg.wallRestitution;
+    hit = true;
+  }
+
+  const beyondTop = b.top - s.y;
+  if (beyondTop > 0) {
+    // Corriente que arrastra el barco de vuelta: mueve el agua, no el casco,
+    // así el freno no la anula y no hay vaivén. Mínimo 15 % para que siempre
+    // termine de devolverlo.
+    const k = clamp(beyondTop / cfg.openEdgeSoftZone, 0.15, 1);
+    s.y += cfg.openEdgeCurrent * k * dt;
+  }
+
+  for (const o of env.obstacles) {
+    const dx = s.x - o.x;
+    const dy = s.y - o.y;
+    const minDist = o.radius + r;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= minDist * minDist) continue;
+    const d = Math.sqrt(d2);
+    // Centro exactamente encima: empuja hacia el espectador.
+    const nx = d > 1e-6 ? dx / d : 0;
+    const ny = d > 1e-6 ? dy / d : 1;
+    s.x = o.x + nx * minDist;
+    s.y = o.y + ny * minDist;
+    const vn = s.vx * nx + s.vy * ny;
+    if (vn < 0) {
+      s.vx -= (1 + cfg.obstacleRestitution) * vn * nx;
+      s.vy -= (1 + cfg.obstacleRestitution) * vn * ny;
+    }
+    hit = true;
+  }
+  return hit;
+}
