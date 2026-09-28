@@ -1,0 +1,23 @@
+{
+ "tema": "arcilla",
+ "escala": 1.0,
+ "muestras": 64,
+ "blender": "5.2.2 LTS",
+ "construccion_s": 6.31,
+ "objetos": 4088,
+ "imagenes": [
+  {
+   "archivo": "allday-recuerdo-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 6.58
+  },
+  {
+   "archivo": "allday-recuerdo-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 7.88
+  }
+ ],
+ "total_s": 21.16
+}

@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mundo de arcilla</title>
+<meta name="description" content="Visor del mapa de lanzamiento del mundo de arcilla de BOIA.PLANET. Muestra.">
+<style>
+:root{
+  --bg:#f6f1e7;--panel:#fffdf8;--ink:#2a2420;--muted:#6f655b;--line:#e3d8c6;--accent:#F26A1B;--accent-ink:#fff;
+  --sea:#2f6a8a;--focus:#1a5fd0;--shadow:0 6px 24px rgba(40,30,20,.18);--chip:#f1e9dc;
+  --bar-h:56px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14161b;--panel:#1d2027;--ink:#efe9df;--muted:#a79e91;--line:#323641;--chip:#282c35;--focus:#7fb2ff;
+  --shadow:0 6px 24px rgba(0,0,0,.5);
+}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+[hidden]:not(#ficha){display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* barra superior */
+.bar{position:fixed;inset:0 0 auto 0;height:var(--bar-h);display:flex;align-items:center;gap:10px;padding:0 12px;
+  background:var(--panel);border-bottom:1px solid var(--line);z-index:30}
+.bar h1{font-size:17px;margin:0 6px 0 0;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.tag{font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.04em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:2px 8px}
+.bar .grow{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--bg)}
+.seg button{border:0;background:transparent;padding:6px 12px;min-height:36px;cursor:pointer;white-space:nowrap}
+.seg button[aria-checked="true"]{background:var(--ink);color:var(--bg)}
+.seg button[aria-disabled="true"]{opacity:.4;cursor:not-allowed}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 14px;min-height:36px;cursor:pointer;white-space:nowrap}
+.btn[aria-pressed="true"],.btn[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.bar .ico{display:none}
+.mob{display:none;margin-bottom:12px}
+
+/* mapa */
+#stage{position:fixed;inset:var(--bar-h) 0 0 0}
+#viewport{position:absolute;inset:0;overflow:hidden;background:var(--sea);touch-action:none;cursor:grab;outline:none}
+#viewport.drag{cursor:grabbing}
+#viewport:focus-visible{box-shadow:inset 0 0 0 3px var(--focus)}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#world img.map{position:absolute;left:0;top:0;opacity:0;transition:opacity .6s ease;user-select:none;-webkit-user-drag:none;pointer-events:none}
+#world img.map.on{opacity:1}
+#ov{position:absolute;left:0;top:0;overflow:visible}
+#ov .zone{fill-opacity:0;stroke-opacity:.6;stroke-width:2;stroke-dasharray:7 5;cursor:pointer;transition:fill-opacity .2s}
+#ov .zone:hover{fill-opacity:.14}
+#ov .zone.sel{fill-opacity:.2;stroke-opacity:1}
+#ov .line{fill:none;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+#ov path,#ov polygon,#ov polyline{vector-effect:non-scaling-stroke}
+#ship{position:absolute;left:0;top:0;width:256px;height:256px;pointer-events:none;transform-origin:0 0;image-rendering:auto}
+#labels{position:absolute;inset:0;pointer-events:none}
+.pin{position:absolute;transform:translate(-50%,-50%);pointer-events:auto}
+.zlabel{display:flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:3px 10px 3px 3px;min-height:30px;
+  background:rgba(255,253,248,.93);color:#2a2420;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;font-weight:650;font-size:13px;white-space:nowrap}
+.zlabel b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font-size:12px}
+.zlabel.sel{outline:3px solid var(--accent)}
+.zlabel.mini{padding:3px}
+.zlabel.mini span{display:none}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pl{font-size:12px;font-weight:600;color:#2a2420;background:rgba(255,253,248,.9);border-radius:6px;padding:1px 6px;white-space:nowrap;position:absolute;left:10px;top:-9px}
+.pl.hide{display:none}
+.star{width:20px;height:20px}
+.mk{font:700 11px system-ui;color:#fff;background:#2a2420;border-radius:4px;padding:1px 5px;white-space:nowrap}
+.diamond{width:12px;height:12px;background:#fff;border:2px solid #D19A00;transform:rotate(45deg)}
+.obst{width:12px;height:12px;border-radius:50%;background:#B3261E;border:2px solid #fff}
+.layer-off{display:none!important}
+
+/* controles flotantes */
+.zoom{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:10}
+.zoom button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:20px;cursor:pointer;box-shadow:var(--shadow)}
+.pop{position:absolute;top:8px;right:12px;z-index:25;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;max-height:calc(100% - 16px);overflow:auto;width:290px}
+.pop h2{font-size:14px;margin:0 0 8px}
+.pop label{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer}
+.pop input{width:18px;height:18px;accent-color:var(--accent)}
+.sw{display:inline-block;width:26px;height:10px;border-radius:3px;flex:none}
+#zones ol{list-style:none;margin:0;padding:0}
+#zones button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;background:transparent;padding:7px 4px;border-radius:8px;cursor:pointer}
+#zones button:hover{background:var(--chip)}
+#zones b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font-size:12px;flex:none}
+#tourbar{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:12;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;box-shadow:var(--shadow);padding:8px 10px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 90px)}
+#tourbar button{min-width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+#tourbar .clock{font:600 15px ui-monospace,Menlo,monospace;min-width:0}
+#tourbar .where{font-size:12px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tourbar select{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#loading{position:absolute;left:12px;bottom:12px;z-index:11;background:var(--panel);border-radius:999px;padding:6px 12px;font-size:13px;box-shadow:var(--shadow)}
+
+/* ficha */
+#ficha{position:absolute;top:0;right:0;bottom:0;width:420px;max-width:100%;background:var(--panel);border-left:1px solid var(--line);
+  box-shadow:var(--shadow);z-index:20;display:flex;flex-direction:column;transform:translateX(0);transition:transform .3s ease}
+#ficha[hidden]{display:flex;transform:translateX(105%);visibility:hidden}
+#ficha header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+#ficha header h2{font-size:17px;margin:0;flex:1;display:flex;align-items:center;gap:8px}
+#ficha header h2 b{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;color:#fff;font-size:13px;flex:none}
+#ficha .body{overflow-y:auto;overflow-x:hidden;padding:0 14px 20px}
+#ficha figure{margin:12px 0 6px;position:relative;border-radius:12px;overflow:hidden;background:var(--sea);aspect-ratio:4/3}
+#ficha figure img{display:block;width:100%;height:100%;object-fit:cover}
+#ficha figure .seg{position:absolute;right:8px;bottom:8px;background:var(--panel)}
+#ficha h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:16px 0 6px}
+#ficha p{margin:6px 0}
+#ficha .alt{color:var(--muted);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{background:var(--chip);border-radius:999px;padding:2px 10px;font-size:13px}
+.chips code{font:12px ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+blockquote{margin:8px 0;border-left:4px solid var(--accent);padding:4px 0 4px 12px;color:var(--ink)}
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+.pal div{border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:11px}
+.pal i{display:block;height:26px}
+.pal span{display:block;padding:3px 6px;font-family:ui-monospace,Menlo,monospace}
+.nav{display:flex;gap:8px;margin-top:18px}
+.nav button{flex:1;min-width:0;white-space:normal;border-radius:14px;text-align:center}
+.close{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:18px}
+
+@media (max-width:760px){
+  :root{--bar-h:52px}
+  .bar{gap:6px;padding:0 8px}
+  .bar h1 .t{display:none}
+  .bar .full{display:none}
+  .bar .ico{display:inline}
+  .seg button{padding:6px 9px}
+  .btn{padding:6px 10px}
+  .bar #worlds{display:none}
+  .mob{display:block}
+  .seg.hours button span.full{display:none}
+  .bar h1{margin:0}
+  #ficha{top:auto;left:0;right:0;width:100%;height:auto;max-height:62%;border-left:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0}
+  #ficha[hidden]{transform:translateY(105%)}
+  #ficha header::before{content:"";position:absolute;left:50%;top:5px;width:42px;height:4px;margin-left:-21px;border-radius:2px;background:var(--line)}
+  #ficha figure{aspect-ratio:16/10}
+  .pop{left:8px;right:8px;width:auto}
+  #tourbar{left:8px;right:64px;transform:none;max-width:none;bottom:8px;gap:6px;padding:6px}
+  #tourbar button{min-width:38px}
+  .zoom{right:8px;bottom:8px}
+}
+@media (max-width:420px){
+  .seg.hours button span.full{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+.reduce *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1><span aria-hidden="true">🏝</span><span class="t">Mundo de arcilla</span><span class="tag">muestra</span></h1>
+  <div class="seg" role="radiogroup" aria-label="Mundo" id="worlds">
+    <button role="radio" data-w="arcilla" aria-checked="true">Arcilla</button>
+    <button role="radio" data-w="papel" aria-checked="false">Papel</button>
+    <button role="radio" data-w="cartoon" aria-checked="false">Cartoon</button>
+  </div>
+  <div class="seg hours" role="radiogroup" aria-label="Hora" id="hours">
+    <button role="radio" data-h="dia" aria-checked="true" title="Día"><span aria-hidden="true">☀︎</span><span class="full"> Día</span></button>
+    <button role="radio" data-h="atardecer" aria-checked="false" title="Atardecer"><span aria-hidden="true">◐</span><span class="full"> Atardecer</span></button>
+    <button role="radio" data-h="noche" aria-checked="false" title="Noche"><span aria-hidden="true">☾</span><span class="full"> Noche</span></button>
+  </div>
+  <span class="grow"></span>
+  <button class="btn" id="btn-tour" aria-pressed="false"><span class="full">Recorrido</span><span class="ico" aria-hidden="true">⛵</span><span class="sr ico">Recorrido</span></button>
+  <button class="btn" id="btn-zones" aria-expanded="false" aria-controls="zones"><span class="full">Zonas</span><span class="ico" aria-hidden="true">☰</span><span class="sr ico">Zonas</span></button>
+  <button class="btn" id="btn-layers" aria-expanded="false" aria-controls="layers"><span class="full">Capas</span><span class="ico" aria-hidden="true">◧</span><span class="sr ico">Capas</span></button>
+</header>
+
+<main id="stage">
+  <div id="viewport" tabindex="0" role="application" aria-roledescription="mapa" aria-describedby="map-help"
+       aria-label="Mapa del mundo de arcilla">
+    <div id="world">
+      <img class="map" id="img-arcilla-dia" alt="Vista general del mundo de arcilla de día: un mar entre acantilados al oeste y una playa al este, con el puerto de salida abajo y nueve zonas hasta la última isla, arriba." draggable="false">
+      <img class="map" id="img-arcilla-atardecer" alt="Vista general del mundo de arcilla al atardecer, con luz baja y cálida." draggable="false">
+      <img class="map" id="img-arcilla-noche" alt="Vista general del mundo de arcilla de noche: se encienden el escenario, las guirnaldas, las boies y la hoguera de la última isla." draggable="false">
+      <img class="map" id="img-papel-dia" alt="Vista general del mismo mapa en el mundo de papel, a lápiz." draggable="false">
+      <img class="map" id="img-cartoon-dia" alt="Vista general del mismo mapa en el mundo cartoon, con tinta y paleta corta." draggable="false">
+      <svg id="ov" aria-hidden="true"></svg>
+      <img id="ship" alt="" aria-hidden="true" draggable="false">
+    </div>
+    <div id="labels"></div>
+  </div>
+  <p id="map-help" class="sr">Arrastra o usa las flechas para moverte, la rueda, el pellizco o las teclas más y menos para acercar, y cero para ver todo. Cada zona es un botón que abre su ficha.</p>
+  <div class="zoom" role="group" aria-label="Zoom">
+    <button id="z-in" aria-label="Acercar">+</button>
+    <button id="z-out" aria-label="Alejar">−</button>
+    <button id="z-fit" aria-label="Ver todo el mapa">⤢</button>
+  </div>
+
+  <div id="layers" class="pop" hidden role="group" aria-labelledby="layers-h">
+    <div class="mob">
+      <h2 id="worlds2-h">Mundo</h2>
+      <div class="seg" role="radiogroup" aria-labelledby="worlds2-h" id="worlds2">
+        <button role="radio" data-w="arcilla" aria-checked="true">Arcilla</button>
+        <button role="radio" data-w="papel" aria-checked="false">Papel</button>
+        <button role="radio" data-w="cartoon" aria-checked="false">Cartoon</button>
+      </div>
+    </div>
+    <h2 id="layers-h">Capas</h2>
+    <div id="layer-list"></div>
+  </div>
+  <nav id="zones" class="pop" hidden aria-labelledby="zones-h">
+    <h2 id="zones-h">Zonas</h2>
+    <ol id="zone-list"></ol>
+  </nav>
+
+  <div id="tourbar" hidden role="group" aria-label="Recorrido">
+    <button id="t-prev" aria-label="Zona anterior">⏮</button>
+    <button id="t-play" aria-label="Reproducir">▶</button>
+    <button id="t-next" aria-label="Zona siguiente">⏭</button>
+    <div class="clock"><span id="t-clock" aria-live="off">0:00</span><span class="where" id="t-where"></span></div>
+    <label class="sr" for="t-speed">Velocidad</label>
+    <select id="t-speed" aria-label="Velocidad"><option value="1">×1</option><option value="5">×5</option><option value="10" selected>×10</option><option value="30">×30</option></select>
+  </div>
+  <div id="loading" hidden role="status">Cargando…</div>
+
+  <aside id="ficha" hidden role="dialog" aria-modal="false" aria-labelledby="f-title">
+    <header>
+      <h2 id="f-title" tabindex="-1"></h2>
+      <button class="close" id="f-close" aria-label="Cerrar ficha">✕</button>
+    </header>
+    <div class="body" id="f-body"></div>
+  </aside>
+  <p id="status" class="sr" role="status" aria-live="polite"></p>
+</main>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const SVGNS = "http://www.w3.org/2000/svg";
+const reducedMQ = matchMedia("(prefers-reduced-motion: reduce)");
+const reducedForced = new URLSearchParams(location.search).get("movimiento") === "reducido";
+const reduced = {get matches() { return reducedMQ.matches || reducedForced; }};
+if (reducedForced) document.documentElement.classList.add("reduce");
+const SHIP_ART = "../../art/barco/estilos/arcilla/";
+const HOURS = ["dia", "atardecer", "noche"];
+
+const S = {
+  M: null, G: null, pal: null, man: null,
+  world: "arcilla", hour: "dia", zone: null,
+  s: 1, tx: 0, ty: 0, min: 0.1, max: 1, W: 1, H: 1,
+  layers: {zonas: true, ruta: true, desvios: false, circuito: false, proximidad: false, colision: false, lugares: false, secretos: false},
+  tour: {on: false, playing: false, t: 0, speed: 10, last: 0, timer: 0},
+};
+const LAYERS = [
+  ["zonas", "Zonas", "#8E3FB0"], ["ruta", "Ruta principal y directa", "#F26A1B"], ["desvios", "Desvíos opcionales", "#0E6E8C"],
+  ["circuito", "Circuito: segura y atajo", "#D19A00"], ["proximidad", "Radios de proximidad", "#888"],
+  ["colision", "Costas y colisión", "#5A4632"], ["lugares", "Lugares", "#2a2420"], ["secretos", "Secretos", "#E0A800"],
+];
+
+// ---------- carga ----------
+async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }
+function imgSrc(world, hour) { return "render/" + (world === "arcilla" ? "" : world + "-") + "general-" + hour + ".webp"; }
+function loadImg(el, src) {
+  return new Promise((res, rej) => {
+    if (el.dataset.src === src && el.complete && el.naturalWidth) return res();
+    el.onload = () => res(); el.onerror = () => rej(new Error(src));
+    el.dataset.src = src; el.src = src;
+  });
+}
+
+async function init() {
+  const [M, G, pal, man] = await Promise.all([
+    getJSON("mapa.json"), getJSON("render/general.json"), getJSON("paleta.json"), getJSON(SHIP_ART + "manifest.json"),
+  ]);
+  Object.assign(S, {M, G, pal, man});
+  [S.W, S.H] = G.imagen;
+  $$("#world img.map").forEach(im => { im.width = S.W; im.height = S.H; });
+  const ov = $("#ov"); ov.setAttribute("width", S.W); ov.setAttribute("height", S.H); ov.setAttribute("viewBox", `0 0 ${S.W} ${S.H}`);
+  buildOverlay(); buildLabels(); buildLayerUI(); buildZoneList(); setupTour();
+  fit(); bindInput();
+  const first = $("#img-arcilla-dia");
+  await loadImg(first, imgSrc("arcilla", "dia")); first.classList.add("on");
+  placeShip(S.route.px[0], "N");
+  await applyQuery();
+  openFromHash();
+}
+
+// Estado inicial por URL, para compartir una vista: ?mundo=papel&hora=noche&capas=zonas,circuito&zoom=2.5&en=x,y&recorrido=3
+async function applyQuery() {
+  const q = new URLSearchParams(location.search);
+  if (q.has("capas")) {
+    const want = q.get("capas") === "todas" ? LAYERS.map(l => l[0]) : q.get("capas").split(",");
+    for (const [id] of LAYERS) S.layers[id] = want.includes(id);
+    $$("#layer-list input").forEach(i => { i.checked = S.layers[i.dataset.l]; });
+    applyLayers();
+  }
+  if (q.has("mundo") || q.has("hora")) await setView(q.get("mundo") || "arcilla", q.get("hora") || "dia");
+  if (q.has("zoom")) {
+    const [w, h] = vpSize(); zoomAt(+q.get("zoom"), w / 2, h / 2);
+    if (q.has("en")) { const [x, y] = q.get("en").split(",").map(Number); centerOn(x, y); }
+  }
+  if (q.has("recorrido")) { toggleTour(true); for (let i = 0; i < +q.get("recorrido"); i++) tourStep(1); }
+  if (q.has("reproducir")) { if (!S.tour.on) toggleTour(true); S.tour.speed = +q.get("reproducir") || 10; $("#t-speed").value = String(S.tour.speed); setPlaying(true); }
+}
+
+// ---------- vista ----------
+function vpSize() { const r = $("#viewport").getBoundingClientRect(); return [r.width, r.height]; }
+function fitScale() { const [w, h] = vpSize(); return Math.min(w / S.W, h / S.H); }
+function fit() {
+  const [w, h] = vpSize();
+  S.min = fitScale(); S.max = Math.max(1, S.min * 1.5);
+  S.s = S.min; S.tx = (w - S.W * S.s) / 2; S.ty = (h - S.H * S.s) / 2; apply();
+}
+function clamp() {
+  // Límite del desplazamiento: el mapa siempre cubre el centro de la parte visible (la que no tapa la
+  // ficha). Así cualquier punto, también los del borde, se puede llevar a la vista.
+  const [w, h] = visibleArea();
+  S.s = Math.min(S.max, Math.max(S.min, S.s));
+  const cw = S.W * S.s, ch = S.H * S.s;
+  S.tx = Math.min(w / 2, Math.max(w / 2 - cw, S.tx));
+  S.ty = Math.min(h / 2, Math.max(h / 2 - ch, S.ty));
+}
+function apply() {
+  clamp();
+  $("#world").style.transform = `translate(${S.tx}px,${S.ty}px) scale(${S.s})`;
+  placeLabels();
+}
+function zoomAt(f, cx, cy) {
+  const ns = Math.min(S.max, Math.max(S.min, S.s * f));
+  const k = ns / S.s;
+  S.tx = cx - (cx - S.tx) * k; S.ty = cy - (cy - S.ty) * k; S.s = ns; apply();
+}
+function visibleArea() {
+  // Parte del mapa que no tapa la ficha: a su izquierda en escritorio, encima en móvil.
+  let [w, h] = vpSize();
+  const f = $("#ficha");
+  if (S.zone && !f.hidden) { const r = f.getBoundingClientRect(); if (r.width < w * 0.9) w -= r.width; else h -= r.height; }
+  return [w, h];
+}
+function centerOn(x, y) { const [w, h] = visibleArea(); S.tx = w / 2 - x * S.s; S.ty = h / 2 - y * S.s; apply(); }
+
+// ---------- capas SVG ----------
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const pts = a => a.map(p => p.join(",")).join(" ");
+function buildOverlay() {
+  const ov = $("#ov"), G = S.G, M = S.M;
+  const g = {};
+  for (const [id] of LAYERS) g[id] = el("g", {id: "L-" + id}, ov);
+  // colisión y costas
+  for (const c of G.colision) el("polygon", {points: pts(c.poly), fill: "rgba(90,70,50,.25)", stroke: "#5A4632", "stroke-width": 1.5}, g.colision);
+  for (const id in G.costas) {
+    const c = G.costas[id];
+    el("polyline", {class: "line", points: pts(c.linea), stroke: c.tipo === "abierto" ? "#7fd3ff" : "#3a2a1c",
+      "stroke-width": c.tipo === "abierto" ? 3 : 5, "stroke-dasharray": c.tipo === "abierto" ? "12 8" : "none"}, g.colision);
+  }
+  // zonas
+  for (const z of M.zonas) {
+    const gz = G.zonas[z.id];
+    const p = el("polygon", {class: "zone", points: pts(gz.contorno), fill: z.color, stroke: z.color, "data-z": z.id}, g.zonas);
+    p.addEventListener("click", e => { if (!S.moved) openZone(z.id); });
+  }
+  // proximidad
+  for (const pr of G.proximidad) el("polygon", {points: pts(pr.poly), fill: "rgba(255,255,255,.08)", stroke: "#fff", "stroke-width": 1.5, "stroke-dasharray": "3 4"}, g.proximidad);
+  // desvíos
+  for (const id in G.rutas.desvios) el("polyline", {class: "line", points: pts(G.rutas.desvios[id].puntos), stroke: "#7fe3ff", "stroke-width": 3, "stroke-dasharray": "9 7"}, g.desvios);
+  // circuito
+  const C = G.circuito;
+  for (const k of ["comun", "segura", "final"]) {
+    el("polyline", {class: "line", points: pts(C[k]), stroke: "rgba(209,154,0,.35)", "stroke-width": 16}, g.circuito);
+    el("polyline", {class: "line", points: pts(C[k]), stroke: "#FFD04D", "stroke-width": 3}, g.circuito);
+  }
+  el("polyline", {class: "line", points: pts(C.atajo), stroke: "rgba(179,38,30,.35)", "stroke-width": 9}, g.circuito);
+  el("polyline", {class: "line", points: pts(C.atajo), stroke: "#FF5A4E", "stroke-width": 3}, g.circuito);
+  // ruta principal y directa
+  el("polyline", {class: "line", points: pts(G.rutas.directa), stroke: "#fff", "stroke-width": 2, "stroke-dasharray": "2 6"}, g.ruta);
+  el("polyline", {class: "line", points: pts(G.rutas.principal), stroke: "rgba(0,0,0,.35)", "stroke-width": 9}, g.ruta);
+  el("polyline", {class: "line", points: pts(G.rutas.principal), stroke: "#F26A1B", "stroke-width": 6}, g.ruta);
+  applyLayers();
+}
+
+// ---------- rótulos y marcadores (en coordenadas de pantalla) ----------
+const LBL = [];
+function addPin(layer, x, y, html, opts = {}) {
+  const d = document.createElement(opts.button ? "button" : "div");
+  d.className = "pin " + (opts.cls || ""); d.innerHTML = html;
+  if (opts.label) d.setAttribute("aria-label", opts.label);
+  if (!opts.button) d.setAttribute("aria-hidden", "true");
+  $("#labels").appendChild(d);
+  LBL.push({el: d, x, y, layer, pri: opts.pri || 0, text: d.querySelector(".pl")});
+  return d;
+}
+function buildLabels() {
+  const G = S.G, M = S.M;
+  for (const z of M.zonas) {
+    const [x, y] = G.zonas[z.id].rotulo || G.zonas[z.id].centro;
+    const b = addPin("zonas", x, y, `<b style="background:${z.color}">${z.n}</b><span>${esc(z.nombre)}</span>`,
+      {button: true, cls: "zlabel", label: `Zona ${z.n}: ${z.nombre}. Abrir ficha`, pri: 10});
+    b.dataset.z = z.id;
+    b.addEventListener("click", () => openZone(z.id));
+  }
+  for (const z of M.zonas) for (const id in G.zonas[z.id].lugares) {
+    const L = G.zonas[z.id].lugares[id];
+    addPin("lugares", L.px[0], L.px[1], `<div class="dot" style="background:${z.color}"></div><span class="pl">${esc(L.nombre)}</span>`, {pri: 1});
+  }
+  for (const s of G.secretos) addPin("secretos", s.px[0], s.px[1],
+    `<svg class="star" viewBox="0 0 20 20"><path d="M10 1l2.6 6 6.4.5-4.9 4.2 1.5 6.3L10 14.6 4.4 18l1.5-6.3L1 7.5 7.4 7z" fill="#FFD27E" stroke="#6B4E00"/></svg><span class="pl">${esc(s.nombre)}</span>`, {pri: 3});
+  for (const s of G.solares) addPin("secretos", s.px[0], s.px[1], `<span class="mk">L2</span>`, {pri: 2});
+  const C = G.circuito;
+  for (const id in C.checkpoints) addPin("circuito", ...C.checkpoints[id], `<div class="diamond"></div><span class="pl">${id}</span>`, {pri: 2});
+  for (const id in C.obstaculos) addPin("circuito", ...C.obstaculos[id], `<div class="obst"></div><span class="pl">${esc(id)}</span>`, {pri: 2});
+  addPin("circuito", ...C.salida, `<span class="mk">SALIDA</span>`, {pri: 4});
+  addPin("circuito", ...C.meta, `<span class="mk">META</span>`, {pri: 4});
+  addPin("circuito", ...C.cartel_atajo, `<span class="mk" style="background:#B3261E">ATAJO →</span>`, {pri: 4});
+}
+function placeLabels() {
+  // Rótulos en pantalla: los de zona se reducen a su número si su caja choca con otra;
+  // los de lugares y secretos esconden el texto si caen a menos de 40 px de otro rótulo.
+  const boxes = [], anchors = [];
+  const items = LBL.filter(l => S.layers[l.layer]).sort((a, b) => b.pri - a.pri);
+  for (const l of LBL) l.el.classList.toggle("layer-off", !S.layers[l.layer]);
+  const hit = (b) => boxes.some(o => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+  for (const l of items) {
+    const X = S.tx + l.x * S.s, Y = S.ty + l.y * S.s;
+    l.el.style.left = X + "px"; l.el.style.top = Y + "px";
+    if (l.el.classList.contains("zlabel")) {
+      l.el.classList.remove("mini");
+      let w = l.el.offsetWidth, h = l.el.offsetHeight;
+      let b = [X - w / 2 - 4, Y - h / 2 - 4, X + w / 2 + 4, Y + h / 2 + 4];
+      if (hit(b)) { l.el.classList.add("mini"); w = l.el.offsetWidth; b = [X - w / 2, Y - h / 2, X + w / 2, Y + h / 2]; }
+      boxes.push(b); anchors.push([X, Y]);
+    } else if (l.text) {
+      // texto a la derecha del punto: se esconde si su caja pisa otro rótulo o cae a menos de 40 px de otro ancla
+      l.text.classList.remove("hide");
+      const w = l.text.offsetWidth, b = [X + 8, Y - 10, X + 12 + w, Y + 10];
+      const clash = hit(b) || anchors.some(p => Math.hypot(p[0] - X, p[1] - Y) < 40);
+      l.text.classList.toggle("hide", clash);
+      if (!clash) { anchors.push([X, Y]); boxes.push(b); }
+    } else {
+      const w = l.el.offsetWidth, h = l.el.offsetHeight;
+      boxes.push([X - w / 2, Y - h / 2, X + w / 2, Y + h / 2]);
+    }
+  }
+}
+
+// ---------- capas UI ----------
+function buildLayerUI() {
+  const box = $("#layer-list");
+  for (const [id, name, col] of LAYERS) {
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="checkbox" data-l="${id}" ${S.layers[id] ? "checked" : ""}><span class="sw" style="background:${col}"></span>${name}`;
+    box.appendChild(lab);
+  }
+  box.addEventListener("change", e => { const i = e.target; if (i.dataset.l) { S.layers[i.dataset.l] = i.checked; applyLayers(); say((i.checked ? "Capa visible: " : "Capa oculta: ") + i.parentNode.textContent.trim()); } });
+}
+function applyLayers() {
+  for (const [id] of LAYERS) { const g = $("#L-" + id); if (g) g.style.display = S.layers[id] ? "" : "none"; }
+  placeLabels();
+}
+function buildZoneList() {
+  const ol = $("#zone-list");
+  for (const z of S.M.zonas) {
+    const li = document.createElement("li");
+    li.innerHTML = `<button data-z="${z.id}"><b style="background:${z.color}">${z.n}</b><span>${esc(z.nombre)}</span></button>`;
+    ol.appendChild(li);
+  }
+  ol.addEventListener("click", e => { const b = e.target.closest("button"); if (b) { togglePop("zones", false); openZone(b.dataset.z); } });
+}
+function togglePop(id, force) {
+  const pop = $("#" + id), btn = $("#btn-" + id);
+  const open = force ?? pop.hidden;
+  for (const other of ["layers", "zones"]) if (other !== id) { $("#" + other).hidden = true; $("#btn-" + other).setAttribute("aria-expanded", "false"); }
+  pop.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+  if (open) (pop.querySelector("input,button") || pop).focus();
+}
+
+// ---------- mundo y hora ----------
+async function setView(world, hour) {
+  if (world !== "arcilla") hour = "dia";
+  const id = `img-${world}-${hour}`, img = $("#" + id);
+  const src = imgSrc(world, hour);
+  if (!(img.dataset.src === src && img.complete && img.naturalWidth)) {
+    $("#loading").hidden = false;
+    try { await loadImg(img, src); } catch (e) { $("#loading").textContent = "No se pudo cargar " + src; return; }
+    $("#loading").hidden = true;
+  }
+  $$("#world img.map").forEach(im => im.classList.toggle("on", im === img));
+  S.world = world; S.hour = hour;
+  $$("#worlds button, #worlds2 button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.w === world)));
+  $$("#hours button").forEach(b => {
+    b.setAttribute("aria-checked", String(b.dataset.h === hour));
+    b.setAttribute("aria-disabled", String(world !== "arcilla" && b.dataset.h !== "dia"));
+  });
+  $("#btn-tour").disabled = world !== "arcilla";
+  if (world !== "arcilla" && S.tour.on) toggleTour(false);
+  shipFilter();
+  if (S.zone) renderFigure();
+  say(`Mundo ${world}, ${({dia: "día", atardecer: "atardecer", noche: "noche"})[hour]}`);
+}
+
+// ---------- ficha ----------
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]); }
+let lastFocus = null, figHour = null, figVar = "venta";
+function openZone(id, fromHash) {
+  const z = S.M.zonas.find(z => z.id === id); if (!z) return;
+  if (!S.zone) lastFocus = document.activeElement;
+  S.zone = id; figHour = S.hour === "noche" ? "noche" : "dia"; figVar = "venta";
+  $$(".zlabel").forEach(b => b.classList.toggle("sel", b.dataset.z === id));
+  $$("#ov .zone").forEach(p => p.classList.toggle("sel", p.dataset.z === id));
+  $("#f-title").innerHTML = `<b style="background:${z.color}">${z.n}</b><span>${esc(z.nombre)}</span>`;
+  const pal = z.paleta.map(r => { const h = S.pal.papeles[r] || S.pal.brillan[r] || "#888"; return `<div><i style="background:${h}"></i><span>${esc(r)}<br>${h}</span></div>`; }).join("");
+  const beh = z.comportamientos.map(c => `<tr><td>${esc(c.objeto)}</td><td>${esc(c.modulos)}</td><td>${esc(c.parametros)}</td></tr>`).join("");
+  const i = S.M.zonas.indexOf(z), N = S.M.zonas.length;
+  const prev = S.M.zonas[(i - 1 + N) % N], next = S.M.zonas[(i + 1) % N];
+  $("#f-body").innerHTML = `
+    <figure id="f-fig"><img id="f-img" alt=""><div class="seg" role="radiogroup" aria-label="Hora del primer plano">
+      <button role="radio" data-fh="dia">Día</button><button role="radio" data-fh="noche">Noche</button></div></figure>
+    ${z.variantes ? `<div class="seg" role="radiogroup" aria-label="Estado del evento" id="f-var" style="margin:4px 0 6px">
+      ${Object.keys(z.variantes).map(v => `<button role="radio" data-fv="${v}">${v === "venta" ? "A la venta" : "Recuerdo"}</button>`).join("")}</div>` : ""}
+    <p class="alt" id="f-alt"></p>
+    <p><strong>Propuesta de nombre:</strong> ${esc(z.propuesta_nombre)} <span class="tag">muestra</span></p>
+    <p>${esc(z.papel)}</p>
+    <h3>Encuentro</h3><p><strong>${esc(z.encuentro.personaje)}.</strong> ${esc(z.encuentro.que_pasa)}</p>
+    <h3>Texto de muestra</h3>${z.texto.map(t => `<blockquote>${esc(t)}</blockquote>`).join("")}
+    <h3>Piezas (${z.piezas.length})</h3><div class="chips">${z.piezas.map(p => `<span>${esc(p.nombre)}</span>`).join("")}</div>
+    <h3>Mecánicas (§48)</h3><table><thead><tr><th>Objeto</th><th>Comportamientos</th><th>Parámetros</th></tr></thead><tbody>${beh}</tbody></table>
+    <h3>Requisitos</h3><div class="chips">${z.req.map(r => `<span><code>${esc(r)}</code></span>`).join("")}</div>
+    <h3>Día y noche</h3><p>${esc(z.dia_noche)}</p>
+    <h3>Paleta local</h3><div class="pal">${pal}</div>
+    <div class="nav"><button class="btn" data-go="${prev.id}">← ${prev.n} · ${esc(prev.nombre)}</button><button class="btn" data-go="${next.id}">${next.n} · ${esc(next.nombre)} →</button></div>`;
+  $("#f-body").scrollTop = 0;
+  renderFigure();
+  const f = $("#ficha"); f.hidden = false;
+  if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+  const gz = S.G.zonas[id];
+  if (S.s < S.min * 1.6) S.s = Math.min(S.max, S.min * 1.6);
+  centerOn(gz.centro[0], gz.centro[1]);
+  $("#f-title").focus({preventScroll: true});
+  say("Ficha abierta: " + z.nombre);
+}
+function renderFigure() {
+  const z = S.M.zonas.find(z => z.id === S.zone); if (!z) return;
+  const v = z.variantes && figVar !== "venta" ? "-" + figVar : "";
+  const src = `render/${z.id}${v}-${figHour}.webp`;
+  const img = $("#f-img");
+  img.src = src;
+  img.alt = `Primer plano de ${z.nombre}, ${figHour === "noche" ? "de noche" : "de día"}. ` + (z.variantes ? z.variantes[figVar] : z.dia_noche);
+  $("#f-alt").textContent = `Primer plano ${figHour === "noche" ? "de noche" : "de día"}. ${z.piezas.length} piezas.` + (z.variantes ? " " + z.variantes[figVar] : "");
+  $$("#f-fig [data-fh]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.fh === figHour)));
+  $$("#f-var [data-fv]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.fv === figVar)));
+}
+function closeZone() {
+  if (!S.zone) return;
+  S.zone = null; $("#ficha").hidden = true;
+  $$(".zlabel.sel, #ov .zone.sel").forEach(e => e.classList.remove("sel"));
+  history.replaceState(null, "", location.pathname + location.search);
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus({preventScroll: true});
+}
+function openFromHash() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  if (S.M.zonas.some(z => z.id === id)) openZone(id, true); else if (!id) closeZone();
+}
+
+// ---------- barco y recorrido ----------
+function shipDir(dx, dy) {
+  // Dirección del sprite: la vista cuyo bow_screen se parece más al movimiento en pantalla.
+  const n = Math.hypot(dx, dy) || 1; let best = "N", bd = -2;
+  for (const d of S.man.direction_order) {
+    const b = S.man.directions[d].bow_screen, k = (b[0] * dx + b[1] * dy) / (n * Math.hypot(b[0], b[1]));
+    if (k > bd) { bd = k; best = d; }
+  }
+  return best;
+}
+function placeShip(p, dir) {
+  const ship = $("#ship"), sc = S.G.ppu / S.G.barco_ppu_sprite;
+  const piv = S.man.directions[dir].anchors.pivot;
+  const src = SHIP_ART + "base/" + dir + ".png";
+  if (ship.dataset.dir !== dir) { ship.src = src; ship.dataset.dir = dir; }
+  ship.style.transform = `translate(${p[0] - piv[0] * sc}px,${p[1] - piv[1] * sc}px) scale(${sc})`;
+}
+function shipFilter() {
+  const f = {dia: "none", atardecer: "sepia(.25) saturate(1.1) brightness(.92)", noche: "brightness(.55) saturate(.8) drop-shadow(0 0 6px rgba(255,200,120,.55))"}[S.hour];
+  $("#ship").style.filter = f; $("#ship").style.display = S.world === "arcilla" ? "" : "none";
+}
+function setupTour() {
+  const M = S.M, G = S.G, R = M.ritmo, U = M.unidades.u_motor_por_u_maq;
+  const mp = M.rutas.principal.puntos, px = G.rutas.principal;
+  const cum = [0];
+  for (let i = 1; i < mp.length; i++) cum.push(cum[i - 1] + Math.hypot(mp[i][0] - mp[i - 1][0], mp[i][1] - mp[i - 1][1]));
+  const v = R.velocidad_u_motor_s, a = R.aceleracion_u_motor_s2, k = U * R.factor_juego;
+  const dAcc = v * v / (2 * a);
+  const timeAt = d => { const g = d * k; return g <= dAcc ? Math.sqrt(2 * g / a) : v / a + (g - dAcc) / v; };
+  const distAt = t => { const g = t <= v / a ? 0.5 * a * t * t : dAcc + v * (t - v / a); return g / k; };
+  // Parada de cada zona: el vértice de la ruta más cercano a su centro o a cualquiera de sus lugares.
+  const stops = M.rutas.principal.paradas.map(zid => {
+    const z = M.zonas.find(z => z.id === zid); let bi = 0, bd = 1e9;
+    const refs = [z.centro, ...z.lugares.map(l => l.pos)];
+    mp.forEach((p, i) => refs.forEach(r => { const d = Math.hypot(p[0] - r[0], p[1] - r[1]); if (d < bd) { bd = d; bi = i; } }));
+    return {zid, d: cum[bi], name: z.nombre};
+  }).sort((x, y) => x.d - y.d);
+  stops[0].d = 0;
+  S.route = {px, cum, total: cum[cum.length - 1], timeAt, distAt, stops, tEnd: timeAt(cum[cum.length - 1])};
+}
+function tourPos(d) {
+  const {cum, px} = S.route;
+  let i = 1; while (i < cum.length - 1 && cum[i] < d) i++;
+  const t = Math.min(1, Math.max(0, (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1)));
+  const p = [px[i - 1][0] + (px[i][0] - px[i - 1][0]) * t, px[i - 1][1] + (px[i][1] - px[i - 1][1]) * t];
+  return {p, dir: shipDir(px[i][0] - px[i - 1][0], px[i][1] - px[i - 1][1])};
+}
+const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+function tourDraw() {
+  const R = S.route, d = Math.min(R.total, R.distAt(S.tour.t));
+  const {p, dir} = tourPos(d);
+  placeShip(p, dir);
+  const cur = [...R.stops].reverse().find(s => s.d <= d + 1e-6) || R.stops[0];
+  $("#t-clock").textContent = `${fmt(S.tour.t)} / ${fmt(R.tEnd)}`;
+  $("#t-where").textContent = `tiempo de juego simulado (×${S.M.ritmo.factor_juego}) · ${cur.name}`;
+  if (S.s > S.min * 1.2) centerOn(p[0], p[1]);
+}
+function tourFrame() {
+  if (!S.tour.playing) return;
+  const now = performance.now();
+  const dt = Math.max(0, Math.min(0.25, (now - S.tour.last) / 1000)); S.tour.last = now;
+  S.tour.t = Math.min(S.route.tEnd, S.tour.t + dt * S.tour.speed);
+  tourDraw();
+  if (S.tour.t >= S.route.tEnd) { setPlaying(false); say("Recorrido terminado en la última isla"); return; }
+  // requestAnimationFrame no llega con la pestaña oculta: entonces se sigue con un temporizador
+  if (document.hidden) setTimeout(tourFrame, 50); else requestAnimationFrame(tourFrame);
+}
+function setPlaying(on) {
+  S.tour.playing = on; clearInterval(S.tour.timer);
+  $("#t-play").textContent = on ? "⏸" : "▶"; $("#t-play").setAttribute("aria-label", on ? "Pausa" : "Reproducir");
+  if (!on) return;
+  if (S.tour.t >= S.route.tEnd) S.tour.t = 0;
+  if (reduced.matches) { tourStep(1); S.tour.timer = setInterval(() => { if (!tourStep(1)) setPlaying(false); }, 2000); }
+  else { S.tour.last = performance.now(); if (document.hidden) setTimeout(tourFrame, 50); else requestAnimationFrame(tourFrame); }
+}
+function tourStep(dir) {
+  const R = S.route, d = R.distAt(S.tour.t);
+  const s = dir > 0 ? R.stops.find(s => s.d > d + 0.05) : [...R.stops].reverse().find(s => s.d < d - 0.05);
+  const target = s ? s.d : (dir > 0 ? R.total : 0);
+  if (dir > 0 && d >= R.total - 1e-6) return false;
+  S.tour.t = R.timeAt(target); tourDraw();
+  say(s ? "Zona: " + s.name : dir > 0 ? "Última isla" : "Salida");
+  return true;
+}
+function toggleTour(force) {
+  const on = force ?? !S.tour.on; S.tour.on = on;
+  $("#btn-tour").setAttribute("aria-pressed", String(on)); $("#tourbar").hidden = !on;
+  if (on) { S.tour.t = 0; tourDraw(); $("#t-play").focus(); }
+  else { setPlaying(false); placeShip(S.route.px[0], "N"); }
+}
+
+// ---------- entrada ----------
+function bindInput() {
+  const vp = $("#viewport"), pointers = new Map(); let start = null;
+  vp.addEventListener("pointerdown", e => {
+    if (e.target.closest(".pin")) return;
+    try { vp.setPointerCapture(e.pointerId); } catch (_) { /* puntero sin captura: se sigue igual */ }
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    S.moved = false; start = snapshot(pointers); vp.classList.add("drag");
+  });
+  vp.addEventListener("pointermove", e => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    const cur = snapshot(pointers); if (!start || cur.n !== start.n) { start = cur; return; }
+    const r = vp.getBoundingClientRect();
+    if (Math.hypot(cur.x - start.x, cur.y - start.y) > 4 || Math.abs(cur.d - start.d) > 4) S.moved = true;
+    if (cur.n >= 2 && start.d > 0) {
+      const f = cur.d / start.d; const ns = Math.min(S.max, Math.max(S.min, start.s * f)), k = ns / start.s;
+      S.s = ns; S.tx = cur.x - r.left - (start.x - r.left - start.tx) * k; S.ty = cur.y - r.top - (start.y - r.top - start.ty) * k;
+    } else { S.tx = start.tx + cur.x - start.x; S.ty = start.ty + cur.y - start.y; }
+    apply();
+  });
+  const up = e => { pointers.delete(e.pointerId); start = pointers.size ? snapshot(pointers) : null; if (!pointers.size) vp.classList.remove("drag"); };
+  vp.addEventListener("pointerup", up); vp.addEventListener("pointercancel", up);
+  function snapshot(P) {
+    const a = [...P.values()]; const x = a.reduce((s, p) => s + p[0], 0) / a.length, y = a.reduce((s, p) => s + p[1], 0) / a.length;
+    const d = a.length >= 2 ? Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) : 0;
+    return {n: a.length, x, y, d, s: S.s, tx: S.tx, ty: S.ty};
+  }
+  vp.addEventListener("wheel", e => {
+    e.preventDefault(); const r = vp.getBoundingClientRect();
+    zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX - r.left, e.clientY - r.top);
+  }, {passive: false});
+  vp.addEventListener("dblclick", e => { const r = vp.getBoundingClientRect(); zoomAt(2, e.clientX - r.left, e.clientY - r.top); });
+  vp.addEventListener("keydown", e => {
+    const [w, h] = vpSize(), step = 80;
+    const k = e.key;
+    if (k === "ArrowLeft") S.tx += step; else if (k === "ArrowRight") S.tx -= step;
+    else if (k === "ArrowUp") S.ty += step; else if (k === "ArrowDown") S.ty -= step;
+    else if (k === "+" || k === "=") return zoomAt(1.4, w / 2, h / 2), e.preventDefault();
+    else if (k === "-" || k === "_") return zoomAt(1 / 1.4, w / 2, h / 2), e.preventDefault();
+    else if (k === "0") return fit(), e.preventDefault();
+    else return;
+    e.preventDefault(); apply();
+  });
+  const mid = () => { const [w, h] = vpSize(); return [w / 2, h / 2]; };
+  $("#z-in").onclick = () => zoomAt(1.5, ...mid());
+  $("#z-out").onclick = () => zoomAt(1 / 1.5, ...mid());
+  $("#z-fit").onclick = fit;
+  for (const id of ["worlds", "worlds2"]) $("#" + id).addEventListener("click", e => { const b = e.target.closest("button"); if (b) setView(b.dataset.w, S.hour); });
+  $("#hours").addEventListener("click", e => { const b = e.target.closest("button"); if (b && b.getAttribute("aria-disabled") !== "true") setView(S.world, b.dataset.h); });
+  for (const id of ["worlds", "worlds2", "hours"]) $("#" + id).addEventListener("keydown", e => {
+    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    const bs = $$("#" + id + " button").filter(b => b.getAttribute("aria-disabled") !== "true");
+    const i = bs.indexOf(document.activeElement); if (i < 0) return;
+    const nb = bs[(i + (e.key === "ArrowRight" ? 1 : -1) + bs.length) % bs.length]; nb.focus(); nb.click(); e.preventDefault();
+  });
+  $("#btn-layers").onclick = () => togglePop("layers");
+  $("#btn-zones").onclick = () => togglePop("zones");
+  $("#btn-tour").onclick = () => toggleTour();
+  $("#t-play").onclick = () => setPlaying(!S.tour.playing);
+  $("#t-next").onclick = () => { setPlaying(false); tourStep(1); };
+  $("#t-prev").onclick = () => { setPlaying(false); tourStep(-1); };
+  $("#t-speed").onchange = e => { S.tour.speed = +e.target.value; };
+  $("#f-close").onclick = closeZone;
+  $("#f-body").addEventListener("click", e => {
+    const go = e.target.closest("[data-go]"); if (go) return openZone(go.dataset.go);
+    const fh = e.target.closest("[data-fh]"); if (fh) { figHour = fh.dataset.fh; renderFigure(); }
+    const fv = e.target.closest("[data-fv]"); if (fv) { figVar = fv.dataset.fv; renderFigure(); }
+  });
+  addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      if (!$("#layers").hidden || !$("#zones").hidden) { const open = !$("#layers").hidden ? "layers" : "zones"; togglePop(open, false); $("#btn-" + open).focus(); }
+      else closeZone();
+    }
+  });
+  addEventListener("hashchange", openFromHash);
+  addEventListener("resize", () => { const was = S.s <= S.min * 1.001; S.min = fitScale(); S.max = Math.max(1, S.min * 1.5); if (was) fit(); else apply(); });
+}
+function say(t) { $("#status").textContent = t; }
+
+init().catch(err => { console.error(err); $("#loading").hidden = false; $("#loading").textContent = "Error al cargar el visor: " + err.message; });
+</script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+{
+ "tema": "arcilla",
+ "escala": 1.0,
+ "muestras": 64,
+ "blender": "5.2.2 LTS",
+ "construccion_s": 18.94,
+ "objetos": 4252,
+ "imagenes": [
+  {
+   "archivo": "general-dia.png",
+   "w": 3108,
+   "h": 2896,
+   "s": 47.26
+  },
+  {
+   "archivo": "puerto-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 6.93
+  },
+  {
+   "archivo": "cala-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 7.04
+  },
+  {
+   "archivo": "fiestera-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 6.04
+  },
+  {
+   "archivo": "allday-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 7.83
+  },
+  {
+   "archivo": "fotos-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 23.73
+  },
+  {
+   "archivo": "tienda-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 19.48
+  },
+  {
+   "archivo": "marvivo-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 23.01
+  },
+  {
+   "archivo": "circuito-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 23.42
+  },
+  {
+   "archivo": "ultima-dia.png",
+   "w": 1200,
+   "h": 900,
+   "s": 17.68
+  },
+  {
+   "archivo": "general-atardecer.png",
+   "w": 3108,
+   "h": 2896,
+   "s": 48.34
+  },
+  {
+   "archivo": "general-noche.png",
+   "w": 3108,
+   "h": 2896,
+   "s": 38.11
+  },
+  {
+   "archivo": "puerto-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 6.32
+  },
+  {
+   "archivo": "cala-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 6.22
+  },
+  {
+   "archivo": "fiestera-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 4.38
+  },
+  {
+   "archivo": "allday-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 8.6
+  },
+  {
+   "archivo": "fotos-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 5.45
+  },
+  {
+   "archivo": "tienda-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 4.23
+  },
+  {
+   "archivo": "marvivo-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 4.4
+  },
+  {
+   "archivo": "circuito-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 5.6
+  },
+  {
+   "archivo": "ultima-noche.png",
+   "w": 1200,
+   "h": 900,
+   "s": 5.68
+  }
+ ],
+ "total_s": 346.53
+}

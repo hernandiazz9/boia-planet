@@ -1,0 +1,17 @@
+{
+ "tema": "cartoon",
+ "escala": 1.0,
+ "muestras": 16,
+ "blender": "5.2.2 LTS",
+ "construccion_s": 7.78,
+ "objetos": 4151,
+ "imagenes": [
+  {
+   "archivo": "cartoon-general-dia.png",
+   "w": 3108,
+   "h": 2896,
+   "s": 4.15
+  }
+ ],
+ "total_s": 12.2
+}

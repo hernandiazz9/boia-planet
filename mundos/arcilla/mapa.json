@@ -1,0 +1,3245 @@
+{
+  "version": 1,
+  "estado": "muestra",
+  "nota": "Fuente única del mundo de arcilla. La leen la escena de Blender (mundos/escena.py y mundos/arcilla/zonas/), el plano (herramientas/plano.py), el ritmo (herramientas/ritmo.py) y el visor (index.html, a través de los JSON de render/). Nombres, textos e historias son propuesta para Álvaro.",
+  "unidades": {
+    "mapa": "u_maq: una unidad de Blender de la maqueta",
+    "ejes": "x hacia la derecha de la pantalla; y hacia el espectador (abajo en pantalla). Arriba del mapa = y negativa. Son los ejes de packages/world/src/iso.ts",
+    "a_blender": "X_b = 0,7071·(x + y); Y_b = 0,7071·(x − y). El eje x del mapa es el vector 'derecha' de rig.py y el y es 'hacia la cámara'",
+    "giro": "grados desde +x hacia +y (en pantalla, sentido horario)",
+    "eslora_barco_u_maq": 1.93,
+    "eslora_barco_u_motor": 48,
+    "u_motor_por_u_maq": 24.87,
+    "fuente_eslora": "art/barco/estilos/arcilla/manifest.json, vista W: bow − wake_origin = 170,37 px a 88,2759 px/u_maq; SHIP_LENGTH = 48 (D-15)"
+  },
+  "limites": {
+    "x_min": -15,
+    "x_max": 15,
+    "y_arriba": -31.5,
+    "y_abajo": 31,
+    "encuadre_general": {
+      "x": [
+        -17.6,
+        17.6
+      ],
+      "y": [
+        -33.2,
+        32.4
+      ]
+    }
+  },
+  "costas": [
+    {
+      "id": "costa_oeste",
+      "nombre": "Costa oeste, los acantilados",
+      "tipo": "infranqueable",
+      "linea": [
+        [
+          -15,
+          31
+        ],
+        [
+          -15,
+          -33
+        ]
+      ],
+      "tramos": [
+        {
+          "centro": [
+            -17.4,
+            27.5
+          ],
+          "a": 3.0,
+          "b": 4.2,
+          "alto": 1.1
+        },
+        {
+          "centro": [
+            -17.1,
+            20.0
+          ],
+          "a": 2.6,
+          "b": 4.0,
+          "alto": 1.25
+        },
+        {
+          "centro": [
+            -17.6,
+            12.0
+          ],
+          "a": 3.0,
+          "b": 4.6,
+          "alto": 1.45
+        },
+        {
+          "centro": [
+            -17.0,
+            4.2
+          ],
+          "a": 2.4,
+          "b": 3.8,
+          "alto": 1.6
+        },
+        {
+          "centro": [
+            -17.5,
+            -3.5
+          ],
+          "a": 2.9,
+          "b": 4.4,
+          "alto": 1.4
+        },
+        {
+          "centro": [
+            -17.2,
+            -11.5
+          ],
+          "a": 2.6,
+          "b": 4.2,
+          "alto": 1.3
+        },
+        {
+          "centro": [
+            -17.6,
+            -19.5
+          ],
+          "a": 3.0,
+          "b": 4.4,
+          "alto": 1.5
+        },
+        {
+          "centro": [
+            -17.1,
+            -27.5
+          ],
+          "a": 2.6,
+          "b": 4.6,
+          "alto": 1.35
+        }
+      ],
+      "comportamientos": [
+        {
+          "modulo": "COLISIÓN",
+          "parametros": "bloquear; restitución 0,15 (wallRestitution)"
+        }
+      ],
+      "req": [
+        "REQ-MUN-011"
+      ]
+    },
+    {
+      "id": "costa_este",
+      "nombre": "Costa este, la playa larga",
+      "tipo": "infranqueable",
+      "linea": [
+        [
+          15,
+          31
+        ],
+        [
+          15,
+          -33
+        ]
+      ],
+      "tramos": [
+        {
+          "centro": [
+            17.4,
+            27.0
+          ],
+          "a": 3.0,
+          "b": 4.4,
+          "alto": 1.0
+        },
+        {
+          "centro": [
+            17.0,
+            19.0
+          ],
+          "a": 2.5,
+          "b": 4.2,
+          "alto": 0.9
+        },
+        {
+          "centro": [
+            17.6,
+            11.0
+          ],
+          "a": 3.0,
+          "b": 4.4,
+          "alto": 0.8
+        },
+        {
+          "centro": [
+            17.2,
+            3.0
+          ],
+          "a": 2.6,
+          "b": 4.2,
+          "alto": 0.7
+        },
+        {
+          "centro": [
+            17.5,
+            -5.0
+          ],
+          "a": 2.9,
+          "b": 4.4,
+          "alto": 0.8
+        },
+        {
+          "centro": [
+            17.1,
+            -13.0
+          ],
+          "a": 2.5,
+          "b": 4.2,
+          "alto": 0.9
+        },
+        {
+          "centro": [
+            17.6,
+            -21.0
+          ],
+          "a": 3.0,
+          "b": 4.4,
+          "alto": 1.2
+        },
+        {
+          "centro": [
+            17.2,
+            -28.5
+          ],
+          "a": 2.6,
+          "b": 4.2,
+          "alto": 1.4
+        }
+      ],
+      "comportamientos": [
+        {
+          "modulo": "COLISIÓN",
+          "parametros": "bloquear; restitución 0,15 (wallRestitution)"
+        }
+      ],
+      "req": [
+        "REQ-MUN-011"
+      ]
+    },
+    {
+      "id": "borde_arriba",
+      "nombre": "Borde superior abierto",
+      "tipo": "abierto",
+      "linea": [
+        [
+          -15,
+          -31.5
+        ],
+        [
+          15,
+          -31.5
+        ]
+      ],
+      "nota": "Sin pared: una fila de boies de temporada marca dónde acaba el mapa publicado. Más allá, la corriente devuelve el barco (openEdgeCurrent 260 u/s, zona blanda de 200 u).",
+      "comportamientos": [
+        {
+          "modulo": "TELETRANSPORTE/DESTINO",
+          "parametros": "no; lo resuelve el motor con openEdgeCurrent"
+        },
+        {
+          "modulo": "DECORATIVO",
+          "parametros": "boies de temporada"
+        }
+      ],
+      "req": [
+        "REQ-MUN-011"
+      ]
+    }
+  ],
+  "zonas": [
+    {
+      "id": "puerto",
+      "primer_plano": {
+        "centro": [
+          0,
+          24.2
+        ],
+        "ancho": 13
+      },
+      "n": 1,
+      "nombre": "Puerto de salida",
+      "color": "#E43B30",
+      "propuesta_nombre": "El Varadero",
+      "papel": "Salida del barco y primera boia, en la bocana, justo delante de la proa: es imposible no pasarle al lado.",
+      "centro": [
+        -4.4,
+        27.4
+      ],
+      "rotulo": [
+        -4.4,
+        27.4
+      ],
+      "contorno": [
+        [
+          -7,
+          31
+        ],
+        [
+          7,
+          31
+        ],
+        [
+          7,
+          19.2
+        ],
+        [
+          -7,
+          19.2
+        ]
+      ],
+      "islas": [
+        {
+          "id": "paseo",
+          "centro": [
+            0,
+            30.6
+          ],
+          "a": 15.8,
+          "b": 2.8,
+          "giro": 0,
+          "alto": 0.55,
+          "p": 6.0,
+          "rol": "sand",
+          "bajio": false
+        },
+        {
+          "id": "escollera_oeste",
+          "forma": "escollera",
+          "centro": [
+            -3.9,
+            25.1
+          ],
+          "a": 3.0,
+          "b": 0.55,
+          "giro": -64.3,
+          "alto": 0.5,
+          "p": 2.0,
+          "rol": "rock",
+          "bajio": false
+        },
+        {
+          "id": "escollera_este",
+          "forma": "escollera",
+          "centro": [
+            3.9,
+            25.1
+          ],
+          "a": 3.0,
+          "b": 0.55,
+          "giro": 64.3,
+          "alto": 0.5,
+          "p": 2.0,
+          "rol": "rock",
+          "bajio": false
+        }
+      ],
+      "lugares": [
+        {
+          "id": "salida",
+          "nombre": "Anillo de salida (spawn)",
+          "pos": [
+            0,
+            25.3
+          ]
+        },
+        {
+          "id": "boia",
+          "nombre": "La boia de la entrada",
+          "pos": [
+            0,
+            20.4
+          ]
+        },
+        {
+          "id": "caseta",
+          "nombre": "Caseta del puerto",
+          "pos": [
+            -3.2,
+            29.2
+          ]
+        },
+        {
+          "id": "whatsapp",
+          "nombre": "Boia de WhatsApp",
+          "pos": [
+            -4.8,
+            21.4
+          ]
+        },
+        {
+          "id": "bocana",
+          "nombre": "Bocana con balizas",
+          "pos": [
+            0,
+            22.4
+          ]
+        }
+      ],
+      "proximidad": [
+        {
+          "objeto": "boia",
+          "centro": [
+            0,
+            20.4
+          ],
+          "radio": 3.2
+        },
+        {
+          "objeto": "whatsapp",
+          "centro": [
+            -4.8,
+            21.4
+          ],
+          "radio": 1.6
+        }
+      ],
+      "piezas": [
+        {
+          "id": "paseo",
+          "nombre": "El paseo"
+        },
+        {
+          "id": "escolleras",
+          "nombre": "Escolleras de cantos rodados"
+        },
+        {
+          "id": "muelle",
+          "nombre": "Muelle de tablones"
+        },
+        {
+          "id": "caseta",
+          "nombre": "Caseta del puerto"
+        },
+        {
+          "id": "casitas",
+          "nombre": "Casitas blancas del paseo"
+        },
+        {
+          "id": "farolas",
+          "nombre": "Farolas"
+        },
+        {
+          "id": "norays",
+          "nombre": "Norays"
+        },
+        {
+          "id": "redes",
+          "nombre": "Cajas y redes"
+        },
+        {
+          "id": "balizas",
+          "nombre": "Balizas roja y verde de la bocana"
+        },
+        {
+          "id": "anillo",
+          "nombre": "Anillo de salida"
+        },
+        {
+          "id": "boia",
+          "nombre": "La boia de la entrada"
+        },
+        {
+          "id": "bocadillo",
+          "nombre": "Bocadillo de arcilla"
+        },
+        {
+          "id": "whatsapp",
+          "nombre": "Boia de WhatsApp"
+        },
+        {
+          "id": "gaviotas",
+          "nombre": "Gaviotas"
+        },
+        {
+          "id": "guardamuelle",
+          "nombre": "La guardamuelle"
+        }
+      ],
+      "encuentro": {
+        "personaje": "La boia de la entrada",
+        "que_pasa": "Al salir del anillo, la boia salta con un «plop», habla en bocadillos de 1,5 s y explica la misión; se puede saltar tocando. Si el barco se aleja, protesta en broma."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Anillo de salida",
+          "modulos": "SPAWN/RESPAWN",
+          "parametros": "posición fija; respawn aquí si el barco queda en tierra"
+        },
+        {
+          "objeto": "Boia de la entrada",
+          "modulos": "PROXIMIDAD + DIÁLOGO + LOGRO/TRIGGER",
+          "parametros": "radio 3,2; 4 bocadillos a 1,5 s; logro «Primera boia» una vez"
+        },
+        {
+          "objeto": "Boia de WhatsApp",
+          "modulos": "PROXIMIDAD + EVENTO/CONTENIDO",
+          "parametros": "radio 1,6; abre el acceso voluntario a WhatsApp"
+        },
+        {
+          "objeto": "Escolleras y paseo",
+          "modulos": "COLISIÓN",
+          "parametros": "bloquear"
+        },
+        {
+          "objeto": "Gaviotas, bandera",
+          "modulos": "DECORATIVO",
+          "parametros": "loop"
+        }
+      ],
+      "req": [
+        "REQ-AVE-001",
+        "REQ-AVE-002",
+        "REQ-AVE-003",
+        "REQ-AVE-004",
+        "REQ-AVE-023",
+        "REQ-MUN-015"
+      ],
+      "texto": [
+        "¡Plop! Bienvenido. Una Boia Fiestera se ha perdido entre cocodrilos: encuéntrala y llévala a la última isla.",
+        "Por el camino hay monedas, descuentos y algún secreto. Toca para seguir."
+      ],
+      "paleta": [
+        "red",
+        "white",
+        "whitewash",
+        "blue_door",
+        "stone",
+        "wood",
+        "sea_shallow"
+      ],
+      "dia_noche": "De día manda el rojo y blanco de la boia sobre el turquesa de la bocana. De noche se encienden la luz de la boia, las dos balizas (roja y verde), las farolas y la ventana de la caseta; el anillo de salida brilla suave."
+    },
+    {
+      "id": "cala",
+      "primer_plano": {
+        "centro": [
+          8.8,
+          13.2
+        ],
+        "ancho": 9.5
+      },
+      "n": 2,
+      "nombre": "Cala del Alfar",
+      "color": "#C8643A",
+      "propuesta_nombre": "Cala del Alfar",
+      "papel": "La casa del barco, primera isla del recorrido. Enseña qué es BOIA antes de vender nada: horno, paella, pista y guirnalda. Isla secundaria con recuerdos.",
+      "centro": [
+        8.5,
+        13.0
+      ],
+      "rotulo": [
+        7.0,
+        16.9
+      ],
+      "contorno": [
+        [
+          3,
+          19.2
+        ],
+        [
+          15,
+          19.2
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          3,
+          8
+        ]
+      ],
+      "islas": [
+        {
+          "id": "isla",
+          "centro": [
+            8.5,
+            13.0
+          ],
+          "a": 3.1,
+          "b": 2.1,
+          "giro": 45,
+          "alto": 0.55,
+          "p": 2.4,
+          "rol": "sand",
+          "bajio": true
+        }
+      ],
+      "lugares": [
+        {
+          "id": "horno",
+          "nombre": "Horno de alfarero",
+          "pos": [
+            8.29,
+            11.37
+          ]
+        },
+        {
+          "id": "chiringuito",
+          "nombre": "Chiringuito de paja",
+          "pos": [
+            9.95,
+            12.97
+          ]
+        },
+        {
+          "id": "paella",
+          "nombre": "La paella del mediodía",
+          "pos": [
+            9.38,
+            14.17
+          ]
+        },
+        {
+          "id": "pista",
+          "nombre": "Pista de azulejos",
+          "pos": [
+            8.0,
+            13.28
+          ]
+        },
+        {
+          "id": "embarcadero",
+          "nombre": "Embarcadero de los botijos",
+          "pos": [
+            10.82,
+            16.09
+          ]
+        },
+        {
+          "id": "amarre",
+          "nombre": "Amarre del barco (vacío mientras navegas)",
+          "pos": [
+            11.73,
+            15.71
+          ]
+        },
+        {
+          "id": "torno",
+          "nombre": "Torno de la alfarera",
+          "pos": [
+            7.0,
+            12.4
+          ]
+        }
+      ],
+      "proximidad": [
+        {
+          "objeto": "isla",
+          "centro": [
+            8.5,
+            13.0
+          ],
+          "radio": 4.6
+        }
+      ],
+      "piezas": [
+        {
+          "id": "isla",
+          "nombre": "Isla y bajío"
+        },
+        {
+          "id": "colina",
+          "nombre": "Colina"
+        },
+        {
+          "id": "horno",
+          "nombre": "Horno de alfarero"
+        },
+        {
+          "id": "humo",
+          "nombre": "Humo del horno"
+        },
+        {
+          "id": "botijos",
+          "nombre": "Botijos secando"
+        },
+        {
+          "id": "chiringuito",
+          "nombre": "Chiringuito de paja"
+        },
+        {
+          "id": "paella",
+          "nombre": "Paella del mediodía"
+        },
+        {
+          "id": "pista",
+          "nombre": "Pista de azulejos"
+        },
+        {
+          "id": "embarcadero",
+          "nombre": "Embarcadero de los botijos"
+        },
+        {
+          "id": "amarre",
+          "nombre": "Amarre del barco"
+        },
+        {
+          "id": "palmeras",
+          "nombre": "Palmeras"
+        },
+        {
+          "id": "guirnaldas",
+          "nombre": "Guirnaldas entre palmeras"
+        },
+        {
+          "id": "torno",
+          "nombre": "Torno de alfarero"
+        },
+        {
+          "id": "alfarera",
+          "nombre": "La alfarera"
+        },
+        {
+          "id": "lenya",
+          "nombre": "Leña"
+        },
+        {
+          "id": "estante",
+          "nombre": "Estante de cántaros"
+        }
+      ],
+      "encuentro": {
+        "personaje": "La alfarera",
+        "que_pasa": "Trabaja en el torno junto al horno. Al acercarse, cuenta que el barco salió de ese horno y regala la primera visita."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Isla",
+          "modulos": "PROXIMIDAD + EVENTO/CONTENIDO",
+          "parametros": "radio 4,6; recuerdos de la isla y bloque Próximos eventos"
+        },
+        {
+          "objeto": "Isla, primera llegada",
+          "modulos": "LOGRO/TRIGGER + RECOMPENSA",
+          "parametros": "descubrimiento; puntos una vez"
+        },
+        {
+          "objeto": "La alfarera",
+          "modulos": "PROXIMIDAD + DIÁLOGO",
+          "parametros": "radio 1,8; 2 bocadillos"
+        },
+        {
+          "objeto": "Humo, fuego, guirnalda",
+          "modulos": "DECORATIVO",
+          "parametros": "loop"
+        },
+        {
+          "objeto": "Isla y embarcadero",
+          "modulos": "COLISIÓN",
+          "parametros": "bloquear"
+        }
+      ],
+      "req": [
+        "REQ-AVE-012",
+        "REQ-AVE-013",
+        "REQ-AVE-014",
+        "REQ-MUN-015"
+      ],
+      "texto": [
+        "Aquí se coció tu barco. Todavía está caliente.",
+        "De día la cala cocina; de noche, baila."
+      ],
+      "paleta": [
+        "terracotta",
+        "thatch",
+        "sand",
+        "grass",
+        "tile_a",
+        "tile_b",
+        "rice"
+      ],
+      "dia_noche": "De día humea el horno y hierve la paella. De noche la guirnalda y la pista de azulejos toman la cala, el horno brilla por la boca y el chiringuito se ilumina."
+    },
+    {
+      "id": "fiestera",
+      "primer_plano": {
+        "centro": [
+          -3.8,
+          7.4
+        ],
+        "ancho": 6
+      },
+      "n": 3,
+      "nombre": "Encuentro de la Boia Fiestera",
+      "color": "#F26A1B",
+      "propuesta_nombre": "El Remanso de los Cocodrilos",
+      "papel": "Misión principal. La Boia Fiestera flota rodeada de cuatro cocodrilos; al acercarse, se sumergen uno a uno y ella sube a bordo.",
+      "centro": [
+        -3.8,
+        7.6
+      ],
+      "rotulo": [
+        -3.8,
+        10.4
+      ],
+      "contorno": [
+        [
+          -7,
+          11
+        ],
+        [
+          1.5,
+          11
+        ],
+        [
+          1.5,
+          3.5
+        ],
+        [
+          -7,
+          3.5
+        ]
+      ],
+      "islas": [],
+      "lugares": [
+        {
+          "id": "fiestera",
+          "nombre": "La Boia Fiestera",
+          "pos": [
+            -3.8,
+            7.6
+          ]
+        },
+        {
+          "id": "cocodrilos",
+          "nombre": "Cuatro cocodrilos",
+          "pos": [
+            -3.8,
+            6.2
+          ]
+        }
+      ],
+      "proximidad": [
+        {
+          "objeto": "rescate",
+          "centro": [
+            -3.8,
+            7.6
+          ],
+          "radio": 2.6
+        },
+        {
+          "objeto": "cocodrilos",
+          "centro": [
+            -3.8,
+            7.6
+          ],
+          "radio": 4.0
+        }
+      ],
+      "piezas": [
+        {
+          "id": "fiestera",
+          "nombre": "La Boia Fiestera"
+        },
+        {
+          "id": "globos",
+          "nombre": "Globos de la Fiestera"
+        },
+        {
+          "id": "cocodrilos",
+          "nombre": "Cocodrilos"
+        },
+        {
+          "id": "ondas",
+          "nombre": "Anillos de onda"
+        },
+        {
+          "id": "burbujas",
+          "nombre": "Burbujas"
+        },
+        {
+          "id": "posidonia",
+          "nombre": "Matas de posidonia"
+        },
+        {
+          "id": "rocas",
+          "nombre": "Rocas del remanso"
+        }
+      ],
+      "encuentro": {
+        "personaje": "Boia Fiestera y cuatro cocodrilos",
+        "que_pasa": "Ella pide ayuda en bocadillos. Al entrar el barco en 4,0, los cocodrilos reaccionan y se sumergen uno a uno con ondas y burbujas; en 2,6 ella sube a bordo y sale el aviso «Nueva tripulante a bordo · Boia Fiestera rescatada · Destino: última isla»."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Boia Fiestera",
+          "modulos": "PROXIMIDAD + DIÁLOGO + LOGRO/TRIGGER",
+          "parametros": "radio 2,6; rescate; pasa al slot TRIPULANTE; destino por ID de temporada"
+        },
+        {
+          "objeto": "Cocodrilo (×4)",
+          "modulos": "COLISIÓN + PROXIMIDAD",
+          "parametros": "ralentizar 60 % durante 2 s; al entrar en 4,0 se sumerge (uno cada 0,4 s)"
+        },
+        {
+          "objeto": "Ondas y burbujas",
+          "modulos": "DECORATIVO",
+          "parametros": "se disparan al sumergirse"
+        },
+        {
+          "objeto": "Rocas",
+          "modulos": "COLISIÓN",
+          "parametros": "rebote suave"
+        }
+      ],
+      "req": [
+        "REQ-AVE-005",
+        "REQ-AVE-006",
+        "REQ-AVE-007",
+        "REQ-AVE-009",
+        "REQ-AVE-010",
+        "REQ-MUN-015"
+      ],
+      "texto": [
+        "¡Eh, barquito! Estos señores no me dejan ir a la fiesta.",
+        "¿Me llevas a la última isla? Te lo pagaré bailando."
+      ],
+      "paleta": [
+        "fiestera",
+        "fiestera_band",
+        "croc",
+        "croc_belly",
+        "posidonia",
+        "foam"
+      ],
+      "dia_noche": "De día, verdes y naranjas sobre el agua oscura del remanso. De noche la guirnalda de la Fiestera se enciende y los ojos de los cocodrilos brillan amarillos."
+    },
+    {
+      "id": "allday",
+      "primer_plano": {
+        "centro": [
+          1.4,
+          -15.4
+        ],
+        "ancho": 12
+      },
+      "n": 4,
+      "nombre": "Isla del escenario · All Day BOIA",
+      "color": "#8E3FB0",
+      "propuesta_nombre": "Isla Gran",
+      "papel": "La gran isla comercial y destino principal: el escenario del All Day BOIA con su taquilla. Variante «a la venta» (la del render) y variante «recuerdo».",
+      "centro": [
+        1.2,
+        -15.6
+      ],
+      "rotulo": [
+        3.6,
+        -11.4
+      ],
+      "contorno": [
+        [
+          -3,
+          -4.5
+        ],
+        [
+          7.0,
+          -4.5
+        ],
+        [
+          7.0,
+          -21.5
+        ],
+        [
+          -6,
+          -21.5
+        ],
+        [
+          -6,
+          -15.5
+        ],
+        [
+          -3,
+          -15.5
+        ]
+      ],
+      "islas": [
+        {
+          "id": "isla",
+          "centro": [
+            1.2,
+            -15.6
+          ],
+          "a": 4.6,
+          "b": 3.4,
+          "giro": 12,
+          "alto": 0.55,
+          "p": 2.3,
+          "rol": "sand",
+          "bajio": true
+        }
+      ],
+      "lugares": [
+        {
+          "id": "escenario",
+          "nombre": "Escenario",
+          "pos": [
+            0.6,
+            -17.6
+          ]
+        },
+        {
+          "id": "taquilla",
+          "nombre": "Taquilla «a la venta»",
+          "pos": [
+            0.9,
+            -12.6
+          ]
+        },
+        {
+          "id": "barra",
+          "nombre": "Barra",
+          "pos": [
+            4.0,
+            -15.0
+          ]
+        },
+        {
+          "id": "arco",
+          "nombre": "Arco de entrada",
+          "pos": [
+            0.5,
+            -12.0
+          ]
+        },
+        {
+          "id": "muelle",
+          "nombre": "Muelle de llegada",
+          "pos": [
+            0.5,
+            -11.2
+          ]
+        },
+        {
+          "id": "dj",
+          "nombre": "Cabina",
+          "pos": [
+            -2.3,
+            -15.2
+          ]
+        }
+      ],
+      "proximidad": [
+        {
+          "objeto": "isla",
+          "centro": [
+            1.2,
+            -15.6
+          ],
+          "radio": 6.4
+        }
+      ],
+      "piezas": [
+        {
+          "id": "isla",
+          "nombre": "Isla y bajío"
+        },
+        {
+          "id": "escenario",
+          "nombre": "Escenario con techo"
+        },
+        {
+          "id": "altavoces",
+          "nombre": "Altavoces"
+        },
+        {
+          "id": "torres",
+          "nombre": "Torres de luces"
+        },
+        {
+          "id": "publico",
+          "nombre": "Público"
+        },
+        {
+          "id": "barra",
+          "nombre": "Barra de paja"
+        },
+        {
+          "id": "taquilla",
+          "nombre": "Taquilla"
+        },
+        {
+          "id": "cartel",
+          "nombre": "Cartel del evento (muestra)"
+        },
+        {
+          "id": "arco",
+          "nombre": "Arco de entrada"
+        },
+        {
+          "id": "muelle",
+          "nombre": "Muelle de llegada"
+        },
+        {
+          "id": "palmeras",
+          "nombre": "Palmeras"
+        },
+        {
+          "id": "guirnaldas",
+          "nombre": "Guirnaldas"
+        },
+        {
+          "id": "banderas",
+          "nombre": "Mástiles con banderas"
+        },
+        {
+          "id": "sombrillas",
+          "nombre": "Sombrillas y hamacas"
+        },
+        {
+          "id": "dj",
+          "nombre": "Cabina"
+        }
+      ],
+      "encuentro": {
+        "personaje": "La taquillera",
+        "que_pasa": "Al entrar en el radio de la isla se abre el panel del evento; la taquillera saluda desde la taquilla si el evento está a la venta. En «recuerdo», la taquilla se cierra y el cartel pasa a fotos, artistas y relato."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Isla",
+          "modulos": "PROXIMIDAD + EVENTO/CONTENIDO",
+          "parametros": "radio 6,4; panel del evento, recuerdos y Próximos eventos"
+        },
+        {
+          "objeto": "Taquilla",
+          "modulos": "TICKET",
+          "parametros": "evento muestra; desaparece al pasar a histórico"
+        },
+        {
+          "objeto": "Isla, primera llegada",
+          "modulos": "LOGRO/TRIGGER + RECOMPENSA",
+          "parametros": "descubrimiento; puntos una vez"
+        },
+        {
+          "objeto": "Público, luces",
+          "modulos": "DECORATIVO",
+          "parametros": "loop"
+        },
+        {
+          "objeto": "Isla y muelle",
+          "modulos": "COLISIÓN",
+          "parametros": "bloquear"
+        }
+      ],
+      "req": [
+        "REQ-PRO-006",
+        "REQ-COM-005",
+        "REQ-AVE-012",
+        "REQ-AVE-013",
+        "REQ-AVE-014",
+        "REQ-MUN-015",
+        "REQ-MUN-018"
+      ],
+      "texto": [
+        "All Day BOIA: de la paella al amanecer. Entradas a la venta (muestra).",
+        "¿Llegas en barco? Pasa por el arco, que la fiesta está dentro."
+      ],
+      "paleta": [
+        "band",
+        "stage_wood",
+        "speaker",
+        "thatch",
+        "canvas",
+        "person_a",
+        "person_b"
+      ],
+      "dia_noche": "De día, sombrillas, hamacas y el toldo naranja. De noche el escenario se enciende en ámbar y magenta, las torres de luces y las guirnaldas marcan el perímetro y el público queda a contraluz.",
+      "variantes": {
+        "venta": "Evento a la venta: taquilla abierta, público y cartel del evento.",
+        "recuerdo": "Evento terminado (REQ-COM-005): la taquilla cierra, el escenario queda sin público y el cartel pasa a fotos, artistas y relato; la isla se conserva."
+      }
+    },
+    {
+      "id": "fotos",
+      "primer_plano": {
+        "centro": [
+          -8.9,
+          -9.6
+        ],
+        "ancho": 8.5
+      },
+      "n": 5,
+      "nombre": "Puerto de Fotos",
+      "color": "#2C62BE",
+      "propuesta_nombre": "El Revelado",
+      "papel": "Desvío corto a la izquierda, entre la tienda y el escenario: la galería de BOIA como lugar del mundo.",
+      "centro": [
+        -9.2,
+        -9.6
+      ],
+      "rotulo": [
+        -9.6,
+        -7.0
+      ],
+      "contorno": [
+        [
+          -15,
+          -4.5
+        ],
+        [
+          -3,
+          -4.5
+        ],
+        [
+          -3,
+          -15.5
+        ],
+        [
+          -15,
+          -15.5
+        ]
+      ],
+      "islas": [
+        {
+          "id": "isla",
+          "centro": [
+            -9.4,
+            -9.9
+          ],
+          "a": 2.6,
+          "b": 1.9,
+          "giro": -20,
+          "alto": 0.5,
+          "p": 2.6,
+          "rol": "sand",
+          "bajio": true
+        }
+      ],
+      "lugares": [
+        {
+          "id": "camara",
+          "nombre": "Cámara-kiosco",
+          "pos": [
+            -9.8,
+            -10.4
+          ]
+        },
+        {
+          "id": "marco",
+          "nombre": "Marco gigante",
+          "pos": [
+            -6.6,
+            -8.6
+          ]
+        },
+        {
+          "id": "tendedero",
+          "nombre": "Tendedero de fotos",
+          "pos": [
+            -8.6,
+            -9.0
+          ]
+        },
+        {
+          "id": "cuarto",
+          "nombre": "Cuarto oscuro",
+          "pos": [
+            -10.8,
+            -8.6
+          ]
+        }
+      ],
+      "proximidad": [
+        {
+          "objeto": "isla",
+          "centro": [
+            -9.4,
+            -9.9
+          ],
+          "radio": 4.0
+        }
+      ],
+      "piezas": [
+        {
+          "id": "isla",
+          "nombre": "Isla y bajío"
+        },
+        {
+          "id": "camara",
+          "nombre": "Cámara-kiosco"
+        },
+        {
+          "id": "marco",
+          "nombre": "Marco gigante"
+        },
+        {
+          "id": "tendedero",
+          "nombre": "Tendedero de fotos"
+        },
+        {
+          "id": "cuarto",
+          "nombre": "Cuarto oscuro"
+        },
+        {
+          "id": "tripode",
+          "nombre": "Trípode"
+        },
+        {
+          "id": "fotografa",
+          "nombre": "La fotógrafa"
+        },
+        {
+          "id": "muelle",
+          "nombre": "Muelle"
+        },
+        {
+          "id": "palmeras",
+          "nombre": "Palmeras"
+        },
+        {
+          "id": "flashes",
+          "nombre": "Bombillas de flash"
+        }
+      ],
+      "encuentro": {
+        "personaje": "La fotógrafa",
+        "que_pasa": "Espera junto al trípode. Si el barco pasa por el marco gigante, dispara el flash y abre la galería."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Isla",
+          "modulos": "PROXIMIDAD + EVENTO/CONTENIDO",
+          "parametros": "radio 4,0; galería general y por evento"
+        },
+        {
+          "objeto": "Marco gigante",
+          "modulos": "PROXIMIDAD + LOGRO/TRIGGER",
+          "parametros": "radio 0,9; logro «Sonríe» una vez"
+        },
+        {
+          "objeto": "La fotógrafa",
+          "modulos": "DIÁLOGO",
+          "parametros": "2 bocadillos"
+        },
+        {
+          "objeto": "Flashes",
+          "modulos": "DECORATIVO",
+          "parametros": "destello al pasar"
+        },
+        {
+          "objeto": "Isla y muelle",
+          "modulos": "COLISIÓN",
+          "parametros": "bloquear"
+        }
+      ],
+      "req": [
+        "REQ-AVE-022",
+        "REQ-COM-031",
+        "REQ-MUN-015"
+      ],
+      "texto": [
+        "Todas las fotos de BOIA se revelan aquí.",
+        "Pasa por el marco y sonríe."
+      ],
+      "paleta": [
+        "photo_body",
+        "photo_lens",
+        "photo_paper",
+        "darkroom",
+        "wood"
+      ],
+      "dia_noche": "De día, papel blanco y cámara negra sobre la arena. De noche el cuarto oscuro brilla rojo y las bombillas de flash parpadean."
+    },
+    {
+      "id": "tienda",
+      "primer_plano": {
+        "centro": [
+          6.5,
+          -1.0
+        ],
+        "ancho": 6
+      },
+      "n": 6,
+      "nombre": "Isla tienda",
+      "color": "#1F8A70",
+      "propuesta_nombre": "La Botiga",
+      "papel": "Escaparate de la tienda externa: camisetas, tote bags y pegatinas. Queda entre la Fiestera y las Fotos para que las dos islas comerciales no vayan seguidas.",
+      "centro": [
+        6.6,
+        -1.2
+      ],
+      "rotulo": [
+        6.6,
+        1.3
+      ],
+      "contorno": [
+        [
+          1.5,
+          8
+        ],
+        [
+          9.8,
+          8
+        ],
+        [
+          9.8,
+          -4.5
+        ],
+        [
+          1.5,
+          -4.5
+        ]
+      ],
+      "islas": [
+        {
+          "id": "isla",
+          "centro": [
+            6.6,
+            -1.2
+          ],
+          "a": 1.9,
+          "b": 1.5,
+          "giro": 45,
+          "alto": 0.45,
+          "p": 2.4,
+          "rol": "sand",
+          "bajio": true
+        }
+      ],
+      "lugares": [
+        {
+          "id": "kiosco",
+          "nombre": "Kiosco",
+          "pos": [
+            6.5,
+            -1.4
+          ]
+        },
+        {
+          "id": "tendedero",
+          "nombre": "Tendedero de camisetas",
+          "pos": [
+            5.6,
+            -0.2
+          ]
+        },
+        {
+          "id": "cartel",
+          "nombre": "Cartel TIENDA",
+          "pos": [
+            7.8,
+            0.0
+          ]
+        }
+      ],
+      "proximidad": [
+        {
+          "objeto": "isla",
+          "centro": [
+            6.6,
+            -1.2
+          ],
+          "radio": 3.2
+        }
+      ],
+      "piezas": [
+        {
+          "id": "isla",
+          "nombre": "Isla y bajío"
+        },
+        {
+          "id": "kiosco",
+          "nombre": "Kiosco con toldo"
+        },
+        {
+          "id": "mostrador",
+          "nombre": "Mostrador"
+        },
+        {
+          "id": "camisetas",
+          "nombre": "Tendedero de camisetas"
+        },
+        {
+          "id": "totes",
+          "nombre": "Tote bags"
+        },
+        {
+          "id": "pegatinas",
+          "nombre": "Rollos de pegatinas"
+        },
+        {
+          "id": "cajas",
+          "nombre": "Cajas"
+        },
+        {
+          "id": "palmera",
+          "nombre": "Palmera"
+        },
+        {
+          "id": "cartel",
+          "nombre": "Cartel TIENDA"
+        },
+        {
+          "id": "tendera",
+          "nombre": "La tendera"
+        }
+      ],
+      "encuentro": {
+        "personaje": "La tendera",
+        "que_pasa": "Saluda desde el mostrador y abre el panel de la tienda, que enlaza a la tienda externa de BOIA."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Isla",
+          "modulos": "PROXIMIDAD + EVENTO/CONTENIDO",
+          "parametros": "radio 3,2; panel Tienda con enlace externo"
+        },
+        {
+          "objeto": "La tendera",
+          "modulos": "DIÁLOGO",
+          "parametros": "1 bocadillo"
+        },
+        {
+          "objeto": "Camisetas al viento",
+          "modulos": "DECORATIVO",
+          "parametros": "loop"
+        },
+        {
+          "objeto": "Isla",
+          "modulos": "COLISIÓN",
+          "parametros": "bloquear"
+        }
+      ],
+      "req": [
+        "REQ-COM-033",
+        "REQ-AVE-021",
+        "REQ-MUN-015"
+      ],
+      "texto": [
+        "Camisetas, tote bags y pegatinas.",
+        "La tienda de verdad está en tierra; esto es su escaparate."
+      ],
+      "paleta": [
+        "shirt_a",
+        "shirt_b",
+        "tote",
+        "sticker_a",
+        "sticker_b",
+        "band"
+      ],
+      "dia_noche": "De día, camisetas naranjas y azules al viento. De noche una bombilla bajo el toldo ilumina el mostrador."
+    },
+    {
+      "id": "marvivo",
+      "primer_plano": {
+        "centro": [
+          -10.2,
+          4.6
+        ],
+        "ancho": 10.5
+      },
+      "n": 7,
+      "nombre": "Mar vivo",
+      "color": "#0E9BB5",
+      "propuesta_nombre": "Mar de los Restos",
+      "papel": "El mar que da razones para volver: náufrago antes de la primera isla, restos que se regeneran, cofres fugaces, delfín, remolino y botellas. Ocupa la banda izquierda, pero sus restos y cofres se reparten por todo el recorrido.",
+      "centro": [
+        -11.6,
+        12.6
+      ],
+      "rotulo": [
+        -11.6,
+        12.6
+      ],
+      "contorno": [
+        [
+          -15,
+          19.2
+        ],
+        [
+          -2,
+          19.2
+        ],
+        [
+          -2,
+          11
+        ],
+        [
+          -7,
+          11
+        ],
+        [
+          -7,
+          3.5
+        ],
+        [
+          -4,
+          3.5
+        ],
+        [
+          -4,
+          -4.5
+        ],
+        [
+          -15,
+          -4.5
+        ]
+      ],
+      "islas": [
+        {
+          "id": "banco_naufrago",
+          "centro": [
+            -5.6,
+            16.4
+          ],
+          "a": 1.3,
+          "b": 0.85,
+          "giro": 20,
+          "alto": 0.3,
+          "p": 2.2,
+          "rol": "sand",
+          "bajio": true
+        }
+      ],
+      "lugares": [
+        {
+          "id": "naufrago",
+          "nombre": "El náufrago",
+          "pos": [
+            -5.6,
+            16.3
+          ]
+        },
+        {
+          "id": "delfin",
+          "nombre": "Delfín",
+          "pos": [
+            -10.8,
+            8.6
+          ]
+        },
+        {
+          "id": "remolino",
+          "nombre": "Remolino",
+          "pos": [
+            -10.2,
+            0.6
+          ]
+        },
+        {
+          "id": "cofre_1",
+          "nombre": "Cofre fugaz",
+          "pos": [
+            -12.6,
+            13.8
+          ]
+        },
+        {
+          "id": "cofre_2",
+          "nombre": "Cofre fugaz",
+          "pos": [
+            -5.4,
+            -1.8
+          ]
+        },
+        {
+          "id": "botella_1",
+          "nombre": "Botella",
+          "pos": [
+            -8.2,
+            4.4
+          ]
+        },
+        {
+          "id": "botella_2",
+          "nombre": "Botella",
+          "pos": [
+            -2.8,
+            13.4
+          ]
+        },
+        {
+          "id": "botella_3",
+          "nombre": "Botella",
+          "pos": [
+            -13.2,
+            -2.4
+          ]
+        }
+      ],
+      "restos": [
+        [
+          -3.4,
+          18.4
+        ],
+        [
+          -8.8,
+          12.4
+        ],
+        [
+          -12.8,
+          6.2
+        ],
+        [
+          -6.4,
+          -3.2
+        ],
+        [
+          2.4,
+          16.0
+        ],
+        [
+          3.2,
+          -7.6
+        ],
+        [
+          -1.6,
+          -21.6
+        ],
+        [
+          10.2,
+          21.4
+        ]
+      ],
+      "proximidad": [
+        {
+          "objeto": "naufrago",
+          "centro": [
+            -5.6,
+            16.4
+          ],
+          "radio": 2.2
+        },
+        {
+          "objeto": "delfin",
+          "centro": [
+            -10.8,
+            8.6
+          ],
+          "radio": 2.0
+        },
+        {
+          "objeto": "remolino",
+          "centro": [
+            -10.2,
+            0.6
+          ],
+          "radio": 1.7
+        },
+        {
+          "objeto": "cofre_1",
+          "centro": [
+            -12.6,
+            13.8
+          ],
+          "radio": 0.8
+        },
+        {
+          "objeto": "cofre_2",
+          "centro": [
+            -5.4,
+            -1.8
+          ],
+          "radio": 0.8
+        },
+        {
+          "objeto": "botella_1",
+          "centro": [
+            -8.2,
+            4.4
+          ],
+          "radio": 1.0
+        },
+        {
+          "objeto": "botella_2",
+          "centro": [
+            -2.8,
+            13.4
+          ],
+          "radio": 1.0
+        },
+        {
+          "objeto": "botella_3",
+          "centro": [
+            -13.2,
+            -2.4
+          ],
+          "radio": 1.0
+        }
+      ],
+      "piezas": [
+        {
+          "id": "naufrago",
+          "nombre": "El náufrago y su banco de arena"
+        },
+        {
+          "id": "balsa",
+          "nombre": "Balsa del náufrago"
+        },
+        {
+          "id": "restos",
+          "nombre": "Grupos de restos flotantes"
+        },
+        {
+          "id": "cofres",
+          "nombre": "Cofres fugaces"
+        },
+        {
+          "id": "delfin",
+          "nombre": "Delfín"
+        },
+        {
+          "id": "remolino",
+          "nombre": "Remolino"
+        },
+        {
+          "id": "botellas",
+          "nombre": "Botellas"
+        },
+        {
+          "id": "gaviotas",
+          "nombre": "Gaviotas"
+        }
+      ],
+      "encuentro": {
+        "personaje": "El náufrago y el delfín",
+        "que_pasa": "El náufrago pide que lo acerquen a una fiesta BOIA y da un código de descuento para entradas (10 % en la v14, muestra). El delfín aparece junto al barco, se sumerge y reaparece; seguirlo lleva al cofre."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Náufrago",
+          "modulos": "PROXIMIDAD + DIÁLOGO + RECOMPENSA",
+          "parametros": "radio 2,2; código de descuento de entradas (muestra), una vez"
+        },
+        {
+          "objeto": "Restos",
+          "modulos": "RECOGIBLE + SPAWN/RESPAWN",
+          "parametros": "monedas o puntos; se regeneran al volver a entrar en posiciones semialeatorias"
+        },
+        {
+          "objeto": "Cofre",
+          "modulos": "RECOGIBLE + SPAWN/RESPAWN + RECOMPENSA",
+          "parametros": "aparece 20 s en posiciones temporales; monedas y raramente un cosmético"
+        },
+        {
+          "objeto": "Delfín",
+          "modulos": "SPAWN/RESPAWN + PROXIMIDAD + RECOMPENSA",
+          "parametros": "de vez en cuando junto al barco; seguirlo 3 saltos lleva a cofre, botella o monedas"
+        },
+        {
+          "objeto": "Remolino",
+          "modulos": "PROXIMIDAD + RECOMPENSA (+ fuerza de giro, fuera del catálogo)",
+          "parametros": "radio 1,7; recompensa por segundos dentro con control"
+        },
+        {
+          "objeto": "Botella",
+          "modulos": "PROXIMIDAD + EVENTO/CONTENIDO",
+          "parametros": "radio 1,0; 140 caracteres, apodo y «VER SU CARNET»; sin puntos"
+        }
+      ],
+      "req": [
+        "REQ-AVE-009",
+        "REQ-AVE-016",
+        "REQ-AVE-017",
+        "REQ-AVE-018",
+        "REQ-AVE-019",
+        "REQ-AVE-020",
+        "REQ-AVE-021",
+        "REQ-IDE-040",
+        "REQ-IDE-041",
+        "REQ-IDE-042"
+      ],
+      "texto": [
+        "¡Llevo tres fiestas esperando aquí! Acércame a una de BOIA y te dejo un regalo.",
+        "«Ven por la música. Quédate por todo lo que ocurre alrededor.» (botella de muestra)"
+      ],
+      "paleta": [
+        "dolphin",
+        "dolphin_belly",
+        "chest",
+        "gold",
+        "bottle",
+        "paper",
+        "foam",
+        "wood"
+      ],
+      "dia_noche": "De día el remolino es espuma blanca y el delfín gris azulado. De noche el remolino y la estela del delfín brillan con un turquesa tenue (luminiscencia) y los cofres destellan dorados."
+    },
+    {
+      "id": "circuito",
+      "primer_plano": {
+        "centro": [
+          10.8,
+          -10.6
+        ],
+        "ancho": 12
+      },
+      "n": 8,
+      "nombre": "Circuito de velocidad",
+      "color": "#D19A00",
+      "propuesta_nombre": "El Freu",
+      "papel": "Atajo lateral por la costa este hacia la última isla. Se bifurca en una ruta segura y ancha, que rodea el islote Els Dents por agua abierta, y un atajo estrecho («ATAJO →») que pasa por El Freu, pegado a la costa; se unen antes de meta. Sólo tres obstáculos.",
+      "centro": [
+        11.0,
+        -9.0
+      ],
+      "rotulo": [
+        10.4,
+        -7.2
+      ],
+      "contorno": [
+        [
+          9.8,
+          8
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          15,
+          -25.8
+        ],
+        [
+          7.0,
+          -25.8
+        ],
+        [
+          7.0,
+          -4.5
+        ],
+        [
+          9.8,
+          -4.5
+        ]
+      ],
+      "islas": [
+        {
+          "id": "dents",
+          "centro": [
+            10.7,
+            -11.6
+          ],
+          "a": 1.5,
+          "b": 1.15,
+          "giro": 80,
+          "alto": 0.75,
+          "p": 2.0,
+          "rol": "rock",
+          "bajio": true
+        },
+        {
+          "id": "freu",
+          "centro": [
+            14.6,
+            -12.0
+          ],
+          "a": 1.0,
+          "b": 0.7,
+          "giro": 90,
+          "alto": 0.6,
+          "p": 2.0,
+          "rol": "rock",
+          "bajio": true
+        }
+      ],
+      "lugares": [
+        {
+          "id": "salida",
+          "nombre": "Arco de salida",
+          "pos": [
+            12.6,
+            5.6
+          ]
+        },
+        {
+          "id": "atajo",
+          "nombre": "Cartel ATAJO →",
+          "pos": [
+            12.9,
+            -3.6
+          ]
+        },
+        {
+          "id": "meta",
+          "nombre": "Arco de meta",
+          "pos": [
+            8.8,
+            -25.0
+          ]
+        },
+        {
+          "id": "grada",
+          "nombre": "Grada",
+          "pos": [
+            15.8,
+            2.6
+          ]
+        }
+      ],
+      "proximidad": [],
+      "piezas": [
+        {
+          "id": "salida",
+          "nombre": "Arco de salida"
+        },
+        {
+          "id": "semaforo",
+          "nombre": "Semáforo de salida"
+        },
+        {
+          "id": "carril",
+          "nombre": "Boies de carril"
+        },
+        {
+          "id": "checkpoints",
+          "nombre": "Arcos de checkpoint"
+        },
+        {
+          "id": "cartel",
+          "nombre": "Cartel ATAJO →"
+        },
+        {
+          "id": "dents",
+          "nombre": "Islote Els Dents"
+        },
+        {
+          "id": "freu",
+          "nombre": "Rocas del Freu"
+        },
+        {
+          "id": "roca",
+          "nombre": "Obstáculo: roca"
+        },
+        {
+          "id": "medusa",
+          "nombre": "Obstáculo: medusa"
+        },
+        {
+          "id": "cocodrilo",
+          "nombre": "Obstáculo: cocodrilo móvil"
+        },
+        {
+          "id": "grada",
+          "nombre": "Grada"
+        },
+        {
+          "id": "juez",
+          "nombre": "El juez de carrera"
+        },
+        {
+          "id": "meta",
+          "nombre": "Arco de meta"
+        }
+      ],
+      "encuentro": {
+        "personaje": "El juez de carrera",
+        "que_pasa": "Desde la grada da la salida con el semáforo y baja la bandera a cuadros en meta. El cronómetro es muy pequeño, arriba; el récord personal se enseña antes y después."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Arco de salida",
+          "modulos": "CHECKPOINT/BOOST",
+          "parametros": "inicio y cuenta atrás; circuito v1"
+        },
+        {
+          "objeto": "Checkpoints",
+          "modulos": "CHECKPOINT/BOOST",
+          "parametros": "orden CP1 → (CP-S o CP-A) → CP2; WHOOSH y boost de 2 s"
+        },
+        {
+          "objeto": "Cocodrilo móvil",
+          "modulos": "COLISIÓN",
+          "parametros": "ralentizar 60 % durante 2 s; vaivén de 1,6"
+        },
+        {
+          "objeto": "Roca",
+          "modulos": "COLISIÓN",
+          "parametros": "rebote (obstacleRestitution 0,45)"
+        },
+        {
+          "objeto": "Medusa",
+          "modulos": "COLISIÓN",
+          "parametros": "ralentizar 40 % durante 1,5 s (provisional)"
+        },
+        {
+          "objeto": "Arco de meta",
+          "modulos": "CHECKPOINT/BOOST + LOGRO/TRIGGER",
+          "parametros": "récord personal local con versión de circuito"
+        },
+        {
+          "objeto": "Grada, juez",
+          "modulos": "DECORATIVO",
+          "parametros": "loop"
+        }
+      ],
+      "req": [
+        "REQ-AVE-026",
+        "REQ-AVE-027",
+        "REQ-AVE-028",
+        "REQ-AVE-029",
+        "REQ-AVE-030",
+        "REQ-AVE-031",
+        "REQ-AVE-032",
+        "REQ-AVE-033",
+        "REQ-MUN-016"
+      ],
+      "texto": [
+        "Por la derecha, ancho y tranquilo. Por el Freu, rápido y con dientes.",
+        "ATAJO →"
+      ],
+      "paleta": [
+        "lane_a",
+        "lane_b",
+        "checker_a",
+        "checker_b",
+        "rock",
+        "jelly",
+        "croc"
+      ],
+      "dia_noche": "De día, boies de carril naranjas y blancas sobre el azul. De noche cada boia de carril lleva una lucecita, los arcos se encienden y la medusa brilla rosa."
+    },
+    {
+      "id": "ultima",
+      "primer_plano": {
+        "centro": [
+          4.8,
+          -27.0
+        ],
+        "ancho": 9
+      },
+      "n": 9,
+      "nombre": "Última isla",
+      "color": "#C2185B",
+      "propuesta_nombre": "Isla del Amanecer",
+      "papel": "Destino de la Boia Fiestera y final del recorrido: la fiesta que acaba al salir el sol. Se llega desde el escenario o por la salida del circuito, que queda al lado.",
+      "centro": [
+        4.4,
+        -27.4
+      ],
+      "rotulo": [
+        3.6,
+        -24.2
+      ],
+      "contorno": [
+        [
+          -2,
+          -21.5
+        ],
+        [
+          7.0,
+          -21.5
+        ],
+        [
+          7.0,
+          -25.8
+        ],
+        [
+          15,
+          -25.8
+        ],
+        [
+          15,
+          -31.5
+        ],
+        [
+          -2,
+          -31.5
+        ]
+      ],
+      "islas": [
+        {
+          "id": "isla",
+          "centro": [
+            4.4,
+            -27.4
+          ],
+          "a": 2.7,
+          "b": 2.1,
+          "giro": -10,
+          "alto": 0.55,
+          "p": 2.4,
+          "rol": "sand",
+          "bajio": true
+        }
+      ],
+      "lugares": [
+        {
+          "id": "nicho",
+          "nombre": "El nicho de la Fiestera",
+          "pos": [
+            4.0,
+            -28.2
+          ]
+        },
+        {
+          "id": "muelle",
+          "nombre": "Muelle de llegada",
+          "pos": [
+            6.6,
+            -25.8
+          ]
+        },
+        {
+          "id": "hoguera",
+          "nombre": "Hoguera",
+          "pos": [
+            3.4,
+            -26.6
+          ]
+        },
+        {
+          "id": "amigas",
+          "nombre": "Las boies amigas",
+          "pos": [
+            5.6,
+            -26.8
+          ]
+        }
+      ],
+      "proximidad": [
+        {
+          "objeto": "isla",
+          "centro": [
+            4.4,
+            -27.4
+          ],
+          "radio": 4.4
+        }
+      ],
+      "piezas": [
+        {
+          "id": "isla",
+          "nombre": "Isla y bajío"
+        },
+        {
+          "id": "nicho",
+          "nombre": "Nicho de la Fiestera"
+        },
+        {
+          "id": "muelle",
+          "nombre": "Muelle de llegada"
+        },
+        {
+          "id": "farolillos",
+          "nombre": "Farolillos"
+        },
+        {
+          "id": "fuegos",
+          "nombre": "Fuegos artificiales de arcilla"
+        },
+        {
+          "id": "hoguera",
+          "nombre": "Hoguera"
+        },
+        {
+          "id": "amigas",
+          "nombre": "Las boies amigas"
+        },
+        {
+          "id": "palmeras",
+          "nombre": "Palmeras"
+        },
+        {
+          "id": "banco",
+          "nombre": "Banco de piedra"
+        },
+        {
+          "id": "banderines",
+          "nombre": "Banderines"
+        }
+      ],
+      "encuentro": {
+        "personaje": "Las boies amigas",
+        "que_pasa": "Esperan en la orilla. Al llegar con la Fiestera desde cualquier lado, ella baja, se sube al nicho y empiezan los fuegos: celebración, sonido, logro y una recompensa importante (pendiente Álvaro)."
+      },
+      "comportamientos": [
+        {
+          "objeto": "Isla",
+          "modulos": "PROXIMIDAD + LOGRO/TRIGGER + RECOMPENSA",
+          "parametros": "radio 4,4 por todos los lados; entrega de la misión por ID de temporada"
+        },
+        {
+          "objeto": "Boies amigas",
+          "modulos": "DIÁLOGO",
+          "parametros": "celebración, 3 bocadillos"
+        },
+        {
+          "objeto": "Fuegos, hoguera",
+          "modulos": "DECORATIVO",
+          "parametros": "secuencia al entregar; loop de noche"
+        },
+        {
+          "objeto": "Isla",
+          "modulos": "EVENTO/CONTENIDO",
+          "parametros": "recuerdos y Próximos eventos"
+        },
+        {
+          "objeto": "Isla y muelle",
+          "modulos": "COLISIÓN",
+          "parametros": "bloquear"
+        }
+      ],
+      "req": [
+        "REQ-AVE-008",
+        "REQ-AVE-010",
+        "REQ-AVE-026",
+        "REQ-MUN-016"
+      ],
+      "texto": [
+        "¡Lo has conseguido! Aquí la fiesta acaba cuando sale el sol.",
+        "Quédate un rato: esto no se ve desde la orilla."
+      ],
+      "paleta": [
+        "lantern",
+        "firework_a",
+        "firework_b",
+        "stone",
+        "fire"
+      ],
+      "dia_noche": "De día, farolillos apagados de papel y banderines. De noche, hoguera, farolillos encendidos y fuegos artificiales de arcilla sobre la isla."
+    }
+  ],
+  "rutas": {
+    "principal": {
+      "nombre": "Ruta principal (narrativa)",
+      "paradas": [
+        "puerto",
+        "marvivo",
+        "cala",
+        "fiestera",
+        "tienda",
+        "fotos",
+        "allday",
+        "ultima"
+      ],
+      "puntos": [
+        [
+          0,
+          25.3
+        ],
+        [
+          0.9,
+          22.2
+        ],
+        [
+          1.5,
+          19.8
+        ],
+        [
+          -1.6,
+          17.4
+        ],
+        [
+          -2.8,
+          15.6
+        ],
+        [
+          0.6,
+          12.6
+        ],
+        [
+          3.9,
+          11.6
+        ],
+        [
+          2.2,
+          9.6
+        ],
+        [
+          -0.9,
+          7.8
+        ],
+        [
+          1.2,
+          3.8
+        ],
+        [
+          3.6,
+          0.8
+        ],
+        [
+          2.4,
+          -2.6
+        ],
+        [
+          -2.2,
+          -5.4
+        ],
+        [
+          -5.4,
+          -7.2
+        ],
+        [
+          -3.2,
+          -9.2
+        ],
+        [
+          -0.2,
+          -10.4
+        ],
+        [
+          -3.8,
+          -11.8
+        ],
+        [
+          -5.6,
+          -15.6
+        ],
+        [
+          -4.8,
+          -19.8
+        ],
+        [
+          -1.6,
+          -22.8
+        ],
+        [
+          1.6,
+          -24.4
+        ]
+      ]
+    },
+    "directa": {
+      "nombre": "Ruta directa al destino principal (All Day)",
+      "destino": "allday",
+      "puntos": [
+        [
+          0,
+          25.3
+        ],
+        [
+          0.9,
+          22.2
+        ],
+        [
+          1.5,
+          19.8
+        ],
+        [
+          0.6,
+          -10.4
+        ]
+      ]
+    },
+    "mision": {
+      "nombre": "Ruta directa de la misión (salida → Fiestera → última isla)",
+      "destino": "ultima",
+      "puntos": [
+        [
+          0,
+          25.3
+        ],
+        [
+          0.9,
+          22.2
+        ],
+        [
+          1.5,
+          19.8
+        ],
+        [
+          -0.9,
+          8.0
+        ],
+        [
+          -1.9,
+          -4.0
+        ],
+        [
+          -5.0,
+          -11.6
+        ],
+        [
+          -5.6,
+          -15.6
+        ],
+        [
+          -4.8,
+          -19.8
+        ],
+        [
+          -1.6,
+          -22.8
+        ],
+        [
+          1.6,
+          -24.4
+        ]
+      ]
+    },
+    "desvios": [
+      {
+        "id": "d_remolino",
+        "nombre": "Desvío del remolino y el delfín",
+        "puntos": [
+          [
+            -0.9,
+            7.8
+          ],
+          [
+            -5.0,
+            11.4
+          ],
+          [
+            -10.8,
+            8.6
+          ],
+          [
+            -11.9,
+            2.6
+          ],
+          [
+            -10.2,
+            0.6
+          ],
+          [
+            -6.0,
+            -1.8
+          ],
+          [
+            -2.2,
+            -5.4
+          ]
+        ]
+      },
+      {
+        "id": "d_cueva",
+        "nombre": "Desvío de la cueva",
+        "puntos": [
+          [
+            -10.8,
+            8.6
+          ],
+          [
+            -13.4,
+            4.4
+          ],
+          [
+            -11.9,
+            2.6
+          ]
+        ]
+      },
+      {
+        "id": "d_solar",
+        "nombre": "Desvío del solar L2 y las boies dormidas",
+        "puntos": [
+          [
+            -5.6,
+            -15.6
+          ],
+          [
+            -9.6,
+            -14.8
+          ],
+          [
+            -12.8,
+            -16.6
+          ],
+          [
+            -12.2,
+            -20.6
+          ],
+          [
+            -13.4,
+            -23.6
+          ],
+          [
+            -12.8,
+            -27.4
+          ],
+          [
+            -8.4,
+            -28.6
+          ],
+          [
+            -5.0,
+            -27.0
+          ],
+          [
+            -1.6,
+            -22.8
+          ]
+        ]
+      },
+      {
+        "id": "d_anfora",
+        "nombre": "Desvío del ánfora",
+        "puntos": [
+          [
+            3.9,
+            11.6
+          ],
+          [
+            5.2,
+            9.4
+          ],
+          [
+            8.0,
+            9.0
+          ],
+          [
+            11.4,
+            8.4
+          ],
+          [
+            12.6,
+            5.6
+          ]
+        ]
+      }
+    ],
+    "exploracion": {
+      "nombre": "Exploración completa (sorpresas principales)",
+      "visita": [
+        "salida",
+        "boia",
+        "whatsapp",
+        "naufrago",
+        "restos",
+        "cala",
+        "anfora",
+        "circuito segura",
+        "meta",
+        "vuelta",
+        "fiestera",
+        "botella_1",
+        "delfin",
+        "cueva",
+        "remolino",
+        "botella_3",
+        "cofre_2",
+        "tienda",
+        "fotos",
+        "campana",
+        "allday",
+        "circuito atajo",
+        "solar",
+        "circulo",
+        "ultima"
+      ],
+      "puntos": [
+        [
+          0,
+          25.3
+        ],
+        [
+          0.9,
+          22.2
+        ],
+        [
+          -2.2,
+          21.2
+        ],
+        [
+          -4.8,
+          20.2
+        ],
+        [
+          -3.4,
+          18.4
+        ],
+        [
+          -2.6,
+          15.2
+        ],
+        [
+          -2.8,
+          13.4
+        ],
+        [
+          0.2,
+          12.6
+        ],
+        [
+          2.4,
+          16.0
+        ],
+        [
+          5.0,
+          17.6
+        ],
+        [
+          10.2,
+          21.4
+        ],
+        [
+          13.0,
+          17.8
+        ],
+        [
+          13.4,
+          14.2
+        ],
+        [
+          12.6,
+          10.4
+        ],
+        [
+          8.0,
+          9.0
+        ],
+        [
+          5.2,
+          9.4
+        ],
+        [
+          9.0,
+          8.4
+        ],
+        [
+          12.6,
+          5.6
+        ],
+        [
+          12.2,
+          1.0
+        ],
+        [
+          12.4,
+          -2.6
+        ],
+        [
+          9.6,
+          -5.4
+        ],
+        [
+          7.8,
+          -9.6
+        ],
+        [
+          7.8,
+          -13.8
+        ],
+        [
+          9.4,
+          -17.6
+        ],
+        [
+          12.4,
+          -19.6
+        ],
+        [
+          11.4,
+          -22.0
+        ],
+        [
+          8.8,
+          -25.0
+        ],
+        [
+          7.2,
+          -21.0
+        ],
+        [
+          6.6,
+          -15.0
+        ],
+        [
+          6.4,
+          -9.6
+        ],
+        [
+          3.2,
+          -7.6
+        ],
+        [
+          1.2,
+          -2.4
+        ],
+        [
+          -0.6,
+          3.4
+        ],
+        [
+          -0.9,
+          7.8
+        ],
+        [
+          -3.0,
+          10.6
+        ],
+        [
+          -8.8,
+          12.4
+        ],
+        [
+          -12.6,
+          13.8
+        ],
+        [
+          -10.8,
+          8.6
+        ],
+        [
+          -12.8,
+          6.2
+        ],
+        [
+          -13.4,
+          4.4
+        ],
+        [
+          -11.4,
+          3.6
+        ],
+        [
+          -8.2,
+          4.4
+        ],
+        [
+          -8.6,
+          1.6
+        ],
+        [
+          -10.2,
+          -0.6
+        ],
+        [
+          -11.6,
+          0.8
+        ],
+        [
+          -10.2,
+          2.0
+        ],
+        [
+          -8.8,
+          0.6
+        ],
+        [
+          -13.2,
+          -2.4
+        ],
+        [
+          -9.2,
+          -3.4
+        ],
+        [
+          -6.4,
+          -3.2
+        ],
+        [
+          -5.4,
+          -1.8
+        ],
+        [
+          -1.0,
+          -1.6
+        ],
+        [
+          3.4,
+          1.4
+        ],
+        [
+          4.2,
+          -3.6
+        ],
+        [
+          2.2,
+          -4.2
+        ],
+        [
+          -5.0,
+          -6.4
+        ],
+        [
+          -6.6,
+          -8.6
+        ],
+        [
+          -5.6,
+          -11.2
+        ],
+        [
+          -7.4,
+          -13.6
+        ],
+        [
+          -9.6,
+          -13.6
+        ],
+        [
+          -13.2,
+          -16.0
+        ],
+        [
+          -8.4,
+          -15.0
+        ],
+        [
+          -3.8,
+          -12.2
+        ],
+        [
+          -0.2,
+          -10.4
+        ],
+        [
+          3.8,
+          -10.8
+        ],
+        [
+          6.4,
+          -8.4
+        ],
+        [
+          9.6,
+          -4.4
+        ],
+        [
+          11.8,
+          2.8
+        ],
+        [
+          12.6,
+          5.6
+        ],
+        [
+          12.2,
+          1.0
+        ],
+        [
+          12.4,
+          -2.6
+        ],
+        [
+          13.4,
+          -6.0
+        ],
+        [
+          12.9,
+          -10.0
+        ],
+        [
+          12.9,
+          -14.0
+        ],
+        [
+          13.4,
+          -16.2
+        ],
+        [
+          12.4,
+          -19.6
+        ],
+        [
+          11.4,
+          -22.0
+        ],
+        [
+          8.8,
+          -25.0
+        ],
+        [
+          5.2,
+          -21.0
+        ],
+        [
+          -1.6,
+          -21.6
+        ],
+        [
+          -6.6,
+          -21.4
+        ],
+        [
+          -10.5,
+          -21.8
+        ],
+        [
+          -13.2,
+          -23.0
+        ],
+        [
+          -13.4,
+          -26.6
+        ],
+        [
+          -8.4,
+          -28.6
+        ],
+        [
+          -5.0,
+          -27.0
+        ],
+        [
+          -1.4,
+          -29.4
+        ],
+        [
+          0.2,
+          -25.2
+        ],
+        [
+          1.6,
+          -24.4
+        ]
+      ]
+    }
+  },
+  "circuito": {
+    "version": 1,
+    "salida": [
+      12.6,
+      5.6
+    ],
+    "comun": [
+      [
+        12.6,
+        5.6
+      ],
+      [
+        12.2,
+        1.0
+      ],
+      [
+        12.4,
+        -2.6
+      ]
+    ],
+    "bifurcacion": [
+      12.4,
+      -2.6
+    ],
+    "segura": [
+      [
+        12.4,
+        -2.6
+      ],
+      [
+        9.6,
+        -5.4
+      ],
+      [
+        7.8,
+        -9.6
+      ],
+      [
+        7.8,
+        -13.8
+      ],
+      [
+        9.4,
+        -17.6
+      ],
+      [
+        12.4,
+        -19.6
+      ]
+    ],
+    "atajo": [
+      [
+        12.4,
+        -2.6
+      ],
+      [
+        13.4,
+        -6.0
+      ],
+      [
+        12.9,
+        -10.0
+      ],
+      [
+        12.9,
+        -14.0
+      ],
+      [
+        13.4,
+        -16.2
+      ],
+      [
+        12.4,
+        -19.6
+      ]
+    ],
+    "union": [
+      12.4,
+      -19.6
+    ],
+    "final": [
+      [
+        12.4,
+        -19.6
+      ],
+      [
+        11.4,
+        -22.0
+      ],
+      [
+        8.8,
+        -25.0
+      ]
+    ],
+    "meta": [
+      8.8,
+      -25.0
+    ],
+    "ancho_segura": 2.6,
+    "ancho_atajo": 1.2,
+    "destino": "ultima",
+    "checkpoints": [
+      {
+        "id": "CP1",
+        "pos": [
+          12.2,
+          1.0
+        ],
+        "rama": "comun"
+      },
+      {
+        "id": "CP-S",
+        "pos": [
+          7.8,
+          -11.7
+        ],
+        "rama": "segura"
+      },
+      {
+        "id": "CP-A",
+        "pos": [
+          12.9,
+          -12.0
+        ],
+        "rama": "atajo"
+      },
+      {
+        "id": "CP2",
+        "pos": [
+          11.4,
+          -22.0
+        ],
+        "rama": "comun"
+      }
+    ],
+    "obstaculos": [
+      {
+        "id": "roca",
+        "tipo": "roca fija",
+        "pos": [
+          13.4,
+          -8.0
+        ],
+        "radio": 0.4,
+        "comportamiento": "COLISIÓN rebote"
+      },
+      {
+        "id": "medusa",
+        "tipo": "medusa",
+        "pos": [
+          12.95,
+          -15.3
+        ],
+        "radio": 0.35,
+        "comportamiento": "COLISIÓN ralentizar 40 % 1,5 s (provisional)"
+      },
+      {
+        "id": "cocodrilo",
+        "tipo": "cocodrilo móvil",
+        "pos": [
+          7.9,
+          -12.9
+        ],
+        "radio": 0.55,
+        "vaiven": [
+          [
+            7.1,
+            -12.9
+          ],
+          [
+            8.7,
+            -12.9
+          ]
+        ],
+        "comportamiento": "COLISIÓN ralentizar 60 % 2 s"
+      }
+    ],
+    "cartel_atajo": [
+      12.9,
+      -3.6
+    ]
+  },
+  "secretos": [
+    {
+      "id": "cueva",
+      "nombre": "La cueva del acantilado",
+      "pos": [
+        -14.8,
+        4.2
+      ],
+      "pista": "Tres monedas flotando en fila apuntan a una grieta del acantilado oeste.",
+      "comportamientos": "PROXIMIDAD + RECOMPENSA (una vez) + LOGRO/TRIGGER",
+      "cerca_de": "marvivo"
+    },
+    {
+      "id": "anfora",
+      "nombre": "El ánfora de Agost",
+      "pos": [
+        8.1,
+        9.5
+      ],
+      "pista": "Burbujas detrás de la colina del horno; desde el recorrido se ve sólo la boca.",
+      "comportamientos": "RECOGIBLE + RECOMPENSA (descuento de tienda, 20 % en la v14, muestra)",
+      "cerca_de": "cala"
+    },
+    {
+      "id": "campana",
+      "nombre": "La campana hundida",
+      "pos": [
+        -13.2,
+        -16.0
+      ],
+      "pista": "La fotógrafa dice que su mejor foto salió «donde suena el mar»; la corona de la campana asoma entre algas.",
+      "comportamientos": "PROXIMIDAD + LOGRO/TRIGGER",
+      "cerca_de": "fotos"
+    },
+    {
+      "id": "circulo",
+      "nombre": "El círculo de las boies dormidas",
+      "pos": [
+        -5.0,
+        -27.0
+      ],
+      "pista": "Siete boies pequeñas en corro, con los ojos cerrados. Pasar por el centro las despierta.",
+      "comportamientos": "PROXIMIDAD + LOGRO/TRIGGER + RECOMPENSA",
+      "cerca_de": "ultima"
+    }
+  ],
+  "solares_l2": [
+    {
+      "id": "solar",
+      "nombre": "Solar L2 (Faro · Cañón)",
+      "pos": [
+        -10.5,
+        -25.2
+      ],
+      "isla": {
+        "centro": [
+          -10.5,
+          -25.2
+        ],
+        "a": 1.9,
+        "b": 1.3,
+        "giro": 30,
+        "alto": 0.5,
+        "p": 2.2,
+        "rol": "rock",
+        "bajio": true
+      },
+      "nota": "Vacío a propósito (D-02, D-08): estacas, cuerda y un cartel «L2»."
+    }
+  ],
+  "ritmo": {
+    "velocidad_u_motor_s": 220,
+    "aceleracion_u_motor_s2": 240,
+    "fuente": "packages/engine/src/ship/config.ts (DEFAULT_SHIP_CONFIG.maxSpeed, acceleration)",
+    "factor_juego": 15,
+    "factor_nota": "En el juego las posiciones se multiplican por 15 y los tamaños (islas, piezas, barco) quedan a 1:1: el mar entre zonas es 15 veces más largo que en la maqueta.",
+    "objetivo_directa_s": 60,
+    "objetivo_exploracion_s": 600,
+    "nota": "La maqueta comprime el mar: los tiempos de juego salen de multiplicar la longitud de la maqueta por factor_juego. Islas y piezas van a la escala del barco; lo que se estira es el agua entre zonas."
+  }
+}

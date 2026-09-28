@@ -1,0 +1,2 @@
+# Maestros PNG: se regeneran con render.py (unos 80 MB). En git van los WebP y los JSON del visor.
+*.png

@@ -1,0 +1,40 @@
+{
+  "estado": "muestra",
+  "imagen": [
+    1600,
+    1000
+  ],
+  "ppu": 92.99,
+  "lugares": {
+    "cala": {
+      "nombre": "Cala del Alfar",
+      "x": 32.38,
+      "y": 42.55
+    },
+    "barco": {
+      "nombre": "El barco del mundo",
+      "x": 52.39,
+      "y": 66.22
+    },
+    "pista": {
+      "nombre": "Pista de azulejos",
+      "x": 30.73,
+      "y": 58.19
+    },
+    "escenario": {
+      "nombre": "Isla del escenario, All Day BOIA",
+      "x": 56.62,
+      "y": 17.97
+    },
+    "tienda": {
+      "nombre": "Isla tienda",
+      "x": 74.29,
+      "y": 61.14
+    },
+    "boia": {
+      "nombre": "La primera boia",
+      "x": 44.71,
+      "y": 79.78
+    }
+  }
+}

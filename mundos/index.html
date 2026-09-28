@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mundos de BOIA.PLANET</title>
+<style>
+:root{--bg:#f4efe6;--card:#fffdf8;--ink:#26221e;--muted:#6d655c;--line:#e4dac9;--accent:#F26A1B;}
+@media (prefers-color-scheme:dark){:root{--bg:#14161b;--card:#1d2028;--ink:#eee8de;--muted:#a79f93;--line:#2e323d;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 64px}
+.tag{display:inline-block;font:600 12px ui-monospace,Menlo,monospace;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--accent);border-radius:999px;padding:3px 10px}
+h1{font-size:32px;line-height:1.15;margin:10px 0 4px}
+.lead{font-size:18px;color:var(--muted);margin:0 0 14px;max-width:760px}
+.worlds{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.worlds button{display:flex;align-items:center;gap:10px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:8px 14px 8px 8px;cursor:pointer;font:600 15px system-ui;min-height:52px}
+.worlds button img{width:44px;height:36px;object-fit:cover;border-radius:8px}
+.worlds button small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.worlds button[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 3px rgba(242,106,27,.18)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+.stage{position:relative;border-radius:16px;overflow:hidden;background:#0F5F7D;border:1px solid var(--line)}
+.stage img{display:block;width:100%;height:auto;transition:opacity .25s}
+.pin{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;border:0;
+  font:700 14px system-ui;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.35),0 0 0 3px rgba(255,255,255,.9);cursor:pointer}
+.pin.on{background:#fff;color:var(--accent)}
+.time{display:flex;gap:8px;margin-top:10px}
+.time button{font:600 14px system-ui;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 16px;cursor:pointer;min-height:40px}
+.time button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 14px}
+.card h2{font-size:20px;margin:0 0 6px}.card h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 6px}
+.card p{margin:6px 0}
+.sw{display:flex;gap:6px}.sw i{flex:1;height:30px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(127,127,127,.35)}
+ol{margin:0;padding:0;list-style:none;counter-reset:p}
+ol li{counter-increment:p;display:grid;grid-template-columns:30px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:15px;cursor:default}
+ol li::before{content:counter(p);width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font:700 12px system-ui;display:flex;align-items:center;justify-content:center}
+ol li.on{background:rgba(242,106,27,.08)}
+.how{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
+.how div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.how b{display:block;margin-bottom:4px}
+.muted{color:var(--muted)}code{font:13px ui-monospace,Menlo,monospace}
+@media (max-width:900px){.layout{grid-template-columns:1fr}h1{font-size:26px}.pin{width:24px;height:24px;font-size:12px}}
+</style>
+</head>
+<body>
+<main>
+<span class="tag">Exploración · muestra</span>
+<h1>Un mapa, varios mundos</h1>
+<p class="lead">El mundo principal es el de arcilla. Si eliges otro mundo, las mismas islas, los mismos lugares y el mismo recorrido se redibujan con el estilo de su barco.</p>
+
+<div class="worlds" role="group" aria-label="Elegir mundo" id="worlds"></div>
+
+<div class="layout">
+  <div>
+    <div class="stage" id="stage"><img id="scene" alt=""></div>
+    <div class="time" id="time" role="group" aria-label="Hora">
+      <button type="button" data-v="dia" aria-pressed="true">De día</button>
+      <button type="button" data-v="noche" aria-pressed="false">De noche</button>
+    </div>
+  </div>
+  <aside>
+    <section class="card" id="card"></section>
+    <section class="card">
+      <h2>Los lugares</h2>
+      <p class="muted">Son los mismos en todos los mundos.</p>
+      <ol id="places"></ol>
+    </section>
+  </aside>
+</div>
+
+<div class="how">
+  <div><b>Lo que no cambia</b>Islas, posiciones, colisiones, eventos, misiones y descuentos. El jugador sigue en el mismo mapa y con su progreso.</div>
+  <div><b>Lo que cambia</b>El material de cada pieza (arena, paja, madera, mar…), la luz, el trazo y el barco que te acompaña.</div>
+  <div><b>Cómo se añade un mundo</b>Un tema nuevo traduce cada papel de la escena a su estilo y aporta su barco. Las islas se regeneran solas con la misma cámara, en unos 30 s los tres mundos.</div>
+  <div><b>Por qué encaja</b>Es la regla de la spec aplicada a los mundos: la apariencia va separada del comportamiento. Un mundo es sólo otra apariencia.</div>
+</div>
+</main>
+<script>
+var WORLDS = [
+  {id: "arcilla", name: "Arcilla", sub: "Mundo principal", boat: "B05", variants: ["dia", "noche"],
+   title: "Arcilla · mundo principal",
+   text: "Todo parece modelado a mano en plastilina: formas blandas, huellas de dedos y luz suave de maqueta. Su barco es el chiringuito flotante B05, con techo de paja, palmera y guirnalda.",
+   feel: "Cálido, artesanal y de fiesta de día y de noche.",
+   pal: ["#EBCF9E", "#7DB043", "#C8643A", "#F26A1B", "#0F5F7D"]},
+  {id: "papel", name: "Papel", sub: "Boceto a lápiz", boat: "B01", variants: ["dia"],
+   title: "Papel",
+   text: "El archipiélago como un cuaderno de bocetos: papel, tramado de grafito en las sombras y trazo tembloroso. Su barco es el remolcador B01, dibujado a lápiz.",
+   feel: "Tranquilo, de diario de viaje. Ideal para recuerdos y archivo.",
+   pal: ["#F4F4F4", "#E7E7E7", "#D0D0D0", "#666666", "#292929"]},
+  {id: "cartoon", name: "Cartoon", sub: "Dibujo animado antiguo", boat: "B06", variants: ["dia"],
+   title: "Cartoon",
+   text: "Tinta gruesa, semitono de imprenta y una paleta corta de crema, rojo y negro sobre un mar verdoso. Su barco es el remolcador B06, con ojos de buey que parecen ojos.",
+   feel: "Enérgico y cómico, con aire de dibujo animado clásico.",
+   pal: ["#F1E3BF", "#C8372B", "#17110E", "#5F9C9A", "#9AAE52"]}
+];
+var PLACE_TEXT = {
+  cala: "La Cala del Alfar, con su horno, el chiringuito y la paella.",
+  barco: "El barco del mundo elegido, atracado en el muelle de los botijos.",
+  pista: "Pista de baile de azulejos.",
+  escenario: "La gran isla del All Day BOIA: escenario, altavoces y público.",
+  tienda: "Isla tienda: kiosco, cajas y camisetas tendidas.",
+  boia: "La primera boia, donde empieza el tutorial."
+};
+var state = {world: WORLDS[0], variant: "dia"}, pins = [], order = ["cala", "barco", "pista", "escenario", "tienda", "boia"];
+var img = document.getElementById("scene"), stage = document.getElementById("stage");
+function src(w, v) { return "out/" + w.id + "-" + v + ".png"; }
+function render() {
+  var w = state.world;
+  if (w.variants.indexOf(state.variant) < 0) state.variant = "dia";
+  img.src = src(w, state.variant);
+  img.alt = "Archipiélago en el mundo " + w.name + (state.variant === "noche" ? ", de noche" : "");
+  document.querySelectorAll("#worlds button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.id === w.id); });
+  var t = document.getElementById("time");
+  t.style.display = w.variants.length > 1 ? "flex" : "none";
+  t.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.v === state.variant); });
+  document.getElementById("card").innerHTML =
+    "<h2>" + w.title + "</h2><p>" + w.text + "</p><p class=muted>" + w.feel + "</p>" +
+    "<h3>Paleta</h3><div class=sw>" + w.pal.map(function (c) { return "<i title='" + c + "' style='background:" + c + "'></i>"; }).join("") + "</div>" +
+    "<h3>Barco</h3><p>" + w.boat + " · ver <a href='../docs/barcos/colores.html#" + w.boat + "'>su guía de colores</a></p>";
+}
+WORLDS.forEach(function (w) {
+  var b = document.createElement("button");
+  b.type = "button"; b.dataset.id = w.id;
+  b.innerHTML = "<img src='" + src(w, "dia") + "' alt=''><span>" + w.name + "<small>" + w.sub + "</small></span>";
+  b.addEventListener("click", function () { state.world = w; render(); });
+  document.getElementById("worlds").appendChild(b);
+});
+document.querySelectorAll("#time button").forEach(function (b) {
+  b.addEventListener("click", function () { state.variant = b.dataset.v; render(); });
+});
+function select(k) {
+  document.querySelectorAll("#places li").forEach(function (li) { li.classList.toggle("on", li.dataset.k === k); });
+  pins.forEach(function (p) { p.classList.toggle("on", p.dataset.k === k); });
+}
+fetch("out/lugares.json").then(function (r) { return r.json(); }).then(function (d) {
+  var list = document.getElementById("places");
+  order.forEach(function (k, i) {
+    var p = d.lugares[k]; if (!p) return;
+    var li = document.createElement("li");
+    li.dataset.k = k;
+    li.innerHTML = "<div><b>" + p.nombre + "</b><br><span class=muted>" + (PLACE_TEXT[k] || "") + "</span></div>";
+    li.addEventListener("mouseenter", function () { select(k); });
+    list.appendChild(li);
+    var pin = document.createElement("button");
+    pin.type = "button"; pin.className = "pin"; pin.dataset.k = k; pin.textContent = i + 1;
+    pin.setAttribute("aria-label", (i + 1) + ". " + p.nombre);
+    pin.style.left = p.x + "%"; pin.style.top = p.y + "%";
+    pin.addEventListener("click", function () { select(k); });
+    stage.appendChild(pin); pins.push(pin);
+  });
+}).catch(function () {});
+render();
+</script>
+</body>
+</html>

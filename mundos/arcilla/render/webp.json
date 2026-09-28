@@ -1,0 +1,152 @@
+{
+ "allday-dia.webp": {
+  "calidad": 92,
+  "kb": 99.6,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "allday-noche.webp": {
+  "calidad": 92,
+  "kb": 109.9,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "allday-recuerdo-dia.webp": {
+  "calidad": 92,
+  "kb": 94.9,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "allday-recuerdo-noche.webp": {
+  "calidad": 92,
+  "kb": 107.7,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "cala-dia.webp": {
+  "calidad": 92,
+  "kb": 62.7,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "cala-noche.webp": {
+  "calidad": 92,
+  "kb": 77.1,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "cartoon-general-dia.webp": {
+  "calidad": 92,
+  "kb": 762.8,
+  "tope_kb": 900,
+  "ok": true
+ },
+ "circuito-dia.webp": {
+  "calidad": 92,
+  "kb": 83.6,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "circuito-noche.webp": {
+  "calidad": 92,
+  "kb": 80.6,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "fiestera-dia.webp": {
+  "calidad": 92,
+  "kb": 79.2,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "fiestera-noche.webp": {
+  "calidad": 92,
+  "kb": 75.5,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "fotos-dia.webp": {
+  "calidad": 92,
+  "kb": 65.3,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "fotos-noche.webp": {
+  "calidad": 92,
+  "kb": 59.1,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "general-atardecer.webp": {
+  "calidad": 92,
+  "kb": 734.8,
+  "tope_kb": 900,
+  "ok": true
+ },
+ "general-dia.webp": {
+  "calidad": 92,
+  "kb": 631.1,
+  "tope_kb": 900,
+  "ok": true
+ },
+ "general-noche.webp": {
+  "calidad": 92,
+  "kb": 590.3,
+  "tope_kb": 900,
+  "ok": true
+ },
+ "marvivo-dia.webp": {
+  "calidad": 92,
+  "kb": 67.8,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "marvivo-noche.webp": {
+  "calidad": 92,
+  "kb": 56.4,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "papel-general-dia.webp": {
+  "calidad": 92,
+  "kb": 769.4,
+  "tope_kb": 900,
+  "ok": true
+ },
+ "puerto-dia.webp": {
+  "calidad": 92,
+  "kb": 61.9,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "puerto-noche.webp": {
+  "calidad": 92,
+  "kb": 62.2,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "tienda-dia.webp": {
+  "calidad": 92,
+  "kb": 58.3,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "tienda-noche.webp": {
+  "calidad": 92,
+  "kb": 56.7,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "ultima-dia.webp": {
+  "calidad": 92,
+  "kb": 80.2,
+  "tope_kb": 250,
+  "ok": true
+ },
+ "ultima-noche.webp": {
+  "calidad": 92,
+  "kb": 78.0,
+  "tope_kb": 250,
+  "ok": true
+ }
+}
