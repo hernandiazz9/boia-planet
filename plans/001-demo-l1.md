@@ -27,7 +27,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: 17 files renamed to boia/boies, D-18 added, v14 untouched → f6ebab0
 
 ## T06 — Supabase schema, migrations, RLS
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T00
 - Goal: The data layer of docs/spec/08-arquitectura-y-datos.md for Launch 1: users and carnets (5 public questions, member-since date), events with the seven states of §49.4 and island separated from event, islands, world objects and versioned world snapshots (draft/published), home blocks, achievements with trigger conditions, points and coins ledger (idempotent transactions with stable ids), bottles, audit log. No Docker on this Mac (D-17): migrations are plain SQL in supabase/migrations/ and are tested against the local Homebrew PostgreSQL 17 (port 5432, database `boia_planet_test`, created and dropped by the test harness) with a Supabase-compatible shim (roles anon/authenticated/service_role, schema auth with auth.uid() reading request.jwt.claims). Migrations cumulative; seed data labeled `muestra`; RLS so that no client can write balances, roles, stamps or purchase states.
 - Context: docs/DECISIONES.md (D-04, D-09, D-10, D-17); docs/spec/08-arquitectura-y-datos.md, docs/spec/06-comercial.md (event states table), docs/spec/07-admin.md; skills `supabase` and `supabase-postgres-best-practices` (load them before writing SQL).
@@ -39,7 +39,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T02 — Landing by blocks, tickets panel, analytics
-- Status: pending
+- Status: done
 - Depends on: T00
 - Goal: The HTML landing of v14 §4.2/§4.4 driven by a typed block list with sample data: hero (title, positioning line, EXPLORAR EL UNIVERSO as dominant CTA per D-07, Tickets always visible), priority event, upcoming events, three artists rotating every 5 s without duplicates, philosophy, photos, store as external link, contact, footer with legal links. Tickets panel in HTML that works without WebGL. PostHog (EU) with the funnel events of D-04. Spanish only (D-03), i18n keys from the start.
 - Context: docs/DECISIONES.md (D-02, D-03, D-04, D-07); docs/spec/02-entrada-y-landing.md, docs/spec/06-comercial.md, docs/spec/10-filosofia.md (copy is `muestra` until Álvaro approves); v14 §18.1 for the 26 artists (verbatim, neutral avatars); apps/web/**.
@@ -49,10 +49,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm build` → landing critical path ≤ 1 MB gzip (report the number)
   - `pnpm e2e` (added by this task: Playwright, Chromium, mobile and desktop projects) → exit 0: opens `/`, sees the CTA and Tickets above the fold at 360×640, opens the tickets panel with the game bundle blocked
   - axe-core on `/` → 0 serious or critical violations
-- Outcome:
+- Outcome: block-driven landing, HTML tickets panel (/#tickets), PostHog EU via capture API, Playwright e2e + axe; 155 kB gzip → e680599
 
 ## T01 — World art batch v0 from the Blender pipeline
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T00
 - Goal: Produce, with the same headless Blender pipeline, camera (30°, D-13) and style parameter as the ship, the first swappable world assets the demo needs: one large event island, one small secondary island, the tutorial buoy (idle loop), two rocks, a coastline set for the left and right world edges, and the intro planet as 2D layers (globe, sea band, clouds, a recognisable island shape for continuity, v14 §4.4). Every resource gets its own manifest (id, version, files, frames, scale, anchors, pivot, footprint/hitbox hint, license `muestra`) per v14 §49.17, validated by the existing check. Style: the current `muestra` style of art/barco, selectable so a later style change is a re-render (tools/blender/styles/).
 - Context: docs/DECISIONES.md (D-05, D-13, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, styles); tools/blender/** (rig.py, ship.py, render.py, check.py, styles/); v14 §4.4, §9, §34, §49.17 in docs/fuente/v14-maestro.md.
@@ -171,9 +171,19 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28: up to 3 agents run at once instead of 2 (Hernán)
 - 2026-09-28: tasks reordered by critical path (T06 → T07 → T08 → T09 → T10 first); ready tasks launch in this order (orchestrator)
 - 2026-09-28 T00: D-18 and ESTADO describe the old spelling as "la grafía con y" so the Done-when grep stays empty; docs/PLAN.md slug now `objetos-y-boia-tutorial` (agent)
+- 2026-09-28 T02: PostHog via its EU capture API without SDK (posthog-js pulls core-js, whose build script pnpm 11 blocks); in-memory id, no cookies, nothing sent without NEXT_PUBLIC_POSTHOG_KEY (agent)
+- 2026-09-28 T02: tickets panel at /#tickets opens with CSS :target without JS; sample links to example.com; positioning line = §37.11 working phrase; artist order shuffled with a fixed seed (agent)
+- 2026-09-28 T02: touched outside scope: vitest.config.ts (jsx automatic), root package.json e2e script, old apps/web/app/page.tsx moved to app/(landing)/page.tsx (agent)
 
 ## Proposals (new scope)
+- 2026-09-28 T02: create the PostHog EU project and load NEXT_PUBLIC_POSTHOG_KEY (pedir-token); real sends untested
+- 2026-09-28 T02: legal texts, official links, contact email, store and ticketing URLs pending from Álvaro
+- 2026-09-28 T02: ESTADO.md and plans/ fail `prettier --check` (pre-existing); decide whether to exclude them or format
 
 ## Log
 - 2026-09-28 19:50 T00 launched · attempt 1 · agent a01f4f1d6cbbc33b0
 - 2026-09-28 19:55 T00 done · branch worktree-agent-a01f4f1d6cbbc33b0 → f6ebab0
+- 2026-09-28 19:58 T06 launched · attempt 1 · agent a5a08a5e7cb452cb5
+- 2026-09-28 19:58 T02 launched · attempt 1 · agent a7e2f22a4a0f6d626
+- 2026-09-28 19:58 T01 launched · attempt 1 · agent af5e76d10c58b5de8
+- 2026-09-28 20:08 T02 done · branch worktree-agent-a7e2f22a4a0f6d626 → e680599
