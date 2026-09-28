@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+dist/
+.next/
+.turbo/
+coverage/
+# salidas intermedias de Blender; lo que se entrega va en art/
+tools/blender/out/
+*.blend1
