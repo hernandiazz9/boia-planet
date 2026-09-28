@@ -188,6 +188,14 @@ Orquestador en Fable 5.1 (esta sesión); sesiones de trabajo en Opus 5.5.
 Un encargo, una tarde, un informe. Máximo dos en paralelo sin archivos
 compartidos. Hito de revisión con Álvaro en móvil real al cerrar cada fase.
 
+## D-12 · El joystick nace donde toca el primer dedo · 2026-09-28 · orquestador · pendiente Álvaro
+
+El Prompt 1 de la v14 dice "el control táctil nace al tocar el barco". Se
+cambia a: el primer dedo crea el joystick en su punto, en cualquier lugar de
+la zona de juego. Acertar a un sprite de 64 px en un móvil es frustrante y §25
+pide feedback inmediato. Se muestra a Álvaro en el hito 1; si lo prefiere
+literal, es un cambio de una condición en el motor.
+
 ## Preguntas abiertas
 
 | # | Pregunta | Para | Traba |

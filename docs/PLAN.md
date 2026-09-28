@@ -38,6 +38,11 @@ las de mecánica del método:
 - 2026-09-28 · Los encargos 01 (arte) y 02 (spec) van en paralelo: 01 toca
   `tools/blender/`, `tools/viewer/`, `art/`; 02 toca `docs/spec/` y
   `tools/spec/`. Ninguno toca `docs/DECISIONES.md` ni este plan.
+- 2026-09-28 · Excepción al máximo de dos en paralelo, sólo en R1: tres
+  sesiones (01, 02, 03) porque el repo está vacío y sus directorios son
+  disjuntos (`tools/`+`art/`, `docs/spec/`, `apps/`+`packages/`+raíz). El
+  único archivo común es `ESTADO.md`, cubierto por la regla de "sección
+  propia o al informe". A partir de R2 vuelve el máximo de dos.
 - 2026-09-28 · Sesiones de trabajo en Opus 5.5 (D-11). Si el 01 muestra que el
   modelado procedural en bpy no alcanza, el siguiente encargo de arte prueba
   image-to-3D, no se sube de modelo.
@@ -52,7 +57,7 @@ Máximo dos sesiones a la vez, sin archivos compartidos. Unos 25 encargos para
 L1, en tres fases con un hito de revisión con Álvaro al cerrar cada una.
 
 ### Fase 0 — validar antes de construir
-- **R1** · [en curso] **01** arte-barco-blender ∥ [en curso] **02** spec-v15-consolidada.
+- **R1** · [en curso] **01** arte-barco-blender ∥ [en curso] **02** spec-v15-consolidada ∥ [en curso] **03** monorepo-y-motor-base.
 - **R2** · [pendiente] stack-y-ticketera-adr — ADR del stack de D-04 con una
   prueba mínima de PixiJS v8 + Next.js, y tabla comparativa de ticketeras
   (Fourvenues, Entradium, Wegow, Eventbrite, DICE): API, webhooks, comisiones,
@@ -63,9 +68,6 @@ L1, en tres fases con un hito de revisión con Álvaro al cerrar cada una.
   arte sigue o se pasa a image-to-3D.
 
 ### Fase 1 — corte vertical de riesgo
-- [pendiente] motor-nucleo — barco con joystick desde el punto tocado, drift
-  con segundo dedo, teclado, cámara, agua animada, estela, sectores, costas
-  que colisionan, sprites del 01, independiente de la tasa de imágenes.
 - [pendiente] landing-html — landing por bloques con datos `muestra`,
   tickets HTML, hero con presupuesto de 1 MB, accesibilidad, PostHog.
 - [pendiente] entrada-cinematica — planeta→mar→landing con máquina de
