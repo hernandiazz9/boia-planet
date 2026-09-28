@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cala del Alfar</title>
+<style>
+:root{--bg:#f6f1e7;--card:#fffdf8;--ink:#2a2420;--muted:#6f655b;--line:#e6dccb;--accent:#F26A1B;--green:#4FAA66;}
+@media (prefers-color-scheme:dark){:root{--bg:#15171d;--card:#1e2129;--ink:#efe9df;--muted:#aaa194;--line:#2f333f;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:22px 16px 72px}
+.tag{display:inline-block;font:600 12px ui-monospace,Menlo,monospace;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--accent);border-radius:999px;padding:3px 10px}
+h1{font-size:34px;line-height:1.15;margin:10px 0 4px}
+h2{font-size:22px;margin:0 0 10px}
+.lead{font-size:19px;color:var(--muted);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:18px 0}
+.stage{position:relative;border-radius:14px;overflow:hidden;background:#0F5F7D}
+.stage img{display:block;width:100%;height:auto}
+.pin{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;
+  font:700 14px system-ui;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.35),0 0 0 3px rgba(255,255,255,.85);border:0;cursor:pointer}
+.pin.on{background:#fff;color:var(--accent)}
+.toolbar{display:flex;gap:8px;margin:12px 0 0;flex-wrap:wrap}
+.toolbar button{font:600 14px system-ui;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 16px;cursor:pointer;min-height:40px}
+.toolbar button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+ol.places{margin:0;padding:0;list-style:none;counter-reset:p}
+ol.places li{counter-increment:p;display:grid;grid-template-columns:34px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+ol.places li::before{content:counter(p);width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font:700 13px system-ui;display:flex;align-items:center;justify-content:center}
+ol.places li.on{background:rgba(242,106,27,.08)}
+ol.places b{display:block}
+p{margin:8px 0}
+.muted{color:var(--muted)}
+.quote{border-left:4px solid var(--green);padding:4px 0 4px 14px;margin:12px 0;color:var(--muted)}
+.mech{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.mech div{border:1px solid var(--line);border-radius:12px;padding:12px}
+.mech b{display:block;margin-bottom:4px}
+code{font:13px ui-monospace,Menlo,monospace}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.sw div{border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
+.sw i{display:block;height:46px;box-shadow:inset 0 -1px 0 rgba(127,127,127,.3)}
+.sw span{display:block;padding:6px 8px}.sw span b{font:600 12px ui-monospace,Menlo,monospace;display:block}
+ul{padding-left:20px;margin:6px 0}
+.names{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.names span{border:1px dashed var(--muted);border-radius:999px;padding:4px 12px}
+.names span.pick{border-style:solid;border-color:var(--accent);color:var(--accent);font-weight:600}
+@media (max-width:760px){.cols{grid-template-columns:1fr}h1{font-size:28px}.pin{width:24px;height:24px;font-size:12px}}
+</style>
+</head>
+<body>
+<main>
+<span class="tag">Propuesta · muestra</span>
+<h1>Cala del Alfar, el mundo del barco de arcilla</h1>
+<p class="lead">El barco que convierte una cala en fiesta: cocina de día, luces de noche.</p>
+
+<section class="card">
+  <div class="stage" id="stage">
+    <img id="scene" src="cala-dia.png" width="1600" height="1000" alt="Cala de plastilina con horno de alfarero, chiringuito de paja, palmeras con guirnalda, pista de azulejos, paella y el barco de arcilla atracado en un muelle con botijos">
+  </div>
+  <div class="toolbar" role="group" aria-label="Hora del día">
+    <button type="button" data-src="cala-dia.png" aria-pressed="true">De día</button>
+    <button type="button" data-src="cala-noche.png" aria-pressed="false">De noche</button>
+  </div>
+  <p class="muted">Render en Blender con el mismo material, luz y cámara isométrica del barco B05. La isla, los nombres y la historia son una propuesta para pensar; los aprueba Álvaro.</p>
+</section>
+
+<div class="cols">
+  <section class="card">
+    <h2>Los lugares</h2>
+    <ol class="places" id="places">
+      <li data-k="barco"><div><b>El barco atracado</b>Su casa es un chiringuito flotante: techo de paja, palmera y guirnalda.</div></li>
+      <li data-k="embarcadero"><div><b>Embarcadero de los botijos</b>Los botijos recién cocidos esperan para viajar a las islas de eventos.</div></li>
+      <li data-k="chiringuito"><div><b>Chiringuito de paja</b>La barra en tierra firme, hermana del techo del barco.</div></li>
+      <li data-k="paella"><div><b>La paella del mediodía</b>De día, la cala cocina. Lo primero que huele quien llega.</div></li>
+      <li data-k="horno"><div><b>Horno de alfarero</b>Donde se coció el barco. Todavía humea.</div></li>
+      <li data-k="pista"><div><b>Pista de azulejos</b>De noche, la cala baila.</div></li>
+      <li data-k="guirnalda"><div><b>Guirnalda entre palmeras</b>La misma guirnalda que el barco lleva de isla en isla.</div></li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>El barco</h2>
+    <p>Nombre, a elegir:</p>
+    <div class="names"><span class="pick">Botijo</span><span>Churro</span><span>Palmerita</span></div>
+    <p class="muted">«Churro» es como el script llama a su regala de plastilina.</p>
+    <p><b>Carácter.</b> Es el anfitrión: llega el primero, cuelga la guirnalda, enciende el fuego de la paella y se va el último. Blandito, un poco torcido y lleno de huellas de dedos, porque está hecho a mano y no pretende ser perfecto.</p>
+    <p><b>Su historia.</b> Lo modelaron en la cala para llevar botijos de agua fresca a las fiestas. Salió del horno con la panza redonda y demasiado alegre para ser un barco de carga. Así que dejó los botijos en el muelle y empezó a cargar la fiesta: paja, palmera y bombillas. Desde entonces, cuando aparece por el horizonte, en la isla ya saben que va a haber arroz a mediodía y baile por la noche.</p>
+    <div class="quote">«Ven por la música. Quédate por todo lo que ocurre alrededor.» Una de las frases de trabajo de la filosofía de BOIA (§37.11).</div>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Por qué encaja con BOIA</h2>
+  <ul>
+    <li><b>Más que música (§37.3).</b> La filosofía nombra la paella de día, la artesanía y las pequeñas marcas. La cala es exactamente eso: horno, botijos, cocina y pista.</li>
+    <li><b>All Day BOIA (§37.8).</b> Un evento que cambia con las horas. La cala tiene dos caras, la del mediodía y la de la noche.</li>
+    <li><b>Hecho a mano, desde Alicante.</b> Palmeras, arroz y barro. La tradición alfarera de la provincia, con los botijos de Agost, podría ser la referencia real. Falta que la confirme Álvaro.</li>
+    <li><b>Dar espacio (§37.2).</b> El barco no es la estrella: prepara el sitio para que pasen cosas.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Cómo viviría en el juego</h2>
+  <p class="muted">Todo con comportamientos que el motor ya tiene en el catálogo (§48): ninguna mecánica nueva.</p>
+  <div class="mech">
+    <div><b>Isla por proximidad</b>Al acercarse, la cala muestra sus recuerdos y los próximos eventos. Es PROXIMIDAD más EVENTO/CONTENIDO.</div>
+    <div><b>El barco habla</b>Botijo, atracado, saluda con bocadillos de 1,5 s y cuenta su historia por partes. Es DIÁLOGO.</div>
+    <div><b>Misión corta: los botijos perdidos</b>Tres botijos flotan a la deriva. Devolverlos al muelle da un logro y un cosmético de guirnalda para tu barco. Es RECOGIBLE más LOGRO y RECOMPENSA.</div>
+    <div><b>Secreto del horno</b>Pasar por el humo revela un código de descuento de muestra. Es PROXIMIDAD más RECOMPENSA.</div>
+    <div><b>Isla de activaciones</b>Buen sitio para las activaciones satélite de cocina, mercadillo o artesanía, sin competir con las grandes islas de los All Day.</div>
+    <div><b>De día y de noche</b>Las dos caras de la cala se aprovechan cuando exista el ciclo de día y noche, que hoy está en L2 provisional.</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Paleta del mundo</h2>
+  <p class="muted">Arriba, los colores del barco (del script <code>05_arcilla_maqueta.py</code>). Abajo, los que añade la cala (propuesta, en <code>tools/barcos/mundos/b05_cala.py</code>).</p>
+  <div class="sw">
+    <div><i style="background:#4FAA66"></i><span><b>#4FAA66</b>Casco</span></div>
+    <div><i style="background:#F26A1B"></i><span><b>#F26A1B</b>Franja, naranja BOIA</span></div>
+    <div><i style="background:#E9B24C"></i><span><b>#E9B24C</b>Paja</span></div>
+    <div><i style="background:#86BE36"></i><span><b>#86BE36</b>Palmera</span></div>
+    <div><i style="background:#F6E4C4"></i><span><b>#F6E4C4</b>Paredes</span></div>
+    <div><i style="background:#FFD27E"></i><span><b>#FFD27E</b>Bombilla</span></div>
+  </div>
+  <div class="sw" style="margin-top:10px">
+    <div><i style="background:#EBCF9E"></i><span><b>#EBCF9E</b>Arena</span></div>
+    <div><i style="background:#C8643A"></i><span><b>#C8643A</b>Terracota</span></div>
+    <div><i style="background:#7DB043"></i><span><b>#7DB043</b>Colina</span></div>
+    <div><i style="background:#2C62BE"></i><span><b>#2C62BE</b>Azulejo azul</span></div>
+    <div><i style="background:#FFF7EC"></i><span><b>#FFF7EC</b>Azulejo blanco</span></div>
+    <div><i style="background:#9C6B45"></i><span><b>#9C6B45</b>Tronco</span></div>
+    <div><i style="background:#F2B233"></i><span><b>#F2B233</b>Arroz</span></div>
+    <div><i style="background:#FF8A3D"></i><span><b>#FF8A3D</b>Fuego</span></div>
+    <div><i style="background:#0F5F7D"></i><span><b>#0F5F7D</b>Mar del juego</span></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Qué hay que decidir</h2>
+  <ul>
+    <li>El nombre del barco y el de la cala.</li>
+    <li>Si cada barco tiene su isla propia en el mapa o un puerto base en una isla compartida.</li>
+    <li>Dónde se cuenta la historia: en Mi Barco, en su diálogo o en ambos.</li>
+    <li>Si la referencia a Agost y a la alfarería alicantina se usa o se queda en inspiración.</li>
+  </ul>
+  <p class="muted">Se regenera en unos 18 s con <code>/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/barcos/mundos/b05_cala.py</code>.</p>
+</section>
+</main>
+<script>
+(function () {
+  var img = document.getElementById("scene"), stage = document.getElementById("stage");
+  var items = Array.prototype.slice.call(document.querySelectorAll("#places li"));
+  document.querySelectorAll(".toolbar button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      img.src = b.dataset.src;
+      document.querySelectorAll(".toolbar button").forEach(function (o) { o.setAttribute("aria-pressed", o === b); });
+    });
+  });
+  function select(k) {
+    items.forEach(function (li) { li.classList.toggle("on", li.dataset.k === k); });
+    stage.querySelectorAll(".pin").forEach(function (p) { p.classList.toggle("on", p.dataset.k === k); });
+  }
+  fetch("lugares.json").then(function (r) { return r.json(); }).then(function (d) {
+    items.forEach(function (li, i) {
+      var p = d.lugares[li.dataset.k];
+      if (!p) return;
+      var pin = document.createElement("button");
+      pin.className = "pin"; pin.type = "button"; pin.dataset.k = li.dataset.k;
+      pin.textContent = i + 1; pin.setAttribute("aria-label", (i + 1) + ". " + p.nombre);
+      pin.style.left = p.x + "%"; pin.style.top = p.y + "%";
+      pin.addEventListener("click", function () { select(li.dataset.k); });
+      stage.appendChild(pin);
+      li.addEventListener("mouseenter", function () { select(li.dataset.k); });
+    });
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

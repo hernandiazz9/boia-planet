@@ -171,6 +171,7 @@
       "estilo": "Arcilla, maqueta",
       "aspecto": "Remolcador de juguete blando: casco verde redondo con franja naranja, caseta con techo de paja y palmera, guirnalda de farolillos y bandera naranja.",
       "script": "tools/blender/styles/05_arcilla_maqueta.py",
+      "mundo": "docs/barcos/mundos/b05/index.html",
       "render": "tools/blender/out/styles/05_arcilla_maqueta/hero_SE.png",
       "imagen": "docs/informes/img/01-estilo-05-arcilla-maqueta-hero.png",
       "hoja": "docs/informes/img/01-estilo-05-arcilla-maqueta.png",

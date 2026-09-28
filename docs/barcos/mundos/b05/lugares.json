@@ -1,0 +1,44 @@
+{
+  "estado": "muestra",
+  "imagen": [
+    1600,
+    1000
+  ],
+  "lugares": {
+    "barco": {
+      "nombre": "El barco atracado",
+      "x": 74.05,
+      "y": 69.92
+    },
+    "embarcadero": {
+      "nombre": "Embarcadero de los botijos",
+      "x": 63.77,
+      "y": 74.73
+    },
+    "chiringuito": {
+      "nombre": "Chiringuito de paja",
+      "x": 57.34,
+      "y": 45.78
+    },
+    "paella": {
+      "nombre": "La paella del mediodía",
+      "x": 52.04,
+      "y": 62.26
+    },
+    "horno": {
+      "nombre": "Horno de alfarero",
+      "x": 41.76,
+      "y": 31.74
+    },
+    "pista": {
+      "nombre": "Pista de azulejos",
+      "x": 39.11,
+      "y": 56.97
+    },
+    "guirnalda": {
+      "nombre": "Guirnalda entre palmeras",
+      "x": 32.77,
+      "y": 34.52
+    }
+  }
+}
