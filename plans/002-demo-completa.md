@@ -240,3 +240,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 01:27 T19 launched · attempt 1 · agent ac12551dbf19cf19b
 - 2026-09-29 01:27 T27 launched · attempt 1 · agent a919e19d514682d6b
 - 2026-09-29 01:53 T27 done · branch worktree-agent-a919e19d514682d6b → f0d9a26
+- 2026-09-29 02:00 PAUSED by Hernán (usage limit). T20 agent stopped, WIP 63a4fdd on worktree-agent-a105e608c994e8161 (worktree .claude/worktrees/agent-a105e608c994e8161 kept). T19 agent stopped, WIP df06477 on worktree-agent-ac12551dbf19cf19b (worktree .claude/worktrees/agent-ac12551dbf19cf19b kept). On resume: section 7 (orphans) → continuation agents (interrupted) for T20 and T19; everything else pending is blocked on them.
