@@ -13,15 +13,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Grabación y storyboard de la entrada para la revisión visual (ENT 06,
- * REQ-ENT-023). No corre con `pnpm e2e`; se pide aparte:
+ * Grabación y storyboard de la entrada «mini-mundo» para la revisión visual
+ * (ENT 06, REQ-ENT-023; T14). No corre con `pnpm e2e`; se pide aparte:
  *
  *   RECORD_INTRO=1 pnpm e2e record.spec.ts --workers=1
  *
  * Deja en docs/informes/img/:
- * - p001-t03-entrada-{movil,escritorio}.webm: primera visita en tiempo real;
- * - p001-t03-storyboard-{movil,escritorio}.png: fotogramas exactos de la
- *   secuencia con reloj simulado (0, 0,6, 1,2, 1,8, 2,4 y 3,1 s), si hay ffmpeg.
+ * - p001-t14-entrada-{movil,escritorio}.webm: primera visita en tiempo real
+ *   (aparición, pausa de 2 s, «Zarpar», aterrizaje y landing);
+ * - p001-t14-storyboard-{movil,escritorio}.png: fotogramas exactos con reloj
+ *   simulado (aparición a 0, 0,6, 1,2 y 2 s; pausa; aterrizaje a 0,4, 0,8,
+ *   1,2, 1,6 y 2 s; landing), si hay ffmpeg.
  */
 
 test.skip(!process.env.RECORD_INTRO, 'sólo con RECORD_INTRO=1');
@@ -31,8 +33,11 @@ const OUT = path.resolve(
   '../../../docs/informes/img',
 );
 const NAME: Record<string, string> = { mobile: 'movil', desktop: 'escritorio' };
-// El último, un poco pasado de 3 s: el primer fotograma llega tras el primer tic.
-const STORY_MS = [0, 600, 1200, 1800, 2400, 3100];
+/** ms desde el inicio de cada acto en los que se toma un fotograma. */
+const STORY_APPEAR = [0, 600, 1200, 2100];
+const STORY_PAUSE = 700;
+// El último, un poco pasado de 2 s: el primer fotograma llega tras el primer tic.
+const STORY_LANDING = [400, 800, 1200, 1600, 2100];
 
 // Chromium sin cabeza pinta WebGL por software (SwiftShader): un primer
 // fotograma de ~1 s y ~20 fps en el mar. Para grabar se usa la GPU del Mac
@@ -66,6 +71,11 @@ test('grabación de la primera visita', async ({ baseURL }, info) => {
   });
   const page = await ctx.newPage();
   await page.goto('/');
+  await page.waitForFunction(() => window.__boiaIntro?.phase === 'paused', null, {
+    timeout: 15_000,
+  });
+  await page.waitForTimeout(2000);
+  await page.getByRole('button', { name: 'Zarpar' }).click();
   await page.waitForFunction(() => window.__boiaIntro?.phase === 'landed', null, {
     timeout: 15_000,
   });
@@ -73,7 +83,7 @@ test('grabación de la primera visita', async ({ baseURL }, info) => {
   const video = page.video()!;
   await ctx.close();
   mkdirSync(OUT, { recursive: true });
-  const dest = path.join(OUT, `p001-t03-entrada-${NAME[info.project.name]}.webm`);
+  const dest = path.join(OUT, `p001-t14-entrada-${NAME[info.project.name]}.webm`);
   renameSync(await video.path(), dest);
   info.annotations.push({ type: 'grabación', description: dest });
 });
@@ -85,25 +95,38 @@ test('storyboard con reloj simulado', async ({ baseURL }, info) => {
   await page.clock.install({ time: 0 });
   await page.clock.pauseAt(1000);
   await page.goto('/');
-  await page.waitForFunction(() => window.__boiaIntro?.phase === 'playing', null, {
+  await page.waitForFunction(() => window.__boiaIntro?.phase === 'appearing', null, {
     polling: 50,
   });
   const frames: string[] = [];
-  let at = 0;
-  for (const t of STORY_MS) {
-    if (t > at) await page.clock.runFor(t - at);
-    at = t;
+  const shoot = async (name: string) => {
     await page.waitForTimeout(100);
-    const file = path.join(tmp, `${String(t).padStart(4, '0')}.png`);
+    const file = path.join(tmp, `${String(frames.length).padStart(2, '0')}-${name}.png`);
     await page.screenshot({ path: file });
     frames.push(file);
-  }
+  };
+  const runTimes = async (times: number[], name: string) => {
+    let at = 0;
+    for (const t of times) {
+      if (t > at) await page.clock.runFor(t - at);
+      at = t;
+      await shoot(`${name}-${t}`);
+    }
+  };
+  await runTimes(STORY_APPEAR, 'aparicion');
+  expect((await page.evaluate(() => window.__boiaIntro))?.phase).toBe('paused');
+  await page.clock.runFor(STORY_PAUSE);
+  await shoot('pausa');
+  await page.getByRole('button', { name: 'Zarpar' }).click();
+  await runTimes(STORY_LANDING, 'aterrizaje');
   expect((await page.evaluate(() => window.__boiaIntro))?.phase).toBe('landed');
+  await page.clock.runFor(1000);
+  await shoot('landing');
   await ctx.close();
 
-  const dest = path.join(OUT, `p001-t03-storyboard-${NAME[info.project.name]}.png`);
+  const dest = path.join(OUT, `p001-t14-storyboard-${NAME[info.project.name]}.png`);
   const inputs = frames.flatMap((f) => ['-i', f]);
-  const cols = info.project.name === 'mobile' ? STORY_MS.length : 3;
+  const cols = info.project.name === 'mobile' ? 6 : 4;
   // Rejilla de xstack: la celda (col, fila) empieza tras `col` anchos y `fila` altos.
   const offset = (n: number, v: 'w' | 'h') =>
     n === 0 ? '0' : Array.from({ length: n }, (_, k) => `${v}${k}`).join('+');

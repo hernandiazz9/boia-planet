@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Entrada cinemática planeta → mar → landing (T03; REQ-ENT-001…020, ENT 01–03).
+ * Entrada «mini-mundo» en tres actos (T14, D-19; REQ-ENT-001…020, ENT 01–03).
  * Cada prueba abre un contexto nuevo: sin almacenamiento, es primera visita.
  * El estado se lee de `window.__boiaIntro` (diagnóstico público de la entrada).
  */
@@ -9,9 +9,11 @@ import { expect, test, type Page } from '@playwright/test';
 type Diag = NonNullable<Window['__boiaIntro']>;
 
 const diag = (page: Page) => page.evaluate(() => window.__boiaIntro ?? null);
+const phaseIs = (page: Page, phase: string, timeout = 15_000) =>
+  page.waitForFunction((p) => window.__boiaIntro?.phase === p, phase, { timeout });
 
-async function waitLanded(page: Page, timeout = 10_000): Promise<Diag> {
-  await page.waitForFunction(() => window.__boiaIntro?.phase === 'landed', null, { timeout });
+async function waitLanded(page: Page, timeout = 15_000): Promise<Diag> {
+  await phaseIs(page, 'landed', timeout);
   await expect(page.locator('html')).not.toHaveAttribute('data-intro', /.*/);
   return (await diag(page))!;
 }
@@ -21,6 +23,12 @@ const exploreCta = (page: Page) => hero(page).getByRole('link', { name: /explora
 const heroTickets = (page: Page) => hero(page).getByRole('link', { name: 'Tickets', exact: true });
 const ticketsPanel = (page: Page) => page.getByRole('dialog', { name: 'Elige tu evento' });
 const canvases = (page: Page) => page.locator('.hero__scene canvas');
+const title = (page: Page) => page.locator('.intro-overlay__title');
+const enterButton = (page: Page) => page.getByRole('button', { name: 'Zarpar' });
+const ticketsOnly = (page: Page) =>
+  page.getByRole('link', { name: 'Solo quiero ver las entradas' });
+const opacity = (page: Page, sel: string) =>
+  page.locator(sel).evaluate((el) => Number(getComputedStyle(el).opacity));
 
 async function landingViews(page: Page) {
   return page.evaluate(() =>
@@ -45,38 +53,66 @@ async function receivesTaps(page: Page, name: string) {
   expect(hit, `${name} recibe el toque`).toBe(true);
 }
 
-test('primera visita: planeta → mar → landing sin ningún clic (ENT 01, 02)', async ({
-  page,
-}, info) => {
-  await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
-
-  // Antes de la landing sólo hay una acción visible, y no es obligatoria: Saltar.
-  const visibleActions = await page
-    .locator('a:visible, button:visible, input:visible, select:visible')
-    .allInnerTexts();
-  expect(visibleActions).toEqual(['Saltar animación']);
-  await expect(page.locator('.intro-overlay__title')).toHaveText('BOIA.PLANET');
-
-  const d = await waitLanded(page);
-  expect(d.mode).toBe('intro');
-  expect(d.history).toEqual(['waiting', 'playing', 'landed']);
-  expect(d.outcome).toBe('played');
-  expect(d.cameraMoves, 'la cámara se movió durante la entrada').toBeGreaterThan(0);
-  // ~3 s de secuencia (REQ-ENT-007), medido con el reloj del navegador. Aquí
-  // sólo el mínimo: con las pruebas en paralelo y WebGL por software los
-  // fotogramas se alargan; la medida limpia se toma con --workers=1 (ESTADO.md).
-  expect(d.playedMs).toBeGreaterThanOrEqual(3000);
-  info.annotations.push({
-    type: 'medida',
-    description: `secuencia ${d.playedMs?.toFixed(0)} ms; carga→landing ${d.landedAtMs?.toFixed(0)} ms`,
-  });
-
-  // Un mundo, ninguna partida, y la landing responde ya.
+/** Un mundo, ninguna partida (REQ-ENT-013, 014). */
+async function oneWorldNoGame(page: Page) {
+  const d = (await diag(page))!;
   expect(d.scenesCreated).toBe(1);
   expect(d.worldsAlive).toBe(1);
   expect(d.gamesStarted).toBe(0);
   await expect(canvases(page)).toHaveCount(1);
+  return d;
+}
+
+test('primera visita: el mini-mundo, luego «BOIA» y el botón; al pulsar, aterriza en la landing (ENT 01, 02)', async ({
+  page,
+}, info) => {
+  test.setTimeout(60_000);
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
+
+  // Acto 1: el mini-mundo aparece. Sólo hay dos acciones, y ninguna obligatoria.
+  await phaseIs(page, 'appearing');
+  await expect(canvases(page)).toHaveCount(1);
+  const actions = await page
+    // Sin el gancho de accesibilidad táctil de Pixi (un botón de 1 px fuera de la vista).
+    .locator(
+      ':is(a, button, input, select):visible:not([title="select to enable accessibility for this content"])',
+    )
+    .allInnerTexts();
+  expect(actions).toEqual(['Solo quiero ver las entradas', 'Saltar animación']);
+
+  // Acto 2: «BOIA» y el botón, con el foco; la pausa no avanza sola.
+  await phaseIs(page, 'paused');
+  await expect(title(page)).toHaveText('BOIA');
+  await expect(enterButton(page)).toBeVisible();
+  await expect(enterButton(page)).toBeFocused();
+  await page.waitForTimeout(2500);
+  expect((await diag(page))!.phase).toBe('paused');
+  expect(await opacity(page, '.intro-overlay__title')).toBe(1);
+  await expect(ticketsOnly(page)).toBeVisible();
+
+  // Acto 3: Enter (el botón tiene el foco) → aterrizaje continuo.
+  await page.keyboard.press('Enter');
+  const d = await waitLanded(page);
+  expect(d.history).toEqual(['waiting', 'appearing', 'paused', 'landing', 'landed']);
+  expect(d.outcome).toBe('played');
+  expect(d.enteredBy).toBe('button');
+  expect(d.cameraMoves, 'la cámara se movió').toBeGreaterThan(0);
+  // La curvatura baja de 1 a 0 sin retroceder: termina en el isométrico del juego.
+  expect(d.landingK.length).toBeGreaterThan(2);
+  expect(d.landingK.every((k, i) => i === 0 || k <= d.landingK[i - 1]!)).toBe(true);
+  expect(d.k).toBe(0);
+  // ~2 s por tramo (REQ-ENT-007), con el reloj del navegador; aquí sólo el
+  // mínimo: con WebGL por software los fotogramas se alargan.
+  expect(d.appearedMs).toBeGreaterThanOrEqual(2000);
+  expect(d.playedMs).toBeGreaterThanOrEqual(2000);
+  info.annotations.push({
+    type: 'medida',
+    description: `escena lista a ${d.sceneReadyMs?.toFixed(0)} ms, aparición ${d.appearedMs?.toFixed(0)} ms, aterrizaje ${d.playedMs?.toFixed(0)} ms, fotograma más largo ${d.longestFrameMs.toFixed(0)} ms · ${d.renderer}`,
+  });
+
+  // La landing sobre el mar responde ya; un mundo y ninguna partida.
+  await oneWorldNoGame(page);
   await expect(page.locator('.intro-overlay')).toHaveCount(0);
   await expect(exploreCta(page)).toBeVisible();
   await receivesTaps(page, 'Explorar el universo');
@@ -88,73 +124,137 @@ test('primera visita: planeta → mar → landing sin ningún clic (ENT 01, 02)'
   expect(new URL(page.url()).pathname).toBe('/');
 });
 
-test('Saltar cinco veces y Escape: un solo mundo, la misma landing (REQ-ENT-008, ENT 03)', async ({
+test('«Solo quiero ver las entradas» lleva a Tickets sin el botón ni la animación (REQ-ENT-002)', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.waitForFunction(() => window.__boiaIntro?.phase === 'playing');
+  await phaseIs(page, 'appearing');
+  await ticketsOnly(page).click();
+  await expect(ticketsPanel(page)).toBeVisible();
+  const d = await waitLanded(page, 3000);
+  expect(d.outcome).toBe('skipped');
+  expect(d.history).not.toContain('landing');
+  expect(d.gamesStarted).toBe(0);
+  expect(new URL(page.url()).pathname).toBe('/');
+  expect(await landingViews(page)).toEqual(['skipped']);
+});
+
+test('botón pulsado dos veces: un solo aterrizaje, un solo mundo (ENT 03)', async ({ page }) => {
+  await page.goto('/');
+  await phaseIs(page, 'paused');
   await page.evaluate(() => {
-    const skip = document.querySelector<HTMLButtonElement>('[data-intro-skip]');
+    const b = document.querySelector<HTMLButtonElement>('[data-intro-enter]');
+    b?.click();
+    b?.click();
+  });
+  await page.keyboard.press('Enter');
+  const d = await waitLanded(page);
+  expect(d.outcome).toBe('played');
+  expect(d.history.filter((p) => p === 'landing')).toHaveLength(1);
+  expect(d.landingK.every((k, i) => i === 0 || k <= d.landingK[i - 1]!)).toBe(true);
+  await oneWorldNoGame(page);
+  expect(await landingViews(page)).toEqual(['played']);
+});
+
+test('«Saltar» cinco veces y Escape en la pausa: la misma landing (REQ-ENT-008, ENT 03)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await phaseIs(page, 'paused');
+  await page.evaluate(() => {
+    const skip = document.querySelector<HTMLButtonElement>('.intro-overlay__skip');
     for (let i = 0; i < 5; i++) skip?.click();
   });
   await page.keyboard.press('Escape');
-  await page.keyboard.press('Escape');
-
   const d = await waitLanded(page, 2000);
   expect(d.outcome).toBe('skipped');
-  expect(d.scenesCreated).toBe(1);
-  expect(d.worldsAlive).toBe(1);
-  expect(d.gamesStarted).toBe(0);
-  await expect(canvases(page)).toHaveCount(1);
+  expect(d.history).not.toContain('landing');
+  await oneWorldNoGame(page);
   expect(new URL(page.url()).pathname).toBe('/');
   expect(await landingViews(page)).toEqual(['skipped']);
   await receivesTaps(page, 'Tickets');
 });
 
-test('pestaña oculta a mitad: termina en la landing, sin animación pendiente (REQ-ENT-014)', async ({
+test('«Saltar» durante el aterrizaje: termina una vez, sin duplicar el mundo', async ({ page }) => {
+  await page.goto('/');
+  await phaseIs(page, 'paused');
+  await enterButton(page).click();
+  await phaseIs(page, 'landing');
+  await page.evaluate(() => {
+    const skip = document.querySelector<HTMLButtonElement>('.intro-overlay__skip');
+    skip?.click();
+    skip?.click();
+  });
+  const d = await waitLanded(page, 2000);
+  expect(d.outcome).toBe('skipped');
+  await oneWorldNoGame(page);
+});
+
+test('pestaña oculta: la aparición acaba en la pausa; el aterrizaje, en la landing (REQ-ENT-014)', async ({
   page,
 }) => {
+  const hide = (hidden: boolean) =>
+    page.evaluate((h) => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => (h ? 'hidden' : 'visible'),
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, hidden);
   await page.goto('/');
-  await page.waitForFunction(() => window.__boiaIntro?.phase === 'playing');
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
-    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
+  await phaseIs(page, 'appearing');
+  await hide(true);
+  await phaseIs(page, 'paused', 2000);
+  await hide(false);
+  await page.waitForTimeout(500);
+  expect((await diag(page))!.phase).toBe('paused');
+
+  await enterButton(page).click();
+  await phaseIs(page, 'landing');
+  await hide(true);
   const d = await waitLanded(page, 2000);
   expect(d.outcome).toBe('played');
   expect(d.playedMs).toBeNull();
-  expect(d.worldsAlive).toBe(1);
-  await expect(canvases(page)).toHaveCount(1);
+  await hide(false);
+  await oneWorldNoGame(page);
 });
 
-test('Atrás a mitad de la entrada: no la repite ni duplica el mundo (ENT 03)', async ({ page }) => {
+test('Atrás en la pausa: no repite la entrada ni duplica el mundo (ENT 03)', async ({ page }) => {
   await page.goto('/');
-  await page.waitForFunction(() => window.__boiaIntro?.phase === 'playing');
+  await phaseIs(page, 'paused');
   await page.goto('/legal/privacidad');
   await page.goBack();
-  const d = await waitLanded(page);
-  expect(d.history).not.toContain('playing');
+  // Vuelta desde la caché del navegador (la pausa sigue) o carga nueva (ya vista: directa).
+  await page.waitForFunction(() => ['paused', 'landed'].includes(window.__boiaIntro?.phase ?? ''));
+  const d = (await diag(page))!;
+  expect(d.history).not.toContain('landing');
   expect(d.gamesStarted).toBe(0);
-  await expect(canvases(page)).toHaveCount(1);
+  expect(d.worldsAlive).toBeLessThanOrEqual(1);
+  expect(await canvases(page).count()).toBeLessThanOrEqual(1);
 });
 
 test.describe('movimiento reducido', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('escena quieta y fundido: la cámara no se mueve (REQ-ENT-010)', async ({ page }) => {
+  test('mini-mundo quieto, título y botón; al pulsar, fundido sin mover la cámara (REQ-ENT-010)', async ({
+    page,
+  }) => {
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('data-entry', 'reduced');
-    await expect(exploreCta(page)).toBeVisible();
-    await page.waitForFunction(
-      () => window.__boiaIntro?.sceneStatus === 'ready' && window.__boiaIntro.framesRendered > 0,
-    );
+    await phaseIs(page, 'paused');
+    await expect(title(page)).toHaveText('BOIA');
+    await expect(enterButton(page)).toBeVisible();
     await page.waitForTimeout(800);
-    const d = (await diag(page))!;
+    expect((await diag(page))!.phase).toBe('paused');
+    await enterButton(page).click();
+    const d = await waitLanded(page);
     expect(d.mode).toBe('reduced');
-    expect(d.history).not.toContain('playing');
+    expect(d.history).not.toContain('appearing');
+    expect(d.outcome).toBe('played');
+    expect(d.framesRendered).toBeGreaterThan(0);
     expect(d.cameraMoves).toBe(0);
-    expect(d.worldsAlive).toBe(1);
+    await oneWorldNoGame(page);
     await receivesTaps(page, 'Tickets');
   });
 });
@@ -202,7 +302,7 @@ test('motor bloqueado: ilustración de la isla y Tickets funcionando (REQ-ENT-01
   await popup.close();
 });
 
-test('recursos lentos: la landing ligera sale sin alargar la espera (REQ-ENT-007)', async ({
+test('recursos lentos: «Cargando» y luego la landing ligera, sin alargar la espera (REQ-ENT-007)', async ({
   page,
 }) => {
   await page.route('**/api/art/**', async (route) => {
@@ -210,9 +310,13 @@ test('recursos lentos: la landing ligera sale sin alargar la espera (REQ-ENT-007
     await route.continue().catch(() => {});
   });
   await page.goto('/', { waitUntil: 'commit' });
+  // Acto 0: la boia dibujada y «Cargando» mientras no hay escena.
+  await expect(page.locator('.intro-loading')).toBeVisible();
+  await expect(page.locator('.intro-loading')).toContainText('Cargando');
+  await expect(ticketsOnly(page)).toBeVisible();
   const d = await waitLanded(page, 4000);
   expect(d.outcome).toBe('none');
-  expect(d.history).not.toContain('playing');
+  expect(d.history).not.toContain('appearing');
   expect(d.landedAtMs).toBeLessThan(2600);
   await expect(exploreCta(page)).toBeVisible();
 });
@@ -222,7 +326,8 @@ test('visita posterior, enlace directo y «Ver la introducción» (REQ-ENT-009, 
   browser,
 }, info) => {
   await page.goto('/');
-  await waitLanded(page);
+  await phaseIs(page, 'paused');
+  expect(await page.evaluate(() => localStorage.getItem('boia.intro.v2'))).toBe('seen');
 
   // Segunda carga: directa.
   await page.goto('/');
@@ -236,12 +341,24 @@ test('visita posterior, enlace directo y «Ver la introducción» (REQ-ENT-009, 
   await other.goto('/#tickets');
   await expect(other.locator('html')).toHaveAttribute('data-entry', 'direct');
   await expect(ticketsPanel(other)).toBeVisible();
-  expect((await diag(other))!.history).not.toContain('playing');
+  expect((await diag(other))!.history).not.toContain('appearing');
   await fresh.close();
 
   // Pedirla desde el pie la vuelve a reproducir.
   await page.getByRole('link', { name: 'Ver la introducción' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
-  d = await waitLanded(page);
-  expect(d.history).toEqual(['waiting', 'playing', 'landed']);
+  await phaseIs(page, 'paused');
+  d = (await diag(page))!;
+  expect(d.history).toEqual(['waiting', 'appearing', 'paused']);
+});
+
+test('quien ya vio la entrada de T03 (boia.intro.v1) ve la nueva una vez', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('v1-puesta')) {
+      localStorage.setItem('boia.intro.v1', 'seen');
+      sessionStorage.setItem('v1-puesta', '1');
+    }
+  });
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
 });

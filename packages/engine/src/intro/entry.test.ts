@@ -141,9 +141,25 @@ describe('script de arranque', () => {
     expect(b.attrs.get('data-entry')).toBe('intro');
   });
 
-  it('con movimiento reducido no oculta la landing', () => {
+  it('con movimiento reducido también espera al botón (mini-mundo quieto, D-19)', () => {
     const b = runBoot({ reduced: true });
     expect(b.attrs.get('data-entry')).toBe('reduced');
-    expect(b.attrs.has('data-intro')).toBe(false);
+    expect(b.attrs.get('data-intro')).toBe('play');
+    expect(b.entry.landed).toBeNull();
+  });
+
+  it('tomado el relevo, ni el plazo ni el tope muestran la landing: la pausa espera al botón', () => {
+    const b = runBoot({});
+    b.entry.claimed = true;
+    for (const t of b.timers) t.fn();
+    expect(b.attrs.get('data-intro')).toBe('play');
+    expect(b.entry.landed).toBeNull();
+    expect(b.events).toEqual([]);
+  });
+
+  it('la marca de visto es la de la intro nueva (v2): quien vio la de T03 la ve una vez', () => {
+    expect(INTRO_SEEN_KEY).toBe('boia.intro.v2');
+    const store = runBoot({}).store;
+    expect([...store.keys()]).toEqual([INTRO_SEEN_KEY]);
   });
 });

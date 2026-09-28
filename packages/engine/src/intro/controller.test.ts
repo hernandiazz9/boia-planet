@@ -1,16 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_INTRO_CONFIG as CFG } from './config';
+import { DEFAULT_INTRO_CONFIG as CFG, type IntroConfig } from './config';
 import {
   IntroController,
   MAX_FRAME_STEP_MS,
   type IntroOutcome,
   type IntroSceneHandle,
 } from './controller';
-import { realAssets } from './test-fixtures';
-import { landingCamera, type IntroFrame, type IntroMode } from './timeline';
+import { realGeometry } from './test-fixtures';
+import { landingCamera, samePose, type IntroFrame, type IntroMode } from './timeline';
 
-const geometry = realAssets();
+const geometry = realGeometry();
 const VP = { width: 360, height: 640 };
+const APPEAR = CFG.appear.durationMs;
+const LAND = CFG.landing.durationMs;
+/** Configuración de prueba con el avance automático encendido. */
+const AUTO: IntroConfig = {
+  ...CFG,
+  pause: { ...CFG.pause, autoAdvance: { enabled: true, afterMs: 8000 } },
+};
 
 class FakeScene implements IntroSceneHandle {
   static alive = 0;
@@ -29,7 +36,7 @@ class FakeScene implements IntroSceneHandle {
 }
 
 /** Controlador con reloj, temporizadores y escena de mentira. */
-function setup(mode: IntroMode = 'intro', opts: { sceneFails?: boolean; elapsed?: number } = {}) {
+function setup(mode: IntroMode = 'intro', opts: { elapsed?: number; config?: IntroConfig } = {}) {
   FakeScene.alive = 0;
   let now = 0;
   const timers: Array<{ at: number; fn: () => void; cancelled: boolean }> = [];
@@ -46,7 +53,7 @@ function setup(mode: IntroMode = 'intro', opts: { sceneFails?: boolean; elapsed?
   );
   const c = new IntroController<FakeScene>({
     mode,
-    config: CFG,
+    config: opts.config ?? CFG,
     geometry,
     now: () => now,
     elapsedSinceBoot: opts.elapsed ?? 0,
@@ -87,7 +94,27 @@ function setup(mode: IntroMode = 'intro', opts: { sceneFails?: boolean; elapsed?
       c.render(VP, now / 1000);
     }
   };
-  return { c, advance, sceneReady, sceneFails, play, landed, startGame, createScene };
+  /** Hasta la pausa: escena lista y la aparición entera. */
+  const toPause = async () => {
+    c.start();
+    const scene = await sceneReady();
+    play(APPEAR + 32);
+    expect(c.phase).toBe('paused');
+    return scene;
+  };
+  const pending = () => timers.filter((t) => !t.cancelled).length;
+  return {
+    c,
+    advance,
+    sceneReady,
+    sceneFails,
+    play,
+    toPause,
+    pending,
+    landed,
+    startGame,
+    createScene,
+  };
 }
 
 /** Invariantes que ningún evento puede romper (REQ-ENT-008, 014, 020). */
@@ -101,51 +128,126 @@ function expectInvariants(h: ReturnType<typeof setup>) {
   expect(h.c.gamesStarted).toBe(0);
 }
 
-describe('máquina de estados de la entrada', () => {
-  it('primera visita: carga, reproduce y llega a la landing sin input', async () => {
+describe('máquina de estados de la entrada «mini-mundo»', () => {
+  it('primera visita: carga → aparición → pausa → (botón) → aterrizaje → landing', async () => {
     const h = setup();
     h.c.start();
     expect(h.c.phase).toBe('waiting');
     const scene = await h.sceneReady();
-    expect(h.c.phase).toBe('playing');
-    h.play(CFG.durationMs + 50);
+    expect(h.c.phase).toBe('appearing');
+    h.play(APPEAR + 32);
+    expect(h.c.phase).toBe('paused');
+    expect(h.c.appearedMs).toBeGreaterThanOrEqual(APPEAR);
+    expect(h.c.appearedMs).toBeLessThan(APPEAR + 20);
+    expect(h.c.enter()).toBe(true);
+    expect(h.c.phase).toBe('landing');
+    h.play(LAND + 50);
     expect(h.c.phase).toBe('landed');
     expect(h.landed).toEqual(['played']);
-    expect(h.c.playedMs).toBeGreaterThanOrEqual(CFG.durationMs);
-    expect(h.c.playedMs).toBeLessThan(CFG.durationMs + 20);
+    expect(h.c.enteredBy).toBe('button');
+    expect(h.c.playedMs).toBeGreaterThanOrEqual(LAND);
+    expect(h.c.playedMs).toBeLessThan(LAND + 20);
     expect(scene.frames.at(-1)!.camera).toEqual(landingCamera(CFG, geometry, VP));
     expectInvariants(h);
   });
 
-  it('un tirón largo no se come la animación: sigue donde iba', async () => {
+  it('la pausa nunca avanza sin el botón (configuración de serie: sin avance automático)', async () => {
     const h = setup();
-    h.c.start();
-    await h.sceneReady();
-    h.play(300);
-    h.advance(2500); // un fotograma de 2,5 s (subida de texturas, móvil lento)
-    const f = h.c.render(VP, 0)!;
-    expect(f.done).toBe(false);
-    expect(f.t).toBeLessThanOrEqual(304 + MAX_FRAME_STEP_MS);
-    expect(h.c.phase).toBe('playing');
-    h.play(CFG.durationMs);
+    const scene = await h.toPause();
+    h.play(60_000);
+    h.advance(10 * 60_000);
+    h.play(100);
+    expect(h.c.phase).toBe('paused');
+    expect(h.landed).toEqual([]);
+    expect(h.pending()).toBe(0);
+    const last = scene.frames.at(-1)!;
+    expect(last.act).toBe('pause');
+    expect(last.content).toBe(0);
+    expect(last.sphere.k).toBe(1);
+    expectInvariants(h);
+  });
+
+  it('con el avance automático encendido, aterriza solo tras el tiempo configurado', async () => {
+    const h = setup('intro', { config: AUTO });
+    await h.toPause();
+    h.play(AUTO.pause.autoAdvance.afterMs - 100);
+    expect(h.c.phase).toBe('paused');
+    h.play(200);
+    expect(h.c.phase).toBe('landing');
+    expect(h.c.enteredBy).toBe('auto');
+    h.play(LAND + 50);
     expect(h.landed).toEqual(['played']);
     expectInvariants(h);
   });
 
-  it('saltar dos veces (y cinco) lleva una sola vez al mismo estado final', async () => {
+  it('avance automático: tocar la pantalla vuelve a contar desde cero', async () => {
+    const h = setup('intro', { config: AUTO });
+    await h.toPause();
+    const after = AUTO.pause.autoAdvance.afterMs;
+    h.play(after - 1000);
+    h.c.touch();
+    h.play(after - 1000);
+    expect(h.c.phase).toBe('paused');
+    h.play(1100);
+    expect(h.c.phase).toBe('landing');
+    expectInvariants(h);
+  });
+
+  it('el botón pulsado dos veces (y cinco) aterriza una sola vez', async () => {
+    const h = setup();
+    const scene = await h.toPause();
+    expect(h.c.enter()).toBe(true);
+    for (let i = 0; i < 4; i++) expect(h.c.enter()).toBe(false);
+    h.play(LAND / 2);
+    expect(h.c.enter()).toBe(false);
+    h.play(LAND);
+    expect(h.c.enter()).toBe(false);
+    expect(h.landed).toEqual(['played']);
+    // El aterrizaje no volvió a empezar: k nunca sube.
+    const ks = scene.frames.filter((f) => f.act === 'landing').map((f) => f.sphere.k);
+    expect(ks.every((k, i) => i === 0 || k <= ks[i - 1]!)).toBe(true);
+    expectInvariants(h);
+  });
+
+  it('el botón no hace nada durante la aparición, antes de la escena ni tras llegar', async () => {
     const h = setup();
     h.c.start();
-    const scene = await h.sceneReady();
-    h.play(500);
+    expect(h.c.enter()).toBe(false);
+    await h.sceneReady();
+    h.play(APPEAR / 2);
+    expect(h.c.enter()).toBe(false);
+    expect(h.c.phase).toBe('appearing');
+    h.play(APPEAR);
     h.c.skip();
-    h.c.skip();
-    for (let i = 0; i < 3; i++) h.c.skip();
+    expect(h.c.enter()).toBe(false);
+    expect(h.c.phase).toBe('landed');
+    expectInvariants(h);
+  });
+
+  it('«Saltar» durante la pausa: una vez, al mismo estado final', async () => {
+    const h = setup();
+    const scene = await h.toPause();
+    for (let i = 0; i < 5; i++) h.c.skip();
     expect(h.c.phase).toBe('landed');
     expect(h.landed).toEqual(['skipped']);
     h.play(100);
     const last = scene.frames.at(-1)!;
     expect(last.done).toBe(true);
     expect(last.camera).toEqual(landingCamera(CFG, geometry, VP));
+    expectInvariants(h);
+  });
+
+  it('«Saltar» durante el aterrizaje: una vez, al mismo estado final', async () => {
+    const h = setup();
+    const scene = await h.toPause();
+    h.c.enter();
+    h.play(LAND / 3);
+    h.c.skip();
+    h.c.skip();
+    h.c.enter();
+    expect(h.landed).toEqual(['skipped']);
+    h.play(100);
+    expect(scene.frames.at(-1)!.done).toBe(true);
     expectInvariants(h);
   });
 
@@ -161,28 +263,46 @@ describe('máquina de estados de la entrada', () => {
     expectInvariants(h);
   });
 
-  it('Atrás / cambio de hash a mitad: termina en la landing, no repite ni duplica', async () => {
+  it('Atrás / cambio de ancla durante la pausa: sale a la landing sin repetir ni duplicar', async () => {
     const h = setup();
-    h.c.start();
-    await h.sceneReady();
-    h.play(800);
-    h.c.interrupt(); // popstate
-    h.c.interrupt(); // hashchange justo después
-    expect(h.landed).toEqual(['played']);
+    await h.toPause();
+    h.c.skip(); // popstate
+    h.c.skip(); // hashchange justo después
     // Volver desde la caché del navegador (pageshow) tampoco repite.
     h.c.interrupt();
     h.c.start();
     expect(h.c.phase).toBe('landed');
+    expect(h.landed).toEqual(['skipped']);
     expectInvariants(h);
   });
 
-  it('pestaña oculta a mitad: sin animación pendiente al volver', async () => {
+  it('pestaña oculta en la aparición: al volver, pausa con título y botón (no aterriza sola)', async () => {
     const h = setup();
     h.c.start();
     const scene = await h.sceneReady();
-    h.play(1200);
+    h.play(APPEAR / 2);
     h.c.interrupt(); // visibilitychange → hidden
-    h.advance(60_000); // la pestaña vuelve mucho después
+    expect(h.c.phase).toBe('paused');
+    h.advance(60_000);
+    h.play(32);
+    const last = scene.frames.at(-1)!;
+    expect(last.act).toBe('pause');
+    expect(last.title).toBe(1);
+    expect(last.button).toBe(1);
+    expect(h.landed).toEqual([]);
+    expectInvariants(h);
+  });
+
+  it('pestaña oculta en la pausa: sigue esperando; en el aterrizaje: termina en la landing', async () => {
+    const h = setup();
+    const scene = await h.toPause();
+    h.c.interrupt();
+    expect(h.c.phase).toBe('paused');
+    h.c.enter();
+    h.play(LAND / 2);
+    h.c.interrupt();
+    h.c.interrupt();
+    h.advance(60_000);
     h.play(32);
     expect(scene.frames.at(-1)!.done).toBe(true);
     expect(h.landed).toEqual(['played']);
@@ -200,21 +320,30 @@ describe('máquina de estados de la entrada', () => {
     expect(FakeScene.alive).toBe(0);
     expect(h.landed).toEqual([]);
     h.c.skip();
+    h.c.enter();
     h.c.interrupt();
     expect(h.c.render(VP, 1)).toBeNull();
     expectInvariants(h);
   });
 
-  it('cambio de ruta tras llegar: se destruye una vez y no queda mundo', async () => {
-    const h = setup();
-    h.c.start();
-    const scene = await h.sceneReady();
-    h.play(CFG.durationMs + 20);
-    h.c.destroy();
-    h.c.destroy();
-    expect(scene.destroyed).toBe(1);
-    expect(h.c.worldsAlive).toBe(0);
-    expectInvariants(h);
+  it('cambio de ruta en la pausa o en el aterrizaje: se destruye una vez y no queda mundo', async () => {
+    for (const during of ['paused', 'landing'] as const) {
+      const h = setup('intro', { config: AUTO });
+      const scene = await h.toPause();
+      if (during === 'landing') {
+        h.c.enter();
+        h.play(LAND / 2);
+      }
+      h.c.destroy();
+      h.c.destroy();
+      h.c.enter();
+      h.advance(60_000); // el avance automático ya no dispara
+      expect(scene.destroyed).toBe(1);
+      expect(h.c.worldsAlive).toBe(0);
+      expect(h.c.phase).toBe('destroyed');
+      expect(h.pending()).toBe(0);
+      expectInvariants(h);
+    }
   });
 
   it('recursos que no llegan a tiempo: landing ligera; si llegan luego, fondo quieto', async () => {
@@ -240,23 +369,44 @@ describe('máquina de estados de la entrada', () => {
     expectInvariants(h);
   });
 
-  it('movimiento reducido: landing al instante y la cámara nunca se mueve', async () => {
+  it('un tirón largo no se come la aparición: sigue donde iba', async () => {
+    const h = setup();
+    h.c.start();
+    await h.sceneReady();
+    h.play(300);
+    h.advance(2500); // un fotograma de 2,5 s (subida de texturas, móvil lento)
+    const f = h.c.render(VP, 0)!;
+    expect(f.act).toBe('appear');
+    expect(f.t).toBeLessThanOrEqual(304 + MAX_FRAME_STEP_MS);
+    expectInvariants(h);
+  });
+
+  it('movimiento reducido: sin aparición; mini-mundo quieto; al pulsar, fundido sin mover nada', async () => {
     const h = setup('reduced');
     h.c.start();
-    expect(h.landed).toEqual(['none']);
+    expect(h.landed).toEqual([]);
     const scene = await h.sceneReady();
-    h.play(CFG.reduced.fadeMs + 200);
+    expect(h.c.phase).toBe('paused');
+    h.play(3000);
+    expect(h.c.phase).toBe('paused');
+    expect(h.c.enter()).toBe(true);
+    h.play(CFG.reduced.fadeMs + 100);
+    expect(h.landed).toEqual(['played']);
+    const shown = scene.frames.filter((f) => f.planet > 0);
+    expect(shown.every((f) => samePose(f.sphere, shown[0]!.sphere))).toBe(true);
     const cams = new Set(scene.frames.map((f) => JSON.stringify(f.camera)));
     expect(cams.size).toBe(1);
+    expect(scene.frames.some((f) => f.act === 'appear')).toBe(false);
     expectInvariants(h);
   });
 
   it('Explorar arranca el juego una vez y sólo desde la landing', async () => {
     const h = setup();
-    h.c.start();
-    await h.sceneReady();
+    await h.toPause();
     expect(h.c.explore()).toBe(false);
-    h.play(CFG.durationMs + 20);
+    h.c.enter();
+    expect(h.c.explore()).toBe(false);
+    h.play(LAND + 20);
     expect(h.c.explore()).toBe(true);
     expect(h.c.explore()).toBe(false);
     expect(h.startGame).toHaveBeenCalledTimes(1);

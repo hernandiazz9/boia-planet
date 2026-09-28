@@ -1,27 +1,40 @@
-import type { IntroAssets } from './assets';
-import { pickFraming, type Easing, type IntroConfig, type Span } from './config';
+import { pickFraming, type IntroConfig } from './config';
+import { clamp01, ramp, type Viewport } from './math';
+import {
+  appearPose,
+  landingAnchor,
+  landingPose,
+  spinAt,
+  type IntroGeometry,
+  type SpherePose,
+} from './sphere';
 
 /**
- * Línea de tiempo de la entrada: función pura de (configuración, geometría,
- * vista, tiempo) → fotograma. No sabe de Pixi ni del DOM; la escena sólo
- * pinta lo que dice el fotograma. Así el último fotograma se puede comparar
- * con el encuadre de la landing (REQ-ENT-014) y la variante reducida se
- * puede probar sin navegador (REQ-ENT-010).
+ * Línea de tiempo de la entrada «mini-mundo»: función pura de
+ * (configuración, geometría, vista, estado) → fotograma. No sabe de Pixi ni
+ * del DOM; la escena sólo pinta lo que dice el fotograma. Así el último
+ * fotograma se puede comparar con el encuadre de la landing (REQ-ENT-014) y
+ * la variante reducida se puede probar sin navegador (REQ-ENT-010).
  *
- * Cuatro tiempos (§4.4, REQ-ENT-006): planeta con flotación y nubes que
- * giran; acercamiento con aceleración y frenada; revelación por capas (el
- * mar plano sustituye al globo y aparecen islas, rocas, boia y barco);
- * llegada con la cámara quieta y la landing entrando encima.
+ * Actos (D-19, REQ-ENT-006): aparición (el mini-mundo sube, crece y gira),
+ * pausa (sigue girando; título y botón; no avanza sola), aterrizaje (gira
+ * hasta el punto, acerca y aplana k 1 → 0; el mundo vivo toma el relevo y la
+ * landing entra encima) y llegada.
  */
 
 export type IntroMode = 'intro' | 'reduced' | 'direct';
+export type IntroAct = 'appear' | 'pause' | 'landing' | 'landed';
 
-export interface Viewport {
-  width: number;
-  height: number;
+/** Dónde va la entrada: lo lleva el controlador, la línea de tiempo sólo lo lee. */
+export interface TimelineState {
+  act: IntroAct;
+  /** ms dentro del acto. */
+  t: number;
+  /** ms de giro acumulados (actos 1 y 2); en el aterrizaje, los que había al pulsar. */
+  spinMs: number;
 }
 
-/** El punto de escena (x, y) se pinta en el punto de pantalla (ax, ay), con `zoom` px por px de escena. */
+/** El punto de mundo (x, y) se pinta en el punto de pantalla (ax, ay), con `zoom` px por px de mundo. */
 export interface Camera {
   x: number;
   y: number;
@@ -31,165 +44,155 @@ export interface Camera {
 }
 
 export interface IntroFrame {
-  /** ms desde el inicio de la secuencia, recortado a su duración. */
+  act: IntroAct;
+  /** ms dentro del acto, recortados a su duración. */
   t: number;
-  camera: Camera;
-  /** Opacidades 0..1 de cada capa. */
-  space: number;
-  globe: number;
-  band: number;
+  /** Pose de la esfera (mini-mundo). */
+  sphere: SpherePose;
+  /** Opacidad de la esfera. */
+  planet: number;
+  /** Opacidad y longitud (rad) de la capa de nubes. */
   clouds: number;
-  /** Giro de las nubes, radianes. */
-  cloudTurn: number;
-  planetIsland: number;
-  water: number;
-  objects: Readonly<Record<string, number>>;
-  ship: number;
-  /** Título «BOIA.PLANET» (HTML). */
+  cloudLon: number;
+  /** Opacidad del mundo vivo (el del juego) encima de la esfera. */
+  live: number;
+  /** Cámara del mundo vivo: la misma que la esfera ya plana. */
+  camera: Camera;
+  /** Título «BOIA» y botón de entrar (HTML). */
   title: number;
+  button: number;
   /** Contenido de la landing (HTML). */
   content: number;
-  /** La secuencia terminó: la cámara está en el encuadre de la landing. */
+  /** Llegó: la cámara está en el encuadre de la landing. */
   done: boolean;
 }
 
-/** Lo que la línea de tiempo necesita de los recursos. */
-export interface SceneGeometry {
-  artScale: IntroAssets['artScale'];
-  planet: {
-    globe: { scale: number };
-    globeCentre: IntroAssets['planet']['globeCentre'];
-    globeRadius: number;
-  };
-}
-
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-const lerp = (a: number, b: number, u: number) => a + (b - a) * u;
-
-export const EASING_FNS: Record<Easing, (u: number) => number> = {
-  linear: (u) => u,
-  easeInOutSine: (u) => -(Math.cos(Math.PI * u) - 1) / 2,
-  easeInOutCubic: (u) => (u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2),
-};
-
-/** 0 antes del tramo, 1 después, rampa suave (smoothstep) dentro. */
-export function ramp(v: number, [a, b]: Span): number {
-  if (b <= a) return v >= b ? 1 : 0;
-  const u = clamp01((v - a) / (b - a));
-  return u * u * (3 - 2 * u);
-}
-
-/** Encuadre inicial: el globo entero, centrado. */
-export function planetCamera(cfg: IntroConfig, geo: SceneGeometry, vp: Viewport): Camera {
-  const short = Math.min(vp.width, vp.height);
-  return {
-    x: geo.planet.globeCentre[0],
-    y: geo.planet.globeCentre[1],
-    zoom: (cfg.planet.fit * short) / (2 * geo.planet.globeRadius),
-    ax: cfg.planet.anchor[0] * vp.width,
-    ay: cfg.planet.anchor[1] * vp.height,
-  };
-}
-
-/** Encuadre de la landing: la isla de evento en el ancla del dispositivo. */
-export function landingCamera(cfg: IntroConfig, geo: SceneGeometry, vp: Viewport): Camera {
+/** Encuadre de la landing: el punto de aterrizaje en el ancla del dispositivo. */
+export function landingCamera(cfg: IntroConfig, geo: IntroGeometry, vp: Viewport): Camera {
   const f = pickFraming(cfg, vp.width);
-  return {
-    x: 0,
-    y: 0,
-    zoom: f.zoom * geo.artScale,
-    ax: Math.round(f.anchor[0] * vp.width),
-    ay: Math.round(f.anchor[1] * vp.height),
-  };
+  const a = landingAnchor(cfg, vp);
+  return { x: geo.landing.x, y: geo.landing.y, zoom: f.zoom, ax: a.x, ay: a.y };
 }
 
-function finalFrame(cfg: IntroConfig, geo: SceneGeometry, vp: Viewport, t: number): IntroFrame {
-  const objects: Record<string, number> = {};
-  for (const o of cfg.objects) objects[o.id] = 1;
+function finalFrame(cfg: IntroConfig, geo: IntroGeometry, vp: Viewport, t: number): IntroFrame {
   return {
+    act: 'landed',
     t,
-    camera: landingCamera(cfg, geo, vp),
-    space: 0,
-    globe: 0,
-    band: 0,
+    sphere: landingPose(cfg, geo, vp, 1, 0),
+    planet: 0,
     clouds: 0,
-    cloudTurn: 0,
-    planetIsland: 0,
-    water: 1,
-    objects,
-    ship: 1,
+    cloudLon: 0,
+    live: 1,
+    camera: landingCamera(cfg, geo, vp),
     title: 0,
+    button: 0,
     content: 1,
     done: true,
   };
 }
 
-const FLOAT_PERIOD_MS = 2400;
-const APPEAR_SPAN = 0.12;
+/** Duración del acto (el reposo no tiene: dura hasta que se pulsa). */
+export function actDuration(cfg: IntroConfig, act: IntroAct, mode: IntroMode): number {
+  if (act === 'appear') return mode === 'intro' ? cfg.appear.durationMs : 0;
+  if (act === 'landing') return mode === 'intro' ? cfg.landing.durationMs : cfg.reduced.fadeMs;
+  if (act === 'pause') return Infinity;
+  return 0;
+}
 
 export function frameAt(
   cfg: IntroConfig,
-  geo: SceneGeometry,
+  geo: IntroGeometry,
   vp: Viewport,
-  tMs: number,
+  s: TimelineState,
   mode: IntroMode,
 ): IntroFrame {
-  if (mode === 'direct') return finalFrame(cfg, geo, vp, 0);
+  if (mode === 'direct' || s.act === 'landed') return finalFrame(cfg, geo, vp, 0);
+  const uiIn = cfg.pause.uiInMs > 0 ? clamp01(s.t / cfg.pause.uiInMs) : 1;
+  const ui = uiIn * uiIn * (3 - 2 * uiIn);
+  const landed = landingCamera(cfg, geo, vp);
 
   if (mode === 'reduced') {
-    // Escena quieta en el encuadre final y un fundido breve del contenido.
-    const t = Math.max(0, Math.min(tMs, cfg.reduced.fadeMs));
-    const f = finalFrame(cfg, geo, vp, t);
-    const fade = cfg.reduced.fadeMs > 0 ? t / cfg.reduced.fadeMs : 1;
-    return { ...f, content: fade, done: t >= cfg.reduced.fadeMs };
+    // Mini-mundo quieto (sin subir ni girar), título y botón; al pulsar, un
+    // fundido corto a la llegada. Ni la esfera ni el mundo vivo se mueven.
+    const sphere = appearPose(cfg, geo, vp, 1, 0);
+    const base = {
+      sphere,
+      planet: 1,
+      clouds: cfg.clouds.opacity,
+      cloudLon: 0,
+      live: 0,
+      camera: landed,
+      done: false,
+    };
+    if (s.act !== 'landing') {
+      return { ...base, act: 'pause', t: s.t, title: ui, button: ui, content: 0 };
+    }
+    const fade = cfg.reduced.fadeMs;
+    const t = Math.max(0, Math.min(s.t, fade));
+    if (t >= fade) return finalFrame(cfg, geo, vp, t);
+    const u = fade > 0 ? t / fade : 1;
+    return {
+      ...base,
+      act: 'landing',
+      t,
+      planet: 1,
+      clouds: cfg.clouds.opacity * (1 - u),
+      live: u,
+      title: 1 - u,
+      button: 1 - u,
+      content: u,
+    };
   }
 
-  const t = Math.max(0, Math.min(tMs, cfg.durationMs));
-  if (t >= cfg.durationMs) return finalFrame(cfg, geo, vp, t);
-  const tf = t / cfg.durationMs;
-  const ph = cfg.phases;
-  const ease = EASING_FNS[cfg.easing];
-
-  const from = planetCamera(cfg, geo, vp);
-  const to = landingCamera(cfg, geo, vp);
-  const u = ease(clamp01((tf - ph.approach[0]) / (ph.approach[1] - ph.approach[0] || 1)));
-  const zoom = from.zoom * (to.zoom / from.zoom) ** u;
-  // Flotación del planeta: se apaga durante el acercamiento para que la
-  // cámara llegue exacta al encuadre de la landing.
-  const float = Math.sin((2 * Math.PI * t) / FLOAT_PERIOD_MS) * cfg.planet.floatPx * (1 - u);
-  const camera: Camera = {
-    x: lerp(from.x, to.x, u),
-    y: lerp(from.y, to.y, u) + float / zoom,
-    zoom,
-    ax: lerp(from.ax, to.ax, u),
-    ay: lerp(from.ay, to.ay, u),
-  };
-
-  const water = ease(ramp(tf, ph.reveal));
-  const planet = 1 - water;
-  const magnification = zoom * geo.planet.globe.scale;
-  const objects: Record<string, number> = {};
-  for (const o of cfg.objects) {
-    objects[o.id] =
-      o.asset === 'isla-evento'
-        ? water
-        : ramp(tf, [o.appearAt, Math.min(1, o.appearAt + APPEAR_SPAN)]);
+  if (s.act === 'appear' || s.act === 'pause') {
+    const spin = spinAt(cfg, s.spinMs);
+    const appear = s.act === 'appear';
+    const e = appear ? clamp01(s.t / cfg.appear.durationMs) : 1;
+    return {
+      act: s.act,
+      t: appear ? Math.min(s.t, cfg.appear.durationMs) : s.t,
+      sphere: appearPose(cfg, geo, vp, e, spin),
+      planet: 1,
+      clouds: cfg.clouds.opacity,
+      cloudLon: spin * cfg.clouds.speed,
+      live: 0,
+      camera: landed,
+      title: appear ? 0 : ui,
+      button: appear ? 0 : ui,
+      content: 0,
+      done: false,
+    };
   }
 
+  // Aterrizaje.
+  const dur = cfg.landing.durationMs;
+  const t = Math.max(0, Math.min(s.t, dur));
+  if (t >= dur) return finalFrame(cfg, geo, vp, t);
+  const e = t / dur;
+  const L = cfg.landing;
+  const spin0 = spinAt(cfg, s.spinMs);
+  const sphere = landingPose(cfg, geo, vp, e, spin0);
+  const live = ramp(e, L.live);
+  const out = 1 - ramp(e, L.uiOut);
   return {
+    act: 'landing',
     t,
-    camera,
-    space: planet,
-    globe: planet,
-    band: planet * ramp(magnification, cfg.planet.bandFromMagnification),
-    clouds: planet * (1 - ramp(tf, [ph.approach[0] + 0.1, ph.reveal[0]])),
-    cloudTurn: ((cfg.planet.cloudTurnDeg * Math.PI) / 180) * tf,
-    planetIsland: planet,
-    water,
-    objects,
-    ship: ramp(tf, [cfg.ship.appearAt, Math.min(1, cfg.ship.appearAt + APPEAR_SPAN)]),
-    title: 1 - ramp(tf, ph.titleOut),
-    content: ramp(tf, ph.arrival),
+    sphere,
+    planet: live < 1 ? 1 : 0,
+    clouds: cfg.clouds.opacity * (1 - ramp(e, L.cloudsOut)),
+    // Las nubes siguen al suelo, con la deriva que llevaban al pulsar.
+    cloudLon: sphere.front.x + spin0 * (cfg.clouds.speed - 1),
+    live,
+    camera: {
+      x: geo.landing.x,
+      y: geo.landing.y,
+      zoom: sphere.zoom,
+      ax: sphere.center.x,
+      ay: sphere.center.y,
+    },
+    title: out,
+    button: out,
+    content: ramp(e, L.content),
     done: false,
   };
 }
@@ -203,4 +206,27 @@ export function sameCamera(a: Camera, b: Camera): boolean {
     Math.abs((a.x - b.x) * a.zoom) < 0.5 &&
     Math.abs((a.y - b.y) * a.zoom) < 0.5
   );
+}
+
+/** Dos poses de la esfera son iguales (a medio píxel y a una milésima de radián). */
+export function samePose(a: SpherePose, b: SpherePose): boolean {
+  return (
+    Math.abs(a.k - b.k) < 1e-6 &&
+    Math.abs(a.zoom - b.zoom) < 1e-6 &&
+    Math.abs(a.center.x - b.center.x) < 0.5 &&
+    Math.abs(a.center.y - b.center.y) < 0.5 &&
+    Math.abs(a.front.x - b.front.x) < 1e-3 &&
+    Math.abs(a.front.y - b.front.y) < 1e-3
+  );
+}
+
+/**
+ * La vista cambió entre dos fotogramas: se movió la esfera visible o la
+ * cámara del mundo visible (sirve para contar movimientos de cámara).
+ */
+export function viewMoved(a: IntroFrame, b: IntroFrame): boolean {
+  // Una capa que entra o sale fundiéndose no es un movimiento de cámara.
+  if (a.planet > 0 && b.planet > 0 && !samePose(a.sphere, b.sphere)) return true;
+  if (a.live > 0 && b.live > 0 && !sameCamera(a.camera, b.camera)) return true;
+  return false;
 }

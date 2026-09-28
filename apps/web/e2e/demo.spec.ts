@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 
 /**
- * Demo de punta a punta (T12), con datos de muestra y sin Supabase: entrada →
- * landing → EXPLORAR → /juego con el mismo mundo → isla de evento → menú
+ * Demo de punta a punta (T12), con datos de muestra y sin Supabase: entrada
+ * «mini-mundo» (T14) → landing → EXPLORAR → /juego con el mismo mundo → isla de evento → menú
  * «Barco» → artistas. Corre en móvil 360×640 y en escritorio.
  *
  * Con DEMO_SHOTS=1 guarda además capturas del recorrido en docs/informes/img/
@@ -49,13 +49,17 @@ async function openBarco(page: Page) {
   return menu;
 }
 
-test('primera visita → landing sin clic → EXPLORAR → /juego con el mismo mundo → isla de evento', async ({
+test('primera visita → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con el mismo mundo → isla de evento', async ({
   page,
 }, info) => {
   test.setTimeout(120_000);
   await page.goto('/');
-  // La entrada se reproduce sola y termina en la landing (sin ningún clic).
+  // Entrada «mini-mundo» (T14): aparece, espera al botón y aterriza en la landing.
   await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
+  await page.waitForFunction(() => window.__boiaIntro?.phase === 'paused', null, {
+    timeout: 20_000,
+  });
+  await page.getByRole('button', { name: 'Zarpar' }).click();
   await page.waitForFunction(() => window.__boiaIntro?.phase === 'landed', null, {
     timeout: 20_000,
   });
@@ -165,7 +169,7 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
 test('«Ver todos los artistas» enseña los 26 artistas', async ({ page }, info) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('boia.intro.v1', 'seen');
+      localStorage.setItem('boia.intro.v2', 'seen');
     } catch {
       // sin almacenamiento
     }

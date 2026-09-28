@@ -2,9 +2,9 @@
 
 import {
   IntroController,
-  sameCamera,
+  viewMoved,
   type BootEntry,
-  type Camera,
+  type IntroFrame,
   type IntroMode,
   type IntroOutcome,
 } from '@boia/engine/intro';
@@ -15,17 +15,23 @@ import type { IntroDiagnostics } from '../../../lib/intro/bridge';
 import type { IntroData } from '../../../lib/intro/load';
 import { offerWorld } from '../../../lib/world-handoff';
 
+/** Vistas de k guardadas en el diagnóstico durante el aterrizaje (tope). */
+const MAX_K_SAMPLES = 600;
+
 /**
- * Escena del hero y entrada cinemática (v14 §4.4, §47-B). Lo que pinta el
- * servidor funciona solo: mar en CSS con la isla y el barco en `<img>`
- * (ilustración ligera, REQ-ENT-038). Al hidratar carga bajo demanda la
- * escena Pixi y la pone encima con el mismo encuadre. En la primera visita
- * la escena reproduce planeta → mar → landing; el script de arranque ya
- * ocultó la landing antes del primer pintado (ver `bootScript`).
+ * Escena del hero y entrada «mini-mundo» (D-19, REQ-ENT-001…020). Lo que
+ * pinta el servidor funciona solo: mar en CSS con la isla y el barco en
+ * `<img>` (ilustración ligera, REQ-ENT-038), y los textos de la entrada. Al
+ * hidratar carga bajo demanda la escena Pixi y la pone encima. En la primera
+ * visita: carga (sólo si hace falta) → el mini-mundo aparece y gira → «BOIA»
+ * y el botón → al pulsar, aterrizaje continuo en el mar y la landing encima.
+ * El script de arranque ya ocultó la landing antes del primer pintado (ver
+ * `bootScript`).
  */
 export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLabel: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLParagraphElement>(null);
+  const enterRef = useRef<HTMLButtonElement>(null);
   const controllerRef = useRef<IntroController<IntroScene> | null>(null);
   const [overlay, setOverlay] = useState(true);
   const router = useRouter();
@@ -39,13 +45,13 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       setOverlay(false);
       return;
     }
-    const { config, assets } = data;
+    const { config, geometry } = data;
 
-    // La cinemática sólo se reproduce en la carga en la que el script de
+    // La entrada sólo se reproduce en la carga en la que el script de
     // arranque la pidió y aún no se resolvió (saltada antes de hidratar,
     // plazo agotado o ya reclamada por otro montaje).
     let mode: IntroMode = entry?.mode ?? 'direct';
-    if (mode === 'intro' && (!entry || entry.claimed || entry.landed)) mode = 'direct';
+    if (mode !== 'direct' && (!entry || entry.claimed || entry.landed)) mode = 'direct';
     if (entry) {
       entry.claimed = true;
       clearTimeout(entry.timer);
@@ -61,7 +67,13 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       gamesStarted: 0,
       framesRendered: 0,
       cameraMoves: 0,
+      k: null,
+      landingK: [],
+      enteredBy: null,
+      appearedMs: null,
       playedMs: null,
+      renderer: null,
+      sceneReadyMs: null,
       landedAtMs: null,
       longestFrameMs: 0,
       slowFrames: 0,
@@ -76,9 +88,10 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     let scene: IntroScene | null = null;
     let raf = 0;
     let visible = true;
-    let lastCamera: Camera | null = null;
+    let lastFrame: IntroFrame | null = null;
     let lastSize = '';
     let lastFrameAt = 0;
+    let focused = false;
 
     const viewport = () => ({
       width: Math.max(1, host.clientWidth),
@@ -95,13 +108,23 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       diag.scenesCreated = c.scenesCreated;
       diag.worldsAlive = c.worldsAlive;
       diag.gamesStarted = c.gamesStarted;
+      diag.enteredBy = c.enteredBy;
+      diag.appearedMs = c.appearedMs;
       diag.playedMs = c.playedMs;
       host.dataset.phase = c.phase;
+      // Acto en curso, para el CSS de la capa de la entrada (carga, título, botón).
+      if (c.phase === 'destroyed' || c.phase === 'landed') delete html.dataset.introAct;
+      else html.dataset.introAct = c.phase;
       // La escena llega con el canvas ya borrado (color del espacio): se
       // muestra enseguida, así el navegador lo compone antes del primer
-      // fotograma de la secuencia y no en mitad de ella.
+      // fotograma y no en mitad de la aparición.
       if (c.sceneStatus === 'ready') host.dataset.ready = '';
       else delete host.dataset.ready;
+      // Acto 2: el botón recibe el foco (Enter lo activa).
+      if (c.phase === 'paused' && !focused) {
+        focused = true;
+        enterRef.current?.focus({ preventScroll: true });
+      }
       kick();
     };
 
@@ -115,11 +138,14 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     const controller = new IntroController<IntroScene>({
       mode,
       config,
-      geometry: assets,
+      geometry,
       now: () => performance.now(),
       elapsedSinceBoot: mountedAt - t0,
       async createScene() {
-        const { createIntroScene } = await import('@boia/engine/intro/scene');
+        const [{ createIntroScene }, { demoWorld }] = await Promise.all([
+          import('@boia/engine/intro/scene'),
+          import('../../juego/demo-world'),
+        ]);
         const canvas = document.createElement('canvas');
         canvas.className = 'hero__canvas';
         host.appendChild(canvas);
@@ -127,12 +153,16 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
         try {
           scene = await createIntroScene({
             canvas,
-            assets,
+            world: demoWorld,
             config,
+            geometry,
+            assets: data.assets,
             width: vp.width,
             height: vp.height,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
           });
+          diag.renderer = scene.renderer;
+          diag.sceneReadyMs = performance.now() - t0;
           return scene;
         } catch (err) {
           console.warn('[boia] la escena de entrada no arrancó; se queda la landing ligera', err);
@@ -163,38 +193,46 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       const size = `${vp.width}x${vp.height}`;
       if (size !== lastSize) {
         scene?.resize(vp.width, vp.height);
-        lastCamera = null;
+        lastFrame = null;
       }
       const clock = reduced ? 0 : (performance.now() - mountedAt) / 1000;
       const before = performance.now();
-      const wasPlaying = controller.phase === 'playing';
+      const phase = controller.phase;
       const f = controller.render(vp, clock);
-      if (wasPlaying) {
+      if (phase === 'appearing' || phase === 'landing') {
         const dt = lastFrameAt ? before - lastFrameAt : 0;
         diag.longestFrameMs = Math.max(diag.longestFrameMs, dt);
         if (dt > 50) diag.slowFrames++;
         lastFrameAt = before;
-      }
+      } else lastFrameAt = 0;
       if (f) {
         diag.framesRendered++;
-        if (lastCamera && size === lastSize && !sameCamera(lastCamera, f.camera))
-          diag.cameraMoves++;
-        lastCamera = f.camera;
+        diag.k = f.planet > 0 ? f.sphere.k : 0;
+        if (phase === 'landing' && diag.landingK.length < MAX_K_SAMPLES) diag.landingK.push(diag.k);
+        if (lastFrame && size === lastSize && viewMoved(lastFrame, f)) diag.cameraMoves++;
+        lastFrame = f;
         if (titleRef.current) titleRef.current.style.opacity = String(f.title);
-        if (controller.phase === 'playing' && f.content > 0)
+        if (enterRef.current) enterRef.current.style.opacity = String(f.button);
+        if (controller.phase === 'landing' && f.content > 0)
           html.setAttribute('data-intro', 'arrive');
       }
       lastSize = size;
-      const animating = controller.phase === 'waiting' || controller.phase === 'playing';
-      // Movimiento reducido: una escena quieta; no hace falta repintar.
+      const next = controller.phase;
+      // Movimiento reducido: la pausa es una escena quieta; sólo se pinta
+      // mientras entran título y botón. Tras llegar, el mar sigue vivo.
+      const moving =
+        next === 'waiting' ||
+        next === 'appearing' ||
+        next === 'landing' ||
+        (next === 'paused' && (!reduced || (f?.title ?? 0) < 1));
       const idle = !reduced && controller.sceneStatus === 'ready' && visible;
-      if (animating || idle) raf = requestAnimationFrame(loop);
+      if (moving || idle) raf = requestAnimationFrame(loop);
     };
     function kick() {
       if (!raf && !document.hidden) raf = requestAnimationFrame(loop);
     }
 
-    // Todo lo que interrumpe la animación la termina en su estado final.
+    // Lo que interrumpe una animación la termina en su estado final.
     const interrupt = () => {
       controller.interrupt();
       kick();
@@ -203,19 +241,27 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     // Rotar o cambiar el ancho termina la animación; un cambio sólo de alto
     // (barras del navegador móvil al cargar) no la corta.
     let lastWidth = window.innerWidth;
+    const animating = () => controller.phase === 'appearing' || controller.phase === 'landing';
     const onResize = () => {
-      if (window.innerWidth !== lastWidth && controller.phase === 'playing') controller.interrupt();
+      if (window.innerWidth !== lastWidth && animating()) controller.interrupt();
       lastWidth = window.innerWidth;
       kick();
     };
     const onOrientation = () => {
-      if (controller.phase === 'playing') controller.interrupt();
+      if (animating()) controller.interrupt();
       kick();
     };
     const onPageShow = (e: PageTransitionEvent) => e.persisted && interrupt();
+    // Atrás o un cambio de ancla durante la entrada: se sale de ella.
+    const onNavigate = () => {
+      controller.skip();
+      kick();
+    };
     const onKey = (e: KeyboardEvent) => {
+      controller.touch();
       if (e.key === 'Escape') controller.skip();
     };
+    const onPointer = () => controller.touch();
     // EXPLORAR sin recargar: el enlace sigue siendo /juego (sin JS, o con
     // Cmd/Ctrl para otra pestaña, navega normal y el juego arranca en limpio).
     const onExplore = (e: MouseEvent) => {
@@ -230,10 +276,11 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onOrientation);
-    window.addEventListener('popstate', interrupt);
-    window.addEventListener('hashchange', interrupt);
+    window.addEventListener('popstate', onNavigate);
+    window.addEventListener('hashchange', onNavigate);
     window.addEventListener('pageshow', onPageShow);
     document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
     document.addEventListener('click', onExplore);
     const io =
       typeof IntersectionObserver === 'function'
@@ -251,17 +298,19 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onOrientation);
-      window.removeEventListener('popstate', interrupt);
-      window.removeEventListener('hashchange', interrupt);
+      window.removeEventListener('popstate', onNavigate);
+      window.removeEventListener('hashchange', onNavigate);
       window.removeEventListener('pageshow', onPageShow);
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
       document.removeEventListener('click', onExplore);
       io?.disconnect();
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
-      const unfinished = controller.phase === 'waiting' || controller.phase === 'playing';
+      const unfinished = controller.phase !== 'landed' && controller.phase !== 'destroyed';
       controller.destroy();
       sync();
+      delete html.dataset.introAct;
       controllerRef.current = null;
       if (entry) {
         // Un remontaje inmediato (StrictMode en desarrollo) vuelve a reclamar la
@@ -281,10 +330,10 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       {/* eslint-disable-next-line @next/next/no-img-element -- arte servido desde art/ (D-16) */}
       <img
         className="hero__still-island"
-        src={data.assets.sprites['isla-evento'].url}
+        src={data.assets.island.url}
         alt=""
-        width={data.assets.sprites['isla-evento'].width}
-        height={data.assets.sprites['isla-evento'].height}
+        width={data.assets.island.width}
+        height={data.assets.island.height}
       />
       {/* eslint-disable-next-line @next/next/no-img-element -- arte servido desde art/ (D-16) */}
       <img
@@ -297,26 +346,78 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     </div>
   );
 
+  const copy = data?.config.copy;
   return (
     <>
       <div className="hero__scene" ref={hostRef} aria-hidden="true">
         {still}
       </div>
-      {data && overlay && (
+      {copy && overlay && (
         <div className="intro-overlay">
-          <p className="intro-overlay__title" ref={titleRef} aria-hidden="true">
-            {data.config.copy.title}
+          <div className="intro-loading" aria-hidden="true">
+            <BoiaDrawing />
+            <p className="intro-loading__label">{copy.loading}</p>
+          </div>
+          <p className="intro-overlay__title" ref={titleRef}>
+            {copy.title}
           </p>
           <button
             type="button"
-            className="intro-overlay__skip"
-            data-intro-skip=""
-            onClick={() => controllerRef.current?.skip()}
+            className="intro-overlay__enter"
+            data-intro-enter=""
+            ref={enterRef}
+            onClick={() => controllerRef.current?.enter('button')}
           >
-            {skipLabel}
+            {copy.enter}
           </button>
+          <div className="intro-overlay__links">
+            {/* Tickets sin pasar por el botón ni por la animación (REQ-ENT-002). */}
+            <a
+              className="intro-overlay__tickets"
+              href="#tickets"
+              data-intro-skip=""
+              data-tickets-open="hero"
+              onClick={() => controllerRef.current?.skip()}
+            >
+              {copy.ticketsOnly}
+            </a>
+            <button
+              type="button"
+              className="intro-overlay__skip"
+              data-intro-skip=""
+              onClick={() => controllerRef.current?.skip()}
+            >
+              {skipLabel}
+            </button>
+          </div>
         </div>
       )}
     </>
+  );
+}
+
+/** Acto 0: una boia dibujada (muestra, hasta que haya arte o logo de BOIA). */
+function BoiaDrawing() {
+  return (
+    <svg
+      className="intro-loading__boia"
+      viewBox="0 0 64 80"
+      width="64"
+      height="80"
+      aria-hidden="true"
+    >
+      <circle cx="32" cy="10" r="4" fill="#ffd166" />
+      <rect x="30.5" y="13" width="3" height="12" fill="#c9d4e6" />
+      <path d="M16 58 L22 26 H42 L48 58 Z" fill="#f26a1b" />
+      <path d="M19.2 42 H44.8 L46.4 50 H17.6 Z" fill="#ffffff" />
+      <ellipse cx="32" cy="60" rx="20" ry="5" fill="#b9a6ff" />
+      <path
+        d="M4 70 Q12 64 20 70 T36 70 T52 70 T68 70"
+        fill="none"
+        stroke="#1b4a73"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

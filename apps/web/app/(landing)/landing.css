@@ -292,7 +292,7 @@ body {
   display: none;
 }
 
-/* Mientras dura la entrada: sólo el planeta, el título y «Saltar». */
+/* Mientras dura la entrada: el mini-mundo, sus textos, Tickets y «Saltar». */
 html[data-intro] {
   overflow: hidden;
 }
@@ -330,24 +330,129 @@ html[data-intro] .site-footer {
   transition: opacity 0.6s ease;
 }
 
+/* Acto 0 (D-19): boia dibujada y «Cargando», sólo si la escena tarda. El
+   retraso sale de la configuración (loading.showAfterMs, introCss). */
+.intro-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  opacity: 0;
+  visibility: hidden;
+}
+
+html[data-intro='play']:not([data-intro-act]) .intro-loading,
+html[data-intro='play'][data-intro-act='waiting'] .intro-loading {
+  visibility: visible;
+  animation: intro-show 0.3s ease forwards;
+}
+
+@keyframes intro-show {
+  to {
+    opacity: 1;
+  }
+}
+
+.intro-loading__label {
+  margin: 0;
+  color: var(--ink-soft);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.intro-loading__boia {
+  animation: intro-bob 2.4s ease-in-out infinite;
+}
+
+@keyframes intro-bob {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Acto 2: «BOIA» y el botón. La opacidad la lleva la línea de tiempo; la
+   posición por encuadre sale de la configuración (introCss). */
 .intro-overlay__title {
   position: absolute;
   left: var(--gutter);
   right: var(--gutter);
-  top: 15%;
+  top: 14%;
   margin: 0;
+  transform: translateY(-50%);
   text-align: center;
-  font-size: clamp(1.75rem, 8vw, 3.25rem);
+  font-size: clamp(3rem, 17vw, 6.5rem);
+  line-height: 1;
   font-weight: 900;
   letter-spacing: 0.14em;
   color: var(--ink);
+  text-shadow: 0 2px 18px rgb(11 24 48 / 0.6);
+  opacity: 0;
+}
+
+.intro-overlay__enter {
+  pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  top: 80%;
+  transform: translate(-50%, -50%);
+  min-height: 56px;
+  min-width: 200px;
+  padding: 0 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--on-orange);
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+}
+
+html[data-intro-act='paused'] .intro-overlay__enter,
+html[data-intro-act='landing'] .intro-overlay__enter {
+  visibility: visible;
+}
+
+html[data-intro-act='landing'] .intro-overlay__enter {
+  pointer-events: none;
+}
+
+/* Tickets y «Saltar» desde el primer momento (REQ-ENT-002, 008). */
+.intro-overlay__links {
+  position: absolute;
+  left: max(var(--gutter), env(safe-area-inset-left));
+  right: max(var(--gutter), env(safe-area-inset-right));
+  bottom: max(var(--gutter), env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: opacity 0.3s ease;
+}
+
+.intro-overlay__tickets {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 55%;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .intro-overlay__skip {
   pointer-events: auto;
-  position: absolute;
-  right: max(var(--gutter), env(safe-area-inset-right));
-  bottom: max(var(--gutter), env(safe-area-inset-bottom));
+  flex: none;
   min-height: 44px;
   padding: 0 18px;
   border-radius: 999px;
@@ -360,21 +465,14 @@ html[data-intro] .site-footer {
   cursor: pointer;
 }
 
-html[data-intro='arrive'] .intro-overlay__skip {
+html[data-intro='arrive'] .intro-overlay__links {
   opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
-/* Movimiento reducido en la primera visita: escena quieta y fundido breve. */
-@keyframes intro-fade {
-  from {
-    opacity: 0;
+@media (prefers-reduced-motion: reduce) {
+  .intro-loading__boia {
+    animation: none;
   }
-}
-
-html[data-entry='reduced'] .site-header,
-html[data-entry='reduced'] .hero__content {
-  animation: intro-fade 0.4s ease both;
 }
 
 /* Mar de respaldo en CSS: la escena del motor (T03) se pondrá detrás. */

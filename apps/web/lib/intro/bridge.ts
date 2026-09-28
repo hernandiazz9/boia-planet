@@ -10,10 +10,20 @@ export interface IntroDiagnostics {
   worldsAlive: number;
   gamesStarted: number;
   framesRendered: number;
-  /** Fotogramas en los que la cámara cambió sin que cambiase la vista. */
+  /** Fotogramas en los que la cámara (o la esfera) se movió sin que cambiase la vista. */
   cameraMoves: number;
-  /** ms de secuencia hasta la llegada (sólo si se reprodujo entera). */
+  /** Curvatura del último fotograma pintado (1 esfera, 0 plano) y las vistas en el aterrizaje. */
+  k: number | null;
+  landingK: number[];
+  /** Cómo se pidió el aterrizaje: botón o avance automático. */
+  enteredBy: 'button' | 'auto' | null;
+  /** ms de reloj de la aparición y del aterrizaje (sólo si se vieron enteros). */
+  appearedMs: number | null;
   playedMs: number | null;
+  /** GPU con la que pinta la escena (SwiftShader = por software). */
+  renderer: string | null;
+  /** ms desde la carga hasta tener la escena lista (si pasa de `loadBudgetMs`, landing ligera). */
+  sceneReadyMs: number | null;
   /** ms desde la carga (arranque del script) hasta ver la landing. */
   landedAtMs: number | null;
   /** Fotograma más largo durante la animación y cuántos pasaron de 50 ms. */

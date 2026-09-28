@@ -1,7 +1,7 @@
 import { bootScript } from '@boia/engine/intro';
 import type { Metadata } from 'next';
 import { t } from '../../lib/i18n';
-import { loadIntroData, stillCss } from '../../lib/intro/load';
+import { introCss, loadIntroData, stillCss } from '../../lib/intro/load';
 import { resolveBlock, resolveTicketsPanel } from '../../lib/landing/resolve';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
 import { HomeBlocks } from './components/blocks';
@@ -37,7 +37,8 @@ export default function LandingPage() {
       .filter((a): a is string => a !== undefined),
   );
   const tickets = resolveTicketsPanel(content, now);
-  // Entrada cinemática (T03): recursos de art/ leídos al construir la página.
+  // Entrada «mini-mundo» (T14, D-19): configuración, arte de la ilustración
+  // ligera y geometría del mundo, leídos al construir la página.
   const intro = loadIntroData();
   const hasHero = main.some((b) => b.type === 'hero' && resolveBlock(b, content, now) !== null);
 
@@ -50,17 +51,13 @@ export default function LandingPage() {
             dangerouslySetInnerHTML={{
               __html: bootScript({
                 loadBudgetMs: intro.config.loadBudgetMs,
-                hardCapMs: intro.config.loadBudgetMs + intro.config.durationMs + 4000,
-                preload: [
-                  intro.assets.planet.globe.url,
-                  intro.assets.planet.clouds.url,
-                  intro.assets.planet.island.url,
-                  intro.assets.planet.band.url,
-                ],
+                // Sólo si nadie toma el relevo: después manda el controlador.
+                hardCapMs: intro.config.loadBudgetMs + 4000,
+                preload: intro.preload,
               }),
             }}
           />
-          <style dangerouslySetInnerHTML={{ __html: stillCss(intro) }} />
+          <style dangerouslySetInnerHTML={{ __html: `${stillCss(intro)}\n${introCss(intro)}` }} />
         </>
       )}
       <SiteHeader sections={sections} />

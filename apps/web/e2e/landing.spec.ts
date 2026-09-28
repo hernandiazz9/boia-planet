@@ -29,7 +29,7 @@ async function captured(
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('boia.intro.v1', 'seen');
+      localStorage.setItem('boia.intro.v2', 'seen');
     } catch {
       // sin almacenamiento: la entrada se reproduciría, y las esperas lo cubren
     }
@@ -159,8 +159,15 @@ test.describe('sin JavaScript', () => {
 
 test('axe: sin violaciones serias ni críticas en / (y con el panel abierto)', async ({ page }) => {
   await page.goto('/');
-  // Deja terminar las animaciones de entrada (fundido de artistas).
+  // Deja terminar las animaciones de entrada (fundido de artistas): con la
+  // escena del mundo cargando de fondo y las pruebas en paralelo, 600 ms fijos
+  // no siempre bastaban. Las animaciones infinitas (pulso del CTA) no cuentan.
   await page.waitForTimeout(600);
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
+  );
 
   const serious = async () => {
     const results = await new AxeBuilder({ page }).analyze();

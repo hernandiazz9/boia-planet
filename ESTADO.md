@@ -4,6 +4,48 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-28 — plan 001 T14: intro «mini-mundo» en tres actos con botón y aterrizaje continuo
+
+La entrada de T03 (planeta genérico → mar, automática) queda sustituida por la de D-19, con la opción A de T13: el mundo real enrollado en una esfera falsa de Pixi.
+
+Qué existe:
+- `packages/engine/src/intro/` (puro, en la ruta crítica):
+  - `config.ts` v2 (`entrada-mini-mundo-muestra-v2`, todo `muestra`): textos («BOIA», «Zarpar», «Solo quiero ver las entradas», «Cargando»), tiempos de cada acto (aparición 2 s, aterrizaje 2 s, fundido reducido 0,4 s), giro (40 s por vuelta, 16° de inclinación), nubes (1,8× el giro del suelo), punto de aterrizaje en coordenadas del mundo (600, 760: la isla de evento), encuadres por ancho (mini-mundo, título, botón y llegada; la llegada es la de T03), textura de 2048 px y barco. **Avance automático de la pausa implementado y apagado** (`pause.autoAdvance.enabled: false`, 8 s).
+  - `sphere.ts`: geometría y poses de la esfera (de la prueba de T13), con mar de relleno más allá de los polos (`SEA_PAD`).
+  - `timeline.ts`: (config, geometría, vista, acto) → fotograma. `controller.ts`: `waiting → appearing → paused → landing → landed` (+ `destroyed`). La pausa sólo sale con `enter()` (botón o avance automático), «Saltar», Atrás/ancla o cambio de ruta. Pestaña oculta o rotación: la aparición acaba en la pausa y el aterrizaje en la landing.
+  - `world-geometry.ts` (export nuevo `./intro/world-geometry`): la geometría a partir de un `WorldConfig`; fuera de la ruta crítica porque arrastra zod.
+- `@boia/engine/intro/scene` (Pixi, bajo demanda): pinta una vez el mundo de la demo (mismo arte y costas que `/juego`) en una textura con mar arriba y abajo; un shader lo proyecta como planeta con luz, atmósfera y una capa de nubes procedural que gira más deprisa. Al final del aterrizaje (k ≈ 0) entra el mundo vivo (mar animado, boia, barco) en un cruce corto (del 90 al 97 % del acto). EXPLORAR le cede aplicación, canvas y mar a `/juego` como en T12.
+- Web: `intro-stage.tsx` (capa de la entrada: boia dibujada y «Cargando», «BOIA», «Zarpar» con el foco, «Solo quiero ver las entradas» y «Saltar animación» desde el primer momento); `lib/intro/load.ts` (geometría, CSS de posiciones y precarga de las imágenes del mundo desde el script de arranque); marca de visto `boia.intro.v2`.
+- Movimiento reducido: mini-mundo quieto, título y botón; al pulsar, fundido de 0,4 s; 0 movimientos de cámara.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 30 archivos, 324 pruebas (antes 306)
+pnpm e2e                                   # exit 0; 50 pasadas, 10 omitidas (4 de grabación, 6 de la prueba de T13)
+pnpm build                                 # ruta crítica de /: 163,8 kB gzip (T13: 161,6; límite de la tarea 192)
+RECORD_INTRO=1 pnpm e2e record.spec.ts --workers=1   # vídeos y storyboard con la GPU del Mac
+```
+Grabaciones y storyboard: `docs/informes/img/p001-t14-entrada-{movil,escritorio}.webm` y `docs/informes/img/p001-t14-storyboard-{movil,escritorio}.png`. Con la GPU del Mac (`next dev`): aparición 2,01 s, aterrizaje 2,00 s, fotograma más largo 33 ms en móvil y 19 ms en escritorio. `window.__boiaIntro` da `sceneReadyMs`, `appearedMs`, `playedMs`, `longestFrameMs`, `renderer` y las `k` del aterrizaje.
+
+Qué tiene que mirar Hernán en los móviles reales (P6), con `/?intro=1`:
+1. `__boiaIntro.sceneReadyMs` (o si sale «Cargando» y luego la landing ligera): con la escena nueva hay más que cargar (Pixi, arte del mundo y el pintado de la textura). Si en 4G pasa de 2 s (`loadBudgetMs`), la entrada no se verá; se sube el plazo en la configuración.
+2. Fluidez del giro y del aterrizaje (`longestFrameMs`, tirones al entrar el mundo vivo), y que el shader compile (sin él sale la landing ligera).
+3. Encuadres: «BOIA», mini-mundo y «Zarpar» sin solaparse en vertical; el enlace «Solo quiero ver las entradas» ocupa dos líneas a 360 px.
+4. Nitidez de la textura al acercarse y el corte de la tierra en el mar de relleno más allá del polo (se ve un momento hacia la mitad del aterrizaje en escritorio).
+5. Safari de iOS y navegadores internos (Instagram): traspaso a `/juego` con EXPLORAR.
+6. Si hace falta el avance automático de la pausa: sólo es poner `enabled: true`.
+
+Desviaciones:
+- La escena pinta el barco como una sola vista quieta (la W de la ilustración ligera), no con `ShipSprite`: ahorra 26 imágenes en la carga crítica de la entrada. `/juego` sigue creando su barco en el spawn (como en T12).
+- `IntroAssets` sólo resuelve la isla de evento y el barco de la ilustración ligera; `art/planeta/` ya no lo usa nadie (se deja, no se toca `art/`).
+- El enlace «Solo quiero ver las entradas» cuenta en analítica como `tickets_panel_open` con `source: 'hero'` (el contrato no tiene otra fuente que encaje).
+- `landing.spec.ts` (axe): además de los 600 ms, espera a que acaben las animaciones finitas; en la suite completa, con la escena cargando de fondo, falló una vez a mitad del fundido de artistas.
+- La prueba de T13 (`/sphere-probe`, `sphere-probe*.ts`) se deja como estaba y sigue funcionando; se puede retirar en una limpieza.
+
+Sin probar:
+- Móviles reales (ver arriba). En `pnpm e2e` (SwiftShader, en paralelo) sólo se exige la duración mínima de cada tramo.
+- Pixi añade en móvil su botón oculto de accesibilidad táctil («select to enable accessibility…»), también en `/juego`; la prueba de acciones visibles lo excluye.
+
 ## 2026-09-28 — plan 001 T13: intro «mini-mundo», decisión, spec y prueba de la esfera (A/B)
 
 Elección: **opción A** (esfera falsa en Pixi sobre el mundo real). En el móvil emulado con la CPU ×4 y la GPU del Mac va a 60 fps en el giro y a 60 en el aterrizaje. Con WebGL por software (SwiftShader), la esfera sola va a 53,6 fps. El aterrizaje entero baja a 47,2 fps, pero no por la esfera: baja en el último 14 %, el cruce con el mundo vivo de Pixi. Es el mismo mundo que pintan `/juego` y la llegada de T03, y la opción B también acabaría en él. El JS del fotograma no pasa de 1,8 ms (p95) ni con la CPU ×4. Software y GPU sólo discrepan en ese total del aterrizaje; la recomendación es A.
