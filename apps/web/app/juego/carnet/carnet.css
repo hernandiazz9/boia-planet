@@ -1,0 +1,296 @@
+/* Botellas y Carnet (T22). Se apoya en las clases del HUD (hud.css). */
+
+.juego-hud .juego-bottle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.juego-bottle-bar > * {
+  pointer-events: auto;
+}
+.juego-bottle-own {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  background: rgba(18, 35, 63, 0.75);
+}
+.juego-bottle-chip {
+  min-width: 0;
+  max-width: 160px;
+  min-height: 44px;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 2px solid #fff;
+  border-radius: 22px;
+  background: #f26a1b;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.juego-bottle-chip.is-read {
+  background: #12233f;
+}
+
+.juego-sheet {
+  padding: 8px 16px 18px;
+}
+.juego-button.is-quiet {
+  background: transparent;
+  color: #12233f;
+  box-shadow: inset 0 0 0 2px rgba(18, 35, 63, 0.3);
+}
+a.juego-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.juego-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #c24f0c;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.juego-field input,
+.juego-field textarea,
+.carnet-q textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(18, 35, 63, 0.3);
+  border-radius: 10px;
+  background: #fff;
+  color: #12233f;
+  font: inherit;
+  /* 16 px: iOS no hace zoom al enfocar. */
+  font-size: 16px;
+}
+.botella-mensaje {
+  margin: 8px 0 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f3e6c8;
+  font-size: 18px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.carnet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.carnet h4 {
+  margin: 6px 0 4px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+.carnet-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.carnet-avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow:
+    0 0 0 3px #fffaf0,
+    0 0 0 5px #f26a1b;
+}
+.carnet-kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #c24f0c;
+}
+.carnet-name {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.carnet-since {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+.carnet-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 0;
+}
+.carnet-stats div {
+  padding: 8px;
+  border-radius: 10px;
+  background: #12233f;
+  color: #fff;
+  text-align: center;
+}
+.carnet-stats dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.carnet-stats dd {
+  margin: 0;
+  font-weight: 800;
+}
+.carnet .carnet-answers,
+.carnet .carnet-stamps,
+.carnet .carnet-chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.carnet-answers li {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(18, 35, 63, 0.12);
+}
+.carnet .carnet-question {
+  margin: 0 0 2px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+.carnet .carnet-answer {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.carnet .carnet-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.carnet-stamp {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 3px double #c24f0c;
+  border-radius: 50%;
+  color: #c24f0c;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+}
+.carnet-stamp span:first-child {
+  font-size: 20px;
+}
+.carnet .carnet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.carnet-chips li {
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: rgba(18, 35, 63, 0.08);
+  font-size: 13px;
+}
+.carnet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+}
+.carnet-notice {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f3e6c8;
+  font-size: 13px;
+}
+.carnet-error {
+  color: #b3261e;
+  font-weight: 700;
+}
+.carnet-q {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.carnet-avatar-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.carnet-avatar-pick button {
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.carnet-avatar-pick button.is-active {
+  border-color: #f26a1b;
+}
+.carnet-avatar-pick .carnet-avatar,
+.carnet-photo .carnet-avatar {
+  box-shadow: none;
+}
+.carnet-photo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+}
+.carnet-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.carnet-page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: max(16px, env(safe-area-inset-top)) 16px 32px;
+  background: #12233f;
+  font:
+    15px/1.45 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.carnet-page-inner {
+  box-sizing: border-box;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #fffaf0;
+  color: #12233f;
+}
+.carnet-page-nav a {
+  color: #c24f0c;
+  font-weight: 700;
+}

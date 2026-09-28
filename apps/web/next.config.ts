@@ -11,7 +11,7 @@ function lanHosts(): string[] {
 
 const config: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@boia/engine', '@boia/world'],
+  transpilePackages: ['@boia/engine', '@boia/world', '@boia/store'],
   // El móvil entra por la IP de la Wi-Fi; 127.0.0.1 para las pruebas locales (pnpm demo).
   allowedDevOrigins: ['127.0.0.1', ...lanHosts()],
   // ESLint corre una vez en la raíz (`pnpm lint`), no dentro de `next build`.

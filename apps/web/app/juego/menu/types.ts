@@ -37,6 +37,8 @@ export interface MenuContext {
   ship: ShipMenu;
   /** Mundos (T17): cuáles hay, cuál se juega y cómo cambiar. La sección es de T24. */
   world: WorldMenu;
+  /** Abre la hoja de la botella propia: escribirla, editarla o retirarla (T22). */
+  openBottles: () => void;
   /** El motor, si ya arrancó (p. ej. para aplicar un cambio al barco). */
   game: Game | null;
   close: () => void;

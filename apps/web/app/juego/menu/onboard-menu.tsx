@@ -10,7 +10,7 @@ import type { MenuContext } from './types';
  * activo resaltado y separación antes de Controles y Ajustes. No para el
  * juego: el barco sigue en el agua detrás.
  */
-export function OnboardMenu({ ctx, initial }: { ctx: MenuContext; initial?: string }) {
+export function OnboardMenu({ ctx, initial }: { ctx: MenuContext; initial?: string | undefined }) {
   const sections = orderedSections();
   const [activeId, setActiveId] = useState(
     sections.find((s) => s.id === initial)?.id ?? sections[0]!.id,

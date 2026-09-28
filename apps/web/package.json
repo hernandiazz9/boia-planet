@@ -14,6 +14,7 @@
   "dependencies": {
     "@boia/contracts": "workspace:*",
     "@boia/engine": "workspace:*",
+    "@boia/store": "workspace:*",
     "@boia/world": "workspace:*",
     "next": "15.5.26",
     "react": "19.3.0",

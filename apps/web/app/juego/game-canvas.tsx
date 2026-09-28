@@ -2,6 +2,7 @@
 
 import { EVENT_STATE_BEHAVIOR } from '@boia/contracts';
 import type { Game, GameStats, WorldEvent } from '@boia/engine';
+import { nearbyBottles } from '@boia/engine/bottles';
 import {
   DEFAULT_SETTINGS,
   DiscoveryTracker,
@@ -24,18 +25,24 @@ import {
 import { type ComposedWorld, chooseWorld as chooseWorldIn } from '@boia/world';
 import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ShipCatalog } from '../../lib/barco/catalog';
+import { SKIN_LABELS, type ShipCatalog } from '../../lib/barco/catalog';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
 import { claimWorld } from '../../lib/world-handoff';
+import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
+import { BottleSheet, type BottleSheetMode } from './bottles/bottle-sheet';
+import { CarnetSheet } from './carnet/carnet-sheet';
+import { SHIP_PREF, type ShipPref, isShipPref } from './carnet/use-carnet';
 import { worlds } from './demo-world';
 import { Compass, MenuAnchor } from './hud-buttons';
 import './hud.css';
 import './juego.css';
+import './carnet/carnet.css';
 import { OnboardMenu } from './menu/onboard-menu';
 import type { MenuContext, ShipMenu, WorldMenu } from './menu/types';
 import { ExpandedMap, Minimap } from './minimap';
 import { discoveryNotice, noticeFromWorldEvent } from './notice-copy';
 import { NoticeToast, useNoticeQueue } from './notices';
+import { useRepoData } from './repo';
 import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
 import { applyAudioSettings, chime, plop } from './sound';
 import { useViewport } from './use-viewport';
@@ -95,7 +102,21 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const notified = useRef(new Set<string>());
   const notices = useNoticeQueue(() => chime());
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuInitial, setMenuInitial] = useState<string | undefined>(undefined);
   const [mapOpen, setMapOpen] = useState(false);
+
+  // Botellas (T22): las del mar vienen del repositorio; cerca del barco se pueden leer.
+  const { data: bottleList, repo } = useRepoData((r) => r.bottles.list());
+  const bottlesRef = useRef(bottleList ?? []);
+  bottlesRef.current = bottleList ?? [];
+  const nearRef = useRef<ReadonlySet<string>>(new Set());
+  const [nearby, setNearby] = useState<readonly string[]>([]);
+  const [bottleSheet, setBottleSheet] = useState<BottleSheetMode | null>(null);
+  const [carnetOf, setCarnetOf] = useState<string | null>(null);
+  const openMenu = (section?: string) => {
+    setMenuInitial(section);
+    setMenuOpen(true);
+  };
 
   const notify = (n: Notice) => {
     if (notified.current.has(n.id)) return;
@@ -114,6 +135,11 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       for (const f of fresh) if (f.kind === 'island') notify(discoveryNotice(f));
     }
     setSelectedId(t.selected?.id ?? null);
+    const near = nearbyBottles(s, bottlesRef.current, nearRef.current);
+    if (near.join() !== [...nearRef.current].join()) {
+      nearRef.current = new Set(near);
+      setNearby(near);
+    }
   };
 
   /** Pasa la interfaz a otro mundo: objetivos nuevos, lo descubierto y lo elegido se quedan. */
@@ -176,6 +202,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     const initial = currentWorld(window.location.search);
     adoptWorld(initial);
     // `?evento=<id>`: al entrar desde un evento, la brújula señala su isla.
+    // `?menu=<sección>` abre el Menú de a bordo en esa sección (p. ej. desde /carnet).
+    const section = query.get('menu');
+    if (section) {
+      setMenuInitial(section);
+      setMenuOpen(true);
+    }
     const fromEvent = query.get('evento');
     if (fromEvent && trackerRef.current?.selectEvent(fromEvent)) {
       setSelectedId(trackerRef.current.selected?.id ?? null);
@@ -280,6 +312,27 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       });
   };
 
+  // Las botellas del repositorio, en el agua (T22).
+  useEffect(() => {
+    if (!game || !bottleList) return;
+    void game.setBottles(bottleList.map((b) => ({ id: b.id, x: b.x, y: b.y, mine: b.isMine })));
+  }, [game, bottleList]);
+
+  // El barco que se lleva, para el Carnet (vive en este navegador).
+  useEffect(() => {
+    if (!repo || !shipLook) return;
+    const name = shipCatalog?.styles.find((s) => s.id === shipLook.style)?.name ?? shipLook.style;
+    const next: ShipPref = {
+      style: shipLook.style,
+      skin: shipLook.skin,
+      label: `${name} · ${SKIN_LABELS[shipLook.skin] ?? shipLook.skin}`,
+    };
+    void repo.progress.pref(SHIP_PREF).then((old) => {
+      if (isShipPref(old) && old.label === next.label && old.skin === next.skin) return;
+      return repo.progress.setPref(SHIP_PREF, { ...next });
+    });
+  }, [repo, shipLook, shipCatalog]);
+
   // Cambio de mundo (T17): mismo mapa, otra piel. El barco sigue donde está.
   const worldRequest = useRef(0);
   const chooseWorld = (id: string) => {
@@ -370,6 +423,10 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           pending: worldPending || !worldReady,
           choose: chooseWorld,
         } satisfies WorldMenu,
+        openBottles: () => {
+          setMenuOpen(false);
+          setBottleSheet({ kind: 'mine' });
+        },
         game,
         close: () => setMenuOpen(false),
       }
@@ -446,7 +503,14 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             rect={layout.menu}
             pulse={menuPulse}
             open={menuOpen}
-            onClick={() => setMenuOpen((o) => !o)}
+            onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
+          />
+          <BottleBar
+            rect={bottleBarRect(vp)}
+            found={nearby.flatMap((id) => bottleList?.filter((b) => b.id === id) ?? [])}
+            hasOwn={!!bottleList?.some((b) => b.isMine)}
+            onOwn={() => setBottleSheet({ kind: 'mine' })}
+            onRead={(id) => setBottleSheet({ kind: 'read', id })}
           />
           <Minimap
             data={mapData}
@@ -474,7 +538,22 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           onClose={() => setMapOpen(false)}
         />
       ) : null}
-      {menuOpen && menuCtx ? <OnboardMenu ctx={menuCtx} /> : null}
+      {menuOpen && menuCtx ? <OnboardMenu ctx={menuCtx} initial={menuInitial} /> : null}
+      {bottleSheet ? (
+        <BottleSheet
+          mode={bottleSheet}
+          world={world.config}
+          ship={() => gameRef.current?.stats() ?? null}
+          onClose={() => setBottleSheet(null)}
+          onOpenCarnet={(userId) => setCarnetOf(userId)}
+          onNeedCarnet={() => {
+            setBottleSheet(null);
+            openMenu('carnet');
+          }}
+          onMine={() => setBottleSheet({ kind: 'mine' })}
+        />
+      ) : null}
+      {carnetOf ? <CarnetSheet userId={carnetOf} onClose={() => setCarnetOf(null)} /> : null}
       {error && (
         <p style={{ position: 'absolute', bottom: 16, left: 16, right: 16, textAlign: 'center' }}>
           {error}

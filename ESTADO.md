@@ -4,6 +4,45 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T22: Mi Carnet y botellas
+
+Mi Carnet (REQ-IDE-010…022) y botellas (REQ-IDE-040…044) sobre `@boia/store` (T16), todo en este navegador (D-20). Textos, avatares, números y el dibujo de la botella son `muestra`. Las 5 preguntas no: son las de v14 §44.1, textuales.
+
+Qué existe:
+- `apps/web` usa ya `@boia/store` (en `package.json` y `transpilePackages`). `app/juego/repo.ts`: `gameRepository()`, la única llamada de la web a `browserRepository`. Le pasa el validador del mar y las botellas de muestra recolocadas. `useRepoData` y `useRepoRevision` vuelven a leer con cada cambio.
+- Menú de a bordo, sección 🪪 Mi Carnet (`menu/sections/carnet.tsx`):
+  - sin Carnet, la invitación «Crear mi Carnet»;
+  - el alta rápida pide apodo (invitado, sin email), avatar neutro o foto del dispositivo (reducida a 256 px en JPEG) y las 5 preguntas textuales, todas opcionales; antes de crear avisa de qué será público (REQ-IDE-013);
+  - con Carnet, primero se ve como lo verán los demás: «Miembro de BOIA desde», rango, puntos, respuestas (pregunta pequeña y respuesta grande, sólo las contestadas), sellos como colección, logros, barco y cosméticos. Debajo, «Editar mi Carnet» y la botella propia;
+  - REQ-IDE-051 (llegó con T15 al unir main): Carnet y botella dicen en pantalla que todo se guarda sólo en este navegador y que la botella sólo la ve quien la escribe. No hay botón «Compartir».
+- `CarnetCard` (`juego/carnet/`) es la misma vista en el menú, en «VER SU CARNET» (hoja sobre el mar) y a pantalla completa en `/carnet` (el propio) y `/carnet/<id>` (cualquiera), la futura vista para compartir. `?menu=carnet` abre el menú en Mi Carnet. El barco del Carnet sale de la preferencia `barco` del repositorio, que `/juego` escribe al aplicar un estilo.
+- Botellas:
+  - en el HUD, una barra justo encima de la zona del joystick: ✉️ abre la botella propia y aparecen hasta dos botellas cercanas («Tu botella», «Botella de X»);
+  - la propia se echa en un sitio de mar junto al barco (por la popa si se puede), se edita o se retira; hace falta Carnet; una sola activa (la segunda se rechaza con `conflict`, como en la spec), hasta 140 caracteres;
+  - una encontrada se lee (el repositorio lo registra y la botella sigue en el mar), trae el apodo de su autor y «VER SU CARNET», y se puede reportar con un motivo opcional;
+  - no dan puntos ni monedas.
+- `packages/engine/src/bottles/` (`@boia/engine/bottles`, sin Pixi):
+  - `sea.ts`: `bottleSpotProblem` (tierra = fuera de los límites con 32 u de margen, o a menos de 20 u de la colisión de un lugar), `bottlePositionValidator` para el repositorio, `findDropSpot` y `settleInSea`, que deja en el mar las botellas de muestra que no lo están (la primera, junto a la salida);
+  - `finder.ts`: `nearbyBottles`, que las encuentra a 150 u y las suelta a 240 u;
+  - `view.ts`: `BottleLayer`, en la capa de objetos, ordenada con el barco y cabeceando.
+- `Game.setBottles(markers)` y `GameOptions.bottleAsset` (id del arte, configurable) en `game.ts`. `@boia/world`: `bottle.ts` (`BottleMarker`, `bottleObject`, `BOTTLE_PLACEHOLDER_ASSET`). Sin arte, la botella se dibuja por código.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 40 archivos, 420 pruebas
+E2E_PORT=3122 pnpm e2e                     # exit 0; 52 pasan, 10 omitidas (las de siempre); e2e/carnet.spec.ts en móvil y escritorio
+```
+
+Desviaciones:
+- Pintar las botellas pedía un gancho en el motor fuera de `bottles/`: `setBottles` en `game.ts` (unas 20 líneas, sólo añade) y la entrada `./bottles` en `packages/engine/package.json`. Meterlas como objetos del mundo con `setWorld` habría reiniciado el runtime (diálogos y efectos) cada vez que se echa o se retira una botella.
+- Las botellas de muestra de T16 tienen coordenadas del mapa de Arcilla y caen fuera del mapa de la demo. `repo.ts` las recoloca con `settleInSea`. Cuando T20 traiga el mapa de Arcilla, las que caigan en el mar se quedarán donde están.
+- El encargo pedía una vista para compartir, pero REQ-IDE-051 (T15) prohíbe presentar nada como compartido en la versión de prueba. `/carnet/<id>` existe, sin botón de compartir y con el aviso de que todo queda en este navegador. En otro dispositivo el enlace dice «Carnet no encontrado».
+- Al reportar, la botella sigue visible para quien la reporta. Retirarla para todo el mundo es cosa del Admin (`admin.removeBottle`).
+
+Sin probar:
+- Subir una foto del dispositivo (`createImageBitmap` + canvas): ni en pruebas ni a mano, y menos en móvil (HEIC de iOS, fotos grandes).
+- Que el arte de T18 cargue con `bottleAsset`: sin arte, sólo se ha visto el dibujo por código.
+
 ## 2026-09-28 — plan 002 T15: decisión D-20 y spec de la versión de prueba
 
 Sólo documentos. Las decisiones de Hernán del 2026-09-28 quedan como D-20 y la spec las recoge.

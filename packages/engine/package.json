@@ -9,7 +9,8 @@
     "./intro/scene": "./src/intro/scene.ts",
     "./intro/world-geometry": "./src/intro/world-geometry.ts",
     "./intro/sphere-probe": "./src/intro/sphere-probe.ts",
-    "./ui": "./src/ui/index.ts"
+    "./ui": "./src/ui/index.ts",
+    "./bottles": "./src/bottles/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

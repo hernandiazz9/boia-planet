@@ -1,0 +1,476 @@
+'use client';
+
+import { BOTTLE_MESSAGE_MAX, BOTTLE_REPORT_REASON_MAX, charLength } from '@boia/contracts';
+import { type ShipPose, findDropSpot } from '@boia/engine/bottles';
+import { type BoiaRepository, type BottleView, isStoreError } from '@boia/store';
+import type { WorldConfig } from '@boia/world';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { useRepoData } from '../repo';
+
+/**
+ * Botellas (REQ-IDE-040…044): la propia (echarla junto al barco, editarla o
+ * retirarla) y las que se encuentran en el mar (leerlas, ver el Carnet de
+ * quien la escribió, reportarlas). Leer no la quita. Nunca dan puntos ni
+ * monedas. Sin mensajería privada: esto es todo lo social del mar.
+ */
+
+export type BottleSheetMode = { kind: 'mine' } | { kind: 'read'; id: string };
+
+/** Textos de la interfaz. muestra */
+export const BOTTLE_COPY = {
+  rules:
+    'Una botella por persona, de hasta 140 caracteres. No da puntos ni monedas. Cuando BOIA.PLANET abra, la leerá quien navegue cerca, con tu apodo.',
+  localOnly: 'Versión de prueba: tu botella se guarda sólo en este navegador y sólo la ves tú.',
+  needCarnet: 'Para echar botellas necesitas tu Carnet BOIA.',
+  needCarnetReport: 'Para reportar una botella necesitas tu Carnet BOIA.',
+  noSpot: 'Aquí sólo hay tierra alrededor. Acércate a mar abierto y vuelve a probar.',
+  conflict: 'Ya tienes una botella en el mar: edítala o retírala antes de echar otra.',
+  gone: 'Esta botella ya no está en el mar.',
+  reported: 'Gracias. El equipo de BOIA la revisará.',
+  reportedAgain: 'Ya la habías reportado. Gracias.',
+  retireConfirm: '¿La retiras? Desaparece del mar para todo el mundo.',
+} as const;
+
+function Sheet({
+  title,
+  onClose,
+  children,
+  testId,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  testId: string;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => ref.current?.focus(), []);
+  return (
+    <div className="juego-overlay" onClick={onClose}>
+      <section
+        ref={ref}
+        tabIndex={-1}
+        className="juego-map juego-sheet"
+        role="dialog"
+        aria-label={title}
+        data-testid={testId}
+        onClick={(e) => e.stopPropagation()}
+        // El teclado de la hoja (escribir) no mueve el barco.
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Escape') onClose();
+        }}
+      >
+        <header className="juego-sheet-head">
+          <h2>{title}</h2>
+          <button type="button" className="juego-close" onClick={onClose} aria-label="Cerrar">
+            ×
+          </button>
+        </header>
+        {children}
+      </section>
+    </div>
+  );
+}
+
+function MessageField({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  const n = charLength(value.trim());
+  return (
+    <label className="juego-field">
+      <span>{label}</span>
+      <textarea
+        data-testid="botella-texto"
+        value={value}
+        rows={3}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <small className={n > BOTTLE_MESSAGE_MAX ? 'carnet-error' : 'juego-muted'}>
+        {n}/{BOTTLE_MESSAGE_MAX}
+      </small>
+    </label>
+  );
+}
+
+const messageOk = (v: string) => {
+  const n = charLength(v.trim());
+  return n >= 1 && n <= BOTTLE_MESSAGE_MAX;
+};
+
+function errorText(e: unknown): string {
+  if (isStoreError(e, 'conflict')) return BOTTLE_COPY.conflict;
+  if (isStoreError(e, 'no_carnet')) return BOTTLE_COPY.needCarnet;
+  if (isStoreError(e, 'not_found')) return BOTTLE_COPY.gone;
+  if (isStoreError(e, 'invalid')) {
+    return /tierra|mar/.test((e as Error).message)
+      ? `Aquí no puede flotar: ${(e as Error).message.replace(/^botella: /, '')}.`
+      : `Revisa el mensaje: ${(e as Error).message.replace(/^botella: /, '')}.`;
+  }
+  return 'No se ha podido. Vuelve a intentarlo.';
+}
+
+/** La botella propia: echarla, editarla o retirarla. */
+function MyBottle({
+  repo,
+  world,
+  ship,
+  onNeedCarnet,
+  onClose,
+}: {
+  repo: BoiaRepository;
+  world: WorldConfig;
+  ship: () => ShipPose | null;
+  onNeedCarnet: () => void;
+  onClose: () => void;
+}) {
+  const { data } = useRepoData(async (r) => ({
+    carnet: await r.carnet.mine(),
+    bottle: await r.bottles.mine(),
+  }));
+  const [text, setText] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [confirmRetire, setConfirmRetire] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  if (!data) return <p className="juego-muted">Cargando…</p>;
+  if (!data.carnet) {
+    return (
+      <div data-testid="botella-sin-carnet">
+        <p>{BOTTLE_COPY.needCarnet}</p>
+        <button type="button" className="juego-button" onClick={onNeedCarnet}>
+          Crear mi Carnet
+        </button>
+      </div>
+    );
+  }
+
+  const run = (fn: () => Promise<unknown>, done?: () => void) => {
+    setBusy(true);
+    setError(null);
+    fn()
+      .then(() => done?.())
+      .catch((e: unknown) => setError(errorText(e)))
+      .finally(() => setBusy(false));
+  };
+
+  const bottle = data.bottle;
+  const errorLine = error ? (
+    <p className="carnet-error" role="alert" data-testid="botella-error">
+      {error}
+    </p>
+  ) : null;
+
+  if (!bottle) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const pose = ship();
+          const spot = pose ? findDropSpot(world, pose) : null;
+          if (!spot) {
+            setError(BOTTLE_COPY.noSpot);
+            return;
+          }
+          run(
+            () => repo.bottles.place({ message: text.trim(), x: spot.x, y: spot.y }),
+            () => {
+              setText('');
+              onClose();
+            },
+          );
+        }}
+      >
+        {note ? <p>{note}</p> : null}
+        <p className="juego-muted">{BOTTLE_COPY.rules}</p>
+        <p className="juego-muted" data-testid="botella-aviso-local">
+          {BOTTLE_COPY.localOnly}
+        </p>
+        <MessageField value={text} onChange={setText} label="Tu mensaje" />
+        {errorLine}
+        <button
+          type="submit"
+          className="juego-button"
+          data-testid="botella-echar"
+          disabled={busy || !messageOk(text)}
+        >
+          Echar al mar
+        </button>
+      </form>
+    );
+  }
+
+  if (editing) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          run(
+            () => repo.bottles.edit(bottle.id, { message: text.trim() }),
+            () => {
+              setEditing(false);
+              setNote('Botella actualizada.');
+            },
+          );
+        }}
+      >
+        <MessageField value={text} onChange={setText} label="Tu mensaje" />
+        {errorLine}
+        <div className="carnet-actions">
+          <button
+            type="submit"
+            className="juego-button"
+            data-testid="botella-guardar"
+            disabled={busy || !messageOk(text)}
+          >
+            Guardar
+          </button>
+          <button type="button" className="juego-button is-quiet" onClick={() => setEditing(false)}>
+            Cancelar
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div data-testid="botella-mia">
+      {note ? <p>{note}</p> : null}
+      <p className="juego-muted">Tu botella flota en el mar. {BOTTLE_COPY.localOnly}</p>
+      <blockquote className="botella-mensaje" data-testid="botella-mensaje">
+        {bottle.message}
+      </blockquote>
+      {errorLine}
+      {confirmRetire ? (
+        <div className="carnet-actions">
+          <p>{BOTTLE_COPY.retireConfirm}</p>
+          <button
+            type="button"
+            className="juego-button"
+            data-testid="botella-retirar-si"
+            disabled={busy}
+            onClick={() =>
+              run(
+                () => repo.bottles.retire(bottle.id),
+                () => {
+                  setConfirmRetire(false);
+                  setNote('Botella retirada. Puedes echar otra cuando quieras.');
+                },
+              )
+            }
+          >
+            Sí, retirarla
+          </button>
+          <button
+            type="button"
+            className="juego-button is-quiet"
+            onClick={() => setConfirmRetire(false)}
+          >
+            No
+          </button>
+        </div>
+      ) : (
+        <div className="carnet-actions">
+          <button
+            type="button"
+            className="juego-button"
+            data-testid="botella-editar"
+            onClick={() => {
+              setText(bottle.message);
+              setNote(null);
+              setEditing(true);
+            }}
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            className="juego-button is-quiet"
+            data-testid="botella-retirar"
+            onClick={() => setConfirmRetire(true)}
+          >
+            Retirar del mar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Una botella encontrada en el mar: se lee (queda registrado) y sigue flotando. */
+function FoundBottle({
+  repo,
+  id,
+  onOpenCarnet,
+  onNeedCarnet,
+  onMine,
+}: {
+  repo: BoiaRepository;
+  id: string;
+  onOpenCarnet: (userId: string) => void;
+  onNeedCarnet: () => void;
+  onMine: () => void;
+}) {
+  const [bottle, setBottle] = useState<BottleView | null | undefined>(undefined);
+  const [reporting, setReporting] = useState(false);
+  const [reason, setReason] = useState('');
+  const [result, setResult] = useState<string | null>(null);
+  const [needCarnet, setNeedCarnet] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    repo.bottles.read(id).then(
+      (b) => alive && setBottle(b),
+      () => alive && setBottle(null),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [repo, id]);
+
+  if (bottle === undefined) return <p className="juego-muted">Abriendo la botella…</p>;
+  if (bottle === null) return <p>{BOTTLE_COPY.gone}</p>;
+
+  return (
+    <div data-testid="botella-leida">
+      <p className="carnet-kicker">
+        {bottle.isMine ? 'Tu botella' : `Botella de ${bottle.authorNickname ?? 'alguien'}`}
+      </p>
+      <blockquote className="botella-mensaje" data-testid="botella-mensaje">
+        {bottle.message}
+      </blockquote>
+      {bottle.isMine ? (
+        <button type="button" className="juego-button" onClick={onMine}>
+          Editar o retirar
+        </button>
+      ) : (
+        <>
+          <div className="carnet-actions">
+            <button
+              type="button"
+              className="juego-button"
+              data-testid="botella-ver-carnet"
+              onClick={() => onOpenCarnet(bottle.authorId)}
+            >
+              VER SU CARNET
+            </button>
+            {!reporting && !result ? (
+              <button
+                type="button"
+                className="juego-button is-quiet"
+                data-testid="botella-reportar"
+                onClick={() => setReporting(true)}
+              >
+                Reportar
+              </button>
+            ) : null}
+          </div>
+          {reporting ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                repo.bottles.report(bottle.id, reason.trim() || null).then(
+                  (r) => {
+                    setReporting(false);
+                    setResult(r.first ? BOTTLE_COPY.reported : BOTTLE_COPY.reportedAgain);
+                  },
+                  (err: unknown) => {
+                    if (isStoreError(err, 'no_carnet')) setNeedCarnet(true);
+                    else setResult(errorText(err));
+                  },
+                );
+              }}
+            >
+              <label className="juego-field">
+                <span>¿Qué pasa con esta botella? (opcional)</span>
+                <textarea
+                  value={reason}
+                  maxLength={BOTTLE_REPORT_REASON_MAX}
+                  rows={2}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </label>
+              {needCarnet ? (
+                <p className="carnet-error">
+                  {BOTTLE_COPY.needCarnetReport}{' '}
+                  <button type="button" className="juego-link" onClick={onNeedCarnet}>
+                    Crear mi Carnet
+                  </button>
+                </p>
+              ) : null}
+              <div className="carnet-actions">
+                <button
+                  type="submit"
+                  className="juego-button"
+                  data-testid="botella-reportar-enviar"
+                >
+                  Enviar reporte
+                </button>
+                <button
+                  type="button"
+                  className="juego-button is-quiet"
+                  onClick={() => setReporting(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : null}
+          {result ? <p data-testid="botella-reporte">{result}</p> : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+export function BottleSheet({
+  mode,
+  world,
+  ship,
+  onClose,
+  onOpenCarnet,
+  onNeedCarnet,
+  onMine,
+}: {
+  mode: BottleSheetMode;
+  world: WorldConfig;
+  ship: () => ShipPose | null;
+  onClose: () => void;
+  onOpenCarnet: (userId: string) => void;
+  onNeedCarnet: () => void;
+  onMine: () => void;
+}) {
+  const { repo } = useRepoData(async () => null);
+  const title = mode.kind === 'mine' ? 'Tu botella' : 'Botella en el mar';
+  return (
+    <Sheet title={title} onClose={onClose} testId="botella">
+      {!repo ? (
+        <p className="juego-muted">Cargando…</p>
+      ) : mode.kind === 'mine' ? (
+        <MyBottle
+          repo={repo}
+          world={world}
+          ship={ship}
+          onNeedCarnet={onNeedCarnet}
+          onClose={onClose}
+        />
+      ) : (
+        <FoundBottle
+          key={mode.id}
+          repo={repo}
+          id={mode.id}
+          onOpenCarnet={onOpenCarnet}
+          onNeedCarnet={onNeedCarnet}
+          onMine={onMine}
+        />
+      )}
+    </Sheet>
+  );
+}

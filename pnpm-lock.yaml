@@ -50,6 +50,9 @@ importers:
       '@boia/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@boia/store':
+        specifier: workspace:*
+        version: link:../../packages/store
       '@boia/world':
         specifier: workspace:*
         version: link:../../packages/world

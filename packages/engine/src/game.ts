@@ -1,5 +1,12 @@
-import { type Direction, type SeaPalette, type WorldConfig, worldToScreen } from '@boia/world';
+import {
+  type BottleMarker,
+  type Direction,
+  type SeaPalette,
+  type WorldConfig,
+  worldToScreen,
+} from '@boia/world';
 import { Application, Container } from 'pixi.js';
+import { BottleLayer } from './bottles/view';
 import { Camera } from './camera';
 import {
   type KeyboardMode,
@@ -59,6 +66,8 @@ export interface GameOptions {
    * escenario y pinta su mundo encima. `canvas` debe ser `surface.app.canvas`.
    */
   surface?: GameSurface | null;
+  /** Arte de las botellas (T22); sin valor, el marcador por código. */
+  bottleAsset?: string;
 }
 
 /** Aplicación Pixi viva (y su mar) que otra escena cede al juego. */
@@ -107,6 +116,11 @@ export interface Game {
    * Resuelve `true` si quedó el pedido y `false` si no cargó (se queda el de antes).
    */
   setShip(manifest: LoadedShipManifest | null): Promise<boolean>;
+  /**
+   * Botellas en el agua (T22): pinta exactamente éstas, sin tocar el mundo
+   * ni su estado. No colisionan; leerlas lo decide la interfaz.
+   */
+  setBottles(bottles: readonly BottleMarker[]): Promise<void>;
   /** true si el juego adoptó una superficie existente en vez de crear la suya. */
   readonly adoptedSurface: boolean;
   destroy(): void;
@@ -206,6 +220,11 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   worldLayer.addChild(coasts, wakeView.view, objects);
   for (const v of objectViews) objects.addChild(v.view);
   objects.addChild(sprite.view);
+  const bottles = new BottleLayer(objects, {
+    artScale,
+    ...(opts.bottleAsset ? { asset: opts.bottleAsset } : {}),
+    ...(opts.artUrl !== undefined ? { artUrl: opts.artUrl } : {}),
+  });
 
   const touch = new TouchControls();
   const keys = new KeyboardControls(opts.keyboardMode);
@@ -293,6 +312,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     worldLayer.position.set(ox, oy);
     water.update(w, h, cam.x - w / 2, cam.y - h / 2, time);
 
+    bottles.animate(time);
     for (const s of runtime.objectStates()) {
       const v = views.get(s.id);
       if (!v) continue;
@@ -397,6 +417,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
       sprite = next;
       return true;
     },
+    setBottles: (list) => (destroyed ? Promise.resolve() : bottles.set(list)),
     destroy() {
       if (destroyed) return;
       destroyed = true;
