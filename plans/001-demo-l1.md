@@ -1,6 +1,6 @@
 # Plan 001 — Playable demo of BOIA.PLANET (phase 1 + phase 2 foundations)
 
-Status: done
+Status: active
 Created: 2026-09-28
 Base branch: main
 Goal: Reach the first milestone Álvaro can open on his phone: cinematic entry (planet → sea → landing), HTML landing with tickets, and a navigable world with the real ship sprites, a tutorial buoy and one event island by proximity; plus the data layer, auth and the essential Admin so that events, home blocks and the world are data, not code. Scope, stack and every product decision are fixed in docs/DECISIONES.md (D-01…D-18); the consolidated spec is docs/spec/ (REQ-* ids). Nothing here goes beyond Launch 1 (D-02).
@@ -160,6 +160,32 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - Screenshots or a short recording of the flow on desktop and mobile saved in docs/informes/img/ (paths in the final message); ESTADO.md top section says in 3 lines how to open the demo on a computer and on a phone
 - Outcome: end-to-end demo: EXPLORAR hands the live Pixi scene to /juego, «Barco» menu (9 styles, skins, swatches), /artistas with the 26 artists, `pnpm demo` with LAN URL; 302 tests, e2e 42; screenshots p001-t12-*.png → 454c866
 
+## T13 — Intro «mini-mundo»: decision, spec and sphere-filter probe (A/B)
+- Status: pending
+- Depends on: T12
+- Goal: Hernán's proposal docs/propuestas/2026-09-28-intro-mini-mundo.md replaces part of T03. First half: (1) add D-19 to docs/DECISIONES.md in its existing format (author Hernán, 2026-09-28): the five decisions of §4 of the proposal, that it modifies REQ-ENT-001, 002, 003, 006 and 007, that REQ-ENT-004, 005, 008–012 and the lightweight landing stay, and that it still needs Álvaro's approval; (2) rewrite REQ-ENT-001, 002, 003, 006 and 007 in docs/spec/02-entrada-y-landing.md from the wording proposed in §4 (same IDs, same line format, source adds D-19; also fix any other spec line that quotes «BOIA.PLANET» as the intro title or the old four beats); (3) the technique probe of §6/§8: a throwaway-quality but committed prototype of option A (Pixi filter/shader projecting a texture of the real sample world around the landing point onto a sphere, curvature parameter k from 1 to 0 blended with zoom), measured in desktop Chromium and in mobile emulation with 4× CPU slowdown; pick A if it holds ≥ 50 fps on the throttled mobile run, otherwise B (Blender-rendered spin), and write the numbers and the choice in ESTADO.md.
+- Context: docs/propuestas/2026-09-28-intro-mini-mundo.md (whole file, especially §3–§8); docs/DECISIONES.md (D-05, D-08, D-18 format); docs/spec/02-entrada-y-landing.md; tools/spec/check.py (spec consistency check); packages/engine/src/intro/** (T03 timeline, controller, scene); packages/world (SAMPLE_WORLD); apps/web/lib/world-handoff.ts (T12).
+- Scope: may touch ESTADO.md (own top section), docs/DECISIONES.md, docs/spec/02-entrada-y-landing.md (and other docs/spec lines that restate the changed REQ-ENT text), packages/engine/src/intro/** (probe code, clearly named, e.g. `sphere-probe`), apps/web/app/** (only a dev-only probe route or query flag), apps/web/e2e/** (the measurement spec) / must not touch docs/fuente/**, art/**, tools/blender/**, packages/world/**.
+- Done when:
+  - `python3 tools/spec/check.py` → exit 0 (and `python3 tools/spec/test_check.py` → exit 0); `grep -n "D-19" docs/DECISIONES.md` shows the decision with the note that Álvaro's approval is pending
+  - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
+  - The probe measurement (a script or e2e spec, command reported) prints fps for desktop and for mobile 360×640 with 4× CPU throttle; ESTADO.md records both numbers, the chosen option (A or B) and why
+  - A screenshot of the probe's mini-world (k = 1) and of a mid-landing frame (k ≈ 0.5) saved in docs/informes/img/ (paths in the final message)
+- Outcome:
+
+## T14 — Intro «mini-mundo»: three acts with button and continuous landing
+- Status: pending
+- Depends on: T13
+- Goal: Implement §5 and §7 of docs/propuestas/2026-09-28-intro-mini-mundo.md with the option T13 chose: act 0 loading (only if needed, night-blue background with a drawn boia and «Cargando», lightweight landing after loadBudgetMs); act 1 the recognisable mini-world rises, grows and keeps spinning slowly, clouds on a faster layer; act 2 «BOIA» title and an enter button (sample text such as «Zarpar», marked `muestra`), «Solo quiero ver las entradas» visible from the first moment and «Saltar animación» still idempotent, keyboard focus on the button and Enter activates it; act 3 on press the mini-world turns the landing point to camera, zooms in with ease-in/out while curvature flattens (k 1 → 0) into the game's isometric view, no cut, then the landing enters on top and EXPLORAR still hands the live scene to /juego (T12). Every time, size, text and the landing point (world coordinates + framing per viewport width) live in the versioned intro config (REQ-ENT-015), all `muestra`. The auto-advance of act 2 (e.g. 8 s without interaction → lands by itself) is implemented and configurable but DISABLED by default until Hernán confirms it. Seen flag moves to `boia.intro.v2`; `/?intro=1` replays; deep links skip; reduced motion = still mini-world, title and button, short fade on press, no camera movement; engine blocked or assets failing = lightweight landing with working Tickets; no audio; the landing critical path grows by at most ~30 KB gzip over 161.9 KB.
+- Context: docs/propuestas/2026-09-28-intro-mini-mundo.md (§5, §7, §8); D-19 and the updated REQ-ENT-* in docs/spec/02-entrada-y-landing.md (from T13); T13's Outcome and ESTADO section (probe numbers, A/B choice, probe code to build on or replace); packages/engine/src/intro/** (T03 timeline, controller, config), apps/web/app/(landing)/**, apps/web/lib/intro/**, apps/web/lib/world-handoff.ts, apps/web/e2e/**.
+- Scope: may touch ESTADO.md (own top section), packages/engine/src/intro/**, packages/engine/package.json (exports only), apps/web/app/(landing)/**, apps/web/lib/intro/**, apps/web/lib/world-handoff.ts, apps/web/e2e/**; art/** and tools/blender/** only if T13 chose option B / must not touch packages/world/**, apps/web/app/juego/** (except what the handoff strictly needs), docs/spec/**, docs/fuente/**.
+- Done when:
+  - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; new tests: the three-act timeline (the pause never advances without the button; with auto-advance enabled in a test config it lands after the configured time; auto-advance is off in the shipped config; k decreases monotonically from 1 to 0 during act 3; the last frame matches the landing framing); the state machine (button pressed twice, «Saltar» during the pause and during the landing, back, route change and tab hide never duplicate the world or start a game)
+  - `pnpm e2e` → exit 0 on mobile 360×640 and desktop: first visit shows the mini-world, then «BOIA» and the button; «Solo quiero ver las entradas» reaches Tickets without the button; pressing the button ends on the landing over the sea and EXPLORAR still reaches /juego; with `prefers-reduced-motion` no camera movement; with the engine bundle blocked the lightweight landing with Tickets shows; the second visit enters directly; T12's demo spec still passes
+  - `pnpm build` → landing critical path ≤ 192 KB gzip (report the number)
+  - New desktop and mobile recordings and a storyboard in docs/informes/img/ (paths in the final message); ESTADO.md lists what Hernán must check on real phones (P6 of docs/DECISIONES.md)
+- Outcome:
+
 ## T10 — Wire the public app to published data and the ticketing adapter
 - Status: skipped (Hernán: visual demo first; depends on T07)
 - Depends on: T00, T03, T05, T08, T09
@@ -201,6 +227,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T05: joystick zone = bottom 45 % (muestra), HUD never enters it; discovery on entering the proximity radius; tank mode per D-14; English shown disabled (D-03); discoveries in memory only; T11's selector moved into «Mi Barco» because it sat in the joystick zone; small edits outside scope in packages/engine/src/game.ts and package.json (agent)
 - 2026-09-28 T03: hero fills the screen with content at the bottom; seen flag in localStorage boia.intro.v1, replay via /?intro=1 or «Ver la introducción»; lightweight landing if the scene is not ready in 2 s; /api/art cached 1 h in production; T02 landing tests now run as return visits (agent)
 - 2026-09-28 T12: EXPLORAR reuses the entry scene's Pixi app, canvas and sea in /juego (ship sprite recreated); section label «Barco» (id barco) with 9 styles incl. default Toon; notas_render rules applied while the notes exist; TS port of guia_colores constant reader, checked against Python; skin in boia:skin-barco; «Ver todos los artistas» → static /artistas; `pnpm demo` fails clearly if the port is busy; allowedDevOrigins adds 127.0.0.1 (agent)
+- 2026-09-28 T13/T14: Hernán's proposal docs/propuestas/2026-09-28-intro-mini-mundo.md (intro «mini-mundo», title «BOIA», enter button, continuous landing in the sea) replaces part of T03; split into probe+docs (T13) and implementation (T14); act-2 auto-advance implemented but disabled until Hernán confirms (Hernán)
 
 ## Proposals (new scope)
 - 2026-09-28 T12: WebGL handoff untested on iOS Safari and real phones
