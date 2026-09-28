@@ -4,6 +4,44 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T23: minijuegos, Vigilancia del faro y Cañón contra tiburones
+
+Los dos minijuegos de REQ-AVE-035…039 (L1 por D-20) detrás de INICIAR_MINIJUEGO, con ids `faro` y `canon`. Reglas, números, textos y dibujo son `muestra`.
+
+Qué existe:
+- `packages/engine/src/minigames/` (`@boia/engine/minigames`, sin Pixi):
+  - `faro.ts`: escena de noche. El haz sigue al dedo o al puntero, o gira con ←/→ (A/D). La bandera se reconoce tras `identifyS` de luz continua, con un anillo de progreso. Pirata: negra con calavera y huesos. Señuelo: oscura con rayas. Mercante: clara con banda diagonal. Así no depende sólo del color. ALARMA (botón, Espacio o Intro) sobre un pirata lo hace dar media vuelta. Sobre otro barco o sobre el mar vacío cuenta como falsa alarma. Un pirata que cruza se escapa. Fin: `goal` piratas (gana), o tiempo, `maxErrors` falsas alarmas o barcos agotados (pierde). La flota sale de la semilla.
+  - `canon.ts`: se apunta arrastrando (el círculo de caída sigue al dedo y mide lo mismo que la salpicadura), con el puntero o con las flechas. Al soltar, con FUEGO o con Espacio sale una bola en arco, con sombra, que salpica. Los tiburones siguen patrones versionados (`SHARK_PATTERNS[1]`: recto, zigzag, círculo), se sumergen, cambian de rumbo y rebotan. Uno sumergido no se asusta; uno asustado huye entero, sin heridas, y otro ocupa su sitio. Fin: `goal` tiburones (gana), o tiempo o munición (pierde).
+  - `session.ts`: `LocalSessionAuthority`, el «servidor» de la versión de prueba (REQ-AVE-038). La sesión guarda id, juego, versión, semilla, huella de la configuración, inicio y límites. Vive en memoria, así que recargar la invalida. Se liquida una sola vez (`replayed`). Anula la marca por abandono, pestaña oculta, cambio de configuración, otra semilla o versión, o una marca imposible. También si la duración pasa del límite, pasa del reloj real o es menor que el mínimo posible con esa semilla (`minPlausibleMs`: en el faro, la entrada en escena del pirata n-ésimo; en el cañón, vuelo más recargas).
+  - `rewards.ts`: `grantMinigameReward`. Sólo concede con sesión válida y partida ganada. Lo hace con `grantWorldReward({ sourceRef: 'minigame:<id>', policy })` de `@boia/store`, así que la política `once`/`daily`/`season` e ids como `world_reward:minigame:faro@2026-09-29` son los del libro. `record_only` no concede. Los límites `maxPoints`/`maxCoins` acotan el premio. Guarda la marca personal (`boia.minijuegos.marcas`) sólo de partidas válidas. Políticas de muestra: faro diaria (15 puntos y 5 monedas), cañón por temporada (20 puntos y 8 monedas).
+  - `controller.ts` (ciclo sin DOM: instrucciones, juego, pausa, final; paso fijo de 1/60 s; la pausa no cuenta) y `host.ts` (`mountMinigame`: capa a pantalla completa con instrucciones breves, estado en texto, aviso sin destellos, botón de acción grande, pausa, salida y volumen). El teclado no llega al mar. Respeta el movimiento reducido. Ocultar la pestaña pausa la partida y le quita el premio (se ve «sin premio»). También tiene sonido sintetizado y telemetría opcional (`onEvent`).
+  - `skin.ts`: el estilo de cada mundo. `arcilla` en barro con contorno grueso, `acuarela` en aguadas sin contorno; otro mundo usa su mar y su acento.
+  - `testing.ts` (`@boia/engine/minigames/testing`): jugadores automáticos y `playHeadless` para las pruebas.
+- `packages/engine/package.json`: exports `./minigames` y `./minigames/testing`.
+- `apps/web/app/juego/minigame-layer.tsx`, el punto de montaje. Muestra el panel de la isla (evento `minigame` con `available: true`: explica la actividad y abre con «Jugar»; se cierra al alejarse). También abre la ruta de prueba `/juego?minijuego=faro|canon` (se consume al salir) y monta la capa. Premios con `gameRepository().progress` (T22). `game-canvas.tsx` pasa `MINIGAME_REGISTRY` al motor como `runtime.minigames` y monta la capa: unas diez líneas.
+
+Comandos:
+```
+pnpm test --filter minigames      # 25 pruebas del motor (finales de cada juego, sesión, semilla, duración, dibujo)
+pnpm test --filter minigame-layer # 4 pruebas: once/daily/season con el repositorio local tras recargar
+pnpm test && pnpm typecheck && pnpm lint
+E2E_PORT=3123 pnpm e2e minijuegos # 3 specs × móvil y escritorio
+```
+En el navegador: `/juego?minijuego=faro` y `/juego?minijuego=canon`.
+
+Desviaciones:
+- Una alarma sobre el mar vacío cuenta como falsa alarma (REQ-AVE-036 no lo dice). Los escapes no cuentan como error, así que los cuatro finales del faro son alcanzables.
+- Ocultar la pestaña no cierra la partida: la pausa y la deja seguir sin premio (REQ-AVE-038 invalida la marca; REQ-AVE-035 pide pausa).
+- `record_only` guarda la marca en el dispositivo (`KeyValueStore`), no en `@boia/store`: el repositorio no tiene récord de puntuación, sólo de tiempo.
+- La ruta de prueba es un parámetro de `/juego` (`?minijuego=`), no una página aparte, para que salir deje ver el mar de verdad.
+- `apps/web/e2e/minijuegos.spec.ts` está fuera del alcance escrito, pero lo pide «Hecho cuando».
+
+Sin probar:
+- Todavía no hay islas Faro y Cañón en el mapa (las pone T20 con `start_minigame` y `gameId` `faro`/`canon`). El panel de la isla sólo está probado con el evento del motor en pruebas unitarias; en el navegador se ha probado sólo la ruta de prueba.
+- Las skins de Arcilla y Acuarela sólo se han pintado en pruebas con un contexto falso: aún no hay mundos con esos ids en el registro.
+- En un móvil real.
+- Con la máquina cargada (load ~20), `pnpm e2e` con 5 workers da fallos de tiempo intermitentes en `intro.spec.ts` y `juego-hud.spec.ts`, que no tocan los minijuegos. Con `--workers=2` pasan.
+
 ## 2026-09-29 — plan 002 T25: entradas que dan el sello directamente
 
 Compra de prueba sin ticketera (D-20, REQ-COM-035) sobre `@boia/store` (T16), todo en este navegador. Precios, textos y descuentos son `muestra`.

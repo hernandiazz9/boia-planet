@@ -3,6 +3,7 @@
 import { EVENT_STATE_BEHAVIOR } from '@boia/contracts';
 import type { Game, GameStats, WorldEvent } from '@boia/engine';
 import { nearbyBottles } from '@boia/engine/bottles';
+import { MINIGAME_REGISTRY } from '@boia/engine/minigames';
 import {
   DEFAULT_SETTINGS,
   DiscoveryTracker,
@@ -41,10 +42,11 @@ import './juego.css';
 import './carnet/carnet.css';
 import { OnboardMenu } from './menu/onboard-menu';
 import type { MenuContext, ShipMenu, WorldMenu } from './menu/types';
+import { type MinigameOffer, MinigameLayer } from './minigame-layer';
 import { ExpandedMap, Minimap } from './minimap';
 import { discoveryNotice, noticeFromWorldEvent } from './notice-copy';
 import { NoticeToast, useNoticeQueue } from './notices';
-import { useRepoData } from './repo';
+import { gameRepository, useRepoData } from './repo';
 import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
 import { applyAudioSettings, chime, plop } from './sound';
 import { useViewport } from './use-viewport';
@@ -59,6 +61,9 @@ const ticketAvailable = (id: string) => {
   const e = findEvent(id);
   return !!e && EVENT_STATE_BEHAVIOR[e.state].purchasable;
 };
+
+/** Premios de los minijuegos: el libro del repositorio local (T16). */
+const minigameSink = () => gameRepository().progress;
 
 export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,6 +81,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [minimapPulse, setMinimapPulse] = useState(0);
   const [panel, setPanel] = useState<{ objectId: string; eventId: string } | null>(null);
   const [ticketFor, setTicketFor] = useState<string | null>(null);
+  // Isla Faro o Cañón al alcance (INICIAR_MINIJUEGO, T23).
+  const [minigameOffer, setMinigameOffer] = useState<MinigameOffer | null>(null);
   // Compra de prueba abierta desde el panel de la isla (T25).
   const [checkoutFor, setCheckoutFor] = useState<string | null>(null);
 
@@ -178,6 +185,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       case 'ticket':
         setTicketFor(e.eventId);
         break;
+      case 'minigame':
+        if (e.available && e.gameId) setMinigameOffer({ objectId: e.objectId, gameId: e.gameId });
+        break;
+      case 'proximity_exit':
+        setMinigameOffer((m) => (m?.objectId === e.objectId ? null : m));
+        break;
       default:
         break;
     }
@@ -256,7 +269,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         keyboardMode: settingsRef.current.keyboardMode,
         onStats: (s) => handlers.current.onStats(s),
         onWorldEvent: (e) => handlers.current.onWorldEvent(e),
-        runtime: { ticketAvailable },
+        runtime: { ticketAvailable, minigames: MINIGAME_REGISTRY },
         // `?arte=marcadores`: el mismo mundo sin arte, para ver que se comporta igual.
         ...(query.get('arte') === 'marcadores' ? { artUrl: null } : {}),
       });
@@ -535,6 +548,13 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           onClose={() => setPanel(null)}
         />
       )}
+      <MinigameLayer
+        offer={panelEvent || checkoutFor ? null : minigameOffer}
+        onDismiss={() => setMinigameOffer(null)}
+        world={world}
+        settings={settings}
+        sink={minigameSink}
+      />
       {checkoutFor ? (
         <SandboxCheckout
           eventId={checkoutFor}
