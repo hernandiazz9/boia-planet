@@ -7,22 +7,26 @@ Goal: Reach the first milestone Álvaro can open on his phone: cinematic entry (
 Test command: pnpm test
 Worktree setup: pnpm install
 
-> DRAFT written by the orquestador session on 2026-09-28, before round 1 (encargos 01, 02, 03) closed.
-> Before setting `Status: active`: re-check every Context path against the repo, confirm the test
-> command is green on main, and drop or split tasks that round 1 already covered.
+> DRAFT written by the orquestador session on 2026-09-28. Round 1 state when written: encargo 03
+> closed (monorepo, engine, /juego; `pnpm test` 42 passed, exit 0; the engine already loads the real
+> ship sprites from art/barco/manifest.json); encargo 01 closing (Blender pipeline, 56 sprites,
+> 8-style exploration in tools/blender/styles/); encargo 02 (docs/spec/) still running.
+> Before setting `Status: active`: confirm 01 and 02 are committed, re-check every Context path
+> (docs/spec/ file names come from docs/prompts/02-spec-v15-consolidada.md), and run the test command.
 
 ## Tasks
 
-## T01 — Ship sprites in the engine
+## T01 — World art batch v0 from the Blender pipeline
 - Status: pending
 - Depends on: none
-- Goal: Replace the placeholder ship with the 8-direction sprites produced by encargo 01, read through art/barco/manifest.json (skins, idle bob loop, passenger slot, wake origin, pivot). The heading→direction mapping must stay monotonic through N (v14 §49.17).
-- Context: docs/DECISIONES.md (D-05, D-07); docs/spec/03-mundo-y-motor.md; docs/prompts/01-arte-barco-blender.md point 6 (manifest contract); docs/informes/*-01-* and *-03-* (what exists, measured numbers); packages/engine/src/**; art/barco/**.
-- Scope: may touch packages/engine/**, apps/web/app/juego/** / must not touch art/**, tools/**, packages/world/** (except adding optional manifest types), docs/spec/**.
+- Goal: Produce, with the same headless Blender pipeline, camera (30°, D-13) and style parameter as the ship, the first swappable world assets the demo needs: one large event island, one small secondary island, the tutorial buoy (idle loop), two rocks, a coastline set for the left and right world edges, and the intro planet as 2D layers (globe, sea band, clouds, a recognisable island shape for continuity, v14 §4.4). Every resource gets its own manifest (id, version, files, frames, scale, anchors, pivot, footprint/hitbox hint, license `muestra`) per v14 §49.17, validated by the existing check. Style: the current `muestra` style of art/barco, selectable so a later style change is a re-render (tools/blender/styles/).
+- Context: docs/DECISIONES.md (D-05, D-13, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, styles); tools/blender/** (rig.py, ship.py, render.py, check.py, styles/); v14 §4.4, §9, §34, §49.17 in docs/fuente/v14-maestro.md.
+- Scope: may touch tools/blender/**, art/** (new folders only; art/barco/** only if a shared manifest field is added, re-rendered and re-checked) / must not touch apps/**, packages/**, docs/spec/**.
 - Done when:
-  - `pnpm test` → exit 0, no fewer passing tests than main, plus a test that every skin×direction in the manifest resolves to an existing texture and anchors are inside the image bounds
-  - `pnpm typecheck && pnpm lint` → exit 0
-  - `pnpm build` → /juego route bundle ≤ 5 MB gzip (report the number)
+  - `/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/render.py -- --all` → exit 0, twice, outputs byte-identical (report the diff command)
+  - `python3 tools/blender/check.py` → exit 0 and reports every manifest valid (ship plus the new resources, with counts)
+  - `python3 tools/blender/calibrate.py` (or its Blender invocation) → ratio 2.0 ± 0.04
+  - A contact sheet of all new assets over water at game scale saved in docs/informes/img/ (path in the final message)
 - Outcome:
 
 ## T02 — Landing by blocks, tickets panel, analytics
@@ -34,7 +38,7 @@ Worktree setup: pnpm install
 - Done when:
   - `pnpm test` → exit 0; adds tests for the block renderer (hidden blocks render nothing; artist rotation never repeats within a trio)
   - `pnpm build` → landing critical path ≤ 1 MB gzip (report the number)
-  - `pnpm e2e` → exit 0: Playwright opens `/`, sees the CTA and Tickets above the fold at 360×640, opens the tickets panel with JavaScript disabled for the game bundle
+  - `pnpm e2e` (added by this task: Playwright, Chromium, mobile and desktop projects) → exit 0: opens `/`, sees the CTA and Tickets above the fold at 360×640, opens the tickets panel with the game bundle blocked
   - axe-core on `/` → 0 serious or critical violations
 - Outcome:
 
@@ -42,7 +46,7 @@ Worktree setup: pnpm install
 - Status: pending
 - Depends on: T01, T02
 - Goal: The automatic entry of v14 §4.4 and §47-B: planet illustrated in 2D layers, continuous approach, reveal of the isometric sea with islands and the ship, landing content appears over the same scene. No click, no language or login screen. Skip control (idempotent), reduced-motion variant (static scene + short fade), lightweight fallback when assets or the renderer fail, no replay on deep links or return visits. Target ~3 s, measured. Acceptance ENT 01–06 as far as they can be automated; the rest listed for Hernán to check on real phones.
-- Context: docs/DECISIONES.md; docs/spec/02-entrada-y-landing.md (REQ-ENT-*); apps/web/app/**; packages/engine/** (camera and scene handoff); docs/informes/*-T01-* and *-T02-*.
+- Context: docs/DECISIONES.md; docs/spec/02-entrada-y-landing.md (REQ-ENT-*); apps/web/app/**; packages/engine/** (camera and scene handoff); planet layers and islands produced by T01 under art/ (read their manifests); the Outcome lines of T01 and T02.
 - Scope: may touch apps/web/**, packages/engine/src/intro/** (new) / must not touch packages/world/**, art/**, docs/spec/**.
 - Done when:
   - `pnpm test` → exit 0; adds a state-machine test: skip twice, back, route change and tab hide never duplicate the world or start a game
@@ -53,8 +57,8 @@ Worktree setup: pnpm install
 ## T04 — World objects and behavior catalog v1, tutorial buoy, test island
 - Status: pending
 - Depends on: T01
-- Goal: Implement v14 §48 in the engine: a WorldObject is asset + geometry + behaviors from a catalog + params. Catalog v1: collision (block, bounce, brake, slow, boost), proximity, dialogue (speech bubbles, 1.5 s per line, tap to advance or skip, playful reaction when the ship leaves), collectible, reward, content (open an HTML panel), ticket, checkpoint, teleport, spawn, achievement-trigger, decorative, and an empty INICIAR_MINIJUEGO extension point. Sample world: spawn point, tutorial buoy that pulses the menu anchor and minimap placeholders, one event island with a wide proximity radius that opens a sample event panel, a few obstacles.
-- Context: docs/DECISIONES.md; docs/spec/03-mundo-y-motor.md, docs/spec/04-aventura.md (REQ-MUN-*, REQ-AVE-* for §7 and §9), docs/spec/07-admin.md §48.2–48.3; packages/world/**, packages/engine/**.
+- Goal: Implement v14 §48 in the engine: a WorldObject is asset + geometry + behaviors from a catalog + params. Catalog v1: collision (block, bounce, brake, slow, boost), proximity, dialogue (speech bubbles, 1.5 s per line, tap to advance or skip, playful reaction when the ship leaves), collectible, reward, content (open an HTML panel), ticket, checkpoint, teleport, spawn, achievement-trigger, decorative, and an empty INICIAR_MINIJUEGO extension point. Sample world built from the T01 assets: spawn point, tutorial buoy that pulses the menu anchor and minimap placeholders, one event island with a wide proximity radius that opens a sample event panel, rocks as obstacles, coastline at both edges. Also: ship length on screen to ~48 px (D-15), the ship's idle bob loop and the passenger slot from the manifest (passenger hidden until the Fiestera mission).
+- Context: docs/DECISIONES.md (D-12, D-13, D-15, D-16); docs/spec/03-mundo-y-motor.md, docs/spec/04-aventura.md (REQ-MUN-*, REQ-AVE-* for §7 and §9), docs/spec/07-admin.md (§48.2–48.3); docs/informes/2026-09-28-03-monorepo-y-motor-base.md; packages/world/**, packages/engine/**; the art/ manifests from T01.
 - Scope: may touch packages/world/**, packages/engine/**, apps/web/app/juego/** / must not touch apps/web/app/(landing)/**, art/**, docs/spec/**.
 - Done when:
   - `pnpm test` → exit 0; adds tests per behavior (a slow obstacle reduces speed by its param for its duration; proximity fires enter/exit once; dialogue advances at 1.5 s and skips; a collectible grants its reward exactly once per configured policy)
@@ -64,36 +68,36 @@ Worktree setup: pnpm install
 
 ## T05 — Minimap, compass, on-board menu shell, settings, notification queue
 - Status: pending
-- Depends on: T04
-- Goal: v14 §10, §19, §20, §14: minimap 96 px on mobile (D-07), tap to expand with island names, 500 ms long-press to drag with snap to safe zones and persisted position, compass to the next undiscovered target; on-board menu with the seven icons of §19 (sections can be stubs), settings with language, music and SFX separately; notification queue (one at a time, 4 s, top, navy/orange, short sound).
-- Context: docs/DECISIONES.md (D-07); docs/spec/03-mundo-y-motor.md, docs/spec/05-identidad-y-comunidad.md (menu, settings, notifications); packages/engine/**, apps/web/app/juego/**.
-- Scope: may touch packages/engine/src/ui/** (new), apps/web/app/juego/** / must not touch packages/world/**, apps/web/app/(landing)/**, docs/spec/**.
+- Depends on: T04, T02
+- Goal: v14 §10, §19, §20, §14: minimap 96 px on mobile (D-07), tap to expand with island names, 500 ms long-press to drag with snap to safe zones and persisted position, compass to the next undiscovered target; on-board menu with the seven icons of §19 (sections can be stubs), settings with language, music and SFX separately, and the keyboard mode of D-14 (screen-direction by default, tank control as an option, persisted); notification queue (one at a time, 4 s, top, navy/orange, short sound).
+- Context: docs/DECISIONES.md (D-07, D-14); docs/spec/03-mundo-y-motor.md, docs/spec/05-identidad-y-comunidad.md (menu, settings, notifications); packages/engine/** (KeyboardControls already exists), apps/web/app/juego/**.
+- Scope: may touch packages/engine/src/ui/** (new), packages/engine/src/input/** (keyboard mode only), apps/web/app/juego/** / must not touch packages/world/**, apps/web/app/(landing)/**, docs/spec/**.
 - Done when:
-  - `pnpm test` → exit 0; adds tests for minimap snap zones, persisted position, and that the notification queue never shows two at once
+  - `pnpm test` → exit 0; adds tests for minimap snap zones, persisted position, the notification queue never showing two at once, and both keyboard modes
   - `pnpm e2e` → exit 0: on a 360×640 viewport the minimap occupies ≤ 22 % of the width and no HUD element overlaps the joystick zone
 - Outcome:
 
 ## T06 — Supabase schema, migrations, RLS
 - Status: pending
 - Depends on: none
-- Goal: The data layer of docs/spec/08-arquitectura-y-datos.md for Launch 1: users and carnets (5 public questions, member-since date), events with the seven states of §49.4 and island separated from event, islands, world objects and versioned world snapshots (draft/published), home blocks, achievements with trigger conditions, points and coins ledger (idempotent transactions with stable ids), bottles, audit log. Local development with the Supabase CLI; migrations cumulative; seed data labeled `muestra`; RLS so that no client can write balances, roles, stamps or purchase states.
-- Context: docs/DECISIONES.md (D-04, D-09, D-10); docs/spec/08-arquitectura-y-datos.md, docs/spec/06-comercial.md (event states table), docs/spec/07-admin.md; skill `supabase` and `supabase-postgres-best-practices` (load them before writing SQL).
-- Scope: may touch supabase/**, packages/db/** (new), package.json scripts / must not touch apps/web/app/**, packages/engine/**, packages/world/**.
+- Goal: The data layer of docs/spec/08-arquitectura-y-datos.md for Launch 1: users and carnets (5 public questions, member-since date), events with the seven states of §49.4 and island separated from event, islands, world objects and versioned world snapshots (draft/published), home blocks, achievements with trigger conditions, points and coins ledger (idempotent transactions with stable ids), bottles, audit log. No Docker on this Mac (D-17): migrations are plain SQL in supabase/migrations/ and are tested against the local Homebrew PostgreSQL 17 (port 5432, database `boia_planet_test`, created and dropped by the test harness) with a Supabase-compatible shim (roles anon/authenticated/service_role, schema auth with auth.uid() reading request.jwt.claims). Migrations cumulative; seed data labeled `muestra`; RLS so that no client can write balances, roles, stamps or purchase states.
+- Context: docs/DECISIONES.md (D-04, D-09, D-10, D-17); docs/spec/08-arquitectura-y-datos.md, docs/spec/06-comercial.md (event states table), docs/spec/07-admin.md; skills `supabase` and `supabase-postgres-best-practices` (load them before writing SQL).
+- Scope: may touch supabase/**, packages/db/** (new), root package.json (scripts only) / must not touch apps/web/app/**, packages/engine/**, packages/world/**. Never touch other databases on the local server.
 - Done when:
-  - `supabase start && supabase db reset` → exit 0 from an empty database and again on top of seeded data (no destructive reset)
+  - `pnpm db:test` (added by this task) → exit 0: applies every migration to an empty `boia_planet_test`, then re-applies the new ones on top of seeded data without a destructive reset
   - `pnpm test --filter db` → exit 0: RLS tests prove an anonymous or member role cannot insert into ledger, stamps, roles or event state; a second identical reward transaction id is rejected
   - `pnpm typecheck` → exit 0 with generated types committed
 - Outcome:
 
 ## T07 — Public auth (OTP + magic link), guest session, idempotent merge
 - Status: pending
-- Depends on: T06
+- Depends on: T06, T02
 - Goal: D-10: sign in by email with a 6-digit code and a magic link in the same mail; guest identity stored locally with a server-side anonymous id; on sign-in, merge guest progress by ids (union of discoveries, rewards synced once per id, never importing local balances as truth); return to the same panel after verification; "Continuar sin registrarme" always available.
-- Context: docs/DECISIONES.md (D-09, D-10); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-* for §49.10), docs/spec/08-arquitectura-y-datos.md; supabase/**, packages/db/**, apps/web/**.
+- Context: docs/DECISIONES.md (D-09, D-10, D-17); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-* for §49.10), docs/spec/08-arquitectura-y-datos.md; supabase/**, packages/db/**, apps/web/**. Auth runs against the cloud dev project `boia-planet-dev` (D-17): if `.env.local` has no Supabase URL and keys, stop with STATUS: blocked and ask Hernán to create the project and load the keys with the `pedir-token` skill; never create accounts or paste secrets.
 - Scope: may touch apps/web/app/(auth)/** (new), apps/web/lib/auth/** (new), packages/db/**, supabase/** (new migrations only) / must not touch packages/engine/**, apps/web/app/juego/**.
 - Done when:
   - `pnpm test` → exit 0; adds tests: merging the same guest twice grants each reward once; a tampered local balance is ignored; OTP and link both create the same session
-  - `pnpm e2e` → exit 0 against local Supabase (Inbucket): request code, sign in, land on the originating panel
+  - `pnpm e2e` → exit 0 against the dev project: request a code, read it through the Supabase admin API in the test (service key from .env.local, never logged), sign in, land on the originating panel
 - Outcome:
 
 ## T08 — Admin base: login with TOTP, roles, audit, events and home blocks
@@ -133,6 +137,8 @@ Worktree setup: pnpm install
 
 ## Decisions
 - 2026-09-28 draft: task order inverts the v14 prompts (world and entry before Admin); see docs/PLAN.md and docs/DECISIONES.md D-02 (orquestador)
+- 2026-09-28 draft: the original T01 (ship sprites in the engine) was dropped because encargo 03 already loads the real sprites; T01 is now the world art batch (orquestador)
+- 2026-09-28 draft: keyboard with both modes (D-14) and smaller ship (D-15) (Hernán); local Postgres without Docker plus a cloud dev project for auth (D-17) (orquestador)
 
 ## Proposals (new scope)
 

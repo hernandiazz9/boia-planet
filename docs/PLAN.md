@@ -32,7 +32,7 @@ evento objetivo dependen de Álvaro (P2, P3).
 
 ## Decisiones del orquestador
 
-Las de fondo están en `docs/DECISIONES.md` (D-01 a D-12), con fecha. Aquí sólo
+Las de fondo están en `docs/DECISIONES.md` (D-01 a D-17), con fecha. Aquí sólo
 las de mecánica del método:
 
 - 2026-09-28 · **A partir de la ronda 2 el proyecto pasa a la skill
@@ -53,6 +53,15 @@ las de mecánica del método:
   disjuntos (`tools/`+`art/`, `docs/spec/`, `apps/`+`packages/`+raíz). El
   único archivo común es `ESTADO.md`, cubierto por la regla de "sección
   propia o al informe". A partir de R2 vuelve el máximo de dos.
+- 2026-09-28 · Respuestas a las preguntas de los informes 01 y 03: cámara a
+  30° (D-13); el 03 adopta el manifiesto del 01 tal cual (ya lo hace); arte
+  servido desde el repo en L1 (D-16); la velocidad del HUD de depuración
+  sigue siendo respecto al agua; teclado con dos modos (D-14) y barco a
+  ~48 px (D-15) los decidió Hernán y entran en el plan 001 (T05 y T04).
+  Qué estilos van a Álvaro es P8. Evidencia: informes 2026-09-28-01 y -03.
+- 2026-09-28 · Sin Docker: base de datos local en el Postgres 17 de Homebrew
+  y proyecto Supabase de desarrollo en la nube para auth (D-17). El plan 001
+  lo aplica en T06 y T07.
 - 2026-09-28 · Sesiones de trabajo en Opus 5.5 (D-11). Si el 01 muestra que el
   modelado procedural en bpy no alcanza, el siguiente encargo de arte prueba
   image-to-3D, no se sube de modelo.
@@ -67,7 +76,7 @@ Máximo dos sesiones a la vez, sin archivos compartidos. Unos 25 encargos para
 L1, en tres fases con un hito de revisión con Álvaro al cerrar cada una.
 
 ### Fase 0 — validar antes de construir
-- **R1** · [en curso] **01** arte-barco-blender ∥ [en curso] **02** spec-v15-consolidada ∥ [en curso] **03** monorepo-y-motor-base.
+- **R1** · [hecho] **03** monorepo-y-motor-base — b9dd060, b3036f1. `pnpm test` 42/0; /juego a 120 FPS en el Mac; 0,40 MB de 5 MB; ya carga los sprites del 01. ∥ [cerrando] **01** arte-barco-blender — b2d39f9. 56 sprites en 5,3 s, reproducible byte a byte, cubo 1,9998:1 a 30°; exploración de 8 estilos. ∥ [en curso] **02** spec-v15-consolidada.
 - **R2** · [pendiente] stack-y-ticketera-adr — ADR del stack de D-04 con una
   prueba mínima de PixiJS v8 + Next.js, y tabla comparativa de ticketeras
   (Fourvenues, Entradium, Wegow, Eventbrite, DICE): API, webhooks, comisiones,

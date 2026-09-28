@@ -196,6 +196,49 @@ la zona de juego. Acertar a un sprite de 64 px en un móvil es frustrante y §25
 pide feedback inmediato. Se muestra a Álvaro en el hito 1; si lo prefiere
 literal, es un cambio de una condición en el motor.
 
+## D-13 · Cámara a 30° de elevación, no 26,57° · 2026-09-28 · orquestador
+
+Los prompts 01 y 03 decían 26,57°. Es la pendiente de las aristas en pantalla,
+no la inclinación de la cámara: con 26,57° el cubo unidad mide 2,236:1. Con
+30° mide 1,9998:1 (calibración del 01) y el motor lo reproduce (informe del 03).
+Vale 30° en Blender, en `packages/world` y en todo asset futuro.
+
+## D-14 · Teclado con los dos modos · 2026-09-28 · Hernán
+
+Por defecto, dirección de pantalla (flecha arriba lleva el barco hacia arriba,
+igual que el joystick). En Controles se puede cambiar a control de tanque
+(arriba acelera, izquierda y derecha giran). La preferencia se guarda.
+
+## D-15 · Barco más pequeño · 2026-09-28 · Hernán
+
+El barco pasa de ~64 px a ~48 px de eslora en pantalla (`SHIP_LENGTH` al 75 %)
+para ver más mar. Sigue siendo `muestra`; se revisa en el hito 1 con islas
+alrededor.
+
+## D-16 · Arte de L1 servido desde el repo · 2026-09-28 · orquestador
+
+Hasta que exista la biblioteca de assets del editor, la web sirve `art/`
+directamente (el 03 ya lo hace con la ruta `/api/art/...`). Supabase Storage
+entra con el editor de mundo, que es donde Admin sube assets. Motivo: la demo
+no necesita servicios y el pipeline de Blender escribe en `art/`.
+
+## D-17 · Base de datos sin Docker · 2026-09-28 · orquestador
+
+En el Mac no hay Docker ni Supabase CLI; sí hay PostgreSQL 17 de Homebrew
+corriendo en el puerto 5432, y Hernán ya usa Supabase en la nube para otros
+proyectos. Por tanto:
+- Esquema, migraciones y pruebas de RLS se ejecutan contra el Postgres local,
+  en una base `boia_planet_test`, con un shim compatible con Supabase (roles
+  `anon`, `authenticated`, `service_role`; esquema `auth` con `auth.uid()`
+  leyendo `request.jwt.claims`). Las migraciones son SQL plano en
+  `supabase/migrations/`, aplicables tal cual a un proyecto real.
+- Auth, Storage y Edge Functions se prueban contra un proyecto Supabase en la
+  nube de desarrollo, `boia-planet-dev`, que crea Hernán. Sus claves entran
+  en `.env.local` con la skill `pedir-token`. Si el plan gratuito ya tiene dos
+  proyectos activos, Hernán decide si pausa uno o paga.
+- Si más adelante se instala OrbStack, se puede pasar a `supabase start` sin
+  cambiar las migraciones.
+
 ## Preguntas abiertas
 
 | # | Pregunta | Para | Traba |
@@ -205,3 +248,5 @@ literal, es un cambio de una condición en el motor.
 | P4 | ¿Aprueba el corte L1/L2 de D-02 y español solo (D-03)? | Álvaro | nada hasta fase 3; conviene cerrarlo en el hito 1 |
 | P5 | ~~Referencia del barco~~ Cerrada 2026-09-28 por Hernán: no hay; el 01 va con propuesta procedural y Álvaro opina sobre el visor. | — | — |
 | P6 | ¿Quién tiene el iPhone y el Android de prueba? | Hernán | fase 1, entrada cinemática |
+| P7 | Crear el proyecto Supabase `boia-planet-dev` y pasar sus claves con `pedir-token` | Hernán | tarea de auth (T07 del plan 001) en adelante |
+| P8 | ¿Qué estilos de la exploración del 01 (`docs/informes/img/01-estilo-*.png`) pasan a Álvaro? | Hernán | el estilo definitivo; los assets se re-renderizan barato |
