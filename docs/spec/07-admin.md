@@ -1,6 +1,6 @@
 # 07 · Admin
 
-Fuente: v14 §23, §48.4 a §48.8, §49.1, §49.2, §49.13, §49.15 y las secciones del Admin de los Prompts 1 a 3; D-02 y D-10. El contenido cambiante es dato, no código (§23): una fiesta nueva se configura desde el Admin. El Admin no es una herramienta aparte: usa las mismas entidades, el mismo esquema de mundo y las mismas validaciones que la web y el motor (P3).
+Fuente: v14 §23, §48.4 a §48.8, §49.1, §49.2, §49.13, §49.15 y las secciones del Admin de los Prompts 1 a 3; D-02, D-10 y D-20. El contenido cambiante es dato, no código (§23): una fiesta nueva se configura desde el Admin. El Admin no es una herramienta aparte: usa las mismas entidades, el mismo esquema de mundo y las mismas validaciones que la web y el motor (P3).
 
 - **REQ-ADM-001** `L1` — Tratar como datos, nunca como código, el evento prioritario, carteles, URL de tickets, diálogos, spawn y demás contenido cambiante. *Fuente: §23, §24, §30*
 
@@ -13,6 +13,7 @@ Fuente: v14 §23, §48.4 a §48.8, §49.1, §49.2, §49.13, §49.15 y las seccio
 - **REQ-ADM-006** `L1` — Aplicar los permisos en rutas, servicios y base de datos, de modo que ningún miembro se eleve a administrador manipulando una petición. *Fuente: P2, D-04*
 - **REQ-ADM-007** `L1` — Auditar login administrativo, cambios de rol, publicaciones, correcciones de progreso, acciones masivas, moderación, promociones, compras, sellos e integraciones. *Fuente: P1, P2*
 - **REQ-ADM-008** `L1` — Ofrecer en L1 las secciones Página principal, Eventos, Mundo, Artistas, Fotos y vídeos, Logros y cosméticos (con precios de cosméticos y umbrales de rango), Moderación, Textos y música, Temporadas (sólo la activa), Usuarios de administración e Integraciones, y dejar para L2 Resumen, Tienda, Promociones y QR, Perfiles y Carnets, Encuestas, Mensajes y Revisión [provisional]. *Fuente: P2, D-02*
+- **REQ-ADM-039** `L1` — En la versión de prueba, abrir el Admin con un botón «Probar admin» en el pie de la landing y en el menú, sin login, con un aviso permanente de que es una demo y de que los cambios se quedan en este navegador; cada cambio pasa por el repositorio local (REQ-ARQ-025), queda en una auditoría local y se puede volver a los datos de muestra. Es una excepción temporal a REQ-ADM-002 a REQ-ADM-004 que no se publica (REQ-PRO-020). *Fuente: D-20*
 
 ## Editor del mundo
 
@@ -59,7 +60,7 @@ Publicar un logro nuevo para todos desde su publicación es L1; evaluar hechos a
 
 ## Temporadas
 
-- **REQ-ADM-032** `L1` — Mantener una única temporada activa, con ID y versión, que agrupa el mundo publicado, el spawn, el destino de la misión y el ranking de temporada; crear otra temporada es duplicarla (REQ-ADM-033) [provisional]. *Fuente: §21, §23.4, §49.7, P1, D-02*
+- **REQ-ADM-032** `L1` — Tratar cada mundo como una temporada (D-20) y mantener un único mundo activo, con ID y versión, que agrupa las skins publicadas sobre el mapa compartido, el spawn y el puerto, el destino de la misión y el ranking de temporada; el mundo activo es el que ve por defecto quien llega, el visitante puede cambiar de mundo desde el menú (REQ-MUN-037) y crear otra temporada es duplicarla (REQ-ADM-033). *Fuente: §21, §23.4, §49.7, P1, D-02, D-20*
 - **REQ-ADM-033** `L2` — Duplicar una temporada como borrador sin cuentas, ventas, mensajes ni recompensas; cambiar spawn, evento prioritario, destinos, eventos, diálogos y logros; probarla, publicarla y restaurarla. *Fuente: §23.4, P2, D-02*
 
 Qué se conserva entre temporadas está en REQ-ARQ-008.

@@ -1,6 +1,6 @@
 # 03 · Mundo y motor
 
-Fuente: v14 §6, §10, §24, §34, §35, §48 (48.1 a 48.3, 48.6, 48.9), §49.7, §49.14, §49.16, §49.17, MAP 01 y ART 01; D-04, D-05 y D-12. El editor que coloca estos objetos está en [07-admin](07-admin.md); los encuentros concretos (boies, Fiestera, circuito), en [04-aventura](04-aventura.md).
+Fuente: v14 §6, §10, §24, §34, §35, §48 (48.1 a 48.3, 48.6, 48.9), §49.7, §49.14, §49.16, §49.17, MAP 01 y ART 01; D-04, D-05, D-12 y D-20. El editor que coloca estos objetos está en [07-admin](07-admin.md); los encuentros concretos (boies, Fiestera, circuito), en [04-aventura](04-aventura.md).
 
 ## Dirección visual y técnica
 
@@ -31,9 +31,9 @@ Antes de construir bastan las reglas; el mapa de lanzamiento se diseña, se nave
 - **REQ-MUN-015** `L1` — Ordenar la navegación desde la zona inicial hacia las islas principales de eventos, intercalando islas secundarias, personajes, eventos y actividades, sin agrupar las actividades en una esquina ni poner todas las islas comerciales seguidas. *Fuente: §49.16*
 - **REQ-MUN-016** `L1` — Entregar un plano con ruta principal, desvíos opcionales y circuito diferenciados, y comprobar que las actividades opcionales se pueden rodear, que la salida del circuito lleva al destino configurado y que el mapa se amplía sin cambiar misiones existentes. *Fuente: §49.16 · alias MAP 01*
 - **REQ-MUN-017** `L1` — Ajustar velocidad, distancias y señales hacia dos objetivos medidos con el barco base en móvil: 1 minuto de navegación directa al destino principal y 10 minutos para explorar el mapa inicial y sus sorpresas principales, sin contar carga, lectura, compra ni actividades largas. *Fuente: §49.7, P3*
-- **REQ-MUN-018** `L1` — Documentar el boceto del mapa de lanzamiento: inicio, islas principales, destino de la Boia Fiestera, circuito y atajo, costas, Fotos, Tienda, zonas de sorpresas, orden narrativo, evento prioritario provisional y relación de cada isla con sus eventos. *Fuente: §49.14, P3*
+- **REQ-MUN-018** `L1` — Documentar el boceto del mapa de lanzamiento, que es el mapa compartido por todos los mundos (REQ-MUN-035): puerto de salida, islas principales, destino de la Boia Fiestera, circuito y atajo, islas de Faro y Cañón, costas, Fotos, Tienda, zonas de sorpresas, orden narrativo, evento prioritario provisional y relación de cada isla con sus eventos. *Fuente: §49.14, P3, D-20*
 
-Los objetivos de tiempo son objetivos, no resultados garantizados; los logros de 20 minutos siguen siendo retos opcionales de retorno (§49.7). Faro y Cañón, que la v14 sitúa en este mapa, son L2 (D-02, D-08).
+Los objetivos de tiempo son objetivos, no resultados garantizados; los logros de 20 minutos siguen siendo retos opcionales de retorno (§49.7). Faro y Cañón, que la v14 sitúa en este mapa y D-02 dejaba en L2, vuelven con D-20 como islas opcionales que se pueden rodear.
 
 ## Minimapa y brújula
 
@@ -68,7 +68,7 @@ Ejemplos de §48.5: cocodrilo con colisión que ralentiza un 60 % durante 2 s; t
 - **REQ-MUN-023** `L1` — Modelar todo objeto del mundo, islas incluidas, como asset + geometría + comportamientos del catálogo + parámetros, sin lógica ligada a un asset ni a una isla concreta. *Fuente: §9, §24, §48.1, §48.9*
 - **REQ-MUN-024** `L1` — Describir cada objeto con las 9 partes de §48.2: identidad, apariencia, posición, geometría, comportamientos, parámetros, contenido, estado y recompensa o trigger. *Fuente: §48.2*
 - **REQ-MUN-025** `L1` — Implementar los 12 módulos de la tabla, cada uno con un esquema de parámetros compartido por motor y editor. *Fuente: §48.3, P2, D-02*
-- **REQ-MUN-026** `L1` — Registrar INICIAR_MINIJUEGO en el catálogo como punto de extensión sin ningún juego activo. *Fuente: §48.6, §49.11, D-08*
+- **REQ-MUN-026** `L1` — Registrar INICIAR_MINIJUEGO en el catálogo como punto de extensión que arranca un minijuego por su ID, con `faro` y `canon` como los dos primeros (REQ-AVE-035 a REQ-AVE-037). *Fuente: §48.6, §49.11, D-08, D-20*
 - **REQ-MUN-027** `L1` — Programar cada mecánica nueva una sola vez como módulo reutilizable que aparece en la biblioteca del Admin; el Admin combina sólo los comportamientos que el motor ya conoce. *Fuente: §48.6*
 
 ## Barco, skins y sprites
@@ -84,3 +84,11 @@ El barco es el riesgo número uno del arte (D-05). Es modular: cambiar la bander
 - **REQ-MUN-034** `L1` — Aceptar sólo los formatos del contrato de assets: SVG o PNG para logo e iconos, sprites o atlas para barco y personajes, WebP o PNG por capas para islas, WebP o JPG para fotos y carteles, y audio web para efectos (plop, ping, boost, choque, logro) y música con derechos. *Fuente: §34, §48.8*
 
 Tres skins es el mínimo de arranque, no el límite del catálogo; las skins comparten física, hitbox y reglas competitivas (REQ-IDE-032). El barco mide unos 48 px de eslora en pantalla, valor de muestra que se revisa en el hito 1 (D-15).
+
+## Mundos sobre un mapa compartido
+
+Un mapa, muchos mundos (D-20, exploración de `mundos/`). Los lugares (islas, boies, encuentros, puerto) existen una vez, con su ID, su posición y sus comportamientos; cada mundo los viste con su arte, sus nombres y sus textos, y trae su barco. Un mundo es la forma que toma una temporada (REQ-ADM-032).
+
+- **REQ-MUN-035** `L1` — Describir el mundo como un único mapa compartido de lugares, cada uno con ID estable, posición, geometría, comportamientos y parámetros, más el spawn, el puerto de salida y el punto de aterrizaje de la entrada, y dar a cada mundo una skin por lugar (arte, nombre y textos) junto con su estilo de barco, paleta del mar, acento de la interfaz y música; mover un lugar lo mueve en todos los mundos, una isla nueva se añade una vez y cada mundo deja sus archivos en `art/mundos/<mundo>/<lugar>/`, un mundo sólo oculta un lugar con una marca explícita, y un lugar sin skin se ve como un marcador claro y lo señala la comprobación de mundos. *Fuente: §24, §48.9, D-20*
+- **REQ-MUN-036** `L1` — Dar a cada lugar un nombre común con un nombre propio opcional por mundo; al renombrar, elegir «solo en este mundo» (pone el nombre propio) o «en todos los mundos» (cambia el común y quita los propios); las islas de evento y de tickets empiezan con el mismo nombre en todos los mundos y las demás pueden llevar el nombre de un lugar real de la costa de cada mundo. *Fuente: D-20*
+- **REQ-MUN-037** `L1` — Ofrecer dos mundos, Arcilla (barco B05, el principal) y Acuarela (barco B02), cada uno con sus islas, su historia y su estilo de barco por defecto, y permitir cambiar de mundo desde el menú y como mundo activo del Admin conservando el progreso, que va por ID de lugar y nunca por coordenadas [pendiente Álvaro]. *Fuente: D-20*

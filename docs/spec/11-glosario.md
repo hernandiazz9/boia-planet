@@ -46,8 +46,12 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 - **Objeto del mundo.** Asset + geometría + comportamientos + parámetros, descrito con las 9 partes de §48.2 (REQ-MUN-024).
 - **Comportamiento.** Módulo reutilizable del motor que da función a un objeto: colisión, proximidad, diálogo, recogible, etc. (§48.3; REQ-MUN-025).
 - **Plantilla.** Objeto guardado con comportamientos y parámetros para duplicarlo cambiando imagen, posición o texto (§48.7; REQ-ADM-011).
-- **INICIAR_MINIJUEGO.** Comportamiento de extensión para minijuegos. En L1 existe vacío (D-08; REQ-MUN-026).
-- **Temporada.** Configuración versionada del mundo (islas, spawn, destino de misión, eventos, diálogos, logros). Duplicarla es L2 (§23.4; REQ-ARQ-008).
+- **INICIAR_MINIJUEGO.** Comportamiento de extensión para minijuegos. Arranca `faro` y `canon` por su ID (D-08, D-20; REQ-MUN-026).
+- **Temporada.** Configuración versionada del mundo (islas, spawn, destino de misión, eventos, diálogos, logros). Cada mundo hace de temporada; duplicarla es L2 (§23.4, D-20; REQ-ARQ-008, REQ-ADM-032).
+- **Mapa compartido, lugar.** Lista única de lugares (islas, boies, encuentros, puerto) con ID estable, posición y comportamientos, común a todos los mundos. Mover un lugar lo mueve en todos (D-20; REQ-MUN-035).
+- **Mundo.** Forma que toma el mapa compartido en una temporada: una skin por lugar (arte, nombre y textos), una historia y un estilo de barco. Arcilla (B05) y Acuarela (B02) (D-20; REQ-MUN-037).
+- **Skin de lugar, nombre propio.** Lo que un mundo aporta a un lugar; el nombre propio sustituye al común sólo en ese mundo (D-20; REQ-MUN-036).
+- **Puerto de salida.** Lugar donde empieza el barco al explorar, con la primera boia: El Varadero en Arcilla (D-20; REQ-ENT-012).
 - **Borrador, revisión, publicación.** Guardar crea un borrador; publicar crea una revisión inmutable y la activa de forma atómica; restaurar vuelve a una revisión anterior (P2; REQ-ADM-015).
 - **Spawn.** Punto y orientación donde aparece el barco (§23.1).
 - **Teletransporte contextual.** Salto del barco a una isla al usar Tickets, Fotos o Tienda. No concede rescates ni descubrimientos (§4.3, §49.6; REQ-ENT-039).
@@ -58,7 +62,8 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 
 ## Aventura
 
-- **Primera boia.** Boia tutorial tras el spawn (§7; REQ-AVE-001).
+- **Primera boia.** Boia tutorial tras el spawn, en el puerto de salida (§7, D-20; REQ-AVE-001).
+- **Faro, Cañón.** Islas de los minijuegos Vigilancia del faro y Cañón contra tiburones (§49.11, D-20; REQ-AVE-036, REQ-AVE-037).
 - **Boia Fiestera.** Personaje de la misión principal: se rescata entre cocodrilos y se lleva a la última isla (§8; REQ-AVE-005).
 - **Última isla.** Destino de la misión, fijado por ID de temporada (§49.7; REQ-AVE-010).
 - **Náufrago.** Personaje que pide ser acercado a una fiesta y entrega un descuento (§12; REQ-AVE-020).
@@ -70,7 +75,7 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 ## Web y Admin
 
 - **Landing, home.** Página principal dentro de la escena del mundo (§4.4; REQ-ENT-024).
-- **Entrada, cinemática.** Mini-mundo con «BOIA» y botón para entrar; al pulsarlo, aterrizaje continuo en el mar y landing (§4.4, D-19; REQ-ENT-001).
+- **Entrada, cinemática.** Mini-mundo con «BOIA» en letras 3D y botón para entrar; al pulsarlo, aterrizaje continuo en el mar y landing (§4.4, D-19, D-20; REQ-ENT-001, REQ-ENT-003).
 - **Inicio.** La landing. La sección del menú se llama Welcome Aboard (REQ-ENT-012, REQ-IDE-034).
 - **Menú de a bordo.** Menú de iconos del juego (§19; REQ-IDE-034).
 - **Welcome Aboard.** Sección de ayuda consultable del menú (§19, §46; REQ-IDE-035).
@@ -81,6 +86,7 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 ## Alcance y marcas
 
 - **L1, L2, diferido.** Lanzamiento 1, lanzamiento 2 y sin fecha (D-02).
+- **Versión de prueba.** La versión completa del plan 002 que Hernán despliega para enseñar, sin servicios externos: todo en el navegador, sello por sandbox y «Probar admin». No es la publicación (D-20; REQ-PRO-020).
 - **muestra, pendiente.** Etiquetas del contenido real no aprobado (REQ-PRO-018).
 - **[pendiente Álvaro], [pendiente Hernán].** El REQ necesita un dato o una aprobación de esa persona.
 - **[provisional].** Alcance o resolución a confirmar por el orquestador (ver 00-indice).

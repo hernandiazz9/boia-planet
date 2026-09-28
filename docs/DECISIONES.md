@@ -58,7 +58,8 @@ global de circuito con validación de servidor, encuestas voluntarias, Mensajes
 de BOIA, logros globales retroactivos y concesiones masivas, perfiles oficiales
 reclamables, duplicado de temporadas, check-in por QR, motor de promociones
 (primera compra, pegatina WhatsApp, exclusivos), tienda con checkout propio,
-inglés, exportación y borrado de cuenta desde la web.
+inglés, exportación y borrado de cuenta desde la web. (2026-09-28: D-20
+adelanta Vigilancia del faro y Cañón contra tiburones a L1.)
 
 **Diferido sin fecha (ya lo decía la v14):** fotos personales por evento, mini
 blog, relaciones Bolleros, mensajería privada (nunca), corrientes musicales.
@@ -156,7 +157,8 @@ Valores iniciales, ajustables tras probar en móvil:
 - Tabla de §41 (marca "SIGUIENTE" cosas ya cerradas): no vale; vale §42.5 y §44.5.
 - §49.11 mete Faro y Cañón en el lanzamiento: pasan a L2 por D-02. Lo que sí
   queda en L1 es el módulo `INICIAR_MINIJUEGO` como punto de extensión vacío
-  del catálogo de comportamientos, para no migrar después.
+  del catálogo de comportamientos, para no migrar después. (2026-09-28: D-20
+  devuelve Faro y Cañón a L1, detrás de ese mismo módulo.)
 - Duración de avisos: 4 s (D-07).
 - Cinemática: el copy inicial es "BOIA.PLANET" (§47-B); "Bienvenido a BOIA"
   sólo como variante a probar en copy, nunca como pantalla previa.
@@ -262,7 +264,8 @@ mar sin cortes. Hernán decide:
 
 1. Tras la aparición del mini-mundo hay **un botón para entrar**.
 2. El título de la cinemática es **«BOIA»** (wordmark de BOIA), no
-   «BOIA.PLANET».
+   «BOIA.PLANET». (2026-09-28: D-20 lo cambia a letras 3D renderizadas en
+   Blender.)
 3. **Se aterriza en el mar**, en un punto que es un dato configurable
    (coordenadas del mundo y encuadre por ancho de vista), no código. El punto
    definitivo llega más adelante; mientras tanto vale el encuadre de llegada
@@ -283,6 +286,107 @@ con la prueba de fps de la propuesta (§6, §8), que se anota en `ESTADO.md`.
 Falta el visto bueno de Álvaro: el flujo de entrada es identidad y negocio
 suyos (P9). Hasta que conteste se avanza con esta decisión.
 
+## D-20 · Versión de prueba completa: dos mundos sobre un mapa, todo en el navegador · 2026-09-28 · Hernán · pendiente Álvaro
+
+El plan 002 convierte la demo del plan 001 en una versión de prueba que se
+siente final y que Hernán despliega en Vercel para enseñarla en móviles
+reales. No es la publicación de REQ-PRO-020: no usa servicios externos (ni
+Supabase, ni correo, ni ticketera) y todo su contenido es `muestra`. Hernán
+decide:
+
+1. **Se adelantan de L2 los dos minijuegos, un segundo mundo y las
+   temporadas como mundos.** Vigilancia del faro y Cañón contra tiburones
+   (REQ-AVE-035 a REQ-AVE-039) se construyen detrás de INICIAR_MINIJUEGO,
+   con sus islas Faro y Cañón en el mapa. Hay dos mundos: **Arcilla**
+   (barco B05, el principal) y **Acuarela** (barco B02), cada uno con sus
+   islas, su historia y su estilo de barco, según la exploración «un mapa,
+   muchos mundos» de `mundos/` (`mundos/README.md`,
+   `mundos/arcilla/diseno.md`). Un mundo es la forma que toma una temporada:
+   el Admin elige el mundo activo y el visitante puede cambiar de mundo desde
+   el menú. Corrige D-02 y D-08, que dejaban Faro y Cañón en L2. Siguen en
+   L2 duplicar temporadas como borrador (REQ-ADM-033) y configurar los
+   minijuegos desde el Admin (REQ-ADM-036).
+2. **Todo se guarda en el navegador hasta que exista Supabase.** Progreso,
+   Carnet, botellas y cambios del Admin viven en el navegador del visitante
+   detrás de una interfaz de repositorio con las formas de `packages/db`
+   (T06 del plan 001), que Supabase implementará después sin cambiar a quien
+   la usa. En esta versión la identidad es un invitado con apodo, sin
+   correo; nada se comparte entre visitantes ni entre dispositivos; **cada
+   botella sólo la ve quien la escribe** (más unas botellas `muestra`
+   sembradas para poder leer); los cambios del Admin sólo los ve quien los
+   hace, y las recompensas se validan en local, no en servidor.
+3. **Sin ticketera, «Comprar entrada» da el sello directamente.** Abre un
+   checkout sandbox rotulado claramente como prueba y, al confirmar, añade el
+   sello del evento al Carnet una vez por ID de compra y concede el logro de
+   la entrada. Es una excepción de la versión de prueba a REQ-IDE-021 y
+   REQ-COM-017 (sólo el webhook confirma una compra); el adaptador de D-06 se
+   conserva para que la ticketera real sustituya al sandbox.
+4. **El Admin se abre con un botón «Probar admin»**, en el pie de la landing
+   y en el menú, sin login, con un aviso permanente de que es una demo y de
+   que los cambios se quedan en este navegador. Es una excepción de la
+   versión de prueba a REQ-ADM-002 a REQ-ADM-004 (contraseña, TOTP y roles),
+   que siguen valiendo para la versión final.
+5. **El título «BOIA» de la entrada pasa a letras 3D renderizadas en
+   Blender** que se mueven como el título de messenger.abeto.co: suben una a
+   una, flotan y se balancean por separado, con un giro leve que coge la luz,
+   y se sirven como secuencia de imágenes o sprite sheet. D-05 se mantiene:
+   ningún 3D en el navegador. Corrige el wordmark plano de D-19 (punto 2) y
+   de REQ-ENT-003.
+6. **Tras EXPLORAR, el barco empieza en un puerto.** La cámara se aleja un
+   poco (menos que en las primeras versiones) y muestra el puerto de salida
+   con el barco dentro, El Varadero en Arcilla; allí están los primeros
+   encuentros y desde allí empieza la misión de la Boia Fiestera. El punto de
+   aterrizaje de la entrada (D-19, punto 3) sigue siendo un dato aparte; el
+   puerto y su encuadre son datos de cada mundo.
+7. **Un mapa compartido para todos los mundos.** Un lugar es un punto con ID
+   estable (posición, geometría, comportamientos y parámetros) y cada mundo
+   aporta su skin: arte, nombre y textos. Mover un lugar lo mueve en todos
+   los mundos. Una isla nueva se añade una vez y cada mundo deja sus archivos
+   nombrados por mundo (`art/mundos/<mundo>/<lugar>/`). Los nombres son
+   comunes, con un nombre propio opcional por mundo; al renombrar se elige
+   «solo en este mundo» o «en todos los mundos». Las islas de evento y de
+   tickets empiezan con el mismo nombre en todos los mundos; las demás pueden
+   llevar en cada mundo el nombre de un lugar real de su costa. El progreso
+   va por ID de lugar, nunca por coordenadas, y sobrevive al cambio de mundo.
+
+Modifica REQ-ENT-003, REQ-ENT-012, REQ-MUN-018, REQ-MUN-026, REQ-AVE-001,
+REQ-AVE-010 y REQ-ADM-032, y pasa de L2 a L1 REQ-AVE-035 a REQ-AVE-039:
+todos citan ahora D-20. Añade REQ-MUN-035 a REQ-MUN-037 (mapa compartido y
+mundos) y, sólo para la versión de prueba, REQ-ARQ-025 (repositorio en el
+navegador), REQ-IDE-051 (invitado con apodo y botella propia), REQ-COM-035
+(sello por sandbox) y REQ-ADM-039 («Probar admin»). No cambian los requisitos
+de la versión final que los puntos 2 a 4 aplazan (REQ-ARQ-002, REQ-ARQ-010,
+REQ-IDE-002, REQ-IDE-005, REQ-IDE-006, REQ-IDE-021, REQ-COM-017, REQ-ADM-002
+a REQ-ADM-004): lo propio de la versión de prueba se retira cuando llegan.
+
+**Para la versión final** (no está en la versión de prueba):
+
+- Supabase como backend compartido: botellas, cambios del Admin y progreso
+  compartidos entre visitantes, con las migraciones de T06 aplicadas al
+  proyecto en la nube (P7).
+- Acceso público por código de correo y enlace mágico, con fusión del
+  invitado (plan 001 T07, rama WIP `worktree-agent-a208530713932c80c`; D-10).
+- Login real del Admin con contraseña, TOTP y roles (plan 001 T08).
+- El editor visual del mundo, de arrastrar y soltar (plan 001 T09).
+- Ticketera real (webhook con la forma de Fourvenues y sello al confirmar el
+  pago, D-06) en lugar del sandbox (P2).
+- Proyecto PostHog en la nube UE y su clave (REQ-ARQ-019); sin clave, la
+  analítica queda apagada.
+- Validación en servidor de las recompensas de los minijuegos (REQ-AVE-038).
+- Enlaces reales y textos de Álvaro (P13).
+- El visto bueno de Álvaro a D-19 y D-20, a la entrada y a la dirección de
+  arte (P9 a P12).
+- El avance automático del acto 2 de la entrada (implementado en T14 y
+  apagado).
+- Dominio y cuentas a nombre de BOIA (REQ-PRO-021).
+
+Falta el visto bueno de Álvaro en lo que toca identidad y negocio: adelantar
+los minijuegos y un segundo mundo (P10), los dos mundos con sus historias y
+nombres (P11), las letras 3D y el arranque en el puerto (P12) y enseñar a
+terceros una versión con sello de prueba y Admin abierto (P13). Hasta que
+conteste se avanza con esta decisión. Los puntos 2, 3, 4 y 7 son técnicos o
+temporales y los decide Hernán.
+
 ## Preguntas abiertas
 
 | # | Pregunta | Para | Traba |
@@ -295,3 +399,7 @@ suyos (P9). Hasta que conteste se avanza con esta decisión.
 | P7 | Crear el proyecto Supabase `boia-planet-dev` y pasar sus claves con `pedir-token` | Hernán | tarea de auth (T07 del plan 001) en adelante |
 | P8 | ¿Qué estilos de la exploración del 01 (`docs/informes/img/01-estilo-*.png`) pasan a Álvaro? | Hernán | el estilo definitivo; los assets se re-renderizan barato |
 | P9 | ¿Aprueba la entrada nueva de D-19 (mini-mundo, «BOIA», botón para entrar, aterrizaje en el mar) y qué texto lleva el botón? | Álvaro | cerrar ENT 06 y el copy del botón; se avanza con D-19 mientras tanto |
+| P10 | ¿Aprueba adelantar los minijuegos Faro y Cañón y un segundo mundo (D-20, punto 1), que D-02 dejaba en L2? | Álvaro | que entren en el L1 definitivo; la versión de prueba avanza con D-20 |
+| P11 | ¿Aprueba los dos mundos, Arcilla (B05) y Acuarela (B02), con sus historias y los nombres de sus lugares (`mundos/arcilla/diseno.md` y el de Acuarela cuando exista)? | Álvaro | historias y nombres definitivos; todo es `muestra` |
+| P12 | ¿Aprueba el título «BOIA» en letras 3D y que tras EXPLORAR se empiece en el puerto El Varadero (D-20, puntos 5 y 6)? | Álvaro | cerrar ENT 06 junto con P9 |
+| P13 | ¿Se puede enseñar fuera del equipo la versión de prueba, con sello de prueba y «Probar admin» abierto, y con qué enlaces reales (tickets, tienda, WhatsApp, redes, contacto)? | Álvaro | compartir la URL de Vercel más allá de Hernán y Álvaro |

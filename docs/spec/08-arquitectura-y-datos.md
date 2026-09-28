@@ -1,6 +1,6 @@
 # 08 · Arquitectura y datos
 
-Fuente: v14 §24, §49.13 y los apartados de arquitectura, calidad y entrega de los Prompts 1 a 3; D-03, D-04, D-09 y D-10. El stack de D-04 se confirma o ajusta en un ADR y sólo cambia si una prueba lo contradice.
+Fuente: v14 §24, §49.13 y los apartados de arquitectura, calidad y entrega de los Prompts 1 a 3; D-03, D-04, D-09, D-10 y D-20. El stack de D-04 se confirma o ajusta en un ADR y sólo cambia si una prueba lo contradice.
 
 ## Stack y módulos
 
@@ -9,6 +9,7 @@ La v14 separa MOTOR BOIA (movimiento, cámara, colisiones, proximidad, interacci
 - **REQ-ARQ-001** `L1` — Montar un monorepo pnpm en TypeScript estricto con apps/web (Next.js App Router: landing, tickets, Carnet y Admin como grupo de rutas), packages/engine (PixiJS v8 y motor propio de comportamientos, sin Phaser), packages/world (esquema del mundo en zod) y packages/contracts. *Fuente: P2, D-04*
 - **REQ-ARQ-002** `L1` — Usar Supabase (Postgres con RLS, Auth por email, Storage, Edge Functions para webhooks y validaciones, pg_cron para los estados de evento) y Vercel para apps/web. *Fuente: D-04*
 - **REQ-ARQ-003** `L1` — Separar aplicación pública, Admin, motor, contratos, datos del mundo, reglas, adaptadores e infraestructura; ningún componente de UI escribe saldos, roles, sellos ni estados de compra. *Fuente: §24, P2*
+- **REQ-ARQ-025** `L1` — En la versión de prueba, hasta que exista Supabase, guardar progreso, Carnet, botellas y cambios del Admin en el navegador del visitante detrás de una interfaz de repositorio con las formas de las tablas de L1, versión de esquema y migraciones, que Supabase implementará después sin cambiar a quien la usa; si el almacenamiento está bloqueado o se borra, seguir en memoria y decirlo, y no usar ningún servicio externo. *Fuente: D-20*
 
 Entorno de desarrollo (D-16, D-17): hasta que exista la biblioteca de assets del editor, la web sirve `art/` desde el repositorio y Storage entra con el editor. Esquema, migraciones (SQL plano en `supabase/migrations/`) y pruebas de RLS corren contra el PostgreSQL 17 local con un shim compatible con Supabase; Auth, Storage y Edge Functions se prueban contra un proyecto Supabase de desarrollo en la nube.
 
@@ -34,7 +35,8 @@ Entidades con ID estable y versión (P2). Las de L2 se diseñan sólo si omitirl
 | Auditoría | Autor, fecha, motivo, valor anterior y nuevo | L1 |
 | Encuesta, respuesta y mensaje de BOIA | Versiones, audiencia, lectura | L2 |
 | Promoción, check-in y perfil oficial | Primera compra, WhatsApp, exclusivos, asistencia, reclamación | L2 |
-| Sesión de minijuego | ID, juego, versión, semilla, configuración, límites | L2 |
+| Sesión de minijuego | ID, juego, versión, semilla, configuración, límites | L1 (D-20) |
+| Lugar del mapa compartido y skin de mundo | Lugar con ID estable, posición y comportamientos; por mundo, arte, nombre propio y textos | L1 (D-20) |
 
 - **REQ-ARQ-004** `L1` — Dar ID estable y campo de versión a cada entidad de la tabla, diseñando las de L2 sólo si omitirlas obligaría a migrar datos. *Fuente: P2, D-02*
 - **REQ-ARQ-005** `L1` — Escribir migraciones acumulativas que nunca reinician datos y corren igual desde una base vacía que sobre una con datos. *Fuente: P2*

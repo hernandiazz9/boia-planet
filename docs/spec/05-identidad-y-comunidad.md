@@ -1,6 +1,6 @@
 # 05 · Identidad y comunidad
 
-Fuente: v14 §14 a §17, §19 a §21, §40, §42 a §44, §46, §49.8 a §49.10; D-09 y D-10. Cómo se guardan saldos y transacciones está en [08-arquitectura-y-datos](08-arquitectura-y-datos.md); cómo se administran, en [07-admin](07-admin.md).
+Fuente: v14 §14 a §17, §19 a §21, §40, §42 a §44, §46, §49.8 a §49.10; D-09, D-10 y D-20. Cómo se guardan saldos y transacciones está en [08-arquitectura-y-datos](08-arquitectura-y-datos.md); cómo se administran, en [07-admin](07-admin.md).
 
 ## Invitado y cuenta
 
@@ -94,3 +94,9 @@ Las botellas son la única mecánica social abierta: mensajes breves para quien 
 
 - **REQ-IDE-049** `diferido` — Dejar fuera la capa personal ampliada: hasta 6 fotos personales por evento con visibilidad configurable (como mínimo pública o privada), mini blog y relaciones «Mis bolleros». *Fuente: §40.2, §42.4, §44.2, §44.4, D-02*
 - **REQ-IDE-050** `L2` — Permitir solicitar desde la web la descarga y la eliminación de la cuenta. *Fuente: §49.13, D-02*
+
+## Versión de prueba (D-20)
+
+Hasta que exista Supabase todo se guarda en el navegador (REQ-ARQ-025). Los requisitos de cuenta, fusión, validación en servidor y sello por webhook de este archivo siguen valiendo para la versión final; lo que sigue sólo vale para la versión de prueba y se retira cuando llegan.
+
+- **REQ-IDE-051** `L1` — En la versión de prueba, identificar a cada visitante como invitado con apodo, sin correo, que crea su Carnet, gana logros y sellos y escribe su botella con las reglas de REQ-IDE-040 a REQ-IDE-043; decir en pantalla que todo se guarda en este navegador y que su botella sólo la ve él, sembrar unas botellas `muestra` de otros miembros ficticios para poder leer, y no presentar nada de esto como compartido. *Fuente: D-20*

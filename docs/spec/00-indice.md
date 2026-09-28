@@ -1,6 +1,6 @@
 # 00 · Índice de la especificación v15
 
-**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-17 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
+**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-20 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
 
 ## Cómo se usa
 
@@ -11,9 +11,9 @@ Una sesión de trabajo lee este índice y los archivos que nombre su encargo, no
 | Archivo | Qué contiene | Fuente principal en la v14 |
 |---|---|---|
 | [01-producto-y-flujos](01-producto-y-flujos.md) | Visión, dos caminos, flujos, tipos de evento, reglas UX, cobertura del piloto, contenido de BOIA y publicación | §1–3, §25–28, §30, §33, §39, §45–47, §49.18 |
-| [02-entrada-y-landing](02-entrada-y-landing.md) | Cinemática del mini-mundo (D-19), landing en el mundo, home por bloques, accesos con la isla visible, ENT 01–06 | §4, §47-B, §49.3, §49.6 |
-| [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
-| [04-aventura](04-aventura.md) | Tutorial, Boia Fiestera, islas, mar vivo, náufrago, circuito y minijuegos de L2 | §7–9, §11–13, §47-A, §49.11 |
+| [02-entrada-y-landing](02-entrada-y-landing.md) | Cinemática del mini-mundo (D-19) con «BOIA» en letras 3D (D-20), landing en el mundo, home por bloques, accesos con la isla visible, ENT 01–06 | §4, §47-B, §49.3, §49.6 |
+| [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, mundos sobre un mapa compartido (D-20), MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
+| [04-aventura](04-aventura.md) | Tutorial, Boia Fiestera, islas, mar vivo, náufrago, circuito y minijuegos (adelantados por D-20) | §7–9, §11–13, §47-A, §49.11 |
 | [05-identidad-y-comunidad](05-identidad-y-comunidad.md) | Invitado y cuenta, Carnet, sellos, logros, economía, Mi Barco, menú, ranking, botellas, encuestas y mensajes | §14–17, §19–21, §40, §42–44, §46, §49.8–49.10 |
 | [06-comercial](06-comercial.md) | Eventos y sus 7 estados, ticketera, descuentos y promociones, artistas, filosofía, fotos y tienda | §5, §18, §22, §49.4, §49.12 |
 | [07-admin](07-admin.md) | Acceso y roles, editor del mundo, publicación, logros, Carnets, moderación, borrado, temporadas, criterios de §49.15 | §23, §48.4–48.8, §49.1, §49.2, §49.13, §49.15 |
@@ -58,10 +58,12 @@ El alcance se asignó así:
 1. Lo que D-02 nombra lleva el alcance que D-02 le da.
 2. Lo que D-02 no nombra y la propia v14 aparta o pospone va a `diferido` sin marca, como D-02 hace con lo que «ya lo decía la v14».
 3. Lo que D-02 no nombra y la v14 mete en el lanzamiento lleva `[provisional]`, con el alcance que mejor encaja, y queda como pregunta para el orquestador.
+4. Lo que D-20 adelanta de L2 (los minijuegos, REQ-AVE-035 a REQ-AVE-039) lleva `L1` y D-20 en la fuente, con «Adelantado de L2 (D-20)» en las notas de 09; `check.py` sólo admite L1, L2 y diferido, así que no hay un alcance propio para la versión de prueba.
+5. Lo que sólo vale para la versión de prueba de D-20 (REQ-ARQ-025, REQ-IDE-051, REQ-COM-035 y REQ-ADM-039) lleva `L1`, D-20 como fuente, empieza por «En la versión de prueba» y dice en las notas de 09 qué requisito de la versión final lo retira. Esos requisitos de la versión final no cambian.
 
 Requisitos `[provisional]` por motivo:
 
-- **Alcance que D-02 no nombra:** REQ-ENT-016, REQ-ENT-031, REQ-MUN-005, REQ-AVE-023, REQ-AVE-024, REQ-IDE-008, REQ-IDE-009, REQ-IDE-016, REQ-IDE-023, REQ-COM-032, REQ-COM-033, REQ-ADM-005, REQ-ADM-008, REQ-ADM-020, REQ-ADM-025, REQ-ADM-031, REQ-ADM-032, REQ-ADM-037.
+- **Alcance que D-02 no nombra:** REQ-ENT-016, REQ-ENT-031, REQ-MUN-005, REQ-AVE-023, REQ-AVE-024, REQ-IDE-008, REQ-IDE-009, REQ-IDE-016, REQ-IDE-023, REQ-COM-032, REQ-COM-033, REQ-ADM-005, REQ-ADM-008, REQ-ADM-020, REQ-ADM-025, REQ-ADM-031, REQ-ADM-037. (REQ-ADM-032 salió de esta lista con D-20, que la nombra.)
 - **Contradicción de la v14 que D-08 no cubre:** REQ-AVE-030 (cocodrilo del circuito) y REQ-IDE-034 (qué es «Inicio»).
 
 ## Secciones de la v14 sin requisitos propios
@@ -91,14 +93,14 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | v14 | Esta spec | Razón | REQ |
 |---|---|---|---|
 | §32, §36: lanzamiento con 16 fases, 14 CLAVE | Tres lanzamientos: L1, L2 y diferido | D-02 | todos |
-| §49.11, §36, P3: Faro con Vigilancia del faro y Cañón contra tiburones en el lanzamiento | L2; en L1 sólo el punto de extensión INICIAR_MINIJUEGO | D-02, D-08 | REQ-MUN-026, REQ-AVE-035 a REQ-AVE-039 |
-| §49.14, §49.16: boceto y MAP 01 con Faro y Cañón | En L1, sin ellos; «no son peajes» se comprueba sobre las actividades opcionales de L1 | D-02 | REQ-MUN-016, REQ-MUN-018 |
+| §49.11, §36, P3: Faro con Vigilancia del faro y Cañón contra tiburones en el lanzamiento | D-02 los pasó a L2; D-20 los devuelve a L1 detrás de INICIAR_MINIJUEGO, con validación local en la versión de prueba | D-02, D-08, D-20 | REQ-MUN-026, REQ-AVE-035 a REQ-AVE-039 |
+| §49.14, §49.16: boceto y MAP 01 con Faro y Cañón | Con ellos como islas opcionales (D-20); «no son peajes» se comprueba sobre las actividades opcionales | D-02, D-20 | REQ-MUN-016, REQ-MUN-018 |
 | §13, §49.11 («el circuito sí se implementa completo»): ranking global de tiempos | L2; en L1, récord personal local | D-02, D-09 | REQ-AVE-027, REQ-AVE-034 |
 | §49.8: encuestas voluntarias | L2 | D-02 | REQ-IDE-045, REQ-IDE-046, REQ-ADM-034 |
 | §49.9: Mensajes de BOIA | L2 | D-02 | REQ-IDE-047, REQ-IDE-048, REQ-ADM-035 |
 | §49.1: logros retroactivos y concesiones masivas | L2; publicar un logro para todos sigue en L1 | D-02 | REQ-ADM-021, REQ-ADM-023, REQ-ADM-024 |
 | §49.2, §16.3: perfiles oficiales reclamables y perfil de artista | L2 | D-02 | REQ-ADM-026, REQ-IDE-018 |
-| §23.4: duplicar temporadas | L2; en L1 hay una sola temporada activa | D-02 | REQ-ADM-032, REQ-ADM-033 |
+| §23.4: duplicar temporadas | L2; en L1 hay un solo mundo activo, que hace de temporada (D-20) | D-02, D-20 | REQ-ADM-032, REQ-ADM-033 |
 | §42.2, §49.12: check-in por QR y asistencia | L2 | D-02 | REQ-COM-025 |
 | §49.12: primera compra, pegatina por WhatsApp, exclusivos | L2 | D-02 | REQ-COM-023, REQ-COM-024 |
 | §22, P3: tienda con catálogo y checkout | L2; en L1, enlace externo | D-02 | REQ-COM-033, REQ-COM-034 |
@@ -127,13 +129,16 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | §41: tabla con puntos «SIGUIENTE» | No vale; valen §42.5 y §44.5 | D-08 | — |
 | §4.1, §47-B: «Bienvenido a BOIA» | Sólo variante de copy, nunca pantalla previa | D-08 | REQ-ENT-003 |
 | §4.1, §4.4, §47-B: entrada sin clic con «BOIA.PLANET» | Mini-mundo con «BOIA», botón para entrar y aterrizaje en el mar | D-19 | REQ-ENT-001, REQ-ENT-002, REQ-ENT-003, REQ-ENT-006, REQ-ENT-007 |
+| §4.1, §47-B: título plano de la entrada | «BOIA» en letras 3D renderizadas en Blender, servidas como imágenes | D-05, D-20 | REQ-ENT-003 |
+| §4.3, §7: Explorar lleva al spawn con la primera boia | El spawn está en el puerto de salida; Explorar muestra el puerto de salida de cada mundo, con la primera boia y la salida hacia la Boia Fiestera | D-20 | REQ-ENT-012, REQ-AVE-001 |
+| §23.4, §24: una temporada es una configuración del mundo | Un mapa compartido de lugares y un mundo por temporada, cada uno con sus skins, nombres, historia y barco | D-20 | REQ-MUN-035 a REQ-MUN-037, REQ-ADM-032 |
 | §44.2, §46 frente a §8.1: «tripulación» y «tripulante» | «Tripulación» nunca para usuarios; «tripulante» para la Fiestera | D-08 | REQ-IDE-020, REQ-AVE-006 |
 | P1: la IA selecciona la ticketera | La elige Álvaro con un ADR comparativo | D-06, D-08 | REQ-COM-015 |
 | Introducción, §49.5, §50: conservar el repositorio | Desde cero | D-01 | — |
 | §4.4: reproducir el arranque en blanco de la demo | Sin piloto: se prueba cada contexto de apertura | D-01 | REQ-ENT-018 |
 | P1: proponer una pila técnica | Stack fijado, a confirmar en un ADR | D-04 | REQ-ARQ-001, REQ-ARQ-002 |
 | §34: sprites del barco por IA o ilustrador | Pipeline de Blender sin interfaz, reproducible | D-05 | REQ-MUN-032 |
-| P3: minijuegos validados repitiendo las decisiones del cliente | Sesión, semilla y duración verificadas, en L2 | D-09 | REQ-AVE-038, REQ-ARQ-010 |
+| P3: minijuegos validados repitiendo las decisiones del cliente | Sesión, semilla y duración verificadas; en local en la versión de prueba y en servidor en la versión final | D-09, D-20 | REQ-AVE-038, REQ-ARQ-010 |
 | §11.1: sin antitrampas complejas | Se mantiene, con límites de plausibilidad simples | D-09 | REQ-AVE-016, REQ-ARQ-010 |
 | P1, P2, P3: acceso por enlace de email de un solo uso | Código OTP de 6 dígitos y enlace mágico en el mismo correo | D-10 | REQ-IDE-002 |
 | §49.13: segundo factor | TOTP obligatorio | D-10 | REQ-ADM-002 |
@@ -157,3 +162,15 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | §2.1: Tickets «abre automáticamente la compra» | Abre el panel de entradas; el checkout exige una acción | Lectura conforme a §4.3 y §49.6 | REQ-ENT-034, REQ-ENT-035 |
 | §48.3: recompensa una vez, por sesión o repetible; P3: por temporada | Las cuatro frecuencias | Unión, sin conflicto | REQ-MUN-025 |
 | §10: brújula a lo no explorado; P3: brújula al objetivo seleccionado | Al seleccionado y, si no hay, al siguiente no explorado | Unión, sin conflicto | REQ-MUN-022 |
+
+### Versión de prueba (D-20)
+
+Excepciones temporales de la versión de prueba, sin servicios externos. No se publican (REQ-PRO-020) y se retiran cuando llega lo que aplazan; la lista completa de lo aplazado está en D-20, «Para la versión final».
+
+| Versión final | Versión de prueba | Se retira con | REQ |
+|---|---|---|---|
+| Datos en Supabase, compartidos entre visitantes | Todo en el navegador, detrás de una interfaz de repositorio | Supabase | REQ-ARQ-025 |
+| Cuenta por correo; botellas públicas para todos | Invitado con apodo; cada botella sólo la ve quien la escribe | REQ-IDE-002 | REQ-IDE-051 |
+| Sello sólo por el webhook de la ticketera | Sello al confirmar un checkout sandbox rotulado como prueba | La ticketera real (P2) | REQ-COM-035 |
+| Admin con contraseña, TOTP y roles | «Probar admin» sin login, con aviso de demo | REQ-ADM-002 a REQ-ADM-004 | REQ-ADM-039 |
+| Recompensas de minijuegos validadas en servidor | Validadas en el navegador | Supabase | REQ-AVE-038 |

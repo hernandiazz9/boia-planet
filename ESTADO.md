@@ -4,6 +4,33 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-28 — plan 002 T15: decisión D-20 y spec de la versión de prueba
+
+Sólo documentos. Las decisiones de Hernán del 2026-09-28 quedan como D-20 y la spec las recoge.
+
+Qué existe:
+- `docs/DECISIONES.md`: **D-20** (Hernán, pendiente Álvaro) con sus siete puntos: minijuegos, segundo mundo y temporadas como mundos adelantados de L2; todo en el navegador detrás de un repositorio hasta Supabase (cada botella sólo la ve quien la escribe); sello directo por sandbox; «Probar admin» sin login; «BOIA» en letras 3D de Blender; EXPLORAR muestra el puerto (El Varadero); un mapa compartido con skins y nombres por mundo. Lleva la lista «Para la versión final» y la nota de lo que falta aprobar. Notas fechadas en D-02, D-08 y D-19 que remiten a D-20. Preguntas nuevas para Álvaro: P10 (alcance), P11 (mundos, historias y nombres), P12 (letras 3D y puerto), P13 (enseñar la versión de prueba y enlaces reales).
+- `docs/spec/`:
+  - Cambian REQ-ENT-003 (letras 3D), REQ-ENT-012 (puerto tras Explorar), REQ-MUN-018 (mapa con puerto, Faro y Cañón), REQ-MUN-026 (arranca `faro` y `canon`), REQ-AVE-001 (primera boia en el puerto), REQ-AVE-010 (destino por ID de lugar) y REQ-ADM-032 (mundo activo como temporada; pierde `[provisional]`).
+  - Pasan de L2 a L1 REQ-AVE-035 a REQ-AVE-039 (minijuegos). REQ-AVE-038 dice que en la versión de prueba se valida en el navegador.
+  - Nuevos: REQ-MUN-035 a REQ-MUN-037 (mapa compartido, nombres por mundo, Arcilla y Acuarela) y, sólo para la versión de prueba, REQ-ARQ-025 (repositorio en el navegador), REQ-IDE-051 (invitado con apodo, botella propia), REQ-COM-035 (sello por sandbox) y REQ-ADM-039 («Probar admin»).
+  - `00-indice.md`: reglas 4 y 5 de alcance para D-20, desviaciones nuevas y una tabla «Versión de prueba (D-20)». `08`: entidades de sesión de minijuego y de lugar/skin en L1. `11-glosario.md`: mapa compartido, lugar, mundo, skin de lugar, puerto de salida, Faro y Cañón, versión de prueba.
+
+Comandos:
+```
+python3 tools/spec/check.py        # exit 0; 286 requisitos (antes 279): L1 256 · L2 28 · diferido 2; centinelas 10/10
+python3 tools/spec/test_check.py   # exit 0; 18 pruebas
+grep -n "D-20" docs/DECISIONES.md
+```
+
+Desviaciones:
+- `check.py` sólo admite `L1`, `L2` y `diferido`, así que no hay alcance `L1-demo`: lo adelantado lleva `L1` con D-20 en la fuente y «Adelantado de L2 (D-20)» en las notas de 09. Lo que sólo vale para la versión de prueba lleva `L1`, empieza por «En la versión de prueba» y en las notas de 09 dice qué lo retira.
+- Los requisitos de la versión final que D-20 aplaza (REQ-ARQ-002, REQ-ARQ-010, REQ-IDE-002, REQ-IDE-005, REQ-IDE-006, REQ-IDE-021, REQ-COM-017, REQ-ADM-002 a REQ-ADM-004) no se tocan: las excepciones van en requisitos aparte.
+- Siguen en L2 duplicar temporadas (REQ-ADM-033) y configurar minijuegos desde el Admin (REQ-ADM-036): el plan 002 no los construye.
+
+Sin probar:
+- Nada que ejecutar más allá de las dos comprobaciones de la spec. `mundos/arcilla/diseno.md` todavía dice que Faro y Cañón son L2 (un solar vacío); no está en el alcance de este encargo.
+
 ## 2026-09-28 — plan 002 T16: repositorio local, persistencia en el navegador tras una interfaz sustituible
 
 Una sola capa de datos para toda la demo, sin React: `packages/store` (`@boia/store`). Hoy guarda en el navegador (D-20); Supabase implementará la misma interfaz más adelante. API completa en `packages/store/README.md` y comentada en `src/repository.ts`.
