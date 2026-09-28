@@ -10,3 +10,4 @@ coverage/
 # salidas intermedias de Blender; lo que se entrega va en art/
 tools/blender/out/
 *.blend1
+__pycache__/

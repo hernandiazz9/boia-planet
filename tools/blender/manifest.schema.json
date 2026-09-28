@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "boia-planet/tools/blender/manifest.schema.json",
+  "title": "Manifiesto de un recurso de sprites por direcciones (barco)",
+  "description": "Lo escribe tools/blender/render.py y lo valida tools/blender/check.py. Anclajes en píxeles continuos: (0,0) arriba a la izquierda, y hacia abajo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "status", "license", "generator", "image", "projection", "coordinates",
+               "anchors_doc", "skins", "direction_order", "directions", "animations", "images"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["muestra", "pendiente", "aprobado"]},
+    "license": {"type": "string", "minLength": 1},
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scripts", "sources_sha256", "blender", "engine", "samples", "command"],
+      "properties": {
+        "scripts": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^tools/blender/[a-z_]+\\.py$"}},
+        "sources_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "blender": {"type": "string", "minLength": 1},
+        "engine": {"type": "string", "minLength": 1},
+        "samples": {"type": "integer", "minimum": 1},
+        "command": {"type": "string", "minLength": 1}
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "format", "mode", "transparent_border_px"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "format": {"const": "png"},
+        "mode": {"const": "RGBA"},
+        "transparent_border_px": {"type": "integer", "minimum": 0}
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "camera_elevation_deg", "camera_azimuth_deg", "ortho_scale", "pixels_per_unit", "pivot_px"],
+      "properties": {
+        "type": {"const": "dimetric-2:1"},
+        "camera_elevation_deg": {"type": "number", "minimum": 0, "maximum": 90},
+        "camera_azimuth_deg": {"type": "number", "minimum": 0, "maximum": 360},
+        "ortho_scale": {"type": "number", "minimum": 0},
+        "pixels_per_unit": {"type": "number", "minimum": 0},
+        "pivot_px": {"$ref": "#/$defs/point"}
+      }
+    },
+    "coordinates": {"type": "string", "minLength": 1},
+    "anchors_doc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pivot", "mast_top", "slot_passenger", "wake_origin", "bow"],
+      "properties": {
+        "pivot": {"type": "string"}, "mast_top": {"type": "string"}, "slot_passenger": {"type": "string"},
+        "wake_origin": {"type": "string"}, "bow": {"type": "string"}
+      }
+    },
+    "skins": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/slug"}},
+    "direction_order": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/direction"}},
+    "directions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["S", "SW", "W", "NW", "N", "NE", "E", "SE"],
+      "properties": {
+        "S": {"$ref": "#/$defs/directionInfo"}, "SW": {"$ref": "#/$defs/directionInfo"},
+        "W": {"$ref": "#/$defs/directionInfo"}, "NW": {"$ref": "#/$defs/directionInfo"},
+        "N": {"$ref": "#/$defs/directionInfo"}, "NE": {"$ref": "#/$defs/directionInfo"},
+        "E": {"$ref": "#/$defs/directionInfo"}, "SE": {"$ref": "#/$defs/directionInfo"}
+      }
+    },
+    "animations": {"type": "object", "additionalProperties": {"$ref": "#/$defs/animation"}},
+    "images": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/image"}}
+  },
+  "$defs": {
+    "slug": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "direction": {"enum": ["S", "SW", "W", "NW", "N", "NE", "E", "SE"]},
+    "point": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pivot", "mast_top", "slot_passenger", "wake_origin", "bow"],
+      "properties": {
+        "pivot": {"$ref": "#/$defs/point"}, "mast_top": {"$ref": "#/$defs/point"},
+        "slot_passenger": {"$ref": "#/$defs/point"}, "wake_origin": {"$ref": "#/$defs/point"},
+        "bow": {"$ref": "#/$defs/point"}
+      }
+    },
+    "directionInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["yaw_deg", "bow_screen", "anchors"],
+      "properties": {
+        "yaw_deg": {"type": "number"},
+        "bow_screen": {"$ref": "#/$defs/point"},
+        "anchors": {"$ref": "#/$defs/anchors"}
+      }
+    },
+    "animation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skin", "direction", "frames", "fps", "loop", "passenger"],
+      "properties": {
+        "skin": {"$ref": "#/$defs/slug"},
+        "direction": {"$ref": "#/$defs/direction"},
+        "frames": {"type": "integer", "minimum": 1},
+        "fps": {"type": "number", "minimum": 0},
+        "loop": {"type": "boolean"},
+        "passenger": {"type": "boolean"}
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "skin", "direction", "frame", "passenger"],
+      "properties": {
+        "file": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*/(S|SW|W|NW|N|NE|E|SE)(_p|_[a-z]+_[0-9]+)?\\.png$"},
+        "skin": {"$ref": "#/$defs/slug"},
+        "direction": {"$ref": "#/$defs/direction"},
+        "frame": {"type": "integer", "minimum": 0},
+        "passenger": {"type": "boolean"},
+        "animation": {"$ref": "#/$defs/slug"},
+        "anchors": {"$ref": "#/$defs/anchors"}
+      }
+    }
+  }
+}

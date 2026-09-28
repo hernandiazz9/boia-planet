@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Visor del barco · muestra</title>
+<style>
+  :root { --navy: #12233F; --orange: #F26A1B; }
+  html, body { margin: 0; height: 100%; background: #1d6c97; overflow: hidden;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #fff;
+    -webkit-user-select: none; user-select: none; }
+  canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; touch-action: none; }
+  #hud { position: fixed; top: 0; left: 0; right: 0; padding: calc(10px + env(safe-area-inset-top)) 16px 0;
+    display: flex; flex-direction: column; gap: 4px; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+  #state { font: 700 17px/1.3 system-ui, sans-serif; }
+  #note { font: 13px/1.35 system-ui, sans-serif; opacity: .85; }
+  #help { font: 13px/1.35 system-ui, sans-serif; opacity: .85; }
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); }
+  #bar button { min-height: 44px; min-width: 44px; padding: 0 14px; border: 0; border-radius: 12px;
+    background: rgba(18, 35, 63, .78); color: #fff; font: 600 15px system-ui, sans-serif; cursor: pointer; }
+  #bar button[aria-pressed="true"] { background: var(--orange); }
+  #bar button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  #error { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px;
+    background: var(--navy); font: 16px/1.5 system-ui, sans-serif; text-align: center; }
+  #error code { background: rgba(255,255,255,.12); padding: 2px 6px; border-radius: 6px; }
+  body.clean #bar, body.clean #help { display: none; }
+  @media (hover: none) { #help { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Barco sobre el agua"></canvas>
+<div id="hud">
+  <div id="state">Cargando…</div>
+  <div id="note">Sprites de muestra (encargo 01): el diseño del barco lo aprueba BOIA.</div>
+  <div id="help">← → o arrastrar: girar · 1 2 3: skin · p: pasajera · a: anclajes · b: balanceo · w: estela · r: giro automático</div>
+</div>
+<div id="bar" role="toolbar" aria-label="Controles del visor">
+  <button id="bl" aria-label="Girar a la izquierda">◀</button>
+  <button id="br" aria-label="Girar a la derecha">▶</button>
+  <span id="skins" style="display:contents"></span>
+  <button id="bp" aria-pressed="false">Pasajera</button>
+  <button id="ba" aria-pressed="false">Anclajes</button>
+  <button id="bb" aria-pressed="true">Balanceo</button>
+  <button id="bw" aria-pressed="true">Estela</button>
+  <button id="bauto" aria-pressed="false">Auto</button>
+</div>
+<div id="error"></div>
+<script>
+"use strict";
+const BASE = "../../art/barco/";
+const ANCHOR_COLORS = { pivot: "#ff3b3b", mast_top: "#ffd23f", slot_passenger: "#ff5fd2", wake_origin: "#39e6ff", bow: "#ffffff" };
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const q = new URLSearchParams(location.search);
+const flag = (k, def) => q.has(k) ? q.get(k) !== "0" : def;
+
+let man = null;
+const images = {};
+const st = {
+  dir: 0, skin: 0,
+  passenger: flag("p", false), anchors: flag("a", false), bob: flag("bob", true),
+  wake: flag("wake", true), auto: flag("auto", false),
+};
+if (q.get("ui") === "0") document.body.classList.add("clean");
+
+function fail(html) {
+  const e = document.getElementById("error");
+  e.innerHTML = html;
+  e.style.display = "flex";
+}
+
+function load(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error("no carga " + src));
+    im.src = src;
+  });
+}
+
+async function init() {
+  try {
+    const r = await fetch(BASE + "manifest.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    man = await r.json();
+  } catch (err) {
+    fail("No encuentro <code>art/barco/manifest.json</code>.<br>Serví el visor desde la raíz del repo:<br>" +
+      "<code>python3 -m http.server 8080</code> y abrí <code>http://localhost:8080/tools/viewer/</code>");
+    return;
+  }
+  await Promise.all(man.images.map(async (im) => { images[im.file] = await load(BASE + im.file); }));
+  const d = man.direction_order.indexOf(q.get("dir") || "S");
+  st.dir = d < 0 ? 0 : d;
+  const s = man.skins.indexOf(q.get("skin") || man.skins[0]);
+  st.skin = s < 0 ? 0 : s;
+  const box = document.getElementById("skins");
+  man.skins.forEach((name, i) => {
+    const b = document.createElement("button");
+    b.textContent = (i + 1) + " " + name;
+    b.dataset.skin = i;
+    b.onclick = () => { st.skin = i; sync(); };
+    box.appendChild(b);
+  });
+  sync();
+  requestAnimationFrame(frame);
+}
+
+// --- Estado y controles ------------------------------------------------------
+const dirName = () => man.direction_order[st.dir];
+const skinName = () => man.skins[st.skin];
+function bobActive() {
+  const b = man.animations && man.animations.bob;
+  return !!b && st.bob && skinName() === b.skin && dirName() === b.direction && st.passenger === b.passenger;
+}
+function turn(step) { st.dir = (st.dir + step + 8) % 8; sync(); }
+function sync() {
+  if (!man) return;
+  const bob = man.animations.bob;
+  const parts = [
+    "Dirección " + dirName(), "skin " + skinName(), st.passenger ? "con pasajera" : "sin pasajera",
+  ];
+  if (st.bob && !bobActive()) parts.push("balanceo: sólo " + bob.skin + "/" + bob.direction);
+  document.getElementById("state").textContent = parts.join(" · ");
+  const set = (id, v) => document.getElementById(id).setAttribute("aria-pressed", String(v));
+  set("bp", st.passenger); set("ba", st.anchors); set("bb", st.bob); set("bw", st.wake); set("bauto", st.auto);
+  document.querySelectorAll("#skins button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.skin === st.skin)));
+}
+document.getElementById("bl").onclick = () => turn(-1);
+document.getElementById("br").onclick = () => turn(1);
+document.getElementById("bp").onclick = () => { st.passenger = !st.passenger; sync(); };
+document.getElementById("ba").onclick = () => { st.anchors = !st.anchors; sync(); };
+document.getElementById("bb").onclick = () => { st.bob = !st.bob; sync(); };
+document.getElementById("bw").onclick = () => { st.wake = !st.wake; sync(); };
+document.getElementById("bauto").onclick = () => { st.auto = !st.auto; sync(); };
+addEventListener("keydown", (e) => {
+  if (!man) return;
+  const k = e.key.toLowerCase();
+  if (e.key === "ArrowLeft") turn(-1);
+  else if (e.key === "ArrowRight") turn(1);
+  else if (k >= "1" && k <= "9" && +k <= man.skins.length) { st.skin = +k - 1; sync(); }
+  else if (k === "p") { st.passenger = !st.passenger; sync(); }
+  else if (k === "a") { st.anchors = !st.anchors; sync(); }
+  else if (k === "b") { st.bob = !st.bob; sync(); }
+  else if (k === "w") { st.wake = !st.wake; sync(); }
+  else if (k === "r") { st.auto = !st.auto; sync(); }
+  else return;
+  e.preventDefault();
+});
+// Arrastre horizontal: cada 40 px, una dirección. Derecha = sentido horario.
+let drag = null;
+canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  if (Math.abs(dx) >= 40) { turn(dx > 0 ? 1 : -1); drag.x = e.clientX; }
+});
+const endDrag = () => { drag = null; };
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+
+// --- Dibujo ----------------------------------------------------------------
+let cssW = 0, cssH = 0, dpr = 1;
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  cssW = canvas.clientWidth; cssH = canvas.clientHeight;
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+}
+addEventListener("resize", resize);
+
+function hash(i, j, s) {
+  let h = (i * 374761393 + j * 668265263 + s * 2147483647) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+// Una capa de ondas: trazos cortos repartidos en una rejilla dimétrica que se desplaza.
+function waveLayer(t, L, scale) {
+  const cell = L.cell * scale, cx = cssW / 2, cy = cssH / 2;
+  const ou = (t * L.vu * scale) % cell, ov = (t * L.vv * scale) % cell;
+  const ext = cssH / 2 + cssW / 4 + cell * 2;
+  const n = Math.ceil(ext / cell);
+  ctx.lineCap = "round";
+  ctx.lineWidth = L.width * scale;
+  for (let i = -n; i <= n; i++) {
+    for (let j = -n; j <= n; j++) {
+      const h1 = hash(i, j, L.seed), h2 = hash(j, i, L.seed + 3);
+      const u = i * cell + ou + h1 * cell * 0.8, v = j * cell + ov + h2 * cell * 0.8;
+      const x = cx + (u - v), y = cy + (u + v) / 2;
+      if (x < -60 || x > cssW + 60 || y < -30 || y > cssH + 30) continue;
+      const a = L.alpha * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * L.pulse + h1 * 6.283)));
+      const len = L.len * scale * (0.7 + 0.6 * h2), amp = L.amp * scale;
+      ctx.strokeStyle = "rgba(" + L.rgb + "," + a.toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.moveTo(x - len, y);
+      ctx.quadraticCurveTo(x - len / 2, y - amp, x, y);
+      ctx.quadraticCurveTo(x + len / 2, y + amp, x + len, y);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawWater(t, scale) {
+  const g = ctx.createLinearGradient(0, 0, 0, cssH);
+  g.addColorStop(0, "#2b93c6");
+  g.addColorStop(1, "#1a5f8c");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, cssW, cssH);
+  waveLayer(t, { cell: 72, vu: -9, vv: 4, len: 22, amp: 4, width: 3, rgb: "10,50,90", alpha: 0.22, pulse: 0.7, seed: 7 }, scale);
+  waveLayer(t, { cell: 34, vu: 7, vv: 3, len: 8, amp: 2, width: 1.6, rgb: "255,255,255", alpha: 0.28, pulse: 1.4, seed: 1 }, scale);
+}
+
+// Huella del casco y estela: elipses sobre el agua, en el plano del suelo, a partir de los anclajes.
+function groundBasis(anc) {
+  const sinEl = Math.sin(man.projection.camera_elevation_deg * Math.PI / 180);
+  const ax = (anc.bow[0] - anc.wake_origin[0]) / 2, ay = (anc.bow[1] - anc.wake_origin[1]) / 2;
+  // perpendicular en el suelo, proyectada: (−ay/sinEl, ax·sinEl), normalizada a la misma longitud en el mundo
+  return { ax, ay, bx: -ay / sinEl, by: ax * sinEl };
+}
+function groundEllipse(cx, cy, B, ka, kb, fill) {
+  ctx.save();
+  ctx.transform(B.ax * ka, B.ay * ka, B.bx * kb, B.by * kb, cx, cy);
+  ctx.beginPath();
+  ctx.arc(0, 0, 1, 0, Math.PI * 2);
+  ctx.restore();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function frame(ms) {
+  const t = ms / 1000;
+  if (st.auto) {
+    if (!frame.last || t - frame.last > 0.9) { if (frame.last) turn(1); frame.last = t; }
+  } else frame.last = 0;
+  if (canvas.width !== Math.round(canvas.clientWidth * Math.min(2, devicePixelRatio || 1))) resize();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = man.image.width, H = man.image.height;
+  // El sprite entero (W×H) cabe en el hueco entre el texto de arriba y los botones de abajo.
+  const top = document.getElementById("hud").getBoundingClientRect().bottom + 8;
+  const barEl = document.getElementById("bar");
+  const bottom = (getComputedStyle(barEl).display === "none" ? cssH : barEl.getBoundingClientRect().top) - 8;
+  const scale = Math.max(0.6, Math.min(3, cssW * 0.92 / W, (bottom - top) / H));
+  drawWater(t, Math.max(1, scale));
+
+  const d = dirName();
+  let file = skinName() + "/" + d + (st.passenger ? "_p" : "") + ".png";
+  let anc = man.directions[d].anchors;
+  if (bobActive()) {
+    const bob = man.animations.bob;
+    const k = Math.floor(t * bob.fps) % bob.frames;
+    const im = man.images.find((x) => x.animation === "bob" && x.frame === k);
+    file = im.file; anc = im.anchors;
+  }
+  const piv = man.projection.pivot_px;
+  const ox = cssW / 2;                                // dónde cae el pivote en la pantalla
+  const oy = top + Math.max(0, (bottom - top - H * scale) / 2) + piv[1] * scale;
+  const toScreen = (p) => [ox + (p[0] - piv[0]) * scale, oy + (p[1] - piv[1]) * scale];
+
+  const B = groundBasis(man.directions[d].anchors);
+  const sB = { ax: B.ax * scale, ay: B.ay * scale, bx: B.bx * scale, by: B.by * scale };
+  if (st.wake) {
+    const w = toScreen(man.directions[d].anchors.wake_origin);
+    for (let i = 0; i < 7; i++) {
+      const f = ((t * 0.9 + i / 7) % 1);
+      const dist = 0.25 + f * 2.6;                   // en medias esloras detrás de la popa
+      const cx = w[0] - sB.ax * dist, cy = w[1] - sB.ay * dist;
+      groundEllipse(cx, cy, sB, 0.18 + f * 0.22, 0.18 + f * 0.5, "rgba(255,255,255," + (0.22 * (1 - f)).toFixed(3) + ")");
+    }
+  }
+  const c = toScreen(man.directions[d].anchors.pivot);
+  groundEllipse(c[0], c[1], sB, 1.08, 0.36, "rgba(255,255,255,0.20)");
+
+  const img = images[file];
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(img, ox - piv[0] * scale, oy - piv[1] * scale, W * scale, man.image.height * scale);
+
+  if (st.anchors) {
+    ctx.font = "600 12px system-ui, sans-serif";
+    ctx.textBaseline = "middle";
+    for (const [name, p] of Object.entries(anc)) {
+      const [x, y] = toScreen(p);
+      ctx.fillStyle = ANCHOR_COLORS[name] || "#fff";
+      ctx.strokeStyle = "#12233F";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeText(name, x + 9, y);
+      ctx.fillText(name, x + 9, y);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+resize();
+init();
+</script>
+</body>
+</html>
