@@ -134,7 +134,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T11 — Ship in the 8 exploration styles, selectable in the game
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T00, T01
 - Goal: Turn the 8 style studies in tools/blender/styles/ (01_boceto_lapiz … 08_pixel_art, today exploration only, not feeding art/) into ship sprite sets rendered by the same pipeline and camera (30°, D-13): per style, the `base` skin with the same frames as today's ship (8 directions × with/without passenger, plus the idle bob frames); fiesta/noche stay only in the current style. They live in art/barco/ under a style dimension, with manifest entries validated by check.py and labelled `muestra`. The game lets you switch the ship's style (a small test selector in /juego plus `?estilo=<id>`, persisted locally); the default stays the current style. Purpose: compare the 8 styles with Álvaro in-game.
 - Context: docs/DECISIONES.md (D-13, D-15, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, the 8-style exploration and its sheets docs/informes/img/01-estilo-*.png); tools/blender/** (render.py, ship.py, check.py, styles/); art/barco/manifest.json; the ship sprite loader in packages/engine (encargo 03 serves art/ through /api/art/..., see docs/informes/2026-09-28-03-monorepo-y-motor-base.md); apps/web/app/juego/**; T01's Outcome line (its manifest and style changes). Ship registry docs/barcos/barcos.json (B01–B08 = styles 01–08: `estilo` display name, `aspecto` description, `paleta` refs to script constants, `notas_render` with style×skin limits) and its checker `python3 tools/barcos/guia_colores.py --check`, which must stay at 0 broken refs.
@@ -145,7 +145,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm test` → exit 0; adds tests: every style id in the manifest resolves all 8 directions; an unknown `?estilo=` falls back to the default
   - `pnpm typecheck && pnpm lint` → exit 0
   - A contact sheet of the ship in all 8 styles at game scale over water saved in docs/informes/img/ (path in the final message)
-- Outcome:
+- Outcome: 8 styles × 24 sprites in art/barco/estilos/<id>/ (labels from barcos.json), style_label/style_variants in manifest, /juego selector + ?estilo= persisted in localStorage boia:estilo-barco; sheet docs/informes/img/p001-t11-barco-estilos.png → 2ce57f2
 
 ## T12 — Demo pass: see it working end to end
 - Status: pending
@@ -197,8 +197,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T04: behavior ids in English matching T06 seeds, unknown types rejected; swap test compares traces, not .snap; SAMPLE_WORLD as data in packages/world; ship collision radius 13.5; /juego test flags ?pasajera=1 and ?arte=marcadores; space/enter advance bubbles, escape skips (agent)
 - 2026-09-28: Hernán's other session finished; its docs/barcos and tools/barcos changes committed to main as dd156a7 to unblock integration (Hernán)
 - 2026-09-28: Hernán stopped the watchdog timer; no new watchdogs are started for the rest of this plan (orchestrator)
+- 2026-09-28 T11: style ids are slugs (boceto-lapiz … pixel-art); ?estilo= wins over the saved choice; canonical_order() sorts mesh elements for byte-identical renders; style ships use the default ship's scale so they show 49–57 px (agent)
 
 ## Proposals (new scope)
+- 2026-09-28 T11: the 7 world manifests carry a stale sources_sha256 (PNGs identical); the next committed `render.py --all` refreshes them
 - 2026-09-28 T04: /juego copy lives in the component, not apps/web/lib/i18n; rewards/achievements emitted but not stored or shown; bottom coast drawn by code; drawRock in packages/engine/src/views.ts unused
 - 2026-09-28 T01: coast corners, bottom coast and a separate flag sprite are missing
 - 2026-09-28 T06: tables for discounts, discoveries, cosmetics catalogue, races and the common event location (REQ-COM-010) are not in the schema yet
@@ -222,3 +224,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 20:25 T03 launched · attempt 1 · agent adb4fa92632f4004f
 - 2026-09-28 20:25 T11 launched · attempt 1 · agent a8b7248d022f3bd2d
 - 2026-09-28 20:47 T04 done · branch worktree-agent-a97cca5e60498bba8 → bf8ef99
+- 2026-09-28 20:49 T05 launched · attempt 1 · agent ab0317b3ea5c0aa70
+- 2026-09-28 20:59 T11 done · branch worktree-agent-a8b7248d022f3bd2d (1 conflict round) → 2ce57f2
