@@ -141,7 +141,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T25 — Tickets that grant the stamp directly
-- Status: pending
+- Status: done
 - Depends on: T16, T22
 - Goal: Without a ticketing provider (D-20): «Comprar entrada» on the landing, the tickets panel and event islands opens a sandbox checkout clearly labelled as a test (event, price `muestra`, náufrago discount applied when the visitor has it) and on confirm adds the event's stamp to Mi Carnet once per purchase id, fires the ticket achievement and shows the notice. Keep the ticketing adapter interface of the plan so a real provider replaces the sandbox later. A finished event never shows a buy CTA.
 - Context: docs/spec/06-comercial.md (REQ-COM-*), D-06; packages/store (T16); apps/web/app/(landing)/** (tickets panel from T02), apps/web/app/juego/** (event island panel), Mi Carnet (T22).
@@ -149,12 +149,12 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test` → exit 0; adds tests: a stamp is added once per purchase id even on double confirm; the discount applies only with a valid code; finished events have no CTA
   - `pnpm e2e` → exit 0; a spec buys from the landing and from an island and sees the stamp in Mi Carnet
-- Outcome:
+- Outcome: sandbox checkout from landing and islands (lib/ticketing adapter: start/confirm, real provider plugs in via ticketing()), one stamp per purchase id, best found discount auto-applied, ticket achievement via buy_ticket trigger; repo moved to apps/web/lib/repo.ts; landing 166.5 kB → a450c34
 
 ## T26 — Demo Admin with a «Probar admin» button
 - Status: pending
 - Depends on: T20, T22
-- Goal: The L1 Admin sections (REQ-ADM-008) in a demo mode reachable from a «Probar admin» button (landing footer and menu), no login, a permanent banner saying changes stay in this browser: Página principal (order, show/hide, schedule, priority event, desktop/mobile preview), Eventos (seven states with manual override, event↔island link, an island keeps its memories), Mundo (the shared map: list places, edit position, params and enabled state with a map preview — a position change moves the place in every world, stated in the UI; per world: skin and texts of each place; renaming a place asks «solo en este mundo» or «en todos los mundos»; set spawn, port and intro landing point; validation from T09: islands never block navigation, teleports never land on land, ids exist), Artistas, Fotos y vídeos, Logros y cosméticos, Moderación (bottles and reports), Textos y música, Temporadas (active world), Usuarios de administración and Integraciones as read-only stubs. Every change goes through T16 overrides, is logged in a local audit list and can be reset to sample data. The visual drag-and-drop editor stays for later.
+- Goal: The L1 Admin sections (REQ-ADM-008) in a demo mode reachable from a «Probar admin» button (landing footer and menu), no login, a permanent banner saying changes stay in this browser: Página principal (order, show/hide, schedule, priority event, desktop/mobile preview), Eventos (seven states with manual override, event↔island link, an island keeps its memories), Mundo (the shared map: list places, edit position, params and enabled state with a map preview — a position change moves the place in every world, stated in the UI; per world: skin and texts of each place; renaming a place asks «solo en este mundo» or «en todos los mundos»; set spawn, port and intro landing point; validation from T09: islands never block navigation, teleports never land on land, ids exist), Artistas, Fotos y vídeos, Logros y cosméticos, Moderación (bottles and reports), Textos y música, Temporadas (active world), Usuarios de administración and Integraciones as read-only stubs. Every change goes through T16 overrides, is logged in a local audit list and can be reset to sample data. The landing still reads apps/web/lib/landing SAMPLE_CONTENT (T25 note): make it read events, home blocks, artists and photos from the repository (gameRepository in apps/web/lib/repo.ts) so admin changes show on the landing. The visual drag-and-drop editor stays for later.
 - Context: docs/spec/07-admin.md (REQ-ADM-*), docs/DECISIONES.md D-20; packages/store (T16 overrides and audit); packages/world validation; apps/web/app/(landing) and juego (to see changes live).
 - Scope: may touch ESTADO.md (own top section), apps/web/app/admin/** (new), apps/web/lib/admin/** (new), apps/web/app/(landing)/** (only the button), apps/web/app/juego/** (only the button) / must not touch packages/store/** (API only), packages/engine/**, docs/spec/**.
 - Done when:
@@ -205,8 +205,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T16: one JSON doc in localStorage, schema v1; reward ids `world_reward:<ref>[@day|@season:<world>]`, `achievement:<id>`, `stamp:<purchaseId>`…; daily = Europe/Madrid day, season = active world; sandbox purchase grants stamp, not the ticket achievement (T25); nicknames unique case-insensitive; writing/reporting a bottle needs a Carnet; spring event linked to island `allday` (agent)
 - 2026-09-28 T15: check.py only accepts L1/L2/diferido, so brought-forward items are L1 with D-20 in the source; final-version REQs left intact and test-version exceptions added as separate L1 REQs naming what retires them (agent)
 - 2026-09-29 T22: bottles drawn via Game.setBottles (not setWorld) so dialogues/effects don't restart; sample bottles moved into open sea by a fixed rule; «Compartir» removed per REQ-IDE-051 (deviation from «shareable view» until a server exists) (agent)
+- 2026-09-29 T25: sample prices in lib/ticketing/pricing.ts (events have no price field); discounts never typed, best active found discount applies; checkout loads on click; no-JS link still goes to the sample ticketing URL (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T25: add a price field to events in the store/contracts (today prices live in lib/ticketing/pricing.ts)
 - 2026-09-29 T22: move apps/web/app/juego/repo.ts to apps/web/lib so landing/admin share it; photo upload from device untested
 - 2026-09-28 T15: mundos/arcilla/diseno.md still marks Faro and Cañón as L2 empty lots; update when placing them (T18/T20)
 - 2026-09-28 T17: per-object runtime state (dialogue already seen) should persist across world switches via the store
@@ -224,3 +226,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 23:54 T15 done · branch worktree-agent-a652f8d4e7651fde5 (1 conflict round) → 9aab31b
 - 2026-09-28 23:55 T23 launched · attempt 1 · agent a154f90bd0f0e1afa
 - 2026-09-29 00:25 T22 done · branch worktree-agent-afaff0ae95b07a142 (1 conflict round) → f6adabd
+- 2026-09-29 00:13 T25 launched · attempt 1 · agent a8b91419ffa46292b
+- 2026-09-29 00:41 T25 done · branch worktree-agent-a8b91419ffa46292b → a450c34
