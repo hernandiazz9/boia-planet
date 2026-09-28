@@ -120,20 +120,20 @@ test('Menú de a bordo: siete iconos, separación y modo de teclado guardado', a
     'Welcome Aboard',
     'Mi Carnet',
     'Logros',
-    'Mi Barco',
+    'Barco',
     'Ranking',
     'Controles',
     'Ajustes',
   ]) {
-    await expect(menu.getByRole('tab', { name })).toBeVisible();
+    await expect(menu.getByRole('tab', { name, exact: true })).toBeVisible();
   }
   await expect(menu.locator('.juego-menu-sep')).toHaveCount(1);
   // El título va dentro de la sección.
   await expect(menu.getByRole('heading', { name: 'Welcome Aboard' })).toBeVisible();
 
-  // Mi Barco: el selector de estilos de prueba de T11 vive aquí, fuera del joystick.
-  await menu.getByRole('tab', { name: 'Mi Barco' }).click();
-  await expect(menu.getByTestId('ship-style')).toBeVisible();
+  // Barco: estilos y skins (T12; antes, el selector de prueba de T11), fuera del joystick.
+  await menu.getByRole('tab', { name: 'Barco', exact: true }).click();
+  await expect(menu.getByTestId('barco')).toBeVisible();
 
   // Controles: dirección de pantalla por defecto; se cambia a tanque y se guarda.
   await menu.getByRole('tab', { name: 'Controles' }).click();

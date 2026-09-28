@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @boia/web dev",
+    "demo": "node apps/web/scripts/demo.mjs",
     "build": "pnpm --filter @boia/web build",
     "start": "pnpm --filter @boia/web start",
     "e2e": "pnpm --filter @boia/web e2e",

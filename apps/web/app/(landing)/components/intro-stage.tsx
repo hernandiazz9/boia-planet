@@ -9,9 +9,11 @@ import {
   type IntroOutcome,
 } from '@boia/engine/intro';
 import type { IntroScene } from '@boia/engine/intro/scene';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { IntroDiagnostics } from '../../../lib/intro/bridge';
 import type { IntroData } from '../../../lib/intro/load';
+import { offerWorld } from '../../../lib/world-handoff';
 
 /**
  * Escena del hero y entrada cinemática (v14 §4.4, §47-B). Lo que pinta el
@@ -26,6 +28,7 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
   const titleRef = useRef<HTMLParagraphElement>(null);
   const controllerRef = useRef<IntroController<IntroScene> | null>(null);
   const [overlay, setOverlay] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const host = hostRef.current;
@@ -63,6 +66,7 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       longestFrameMs: 0,
       slowFrames: 0,
       history: [],
+      explored: false,
     };
     window.__boiaIntro = diag;
 
@@ -142,6 +146,12 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       },
       onLanded,
       onChange: sync,
+      // EXPLORAR (REQ-ENT-012): la escena no se destruye; cede canvas, WebGL y
+      // mar al juego, que los recoge en /juego tras una navegación sin recarga.
+      startGame() {
+        const surface = scene?.release();
+        if (surface) offerWorld(surface);
+      },
     });
     controllerRef.current = controller;
 
@@ -206,6 +216,17 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') controller.skip();
     };
+    // EXPLORAR sin recargar: el enlace sigue siendo /juego (sin JS, o con
+    // Cmd/Ctrl para otra pestaña, navega normal y el juego arranca en limpio).
+    const onExplore = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+        return;
+      const link = e.target instanceof Element ? e.target.closest('a.cta-explore') : null;
+      if (!link) return;
+      e.preventDefault();
+      diag.explored = controller.explore();
+      router.push(link.getAttribute('href') ?? '/juego');
+    };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onOrientation);
@@ -213,6 +234,7 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     window.addEventListener('hashchange', interrupt);
     window.addEventListener('pageshow', onPageShow);
     document.addEventListener('keydown', onKey);
+    document.addEventListener('click', onExplore);
     const io =
       typeof IntersectionObserver === 'function'
         ? new IntersectionObserver(([e]) => {
@@ -233,6 +255,7 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       window.removeEventListener('hashchange', interrupt);
       window.removeEventListener('pageshow', onPageShow);
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('click', onExplore);
       io?.disconnect();
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
@@ -251,7 +274,7 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
         }
       }
     };
-  }, [data]);
+  }, [data, router]);
 
   const still = data && (
     <div className="hero__still">

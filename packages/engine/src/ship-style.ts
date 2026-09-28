@@ -1,4 +1,4 @@
-import { parseShipManifest } from '@boia/world';
+import { DIRECTIONS, type ShipManifest, findShipImage, parseShipManifest } from '@boia/world';
 import type { LoadedShipManifest } from './manifest-loader';
 import { shipArtScale } from './world/visual';
 
@@ -15,6 +15,9 @@ import { shipArtScale } from './world/visual';
 
 export const SHIP_STYLE_PARAM = 'estilo';
 export const SHIP_STYLE_STORAGE_KEY = 'boia:estilo-barco';
+/** Skin elegida en este navegador (T12). Si el estilo no la tiene, `base`. */
+export const SHIP_SKIN_STORAGE_KEY = 'boia:skin-barco';
+export const DEFAULT_SHIP_SKIN = 'base';
 
 export interface ShipStyleOption {
   id: string;
@@ -82,10 +85,33 @@ export function resolveShipStyle(index: ShipStyleIndex, requested: string | null
   return (requested !== null && byId(requested)) || byId(index.defaultId) || index.options[0]!;
 }
 
+/** Skins completas del manifiesto (las 8 direcciones sin pasajera), en su orden de aparición. */
+export function shipSkins(manifest: ShipManifest): string[] {
+  const skins = [...new Set(manifest.images.map((i) => i.skin))];
+  return skins.filter((skin) => DIRECTIONS.every((d) => findShipImage(manifest, skin, d, false)));
+}
+
+/** La skin guardada en este navegador, o `null`. */
+export function requestedShipSkin(storage?: Pick<Storage, 'getItem'> | null): string | null {
+  try {
+    return storage?.getItem(SHIP_SKIN_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** La skin a usar: la pedida si el manifiesto la trae; si no, `base`. */
+export function resolveShipSkin(skins: readonly string[], requested: string | null): string {
+  if (requested !== null && skins.includes(requested)) return requested;
+  return skins.includes(DEFAULT_SHIP_SKIN) ? DEFAULT_SHIP_SKIN : (skins[0] ?? DEFAULT_SHIP_SKIN);
+}
+
 export interface LoadedShipStyle {
   loaded: LoadedShipManifest | null;
   style: ShipStyleOption | null;
   index: ShipStyleIndex | null;
+  /** Skin con la que quedó `loaded` (`base` si la pedida no existe en ese estilo). */
+  skin: string;
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -116,14 +142,19 @@ function toLoaded(json: unknown, url: string): LoadedShipManifest | null {
 export async function loadShipStyle(
   rootUrl: string,
   requested: string | null,
+  requestedSkin: string | null = null,
 ): Promise<LoadedShipStyle> {
   const absRoot = new URL(rootUrl, globalThis.location?.href).href;
   const root = await fetchJson(absRoot);
-  if (root === null) return { loaded: null, style: null, index: null };
+  if (root === null) return { loaded: null, style: null, index: null, skin: DEFAULT_SHIP_SKIN };
   const index = readShipStyleIndex(root);
   const style = resolveShipStyle(index, requested);
   const base = toLoaded(root, absRoot);
-  const fallback = () => ({ loaded: base, style: resolveShipStyle(index, null), index });
+  const withSkin = (l: LoadedShipManifest | null) => {
+    const skin = resolveShipSkin(l ? shipSkins(l.manifest) : [], requestedSkin);
+    return { loaded: l ? { ...l, skin } : null, skin };
+  };
+  const fallback = () => ({ ...withSkin(base), style: resolveShipStyle(index, null), index });
   if (style.id === index.defaultId || !base) return fallback();
   const url = new URL(style.manifest, absRoot).href;
   const loaded = toLoaded(await fetchJson(url), url);
@@ -131,5 +162,6 @@ export async function loadShipStyle(
   // Mismo pipeline y misma cámara: todo el arte comparte píxeles por unidad. El motor saca
   // la escala del mundo del manifiesto del barco, así que el estilo de exploración usa la
   // del estilo por defecto: el mundo no cambia de tamaño y el barco se ve a su tamaño modelado.
-  return { loaded: { ...loaded, displayScale: shipArtScale(base.manifest) }, style, index };
+  const scaled = { ...loaded, displayScale: shipArtScale(base.manifest) };
+  return { ...withSkin(scaled), style, index };
 }

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { loadShipCatalog } from '../../lib/barco/load';
 import { GameCanvas } from './game-canvas';
 
 export const metadata: Metadata = { title: 'boia-planet · juego' };
@@ -14,5 +15,6 @@ export const viewport: Viewport = {
 };
 
 export default function JuegoPage() {
-  return <GameCanvas />;
+  // Estilos y skins del barco para la sección «Barco»: se leen de art/ y docs/barcos al construir.
+  return <GameCanvas shipCatalog={loadShipCatalog()} />;
 }

@@ -21,6 +21,8 @@ export interface IntroDiagnostics {
   slowFrames: number;
   /** Fases vistas, en orden. */
   history: string[];
+  /** EXPLORAR arrancó el juego desde esta landing (cediendo la escena si la había). */
+  explored: boolean;
 }
 
 declare global {

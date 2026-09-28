@@ -6,8 +6,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   loadShipStyle,
   readShipStyleIndex,
+  requestedShipSkin,
   requestedShipStyle,
+  resolveShipSkin,
   resolveShipStyle,
+  shipSkins,
 } from './ship-style';
 import { shipArtScale } from './world/visual';
 
@@ -110,5 +113,51 @@ describe('loadShipStyle', () => {
     const r = await loadShipStyle(serveArt(), 'no-existe');
     expect(r.style?.id).toBe(index.defaultId);
     expect(r.loaded?.baseUrl).toBe('http://x/api/art/barco/');
+  });
+});
+
+describe('skins del barco', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const rawSkins = (rel: string) => (readJson(rel) as { skins: string[] }).skins;
+
+  it.each(index.options.map((o) => [o.id, o] as const))(
+    '%s: las skins completas son las que declara su manifiesto',
+    (_id, option) => {
+      const parsed = parseShipManifest(readJson(option.manifest));
+      expect(parsed.ok && shipSkins(parsed.manifest)).toEqual(rawSkins(option.manifest));
+    },
+  );
+
+  it('una skin que el estilo no tiene vuelve a base; una guardada rota no rompe', () => {
+    expect(resolveShipSkin(['base', 'noche'], 'noche')).toBe('noche');
+    expect(resolveShipSkin(['base'], 'noche')).toBe('base');
+    expect(resolveShipSkin(['base'], null)).toBe('base');
+    const broken = {
+      getItem: () => {
+        throw new Error('bloqueado');
+      },
+    };
+    expect(requestedShipSkin(broken)).toBeNull();
+  });
+
+  it('loadShipStyle aplica la skin pedida si el estilo la tiene', async () => {
+    vi.stubGlobal('fetch', async (input: string) => {
+      const rel = new URL(input).pathname.replace('/api/art/barco/', '');
+      try {
+        return new Response(readFileSync(path.join(SHIP_DIR, rel)));
+      } catch {
+        return new Response(null, { status: 404 });
+      }
+    });
+    const url = 'http://x/api/art/barco/manifest.json';
+    const themed = rawSkins('manifest.json').find((s) => s !== 'base')!;
+    const def = await loadShipStyle(url, index.defaultId, themed);
+    expect(def.skin).toBe(themed);
+    expect(def.loaded?.skin).toBe(themed);
+    const other = index.options.find((o) => !rawSkins(o.manifest).includes(themed))!;
+    const r = await loadShipStyle(url, other.id, themed);
+    expect(r.style?.id).toBe(other.id);
+    expect(r.skin).toBe('base');
   });
 });

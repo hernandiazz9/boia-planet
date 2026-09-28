@@ -1,4 +1,5 @@
 import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
+import type { GameSurface } from '../game';
 import { Water } from '../water';
 import { introImageUrls, type ArtImage, type IntroAssets } from './assets';
 import type { IntroConfig } from './config';
@@ -23,6 +24,13 @@ const STAR_COUNT = 42;
 
 export interface IntroScene extends IntroSceneHandle {
   resize(width: number, height: number): void;
+  /**
+   * EXPLORAR (REQ-ENT-012): cede la aplicación, su canvas y el mar vivo al
+   * juego en vez de destruirlos. Quita planeta, estrellas y mundo de la
+   * landing; lo último pintado sigue en pantalla hasta que el juego pinte.
+   * Después, `render` y `destroy` no hacen nada. `null` si ya no hay escena.
+   */
+  release(): GameSurface | null;
 }
 
 export interface CreateIntroSceneOptions {
@@ -235,6 +243,15 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
       ship.position.set(config.ship.x, config.ship.y + bob / zoom);
 
       app.render();
+    },
+
+    release() {
+      if (destroyed) return null;
+      destroyed = true;
+      app.stage.removeChild(water.view);
+      for (const c of app.stage.removeChildren()) c.destroy({ children: true });
+      delete canvas.dataset.scene;
+      return { app, water };
     },
 
     destroy() {

@@ -49,6 +49,19 @@ export interface GameOptions {
   onStats?: (s: GameStats) => void;
   /** Modo del teclado (D-14); por defecto, dirección de pantalla. */
   keyboardMode?: KeyboardMode;
+  /**
+   * Superficie ya creada que el juego adopta en vez de crear otra: la de la
+   * entrada al pulsar EXPLORAR (REQ-ENT-012). El mismo canvas, el mismo
+   * contexto WebGL y el mismo mar siguen en pantalla; el juego vacía el
+   * escenario y pinta su mundo encima. `canvas` debe ser `surface.app.canvas`.
+   */
+  surface?: GameSurface | null;
+}
+
+/** Aplicación Pixi viva (y su mar) que otra escena cede al juego. */
+export interface GameSurface {
+  app: Application;
+  water?: Water;
 }
 
 export interface GameStats {
@@ -77,8 +90,19 @@ export interface Game {
   setPassenger(on: boolean): void;
   /** Cambia el modo del teclado en caliente (D-14). */
   setKeyboardMode(mode: KeyboardMode): void;
+  /**
+   * Cambia el aspecto del barco en caliente (estilo o skin): mismo barco en
+   * el agua, misma posición, rumbo y pasajera. `null` pone el provisional.
+   * Resuelve `true` si quedó el pedido y `false` si no cargó (se queda el de antes).
+   */
+  setShip(manifest: LoadedShipManifest | null): Promise<boolean>;
+  /** true si el juego adoptó una superficie existente en vez de crear la suya. */
+  readonly adoptedSurface: boolean;
   destroy(): void;
 }
+
+/** Color del mar bajo el agua animada (el mismo que el fondo de /juego). */
+const SEA_COLOR = 0x0f5f7d;
 
 /** px de tierra que la cámara deja ver bajo el borde inferior del mundo. muestra */
 const BOTTOM_LAND_PX = 56;
@@ -98,20 +122,33 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     heading: -Math.PI / 2,
   };
 
-  const app = new Application();
-  await app.init({
-    canvas,
-    resizeTo: canvas.parentElement ?? window,
-    antialias: true,
-    autoDensity: true,
-    resolution: Math.min(window.devicePixelRatio || 1, 2),
-    background: 0x0f5f7d,
-  });
+  const surface = opts.surface ?? null;
+  let app: Application;
+  if (surface) {
+    // La entrada cede su aplicación: se quita lo suyo y el juego sigue en el mismo canvas.
+    app = surface.app;
+    for (const c of app.stage.removeChildren()) {
+      if (c !== surface.water?.view) c.destroy({ children: true });
+    }
+    app.renderer.background.color = SEA_COLOR;
+    app.resizeTo = canvas.parentElement ?? window;
+    app.resize();
+  } else {
+    app = new Application();
+    await app.init({
+      canvas,
+      resizeTo: canvas.parentElement ?? window,
+      antialias: true,
+      autoDensity: true,
+      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      background: SEA_COLOR,
+    });
+  }
 
   const ship: ShipState = createShipState(spawn.x, spawn.y, spawn.heading);
   const prev: ShipState = { ...ship };
 
-  const sprite =
+  let sprite =
     (opts.manifest ? await ShipSprite.fromManifest(opts.manifest, ship.heading) : null) ??
     ShipSprite.provisional(ship.heading);
 
@@ -132,7 +169,11 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     artScale,
   );
 
-  const water = new Water();
+  const water = surface?.water ?? new Water();
+  // El mar de la entrada llega con su escala y su fundido: vuelve a escala de juego.
+  water.view.scale.set(1);
+  water.view.alpha = 1;
+  water.view.visible = true;
   const worldLayer = new Container();
   const wakeView = new WakeView();
   const objects = new Container();
@@ -266,8 +307,11 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     }
   };
   app.ticker.add(frame);
+  // La superficie adoptada llega con el reloj parado (la entrada pinta a demanda).
+  if (surface) app.start();
 
   let destroyed = false;
+  let shipRequest = 0;
   return {
     stats,
     runtime,
@@ -276,6 +320,29 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     setPassenger: (on) => sprite.setPassenger(on),
     setKeyboardMode: (mode) => {
       keys.mode = mode;
+    },
+    adoptedSurface: surface !== null,
+    async setShip(manifest) {
+      const request = ++shipRequest;
+      const next = manifest
+        ? await ShipSprite.fromManifest(manifest, ship.heading)
+        : ShipSprite.provisional(ship.heading);
+      // Otra petición más nueva, o el juego ya no existe: ésta no se aplica.
+      if (!next || destroyed || request !== shipRequest) {
+        next?.view.destroy({ children: true });
+        return false;
+      }
+      next.setPassenger(sprite.hasPassenger);
+      next.update(ship.heading, time, shipSpeed(ship));
+      next.view.position.copyFrom(sprite.view.position);
+      next.view.zIndex = sprite.view.zIndex;
+      const old = sprite;
+      objects.addChild(next.view);
+      objects.removeChild(old.view);
+      // Las texturas se quedan en la caché de Assets: volver a un estilo es inmediato.
+      old.view.destroy({ children: true });
+      sprite = next;
+      return true;
     },
     destroy() {
       if (destroyed) return;

@@ -23,17 +23,19 @@ import {
 } from '@boia/engine/ui';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import type { ShipCatalog } from '../../lib/barco/catalog';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
+import { claimWorld } from '../../lib/world-handoff';
 import { demoWorld } from './demo-world';
 import { Compass, MenuAnchor } from './hud-buttons';
 import './hud.css';
 import './juego.css';
 import { OnboardMenu } from './menu/onboard-menu';
-import type { MenuContext } from './menu/types';
+import type { MenuContext, ShipMenu } from './menu/types';
 import { ExpandedMap, Minimap } from './minimap';
 import { discoveryNotice, noticeFromWorldEvent } from './notice-copy';
 import { NoticeToast, useNoticeQueue } from './notices';
-import { type ShipStyleState, loadStyledShip } from './ship-style-selector';
+import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
 import { applyAudioSettings, chime, plop } from './sound';
 import { useViewport } from './use-viewport';
 import { EventPanel } from './world-ui';
@@ -51,7 +53,7 @@ const ticketAvailable = (id: string) => {
 const TARGETS = discoveryTargets(demoWorld);
 const MARKERS = mapMarkers(demoWorld);
 
-export function GameCanvas() {
+export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const vp = useViewport();
   const storeRef = useRef<KeyValueStore | null>(null);
@@ -59,7 +61,10 @@ export function GameCanvas() {
   const [game, setGame] = useState<Game | null>(null);
   const [stats, setStats] = useState<GameStats | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [shipStyle, setShipStyle] = useState<ShipStyleState | null>(null);
+  // Aspecto del barco aplicado por el motor (T12) y si la superficie vino de la landing.
+  const [shipLook, setShipLook] = useState<ShipLook | null>(null);
+  const [shipPending, setShipPending] = useState(false);
+  const [adopted, setAdopted] = useState<boolean | null>(null);
   const [menuPulse, setMenuPulse] = useState(0);
   const [minimapPulse, setMinimapPulse] = useState(0);
   const [panel, setPanel] = useState<{ objectId: string; eventId: string } | null>(null);
@@ -150,17 +155,35 @@ export function GameCanvas() {
     }
 
     (async () => {
-      const { createGame } = await import('@boia/engine');
+      const { createGame, loadShipStyle } = await import('@boia/engine');
       // `?barco=provisional` fuerza el barco dibujado por código, para comparar.
       const forceProvisional = query.get('barco') === 'provisional';
-      // `?estilo=<id>` (o el último elegido) elige el estilo del barco (T11).
-      const styled = forceProvisional ? null : await loadStyledShip(MANIFEST_URL);
-      const manifest = styled?.manifest ?? null;
+      // `?estilo=<id>` (o el último elegido) y la skin guardada eligen el aspecto (T11, T12).
+      const want = requestedLook(window.location.search, shipCatalog);
+      const styled = forceProvisional
+        ? null
+        : await loadShipStyle(MANIFEST_URL, want.style, want.skin);
+      const manifest = styled?.loaded ?? null;
       if (cancelled) return;
-      setShipStyle(styled?.style ?? null);
-      const created = await createGame(canvas, {
+      // Un ?estilo= válido queda guardado; uno desconocido no pisa lo guardado.
+      const look = styled?.style && manifest ? { style: styled.style.id, skin: styled.skin } : null;
+      if (look && want.style === look.style) rememberLook(look);
+      // EXPLORAR desde la landing: el juego adopta su canvas, su WebGL y su mar (REQ-ENT-012).
+      const surface = claimWorld();
+      let target = canvas;
+      if (surface) {
+        target = surface.app.canvas;
+        target.className = 'juego-canvas';
+        target.removeAttribute('style');
+        delete target.dataset.ready;
+        // El canvas de React se queda oculto: React sigue siendo dueño de su nodo.
+        canvas.style.display = 'none';
+        canvas.before(target);
+      }
+      const created = await createGame(target, {
         world: demoWorld,
         manifest,
+        surface,
         keyboardMode: settingsRef.current.keyboardMode,
         onStats: (s) => handlers.current.onStats(s),
         onWorldEvent: (e) => handlers.current.onWorldEvent(e),
@@ -175,6 +198,8 @@ export function GameCanvas() {
       g = created;
       gameRef.current = created;
       setGame(created);
+      setShipLook(created.stats().shipSource === 'manifest' ? look : null);
+      setAdopted(created.adoptedSurface);
       // Por si los ajustes cambiaron mientras cargaba.
       created.setKeyboardMode(settingsRef.current.keyboardMode);
       // `?pasajera=1` muestra el slot TRIPULANTE (oculto hasta la misión Fiestera).
@@ -193,7 +218,31 @@ export function GameCanvas() {
       gameRef.current = null;
       g?.destroy();
     };
-  }, []);
+  }, [shipCatalog]);
+
+  // Sección «Barco»: aplica estilo y skin al barco en el agua, sin recargar.
+  const shipRequest = useRef(0);
+  const chooseShip = (want: ShipLook) => {
+    const g = gameRef.current;
+    if (!g) return;
+    const request = ++shipRequest.current;
+    setShipPending(true);
+    (async () => {
+      const { loadShipStyle } = await import('@boia/engine');
+      const r = await loadShipStyle(MANIFEST_URL, want.style, want.skin);
+      if (!r.loaded || !r.style) return;
+      const ok = await g.setShip(r.loaded);
+      if (!ok || request !== shipRequest.current || gameRef.current !== g) return;
+      const look = { style: r.style.id, skin: r.skin };
+      setShipLook(look);
+      rememberLook(look);
+      syncStyleParam(look.style);
+    })()
+      .catch((err: unknown) => console.warn('[boia] no se pudo cambiar el barco', err))
+      .finally(() => {
+        if (request === shipRequest.current) setShipPending(false);
+      });
+  };
 
   const updateSettings = (change: (s: Settings) => Settings) => {
     const next = parseSettings(change(settingsRef.current));
@@ -237,7 +286,12 @@ export function GameCanvas() {
         minimapZone: layout.minimapZone,
         minimapZones: safeMinimapZones(vp!),
         setMinimapZone,
-        shipStyle,
+        ship: {
+          catalog: shipCatalog,
+          current: shipLook,
+          pending: shipPending,
+          choose: chooseShip,
+        } satisfies ShipMenu,
         game,
         close: () => setMenuOpen(false),
       }
@@ -245,6 +299,10 @@ export function GameCanvas() {
 
   return (
     <div
+      data-testid="juego"
+      data-world={adopted === null ? undefined : adopted ? 'adoptado' : 'nuevo'}
+      data-ship-style={shipLook?.style}
+      data-ship-skin={shipLook?.skin}
       style={{
         position: 'fixed',
         inset: 0,
@@ -256,10 +314,7 @@ export function GameCanvas() {
         background: '#0f5f7d',
       }}
     >
-      <canvas
-        ref={canvasRef}
-        style={{ display: 'block', width: '100%', height: '100%', touchAction: 'none' }}
-      />
+      <canvas ref={canvasRef} className="juego-canvas" />
       {layout && vp ? (
         <div className="juego-hud" data-testid="hud-capa" data-joystick-top={layout.joystick.y}>
           <Link

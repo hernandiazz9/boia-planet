@@ -672,44 +672,28 @@ html[data-entry='reduced'] .hero__content {
   align-self: start;
 }
 
-.artists-az {
-  margin-top: 24px;
+.artists-all {
+  margin: 24px 0 0;
 }
 
-.artists-az summary {
+.artists-page__list {
   list-style: none;
-  display: inline-flex;
-}
-
-.artists-az summary::-webkit-details-marker {
-  display: none;
-}
-
-.artists-az__list {
-  columns: 1;
-  margin: 20px 0 0;
+  margin: 0;
   padding: 0;
-  list-style: none;
+  display: grid;
+  gap: 12px;
 }
 
 @media (min-width: 700px) {
-  .artists-az__list {
-    columns: 2;
+  .artists-page__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.artists-az__list li {
-  break-inside: avoid;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.artists-az__name {
-  font-weight: 700;
-}
-
-.artists-az__genres {
-  color: var(--ink-soft);
+@media (min-width: 1024px) {
+  .artists-page__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* ---------- Filosofía, fotos, tienda, contacto ---------- */

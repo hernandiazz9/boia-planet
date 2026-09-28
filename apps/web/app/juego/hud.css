@@ -363,3 +363,82 @@
 .juego-map-hint {
   margin: 6px 0 0;
 }
+
+/* Sección «Barco» (T12): estilos en rejilla y skins del estilo elegido. */
+.juego-menu-body ul.barco-estilos,
+.juego-menu-body ul.barco-skins {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.juego-menu-body ul.barco-estilos {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+.juego-menu-body ul.barco-skins {
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+}
+.barco-estilo,
+.barco-skin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 4px 8px;
+  border: 2px solid rgba(18, 35, 63, 0.15);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.barco-estilo img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.barco-skin img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.barco-estilo:hover,
+.barco-skin:hover,
+.barco-estilo:focus-visible,
+.barco-skin:focus-visible {
+  border-color: rgba(242, 106, 27, 0.6);
+}
+.barco-estilo.is-active,
+.barco-skin.is-active {
+  border-color: #f26a1b;
+  background: #fff1e6;
+  font-weight: 700;
+}
+.barco[aria-busy='true'] .barco-estilo,
+.barco[aria-busy='true'] .barco-skin {
+  cursor: progress;
+}
+.barco-estilo-nombre {
+  min-height: 2.4em;
+}
+.barco-paleta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+.barco-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(18, 35, 63, 0.25);
+}
+.barco-descripcion {
+  font-size: 14px;
+}

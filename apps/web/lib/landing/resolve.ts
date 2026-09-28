@@ -32,6 +32,11 @@ export type ResolvedBlock =
 /** Semilla fija: el orden de rotación es el mismo en servidor y cliente. */
 export const ARTIST_ORDER_SEED = 2026;
 
+/** Artistas de la A a la Z (lista completa en /artistas y orden alfabético del bloque). */
+export function alphabeticalArtists<A extends { name: string }>(artists: readonly A[]): A[] {
+  return [...artists].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+}
+
 export function resolveBlock(
   block: HomeBlock,
   content: HomeContent,
@@ -60,7 +65,7 @@ export function resolveBlock(
       if (content.artists.length === 0) return null;
       const order = shuffledOrder(content.artists.length, ARTIST_ORDER_SEED);
       const rotation = order.map((i) => content.artists[i]!);
-      const alphabetical = [...content.artists].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      const alphabetical = alphabeticalArtists(content.artists);
       return { ...block, rotation, alphabetical };
     }
 

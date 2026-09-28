@@ -1,7 +1,8 @@
 import type { Game } from '@boia/engine';
 import type { DiscoveryTarget, MinimapZone, Notice, Settings } from '@boia/engine/ui';
 import type { ComponentType, ReactNode } from 'react';
-import type { ShipStyleState } from '../ship-style-selector';
+import type { ShipCatalog } from '../../../lib/barco/catalog';
+import type { ShipLook } from '../ship-look';
 
 /**
  * Una sección del Menú de a bordo (§19, REQ-IDE-034). Cada sección es un
@@ -31,9 +32,21 @@ export interface MenuContext {
   /** Zonas del minimapa válidas en esta pantalla. */
   minimapZones: readonly MinimapZone[];
   setMinimapZone: (z: MinimapZone) => void;
-  /** Estilos del barco de T11 (null si no hay más de uno o el barco es provisional). */
-  shipStyle: ShipStyleState | null;
+  /** Sección «Barco»: estilos y skins, lo aplicado y cómo cambiarlo. */
+  ship: ShipMenu;
   /** El motor, si ya arrancó (p. ej. para aplicar un cambio al barco). */
   game: Game | null;
   close: () => void;
+}
+
+/** Estado de la sección «Barco» (T12). */
+export interface ShipMenu {
+  /** Estilos y skins del arte; null si no hay arte del barco (barco provisional). */
+  catalog: ShipCatalog | null;
+  /** Lo que lleva el barco ahora; null mientras arranca o con el barco provisional. */
+  current: ShipLook | null;
+  /** Hay un cambio cargándose. */
+  pending: boolean;
+  /** Aplica un estilo y una skin al barco al momento y lo guarda en este navegador. */
+  choose: (look: ShipLook) => void;
 }

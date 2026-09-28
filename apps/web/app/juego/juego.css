@@ -1,5 +1,13 @@
 /* Interfaz sobre el mundo: panel de evento (T04) y HUD, menú, mapa y avisos (T05). */
 
+/* El canvas del juego: el propio o el que cede la landing al explorar (T12). */
+.juego-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
 /* Pulso breve del ancla (≈1 s) y del minimapa (≈1,6 s, entre 1 y 2 s). */
 @keyframes juego-pulse {
   0%,

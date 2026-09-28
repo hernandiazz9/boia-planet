@@ -15,3 +15,5 @@ export {
   isKeyboardMode,
   type KeyboardMode,
 } from '../input/controls';
+// Estilos y skins del barco (T11, T12): sin Pixi, para el menú y el servidor.
+export * from '../ship-style';

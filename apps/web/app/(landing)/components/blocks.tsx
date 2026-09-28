@@ -6,6 +6,9 @@ import { resolveBlock, type ResolvedBlock } from '../../../lib/landing/resolve';
 import { ArtistRotator } from './artist-rotator';
 import { EventCard } from './event-card';
 
+/** Lista completa de artistas (v14 §18.1). */
+export const ARTISTS_PAGE = '/artistas';
+
 /**
  * Pinta un bloque de la home. Oculto, fuera de programación o sin contenido
  * útil: no pinta nada (ni contenedor vacío).
@@ -155,17 +158,17 @@ function ResolvedBlockView({
                 genres: t('artists.genres'),
               }}
             />
-            <details className="artists-az">
-              <summary className="button button--ghost">{t('artists.all')}</summary>
-              <ul className="artists-az__list" aria-label={t('artists.azLabel')}>
-                {block.alphabetical.map((a) => (
-                  <li key={a.id}>
-                    <span className="artists-az__name">{a.name}</span>{' '}
-                    <span className="artists-az__genres">{a.genres.join(', ')}</span>
-                  </li>
-                ))}
-              </ul>
-            </details>
+            {/* La lista completa es una página: enlazable y sin JS ni WebGL (T12). */}
+            <p className="artists-all">
+              <Link
+                className="button button--ghost"
+                href={ARTISTS_PAGE}
+                prefetch={false}
+                data-testid="ver-artistas"
+              >
+                {t('artists.all')}
+              </Link>
+            </p>
           </div>
         </section>
       );

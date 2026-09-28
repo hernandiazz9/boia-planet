@@ -3,6 +3,7 @@ export {
   obstaclesFromWorld,
   type Game,
   type GameOptions,
+  type GameSurface,
   type GameStats,
 } from './game';
 export { loadShipManifest, type LoadedShipManifest } from './manifest-loader';
@@ -28,9 +29,14 @@ export { DEV_ART_URL, type ArtUrl } from './world/assets';
 export { simulate, type SimulationOptions, type TraceStep } from './world/simulate';
 export { resolveObjectVisual, shipArtScale, type ObjectVisual } from './world/visual';
 export {
+  DEFAULT_SHIP_SKIN,
+  SHIP_SKIN_STORAGE_KEY,
   SHIP_STYLE_PARAM,
   SHIP_STYLE_STORAGE_KEY,
   loadShipStyle,
+  requestedShipSkin,
+  resolveShipSkin,
+  shipSkins,
   readShipStyleIndex,
   requestedShipStyle,
   resolveShipStyle,
