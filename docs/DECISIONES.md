@@ -15,7 +15,7 @@ históricas y no generan requisitos. Las dos secciones sin número que siguen
 a la §47 se citan aquí como **§47-A** (ajustes de pacing) y **§47-B**
 (decisión final de entrada automática).
 
-## D-01 · Repositorio: se empieza de cero aquí · 2026-09-28 · orquestador · pendiente Hernán
+## D-01 · Repositorio: se empieza de cero aquí · 2026-09-28 · confirmado por Hernán
 
 La v14 se contradice: la introducción y §49.5 dicen "conservar el repositorio",
 el Prompt 1 dice "iniciar desde cero". En este Mac no hay ningún repo del
@@ -192,9 +192,8 @@ compartidos. Hito de revisión con Álvaro en móvil real al cerrar cada fase.
 
 | # | Pregunta | Para | Traba |
 |---|---|---|---|
-| P1 | ¿Existe el repositorio del piloto y dónde está? | Hernán | D-01; nada urgente, se avanza desde cero |
 | P2 | ¿Ticketera: Fourvenues u otra? ¿Ya hay cuenta? | Álvaro | adaptador real (fase 2) |
 | P3 | ¿Qué evento es el objetivo de L1 y en qué fecha? | Álvaro | el calendario entero |
 | P4 | ¿Aprueba el corte L1/L2 de D-02 y español solo (D-03)? | Álvaro | nada hasta fase 3; conviene cerrarlo en el hito 1 |
-| P5 | ¿Hay una ilustración o referencia del barco aprobada? Si no, ¿vale una propuesta procedural? | Álvaro | encargo 01 avanza con propuesta |
+| P5 | ~~Referencia del barco~~ Cerrada 2026-09-28 por Hernán: no hay; el 01 va con propuesta procedural y Álvaro opina sobre el visor. | — | — |
 | P6 | ¿Quién tiene el iPhone y el Android de prueba? | Hernán | fase 1, entrada cinemática |

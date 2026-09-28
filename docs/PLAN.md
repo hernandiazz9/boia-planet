@@ -111,10 +111,9 @@ L1, en tres fases con un hito de revisión con Álvaro al cerrar cada una.
 
 ## Preguntas para Hernán
 
-- P1 (D-01): ¿existe el repo del piloto? No traba nada hoy.
 - P6: ¿qué iPhone y Android hay para probar? Traba la entrada cinemática (fase 1).
 - Para Álvaro, vía Hernán: P2 ticketera, P3 evento y fecha, P4 alcance e
-  idioma, P5 referencia del barco. P5 conviene antes del hito 0.
+  idioma. (P1 y P5 cerradas el 2026-09-28: desde cero aquí; barco procedural.)
 
 ## Aparcado
 
