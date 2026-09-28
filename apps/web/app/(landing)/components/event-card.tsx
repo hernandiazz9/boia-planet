@@ -1,6 +1,7 @@
 import { canBuy, type Artist, type BoiaEvent } from '@boia/contracts';
 import type { FunnelEventProps } from '@boia/contracts/analytics';
 import { formatEventDate, t, type MessageKey } from '../../../lib/i18n';
+import { BuyButton } from './buy-button';
 
 type Source = FunnelEventProps['ticket_click_out']['source'];
 
@@ -46,18 +47,13 @@ export function EventCard({
         </p>
       )}
       {canBuy(event) ? (
-        <a
-          className="button button--buy"
-          href={event.ticketUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t('event.buy.aria', { name: event.name })}
-          data-track="ticket_click_out"
-          data-event-id={event.id}
-          data-source={source}
-        >
-          {t('event.buy')}
-        </a>
+        // Versión de prueba (D-20): compra sandbox; un evento finalizado nunca llega aquí.
+        <BuyButton
+          eventId={event.id}
+          eventName={event.name}
+          ticketUrl={event.ticketUrl}
+          source={source}
+        />
       ) : (
         event.state === 'coming_soon' && <p className="event-card__soon">{t('event.soon')}</p>
       )}

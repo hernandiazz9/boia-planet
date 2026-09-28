@@ -68,8 +68,25 @@ test('CTA Explorar y Tickets se ven sin scroll', async ({ page }, info) => {
 });
 
 test('el panel de Tickets abre sin WebGL y con el bundle del juego bloqueado', async ({ page }) => {
-  const gameChunks = gameOnlyChunks();
+  // La compra de prueba (T25) carga al pulsar el checkout y el repositorio,
+  // que el juego también usa: esos chunks son compartidos, no del juego. Se
+  // averiguan comprando una vez en otra pestaña, sin bloquear nada.
+  const probe = await page.context().newPage();
+  const loadedByBuy = new Set<string>();
+  probe.on('request', (r) => loadedByBuy.add(new URL(r.url()).pathname));
+  await probe.addInitScript(() => localStorage.setItem('boia.intro.v2', 'seen'));
+  await probe.goto('/');
+  await heroTickets(probe).click();
+  await ticketsPanel(probe)
+    .getByRole('button', { name: /comprar entradas/i })
+    .first()
+    .click();
+  await expect(probe.getByTestId('checkout-confirmar')).toBeVisible({ timeout: 20_000 });
+  await probe.close();
+
+  const gameChunks = gameOnlyChunks().filter((c) => !loadedByBuy.has(`/_next/${c}`));
   expect(gameChunks.length, 'el build tiene chunks propios del juego').toBeGreaterThan(0);
+  expect(gameChunks.some((c) => c.includes('app/juego/page'))).toBe(true);
 
   // Sin WebGL.
   await page.addInitScript(() => {
@@ -109,13 +126,19 @@ test('el panel de Tickets abre sin WebGL y con el bundle del juego bloqueado', a
   const panel = ticketsPanel(page);
   await expect(panel).toBeVisible();
   await expect(panel.getByRole('heading', { name: 'Elige tu evento' })).toBeFocused();
-  const buy = panel.getByRole('link', { name: /comprar entradas/i }).first();
+  const buy = panel.getByRole('button', { name: /comprar entradas/i }).first();
   await expect(buy).toBeVisible();
   expect(new URL(page.url()).hash).toBe('#tickets');
 
-  // Comprar abre la ticketera en otra pestaña y queda medido.
-  const [popup] = await Promise.all([page.waitForEvent('popup'), buy.click()]);
-  await popup.close();
+  // Comprar abre aquí la compra de prueba (D-20), sin el juego, y queda medido.
+  await buy.click();
+  const checkout = page.getByTestId('checkout');
+  await expect(checkout.getByTestId('checkout-confirmar')).toBeVisible({ timeout: 20_000 });
+  await expect(checkout.getByTestId('checkout-prueba')).toBeVisible();
+  // Escape cierra sólo el checkout: el panel sigue abierto.
+  await page.keyboard.press('Escape');
+  await expect(checkout).toBeHidden();
+  await expect(panel).toBeVisible();
 
   const names = (await captured(page)).map((e) => e.event);
   expect(names).toEqual(

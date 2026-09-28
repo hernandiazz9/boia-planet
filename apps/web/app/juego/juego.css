@@ -91,12 +91,18 @@
 }
 .juego-panel-cta {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
   min-height: 48px;
   margin-top: 4px;
+  border: 0;
   border-radius: 12px;
   background: #f26a1b;
-  color: #fff;
+  /* Navy sobre naranja: el blanco no llega a AA (como en la landing). */
+  color: #12233f;
+  font: inherit;
   font-weight: 800;
+  cursor: pointer;
   text-align: center;
   line-height: 48px;
   text-decoration: none;

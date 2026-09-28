@@ -27,6 +27,8 @@ import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SKIN_LABELS, type ShipCatalog } from '../../lib/barco/catalog';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
+import { SandboxCheckout } from '../../lib/ticketing/checkout';
+import { purchaseNotices } from '../../lib/ticketing/notices';
 import { claimWorld } from '../../lib/world-handoff';
 import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
 import { BottleSheet, type BottleSheetMode } from './bottles/bottle-sheet';
@@ -74,6 +76,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [minimapPulse, setMinimapPulse] = useState(0);
   const [panel, setPanel] = useState<{ objectId: string; eventId: string } | null>(null);
   const [ticketFor, setTicketFor] = useState<string | null>(null);
+  // Compra de prueba abierta desde el panel de la isla (T25).
+  const [checkoutFor, setCheckoutFor] = useState<string | null>(null);
 
   // Preferencias guardadas (se leen al montar: el HUD no se pinta en servidor).
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
@@ -527,9 +531,25 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         <EventPanel
           event={panelEvent}
           showTicket={ticketFor === panelEvent.id}
+          onBuy={() => setCheckoutFor(panelEvent.id)}
           onClose={() => setPanel(null)}
         />
       )}
+      {checkoutFor ? (
+        <SandboxCheckout
+          eventId={checkoutFor}
+          onClose={() => setCheckoutFor(null)}
+          onConfirmed={(o, s) => {
+            for (const n of purchaseNotices(o, s.event.name)) notify(n);
+          }}
+          carnet={{
+            onOpen: () => {
+              setCheckoutFor(null);
+              openMenu('carnet');
+            },
+          }}
+        />
+      ) : null}
       {mapOpen && vp ? (
         <ExpandedMap
           data={mapData}

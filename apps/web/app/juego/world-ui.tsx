@@ -1,6 +1,7 @@
 'use client';
 
 import { type BoiaEvent, EVENT_STATE_BEHAVIOR } from '@boia/contracts';
+import { CHECKOUT_COPY } from '../../lib/ticketing/copy';
 
 /**
  * Panel de evento que abre la isla por proximidad (T04). No es modal: el
@@ -19,16 +20,24 @@ function formatDate(e: BoiaEvent): string {
   }).format(new Date(e.startsAt));
 }
 
+/** La isla ofrece compra sólo si su TICKET se activó y el evento está a la venta. */
+export function islandCanBuy(event: BoiaEvent, showTicket: boolean): boolean {
+  return showTicket && EVENT_STATE_BEHAVIOR[event.state].purchasable;
+}
+
 export function EventPanel({
   event,
   showTicket,
+  onBuy,
   onClose,
 }: {
   event: BoiaEvent;
   showTicket: boolean;
+  /** Abre la compra de prueba (T25, D-20). */
+  onBuy: () => void;
   onClose: () => void;
 }) {
-  const buy = showTicket && EVENT_STATE_BEHAVIOR[event.state].purchasable && event.ticketUrl;
+  const buy = islandCanBuy(event, showTicket);
   return (
     <section className="juego-panel" data-testid="panel-evento" aria-label={event.name}>
       <button type="button" className="juego-panel-close" onClick={onClose} aria-label="Cerrar">
@@ -45,9 +54,15 @@ export function EventPanel({
       <p>{event.description}</p>
       <p className="juego-panel-pending">Fotos y recuerdos de esta isla: próximamente.</p>
       {buy ? (
-        <a className="juego-panel-cta" href={event.ticketUrl} target="_blank" rel="noopener">
-          Entradas
-        </a>
+        <button
+          type="button"
+          className="juego-panel-cta"
+          data-testid="panel-evento-comprar"
+          aria-haspopup="dialog"
+          onClick={onBuy}
+        >
+          {CHECKOUT_COPY.islandBuy}
+        </button>
       ) : null}
     </section>
   );

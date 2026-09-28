@@ -4,6 +4,45 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T25: entradas que dan el sello directamente
+
+Compra de prueba sin ticketera (D-20, REQ-COM-035) sobre `@boia/store` (T16), todo en este navegador. Precios, textos y descuentos son `muestra`.
+
+Qué existe:
+- `apps/web/lib/ticketing/` (nuevo):
+  - `adapter.ts`: `TicketingAdapter`, la interfaz del adaptador de D-06/REQ-COM-015. `start(eventId)` prepara la compra (id estable, precio, descuento, flujo `inline` o `redirect`). `confirm` es opcional: lo tiene sólo el sandbox; con una ticketera real confirma su webhook en el servidor. El comentario explica cómo encaja Fourvenues (`metadata.internal_id` = id de compra).
+  - `sandbox.ts`: `createSandboxTicketing(repo)`. `start` rechaza eventos que no están a la venta (`not_on_sale`, también los finalizados). `confirm` llama a `purchases.confirmSandbox`, que da el sello una vez por id de compra (`duplicate` si se repite, `already_stamped` si otra compra del mismo evento ya lo dio). Después concede el logro de la entrada, buscado por su disparador `buy_ticket`, no por id.
+  - `pricing.ts`: precios `muestra` por evento (25 € el All Day de primavera, 15 € la Noche de mayo, 20 € por defecto). `applicableDiscount` sólo aplica un descuento encontrado por el visitante, vigente ahora y de ese evento (o sin evento); si hay varios, el que más descuenta.
+  - `checkout.tsx` + `checkout.css`: `SandboxCheckout`, un `<dialog>` modal, el mismo en la landing y en el mar. Muestra «Compra de prueba», el evento, el precio de muestra, el descuento (o «Sin descuento»), el total y el aviso de que no se cobra nada y todo queda en este navegador (REQ-IDE-051). Tras confirmar enseña el aviso: sello añadido, ya confirmado o ya tenías el sello, y el logro si es nuevo. Después, «Ver Mi Carnet». Escape y tocar fuera cierran sólo el checkout.
+  - `notices.ts`: `purchaseNotices`, los avisos del mar (sello y logro) con ids estables. `copy.ts`: todos los textos.
+  - `index.ts`: `ticketing()`, la ticketera que usa la web (hoy el sandbox). Ahí se enchufará la real.
+- `apps/web/lib/repo.ts`: `gameRepository` y `seaWorld` salen de `app/juego/repo.ts`, que los reexporta. Motivo: la landing también los usa, y EXPLORAR navega sin recargar, así que la landing y /juego comparten el mismo repositorio con las mismas opciones.
+- Landing (`(landing)/components/buy-button.tsx`): «Comprar entradas» en el evento prioritario, en los próximos y en el panel de Tickets.
+  - Con JavaScript es un botón que carga el checkout y el repositorio al pulsar, fuera de la ruta crítica.
+  - Sin JavaScript, o antes de hidratar, sigue siendo el enlace a la ticketera de muestra (REQ-ENT-017).
+  - Sigue midiendo `ticket_click_out`. Sólo sale en eventos que se pueden comprar (`canBuy`): un evento finalizado nunca muestra compra.
+- /juego: el panel de la isla de evento (`world-ui.tsx`) cambia el enlace «Entradas» por el botón «Comprar entrada» (`islandCanBuy`: sólo si el TICKET se activó y el evento está a la venta). En `game-canvas.tsx`, el checkout; al confirmar, los avisos del mar; «Ver Mi Carnet» abre el menú en Mi Carnet.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 42 archivos, 436 pruebas
+E2E_PORT=3134 pnpm e2e --workers=2         # exit 0; 54 pasan, 10 omitidas (las de siempre); e2e/tickets.spec.ts en móvil y escritorio
+node apps/web/scripts/landing-budget.mjs   # 166,5 kB de 1024 kB: el checkout no entra en la ruta crítica
+```
+
+Desviaciones:
+- Los precios no están en el evento, porque `@boia/contracts` no tiene precio y `packages/store` no se podía tocar. Viven en `lib/ticketing/pricing.ts` hasta que la ticketera o el Admin los den.
+- El descuento no se escribe a mano: se aplica solo el mejor que el visitante haya encontrado. Un código tecleado no vale porque el repositorio exige que esté encontrado.
+- Actualizados `e2e/landing.spec.ts` y `e2e/intro.spec.ts`: el clic de compra ya no abre una pestaña, abre el checkout.
+  - La prueba «bundle del juego bloqueado» compra antes una vez en otra pestaña y no bloquea los chunks que esa compra carga: el checkout y `@boia/store` los comparte con /juego, así que no son «sólo del juego». Sigue bloqueando la página del juego y lo demás.
+  - Los checkouts de las pruebas esperan hasta 20 s: se cargan al pulsar.
+- Con todo el suite en paralelo y el Mac muy cargado (carga ~27, otras sesiones), fallaron por tiempo pruebas de `intro.spec.ts` y `juego-hud.spec.ts` que no tocan la compra. Con `--workers=2` pasa todo.
+- El texto `event.buy.aria` de `lib/i18n/es.ts` («se abre la ticketera en otra pestaña») queda sólo para el enlace sin JavaScript; el botón usa el de `copy.ts`.
+
+Sin probar:
+- La landing sigue pintando eventos de `SAMPLE_CONTENT`, no del repositorio. Si el Admin marca un evento como finalizado, la landing seguirá mostrando el botón hasta que se conecte al repositorio. El checkout sí vuelve a mirar el estado en el repositorio y no deja comprar.
+- En un móvil real: el `<dialog>` con el teclado en pantalla y el Atrás de Android (no cierra el checkout; lo cierra Escape o tocar fuera).
+
 ## 2026-09-29 — plan 002 T22: Mi Carnet y botellas
 
 Mi Carnet (REQ-IDE-010…022) y botellas (REQ-IDE-040…044) sobre `@boia/store` (T16), todo en este navegador (D-20). Textos, avatares, números y el dibujo de la botella son `muestra`. Las 5 preguntas no: son las de v14 §44.1, textuales.

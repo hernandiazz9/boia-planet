@@ -295,11 +295,12 @@ test('motor bloqueado: ilustración de la isla y Tickets funcionando (REQ-ENT-01
   await heroTickets(page).click();
   await expect(ticketsPanel(page)).toBeVisible();
   const buy = ticketsPanel(page)
-    .getByRole('link', { name: /comprar entradas/i })
+    .getByRole('button', { name: /comprar entradas/i })
     .first();
   await expect(buy).toBeVisible();
-  const [popup] = await Promise.all([page.waitForEvent('popup'), buy.click()]);
-  await popup.close();
+  // Sin escena, la compra de prueba (D-20) se abre igual.
+  await buy.click();
+  await expect(page.getByTestId('checkout-confirmar')).toBeVisible({ timeout: 20_000 });
 });
 
 test('recursos lentos: «Cargando» y luego la landing ligera, sin alargar la espera (REQ-ENT-007)', async ({
