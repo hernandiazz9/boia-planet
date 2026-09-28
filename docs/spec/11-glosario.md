@@ -70,7 +70,7 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 ## Web y Admin
 
 - **Landing, home.** Página principal dentro de la escena del mundo (§4.4; REQ-ENT-024).
-- **Entrada, cinemática.** Transición automática planeta, mar y landing (§4.4; REQ-ENT-001).
+- **Entrada, cinemática.** Mini-mundo con «BOIA» y botón para entrar; al pulsarlo, aterrizaje continuo en el mar y landing (§4.4, D-19; REQ-ENT-001).
 - **Inicio.** La landing. La sección del menú se llama Welcome Aboard (REQ-ENT-012, REQ-IDE-034).
 - **Menú de a bordo.** Menú de iconos del juego (§19; REQ-IDE-034).
 - **Welcome Aboard.** Sección de ayuda consultable del menú (§19, §46; REQ-IDE-035).

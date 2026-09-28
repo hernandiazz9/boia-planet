@@ -4,6 +4,64 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-28 — plan 001 T13: intro «mini-mundo», decisión, spec y prueba de la esfera (A/B)
+
+Elección: **opción A** (esfera falsa en Pixi sobre el mundo real). En el móvil emulado con la CPU ×4 y la GPU del Mac va a 60 fps en el giro y a 60 en el aterrizaje. Con WebGL por software (SwiftShader), la esfera sola va a 53,6 fps. El aterrizaje entero baja a 47,2 fps, pero no por la esfera: baja en el último 14 %, el cruce con el mundo vivo de Pixi. Es el mismo mundo que pintan `/juego` y la llegada de T03, y la opción B también acabaría en él. El JS del fotograma no pasa de 1,8 ms (p95) ni con la CPU ×4. Software y GPU sólo discrepan en ese total del aterrizaje; la recomendación es A.
+
+Qué existe:
+- **D-19** en `docs/DECISIONES.md` (Hernán, pendiente Álvaro): las cinco decisiones del §4 de la propuesta. Modifica REQ-ENT-001, 002, 003, 006 y 007. Siguen igual REQ-ENT-004, 005, 008 a 012 y la landing ligera. Pregunta nueva **P9** para Álvaro.
+- Spec: REQ-ENT-001, 002, 003, 006 y 007 reescritos en `docs/spec/02-entrada-y-landing.md` con los mismos ID, citando D-19 en la fuente. REQ-ENT-003 lleva `[pendiente Álvaro]` por el texto del botón. También cambian:
+  - el párrafo de la sección de entrada;
+  - sus filas en `09-requisitos.md`;
+  - una fila nueva en «Contradicciones resueltas» de `00-indice.md`;
+  - la entrada del glosario;
+  - REQ-PRO-004, donde «entrada automática» pasa a ser «entrada cinemática».
+- La prueba (calidad de usar y tirar, pero en el repo):
+  - `packages/engine/src/intro/sphere-probe-pose.ts`: pose pura. Tiene curvatura `k`, zoom, giro y el punto delantero de la esfera. El radio es `rho / k`, así que en k = 0 la proyección es la cámara plana del juego. El aterrizaje es la isla de evento con el encuadre de llegada de T03.
+  - Sus 4 pruebas: `k` baja de 1 a 0 sin retroceder; el final es el encuadre de T03; la esfera coincide con el plano (< 0,5 px) cuando entra el mundo vivo.
+  - `sphere-probe.ts` (Pixi): pinta una vez en una textura de 2048×1024 el `SAMPLE_WORLD` entero, con el arte, las costas y el barco de `/juego`. Un shader en una malla a pantalla completa la proyecta como planeta, con luz y atmósfera, y al final entra el mundo vivo encima.
+  - Ruta `/sphere-probe` (`apps/web/app/sphere-probe/`): siempre en desarrollo; en `next start`, sólo con `BOIA_SPHERE_PROBE=1`, y si no da 404 (comprobado). `window.__sphereProbe` tiene `setMode`, `still(k)` y `measure(ms)`.
+  - `apps/web/e2e/sphere-probe.spec.ts`: la medición y las capturas.
+
+Números (`BOIA_SPHERE_PROBE=1 pnpm e2e sphere-probe.spec.ts --workers=1`, exit 0, 6 pasadas). El móvil es Pixel 5 emulado a 360×640 con resolución Pixi 2, o sea 720×1280 px. «GPU» es Chromium sin cabeza con ANGLE sobre Metal (Apple M3 Pro); «software» es el Chromium sin cabeza de siempre (SwiftShader).
+
+| Vista | Modo | CPU | Giro | Aterrizaje | Del aterrizaje: esfera · cruce · vivo |
+|---|---|---|---|---|---|
+| móvil 360×640 | GPU | ×4 | 60,0 | 60,0 | 60 · 60 · 60 |
+| móvil 360×640 | GPU | ×1 | 59,9 | 60,0 | 60 · 60 · 60 |
+| móvil 360×640 | software | ×4 | 56,3 | 47,2 | 53,6 · 22,9 · 31,0 |
+| móvil 360×640 | software | ×1 | 60,0 | 53,1 | 60 · 29,1 · 34,6 |
+| escritorio 1280×720 | GPU | ×1 | 59,9 | 60,0 | 60 · 60 · 60 |
+| escritorio 1280×720 | software | ×1 | 60,0 | 53,2 | 60 · 28,2 · 33,1 |
+
+Capturas (GPU): `docs/informes/img/p001-t13-esfera-k1-{movil,escritorio}.png` (mini-mundo, k = 1) y `p001-t13-esfera-k05-{movil,escritorio}.png` (medio aterrizaje, k = 0,5).
+
+Comandos:
+```
+python3 tools/spec/check.py && python3 tools/spec/test_check.py   # exit 0; 279 REQ, 18 pruebas
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 30 archivos, 306 pruebas (antes 29 y 302)
+pnpm e2e                                   # exit 0; 42 pasadas, 10 omitidas (4 de grabación, 6 de la prueba)
+BOIA_SPHERE_PROBE=1 pnpm e2e sphere-probe.spec.ts --workers=1   # fps y capturas
+pnpm dev, y abrir /sphere-probe            # verla girar y aterrizar en bucle (aparición 2 s, reposo 2 s, aterrizaje 2 s)
+pnpm --filter @boia/web budget             # ruta crítica de /: 161,6 kB gzip (T12: 161,2)
+```
+
+Para T14 (visto en la prueba):
+- Sin un pintado de calentamiento, SwiftShader se paraba unos 300 ms en el primer fotograma del cruce. Ya está en la prueba, como hizo T03.
+- El cruce pinta dos capas a pantalla completa y es el tramo más caro por software. En ese momento la esfera y el plano coinciden a menos de 0,5 px, así que se puede cambiar sin cruce o acortarlo.
+- La textura está al 79 % de la escala de juego y al final se ve algo blanda. El mundo vivo del final lo resuelve. `?tex=4096` prueba una textura mayor, pero no se ha medido.
+- Con k < 1, más allá del polo reaparece el borde sur del mundo (la boia tutorial arriba en la captura k = 0,5 móvil). Estirar el borde o repetirlo en espejo se ven peor. Hay que rellenar la textura con mar.
+- El mundo mide 1000 u de ancho, así que el planeta sale con un 62 % de tierra: un canal de mar entre dos franjas verdes. Es una decisión de encuadre para T14 y Álvaro.
+- La prueba no tiene nubes, y el agua está quieta (t = 0) para que la textura y el mundo vivo coincidan.
+
+Desviaciones:
+- `packages/engine/package.json` tiene una exportación nueva, `./intro/sphere-probe`, porque la ruta necesita cargar la prueba y el motor sólo exporta lo que lista. No toca ningún bundle de producción.
+- La ruta abre en `next start` con `BOIA_SPHERE_PROBE=1` para medir el build de producción, que es el que usan las e2e.
+
+Sin probar:
+- Móviles reales (P6). La emulación ralentiza la CPU, pero no la GPU. Un M3 Pro sobra para este shader: una lectura de textura y unas pocas funciones trigonométricas por píxel. En un móvil de gama media hay que medirlo.
+- Safari de iOS y los navegadores internos de las apps.
+
 ## 2026-09-28 — plan 001 T12: demo de punta a punta con datos de muestra
 
 Cómo abrir la demo:

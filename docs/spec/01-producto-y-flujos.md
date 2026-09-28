@@ -20,7 +20,7 @@ El objetivo principal es vender entradas (§2.1). Los secundarios (§2.2) son un
 - **REQ-PRO-001** `L1` — Ofrecer desde la landing dos caminos igual de comprensibles, COMPRAR TICKETS y EXPLORAR EL UNIVERSO; Explorar puede ser el CTA más llamativo, pero Tickets nunca queda escondido. *Fuente: §2.1, §3*
 - **REQ-PRO-002** `L1` — No condicionar la compra de entradas a jugar, conducir, registrarse ni conseguir logros. *Fuente: §2.1, §25, §26, P1*
 - **REQ-PRO-003** `L1` — Implementar el flujo comercial directo (landing, Tickets, isla con el panel de entradas abierto, Comprar), que llega al checkout externo del evento prioritario en 2 toques. *Fuente: §4.3, §26*
-- **REQ-PRO-004** `L1` — Implementar el flujo experiencial: entrada automática, landing, Explorar, barco, primera boia, Boia Fiestera y cocodrilos, rescate, exploración de islas, eventos, descuentos y secretos, posible compra, última isla y mundo abierto, sin que login ni Carnet lo interrumpan. *Fuente: §26, §46*
+- **REQ-PRO-004** `L1` — Implementar el flujo experiencial: entrada cinemática, landing, Explorar, barco, primera boia, Boia Fiestera y cocodrilos, rescate, exploración de islas, eventos, descuentos y secretos, posible compra, última isla y mundo abierto, sin que login ni Carnet lo interrumpan. *Fuente: §26, §46*
 - **REQ-PRO-005** `L1` — Tratar el juego como segunda vía de conversión (explorar, descubrir, obtener sorpresa o descuento, conocer el evento, comprar) sin añadir fricción a la compra. *Fuente: §2.1*
 
 El tercer flujo, el de atajo (landing, Fotos, Tienda o evento, barco en esa localización con el contenido abierto, cerrar y seguir navegando), es REQ-ENT-034.

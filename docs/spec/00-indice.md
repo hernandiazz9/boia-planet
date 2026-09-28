@@ -11,7 +11,7 @@ Una sesión de trabajo lee este índice y los archivos que nombre su encargo, no
 | Archivo | Qué contiene | Fuente principal en la v14 |
 |---|---|---|
 | [01-producto-y-flujos](01-producto-y-flujos.md) | Visión, dos caminos, flujos, tipos de evento, reglas UX, cobertura del piloto, contenido de BOIA y publicación | §1–3, §25–28, §30, §33, §39, §45–47, §49.18 |
-| [02-entrada-y-landing](02-entrada-y-landing.md) | Cinemática automática, landing en el mundo, home por bloques, accesos con la isla visible, ENT 01–06 | §4, §47-B, §49.3, §49.6 |
+| [02-entrada-y-landing](02-entrada-y-landing.md) | Cinemática del mini-mundo (D-19), landing en el mundo, home por bloques, accesos con la isla visible, ENT 01–06 | §4, §47-B, §49.3, §49.6 |
 | [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
 | [04-aventura](04-aventura.md) | Tutorial, Boia Fiestera, islas, mar vivo, náufrago, circuito y minijuegos de L2 | §7–9, §11–13, §47-A, §49.11 |
 | [05-identidad-y-comunidad](05-identidad-y-comunidad.md) | Invitado y cuenta, Carnet, sellos, logros, economía, Mi Barco, menú, ranking, botellas, encuestas y mensajes | §14–17, §19–21, §40, §42–44, §46, §49.8–49.10 |
@@ -126,6 +126,7 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | §21, §27, §37.12: «Carta», «Carta de Navegación» | «Mi Carnet»; la Carta no es una pantalla | D-08 | REQ-IDE-011 |
 | §41: tabla con puntos «SIGUIENTE» | No vale; valen §42.5 y §44.5 | D-08 | — |
 | §4.1, §47-B: «Bienvenido a BOIA» | Sólo variante de copy, nunca pantalla previa | D-08 | REQ-ENT-003 |
+| §4.1, §4.4, §47-B: entrada sin clic con «BOIA.PLANET» | Mini-mundo con «BOIA», botón para entrar y aterrizaje en el mar | D-19 | REQ-ENT-001, REQ-ENT-002, REQ-ENT-003, REQ-ENT-006, REQ-ENT-007 |
 | §44.2, §46 frente a §8.1: «tripulación» y «tripulante» | «Tripulación» nunca para usuarios; «tripulante» para la Fiestera | D-08 | REQ-IDE-020, REQ-AVE-006 |
 | P1: la IA selecciona la ticketera | La elige Álvaro con un ADR comparativo | D-06, D-08 | REQ-COM-015 |
 | Introducción, §49.5, §50: conservar el repositorio | Desde cero | D-01 | — |

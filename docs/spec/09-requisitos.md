@@ -38,13 +38,13 @@ Definidos en [02-entrada-y-landing](02-entrada-y-landing.md). 39 requisitos: 37 
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
-| REQ-ENT-001 | Entrada automática planeta a landing | §4.1, §4.4, §47-B · alias ENT 01 | L1 | Primera visita en móvil llega a la landing sin input; grabación sin flashes, fotogramas vacíos ni saltos | — |
-| REQ-ENT-002 | Nada obligatorio antes de la landing | §4.1, §4.4, §47-B | L1 | e2e primera visita: 0 elementos interactivos obligatorios antes de la landing | — |
-| REQ-ENT-003 | Copy «BOIA.PLANET» | §4.1, §47-B, D-08 | L1 | La configuración de entrada trae «BOIA.PLANET» por defecto; ninguna ruta muestra pantalla de bienvenida | — |
+| REQ-ENT-001 | Entrada en tres actos: mini-mundo, botón y aterrizaje en el mar | §4.1, §4.4, §47-B, D-19 · alias ENT 01 | L1 | e2e primera visita en móvil: aparece el mini-mundo, luego «BOIA» y el botón, y pulsarlo termina en la landing sobre el mar; grabación sin flashes, fotogramas vacíos ni saltos | D-19 sustituye la entrada sin clic de §47-B |
+| REQ-ENT-002 | Sólo el botón de entrar antes de la landing; entradas siempre a mano | §4.1, §4.4, §47-B, D-19 | L1 | e2e primera visita: el botón de entrar es la única acción obligatoria y el enlace a entradas lleva a Tickets sin pulsarlo | — |
+| REQ-ENT-003 | Título «BOIA» y botón de entrar | §4.1, §47-B, D-08, D-19 | L1 | La configuración de entrada trae «BOIA» y un texto de botón marcado `muestra`; ninguna ruta muestra pantalla de bienvenida | [pendiente Álvaro] Texto definitivo del botón (P9) |
 | REQ-ENT-004 | Dirección artística de la entrada | §4.4 | L1 | Revisión visual de ENT 06 aprobada por Álvaro | — |
 | REQ-ENT-005 | Planeta 2D/2.5D reconocible | §4.4, D-05 | L1 | Revisión de ENT 06; ninguna librería 3D en el bundle | — |
-| REQ-ENT-006 | Cuatro tiempos de la secuencia | §4.4 | L1 | Storyboard de 4 tiempos aprobado y grabación que los muestra | — |
-| REQ-ENT-007 | 3 s iniciales, nunca espera vacía | §4.4 | L1 | Con red lenta simulada aparece la landing ligera sin esperar la cinemática | — |
+| REQ-ENT-006 | Aparición, pausa, acercamiento con aplanado y llegada | §4.4, D-19 | L1 | Storyboard de los 4 tiempos aprobado y grabación que los muestra; test: la curvatura va de 1 a 0 sin retroceder durante el aterrizaje | — |
+| REQ-ENT-007 | Duración por tramos (~2 s + ~2 s), nunca espera vacía | §4.4, D-19 | L1 | La configuración trae los dos tramos; con red lenta simulada aparece la landing ligera sin esperar la cinemática | — |
 | REQ-ENT-008 | Sin audio y Saltar idempotente | §4.4 | L1 | Pulsar Saltar 5 veces deja 1 mundo y 1 barco; 0 audio al cargar | — |
 | REQ-ENT-009 | Visitas posteriores directas | §4.4 | L1 | La segunda carga no reproduce la cinemática; «ver introducción» la reproduce | — |
 | REQ-ENT-010 | Movimiento reducido | §4.4 | L1 | e2e con movimiento reducido emulado: 0 desplazamientos de cámara | — |

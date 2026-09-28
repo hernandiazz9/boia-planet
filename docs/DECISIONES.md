@@ -251,6 +251,38 @@ Escritorio todavía lleva esa grafía con y; Hernán la renombra a
 del repo ya apuntan a `boia.planet` desde ahora, antes del cambio. Palabras
 que sólo contienen «boy» (el artista Bdboy) no cambian.
 
+## D-19 · Entrada «mini-mundo» con botón y aterrizaje en el mar · 2026-09-28 · Hernán · pendiente Álvaro
+
+Propuesta completa: `docs/propuestas/2026-09-28-intro-mini-mundo.md` (§4 son
+las decisiones; §5 a §7, cómo tiene que ser). Sustituye en parte la entrada
+de T03 (planeta → mar → landing sin clic). La web empieza como la intro de
+messenger.abeto.co: nuestro mundo en miniatura flota y gira, con el título
+encima y un botón; al pulsarlo, el mundo gira, se aplana y se aterriza en el
+mar sin cortes. Hernán decide:
+
+1. Tras la aparición del mini-mundo hay **un botón para entrar**.
+2. El título de la cinemática es **«BOIA»** (wordmark de BOIA), no
+   «BOIA.PLANET».
+3. **Se aterriza en el mar**, en un punto que es un dato configurable
+   (coordenadas del mundo y encuadre por ancho de vista), no código. El punto
+   definitivo llega más adelante; mientras tanto vale el encuadre de llegada
+   de T03: la isla de evento con el barco en posición segura.
+4. **El texto del botón da igual**: uno de muestra («Zarpar», «Entrar»,
+   «Vamos») marcado `muestra` en la configuración. El definitivo lo aprueba
+   Álvaro.
+5. No hay ningún río: «el río» era el mar.
+
+Modifica REQ-ENT-001, REQ-ENT-002, REQ-ENT-003, REQ-ENT-006 y REQ-ENT-007,
+que ahora citan D-19. Contradice la entrada sin clic y el título
+«BOIA.PLANET» de §4.1, §4.4 y §47-B de la v14. Siguen igual REQ-ENT-004,
+REQ-ENT-005 (sin globo 3D, D-05), REQ-ENT-008 a REQ-ENT-012 y la landing
+ligera como respaldo (REQ-ENT-017). La técnica del mini-mundo (A: esfera
+falsa en Pixi sobre el mundo real; B: giro renderizado en Blender) se decide
+con la prueba de fps de la propuesta (§6, §8), que se anota en `ESTADO.md`.
+
+Falta el visto bueno de Álvaro: el flujo de entrada es identidad y negocio
+suyos (P9). Hasta que conteste se avanza con esta decisión.
+
 ## Preguntas abiertas
 
 | # | Pregunta | Para | Traba |
@@ -262,3 +294,4 @@ que sólo contienen «boy» (el artista Bdboy) no cambian.
 | P6 | ¿Quién tiene el iPhone y el Android de prueba? | Hernán | fase 1, entrada cinemática |
 | P7 | Crear el proyecto Supabase `boia-planet-dev` y pasar sus claves con `pedir-token` | Hernán | tarea de auth (T07 del plan 001) en adelante |
 | P8 | ¿Qué estilos de la exploración del 01 (`docs/informes/img/01-estilo-*.png`) pasan a Álvaro? | Hernán | el estilo definitivo; los assets se re-renderizan barato |
+| P9 | ¿Aprueba la entrada nueva de D-19 (mini-mundo, «BOIA», botón para entrar, aterrizaje en el mar) y qué texto lleva el botón? | Álvaro | cerrar ENT 06 y el copy del botón; se avanza con D-19 mientras tanto |
