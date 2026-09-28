@@ -94,7 +94,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: Mi Carnet (menu section + /carnet, /carnet/<id>, ?menu=carnet), bottles in the sea via Game.setBottles (found at 150 u), second active bottle refused, seeded crew bottles; all web repo access through apps/web/app/juego/repo.ts gameRepository(); REQ-IDE-051 copy «solo en este navegador», no share button → f6adabd
 
 ## T23 — Minigames: Vigilancia del faro and Cañón contra tiburones
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T16, T17
 - Goal: The two minigames of REQ-AVE-036/037 behind the INICIAR_MINIJUEGO extension point, started by `start_minigame` with ids `faro` and `canon`: faro — sweep the beam, identify pirate flags, raise the alarm, end after 5 pirates or when time, errors or ships run out; cañón — aim by dragging, fire balls in an arc, end after scaring 3 sharks or when time or ammo run out, no wounds shown. Rewards per once/daily/season policy validated locally with session, seed and duration (REQ-AVE-038; the server check comes with Supabase). Touch and keyboard, reduced motion, pause on tab hide, exit back to the sea where you were. Art: simple vector or reuse of world art in each world's style (no Blender needed); `muestra`.
 - Context: docs/spec/04-aventura.md (REQ-AVE-036…038), docs/DECISIONES.md D-09; packages/engine (start_minigame extension point from T04), packages/store (T16 ledger).
@@ -102,7 +102,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test` → exit 0; adds tests: both end conditions of each game; a replayed seed with an impossible duration grants nothing; the once/daily policy holds across reloads
   - `pnpm e2e` → exit 0; a spec opens each minigame through its test route, plays to an end state and returns to the sea
-- Outcome:
+- Outcome: faro (daily) and cañón (season) in packages/engine/src/minigames, test route /juego?minijuego=faro|canon, non-modal «Jugar» panel near the island, seed-based minimum duration, rewards via gameRepository().progress, arcilla/acuarela styles; islands to be placed by T20 → e2c8abf
 
 ## T21 — Boia Fiestera mission, achievements, points and coins
 - Status: pending
@@ -206,8 +206,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T15: check.py only accepts L1/L2/diferido, so brought-forward items are L1 with D-20 in the source; final-version REQs left intact and test-version exceptions added as separate L1 REQs naming what retires them (agent)
 - 2026-09-29 T22: bottles drawn via Game.setBottles (not setWorld) so dialogues/effects don't restart; sample bottles moved into open sea by a fixed rule; «Compartir» removed per REQ-IDE-051 (deviation from «shareable view» until a server exists) (agent)
 - 2026-09-29 T25: sample prices in lib/ticketing/pricing.ts (events have no price field); discounts never typed, best active found discount applies; checkout loads on click; no-JS link still goes to the sample ticketing URL (agent)
+- 2026-09-29 T23: sessions in memory (reload invalidates), hidden tab pauses and voids the reward, record_only best kept in device storage, alarm on empty sea = false alarm, escaped pirate not an error (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T23: minimap logs negative-size SVG errors while resizing (pre-existing); full e2e flaky at 5 workers under load (passes with --workers=2)
 - 2026-09-29 T25: add a price field to events in the store/contracts (today prices live in lib/ticketing/pricing.ts)
 - 2026-09-29 T22: move apps/web/app/juego/repo.ts to apps/web/lib so landing/admin share it; photo upload from device untested
 - 2026-09-28 T15: mundos/arcilla/diseno.md still marks Faro and Cañón as L2 empty lots; update when placing them (T18/T20)
@@ -228,3 +230,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 00:25 T22 done · branch worktree-agent-afaff0ae95b07a142 (1 conflict round) → f6adabd
 - 2026-09-29 00:13 T25 launched · attempt 1 · agent a8b91419ffa46292b
 - 2026-09-29 00:41 T25 done · branch worktree-agent-a8b91419ffa46292b → a450c34
+- 2026-09-29 01:00 T23 done · branch worktree-agent-a154f90bd0f0e1afa (1 conflict round) → e2c8abf
