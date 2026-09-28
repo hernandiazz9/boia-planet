@@ -52,7 +52,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: block-driven landing, HTML tickets panel (/#tickets), PostHog EU via capture API, Playwright e2e + axe; 155 kB gzip → e680599
 
 ## T01 — World art batch v0 from the Blender pipeline
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T00
 - Goal: Produce, with the same headless Blender pipeline, camera (30°, D-13) and style parameter as the ship, the first swappable world assets the demo needs: one large event island, one small secondary island, the tutorial buoy (idle loop), two rocks, a coastline set for the left and right world edges, and the intro planet as 2D layers (globe, sea band, clouds, a recognisable island shape for continuity, v14 §4.4). Every resource gets its own manifest (id, version, files, frames, scale, anchors, pivot, footprint/hitbox hint, license `muestra`) per v14 §49.17, validated by the existing check. Style: the current `muestra` style of art/barco, selectable so a later style change is a re-render (tools/blender/styles/).
 - Context: docs/DECISIONES.md (D-05, D-13, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, styles); tools/blender/** (rig.py, ship.py, render.py, check.py, styles/); v14 §4.4, §9, §34, §49.17 in docs/fuente/v14-maestro.md.
@@ -62,10 +62,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `python3 tools/blender/check.py` → exit 0 and reports every manifest valid (ship plus the new resources, with counts)
   - `python3 tools/blender/calibrate.py` (or its Blender invocation) → ratio 2.0 ± 0.04
   - A contact sheet of all new assets over water at game scale saved in docs/informes/img/ (path in the final message)
-- Outcome:
+- Outcome: 8 manifests / 78 PNG (islands, boia tutorial, rocks, coasts, planet layers), style param in tools/blender/styles/muestra.py, contact sheet docs/informes/img/p001-t01-hoja-mundo.png → 948a52c
 
 ## T07 — Public auth (OTP + magic link), guest session, idempotent merge
-- Status: running (attempt 1)
+- Status: skipped (Hernán: visual demo first; WIP kept on branch worktree-agent-a208530713932c80c)
 - Depends on: T00, T06, T02
 - Goal: D-10: sign in by email with a 6-digit code and a magic link in the same mail; guest identity stored locally with a server-side anonymous id; on sign-in, merge guest progress by ids (union of discoveries, rewards synced once per id, never importing local balances as truth); return to the same panel after verification; "Continuar sin registrarme" always available.
 - Context: docs/DECISIONES.md (D-09, D-10, D-17); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-* for §49.10), docs/spec/08-arquitectura-y-datos.md; supabase/**, packages/db/**, apps/web/**. Auth runs against the cloud dev project `boia-planet-dev` (D-17). Build and unit-test everything first against the local PostgreSQL shim from T06; only the e2e needs the cloud project. When you reach it, read the keys from the main checkout's `/Users/heralc/Desktop/boya.planet/.env.local` (Hernán may add them after your worktree was created; never copy them into the repo). If they are still missing, commit your work and stop with STATUS: blocked asking Hernán to create the project and load the keys with the `pedir-token` skill; never create accounts or paste secrets.
@@ -76,7 +76,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T04 — World objects and behavior catalog v1, tutorial buoy, test island
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T00, T01
 - Goal: Implement v14 §48 in the engine: a WorldObject is asset + geometry + behaviors from a catalog + params. Catalog v1: collision (block, bounce, brake, slow, boost), proximity, dialogue (speech bubbles, 1.5 s per line, tap to advance or skip, playful reaction when the ship leaves), collectible, reward, content (open an HTML panel), ticket, checkpoint, teleport, spawn, achievement-trigger, decorative, and an empty INICIAR_MINIJUEGO extension point. Sample world built from the T01 assets: spawn point, tutorial buoy that pulses the menu anchor and minimap placeholders, one event island with a wide proximity radius that opens a sample event panel, rocks as obstacles, coastline at both edges. Also: ship length on screen to ~48 px (D-15), the ship's idle bob loop and the passenger slot from the manifest (passenger hidden until the Fiestera mission).
 - Context: docs/DECISIONES.md (D-12, D-13, D-15, D-16); docs/spec/03-mundo-y-motor.md, docs/spec/04-aventura.md (REQ-MUN-*, REQ-AVE-* for §7 and §9), docs/spec/07-admin.md (§48.2–48.3); docs/informes/2026-09-28-03-monorepo-y-motor-base.md; packages/world/**, packages/engine/**; the art/ manifests from T01.
@@ -88,7 +88,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T03 — Cinematic entry: planet → sea → landing
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T00, T01, T02
 - Goal: The automatic entry of v14 §4.4 and §47-B: planet illustrated in 2D layers, continuous approach, reveal of the isometric sea with islands and the ship, landing content appears over the same scene. No click, no language or login screen. Skip control (idempotent), reduced-motion variant (static scene + short fade), lightweight fallback when assets or the renderer fail, no replay on deep links or return visits. Target ~3 s, measured. Acceptance ENT 01–06 as far as they can be automated; the rest listed for Hernán to check on real phones.
 - Context: docs/DECISIONES.md; docs/spec/02-entrada-y-landing.md (REQ-ENT-*); apps/web/app/**; packages/engine/** (camera and scene handoff); planet layers and islands produced by T01 under art/ (read their manifests); the Outcome lines of T01 and T02.
@@ -100,7 +100,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T08 — Admin base: login with TOTP, roles, audit, events and home blocks
-- Status: pending
+- Status: skipped (Hernán: visual demo first; depends on T07)
 - Depends on: T00, T07
 - Goal: docs/spec/07-admin.md for Launch 1: admin login with password + TOTP, roles owner/admin/editor enforced in routes, services and RLS, audit log of every change, recoverable trash with double confirmation; Events CRUD with the seven states, automatic date transitions via pg_cron plus manual override with audit, event↔island separation (an island keeps history and can receive a new event); Home blocks editor (order, show/hide, schedule, priority event) with desktop/mobile preview; artists and photo albums CRUD. First-owner bootstrap generates a random temporary password shown once (never in repo).
 - Context: docs/DECISIONES.md; docs/spec/07-admin.md, docs/spec/06-comercial.md; apps/web/**, packages/db/**, supabase/**.
@@ -123,7 +123,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T09 — Visual world editor
-- Status: pending
+- Status: skipped (Hernán: visual demo first; depends on T07)
 - Depends on: T00, T04, T08
 - Goal: The Admin world editor of v14 §48.4 and §23.1 sharing packages/world and the engine renderer so that what is placed appears in the same spot in the game: isometric canvas, asset library (upload PNG/WebP with validation), inspector for identity/appearance/position/geometry/behaviors/params/content/state/reward, templates (save and duplicate), layers, snap, undo/redo, validation (an island must not block navigation, a teleport cannot land on land, referenced ids must exist), draft → preview (real engine, no rewards) → atomic publish → restore previous version.
 - Context: docs/DECISIONES.md; docs/spec/07-admin.md, docs/spec/03-mundo-y-motor.md; packages/world/**, packages/engine/**, apps/web/app/admin/**.
@@ -134,7 +134,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T11 — Ship in the 8 exploration styles, selectable in the game
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T00, T01
 - Goal: Turn the 8 style studies in tools/blender/styles/ (01_boceto_lapiz … 08_pixel_art, today exploration only, not feeding art/) into ship sprite sets rendered by the same pipeline and camera (30°, D-13): per style, the `base` skin with the same frames as today's ship (8 directions × with/without passenger, plus the idle bob frames); fiesta/noche stay only in the current style. They live in art/barco/ under a style dimension, with manifest entries validated by check.py and labelled `muestra`. The game lets you switch the ship's style (a small test selector in /juego plus `?estilo=<id>`, persisted locally); the default stays the current style. Purpose: compare the 8 styles with Álvaro in-game.
 - Context: docs/DECISIONES.md (D-13, D-15, D-16); docs/informes/2026-09-28-01-arte-barco-blender.md (pipeline, manifest contract, the 8-style exploration and its sheets docs/informes/img/01-estilo-*.png); tools/blender/** (render.py, ship.py, check.py, styles/); art/barco/manifest.json; the ship sprite loader in packages/engine (encargo 03 serves art/ through /api/art/..., see docs/informes/2026-09-28-03-monorepo-y-motor-base.md); apps/web/app/juego/**; T01's Outcome line (its manifest and style changes).
@@ -147,8 +147,21 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - A contact sheet of the ship in all 8 styles at game scale over water saved in docs/informes/img/ (path in the final message)
 - Outcome:
 
-## T10 — Wire the public app to published data and the ticketing adapter
+## T12 — Demo pass: see it working end to end
 - Status: pending
+- Depends on: T00, T03, T04, T05, T11
+- Goal: Hernán wants to see a working visual demo before any mail, auth or admin work. Glue what T01–T05 and T11 produced into one flow that runs with sample data only: `/` plays the entry (planet → sea → landing), EXPLORAR EL UNIVERSO enters /juego with the ship, the tutorial boia, rocks, coasts and the event island whose proximity opens the sample event panel; minimap, compass, menu and the ship-style selector work; Tickets opens the sample panel. No Supabase, no mail. Fix any gap between the pieces (loaders, routes, missing wiring) without redesigning them. One command runs it locally and reachable from a phone on the same Wi-Fi (Next dev on 0.0.0.0, the LAN URL printed).
+- Context: the Outcome lines of T01–T05 and T11 in this plan; ESTADO.md sections of plan 001; apps/web/**, packages/engine/**, packages/world/**, art/**.
+- Scope: may touch ESTADO.md (own top section), apps/web/**, packages/engine/**, packages/world/**, root package.json (scripts only) / must not touch supabase/**, packages/db/**, tools/blender/**, art/**, docs/spec/**.
+- Done when:
+  - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
+  - `pnpm e2e` → exit 0, including a new end-to-end demo spec on mobile 360×640 and desktop: first visit ends on the landing without a click; EXPLORAR reaches /juego; driving the ship toward the event island opens its panel; the style selector changes the ship
+  - `pnpm demo` (added by this task) starts the app and prints a localhost and a LAN URL; stopping it leaves nothing running
+  - Screenshots or a short recording of the flow on desktop and mobile saved in docs/informes/img/ (paths in the final message); ESTADO.md top section says in 3 lines how to open the demo on a computer and on a phone
+- Outcome:
+
+## T10 — Wire the public app to published data and the ticketing adapter
+- Status: skipped (Hernán: visual demo first; depends on T07)
 - Depends on: T00, T03, T05, T08, T09
 - Goal: The landing, tickets and the game read only published data: home blocks and events from Supabase queries by state, the world from the published snapshot, guest and member progress through the ledger. Ticketing adapter interface with a sandbox implementation and a Fourvenues-shaped webhook (`payment.success` with `metadata.internal_id`) that adds a purchase stamp once per confirmation (D-06); external checkout still needs an explicit action. Deep links open Tickets/Fotos with the island visible and the panel open, without replaying the intro.
 - Context: docs/DECISIONES.md (D-06); docs/spec/06-comercial.md, docs/spec/02-entrada-y-landing.md (§49.6), docs/spec/08-arquitectura-y-datos.md; everything T02–T09 produced (read their Outcome lines and the informes).
@@ -177,8 +190,11 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T06: event states and home block types as English enums aligned with @boia/contracts (a test keeps them equal); clients never write state/publish columns; ledger ids chosen by the server, balances derived by trigger; admin needs aal2 (agent)
 - 2026-09-28 T06: root `test` script maps `--filter X` to a vitest path filter; seeds in supabase/seeds/, removable with supabase/sample/remove-sample.sql; each test file uses its own throwaway database (agent)
 - 2026-09-28 T07: context changed so the agent builds everything locally first and blocks only at the e2e if the cloud keys are missing (orchestrator)
+- 2026-09-28: Hernán: only what is needed to see a visual demo now, no mails or auth. T07 stopped (WIP kept), T08/T09/T10 skipped until he reopens them; new T12 glues the demo end to end (Hernán / orchestrator)
+- 2026-09-28 T01: ship look in tools/blender/styles/muestra.py via `render.py --style`; `--out` is now a root folder, `--only <id>` renders one resource; all world art at the ship's pixels per unit (agent)
 
 ## Proposals (new scope)
+- 2026-09-28 T01: coast corners, bottom coast and a separate flag sprite are missing
 - 2026-09-28 T06: tables for discounts, discoveries, cosmetics catalogue, races and the common event location (REQ-COM-010) are not in the schema yet
 - 2026-09-28 T06: migrations not yet applied to the real boia-planet-dev project; no supabase/config.toml or .env.example entry for BOIA_PG_URL
 - 2026-09-28 T02: create the PostHog EU project and load NEXT_PUBLIC_POSTHOG_KEY (pedir-token); real sends untested
@@ -193,3 +209,6 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 19:58 T01 launched · attempt 1 · agent af5e76d10c58b5de8
 - 2026-09-28 20:08 T02 done · branch worktree-agent-a7e2f22a4a0f6d626 → e680599
 - 2026-09-28 20:12 T06 done · branch worktree-agent-a5a08a5e7cb452cb5 (1 conflict round) → 6af3a0c
+- 2026-09-28 20:13 T07 launched · attempt 1 · agent a208530713932c80c
+- 2026-09-28 20:22 T01 done · branch worktree-agent-af5e76d10c58b5de8 (1 conflict round) → 948a52c
+- 2026-09-28 20:22 T07 stopped by Hernán's change of focus · WIP a4c68d3 on worktree-agent-a208530713932c80c · worktree .claude/worktrees/agent-a208530713932c80c kept
