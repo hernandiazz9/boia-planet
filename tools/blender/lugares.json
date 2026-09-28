@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "estado": "muestra",
+  "mapa": "mundos/arcilla/mapa.json",
+  "nota": "Los lugares del mapa compartido que tienen arte. Cada mundo pone uno en art/mundos/<mundo>/<id>/manifest.json (lo escribe tools/blender/render.py y lo valida tools/blender/check.py). El id es estable: sale de mapa.json (id de zona, de lugar, de pieza, de costa o de minijuego) y no cambia aunque cambie el nombre. `ref` apunta a la entrada de mapa.json; `pos` al punto que hace de posición del lugar; `instancias`, cuando el mismo arte va en varios puntos. Las islas de evento (con taquilla) llevan el mismo nombre en todos los mundos (`isla_evento`: el nombre lo pone el evento); el resto puede tener un nombre propio en cada mundo.",
+  "lugares": [
+    {"id": "puerto", "categoria": "puerto", "ref": "zonas/puerto", "pos": "zonas/puerto/lugares/salida", "isla_evento": false},
+    {"id": "cala", "categoria": "isla", "ref": "zonas/cala", "pos": "zonas/cala/islas/isla", "isla_evento": false},
+    {"id": "fiestera", "categoria": "encuentro", "ref": "zonas/fiestera", "pos": "zonas/fiestera/lugares/fiestera", "isla_evento": false},
+    {"id": "allday", "categoria": "isla", "ref": "zonas/allday", "pos": "zonas/allday/islas/isla", "isla_evento": true},
+    {"id": "fotos", "categoria": "isla", "ref": "zonas/fotos", "pos": "zonas/fotos/islas/isla", "isla_evento": false},
+    {"id": "tienda", "categoria": "isla", "ref": "zonas/tienda", "pos": "zonas/tienda/islas/isla", "isla_evento": false},
+    {"id": "ultima", "categoria": "isla", "ref": "zonas/ultima", "pos": "zonas/ultima/islas/isla", "isla_evento": false},
+    {"id": "naufrago", "categoria": "marvivo", "ref": "zonas/marvivo/piezas/naufrago", "pos": "zonas/marvivo/islas/banco_naufrago", "isla_evento": false},
+    {"id": "restos", "categoria": "marvivo", "ref": "zonas/marvivo/piezas/restos", "pos": "zonas/marvivo/restos/0", "instancias": "zonas/marvivo/restos", "isla_evento": false},
+    {"id": "cofres", "categoria": "marvivo", "ref": "zonas/marvivo/piezas/cofres", "pos": "zonas/marvivo/lugares/cofre_1", "instancias": ["zonas/marvivo/lugares/cofre_1", "zonas/marvivo/lugares/cofre_2"], "isla_evento": false},
+    {"id": "botellas", "categoria": "marvivo", "ref": "zonas/marvivo/piezas/botellas", "pos": "zonas/marvivo/lugares/botella_1", "instancias": ["zonas/marvivo/lugares/botella_1", "zonas/marvivo/lugares/botella_2", "zonas/marvivo/lugares/botella_3"], "isla_evento": false},
+    {"id": "delfin", "categoria": "marvivo", "ref": "zonas/marvivo/piezas/delfin", "pos": "zonas/marvivo/lugares/delfin", "isla_evento": false},
+    {"id": "remolino", "categoria": "marvivo", "ref": "zonas/marvivo/piezas/remolino", "pos": "zonas/marvivo/lugares/remolino", "isla_evento": false},
+    {"id": "circuito", "categoria": "circuito", "ref": "zonas/circuito", "pos": "circuito/salida", "isla_evento": false},
+    {"id": "faro", "categoria": "minijuego", "ref": "minijuegos/faro", "pos": "minijuegos/faro/isla", "isla_evento": false},
+    {"id": "canon", "categoria": "minijuego", "ref": "minijuegos/canon", "pos": "minijuegos/canon/isla", "isla_evento": false},
+    {"id": "costa_oeste", "categoria": "costa", "ref": "costas/costa_oeste", "pos": "costas/costa_oeste/linea/0", "isla_evento": false},
+    {"id": "costa_este", "categoria": "costa", "ref": "costas/costa_este", "pos": "costas/costa_este/linea/0", "isla_evento": false},
+    {"id": "costa_sur", "categoria": "costa", "ref": "costas/costa_sur", "pos": "costas/costa_sur/linea/0", "isla_evento": false}
+  ]
+}

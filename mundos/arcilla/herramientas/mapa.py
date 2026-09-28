@@ -84,6 +84,8 @@ def all_islands(M):
             out.append((c["id"], dict(t, id="%s_%d" % (c["id"], k), giro=0, p=4.0)))
     for s in M.get("solares_l2", []):
         out.append(("l2", dict(s["isla"], id=s["id"])))
+    for s in M.get("minijuegos", []):
+        out.append(("minijuegos", dict(s["isla"], id=s["id"])))
     return out
 
 

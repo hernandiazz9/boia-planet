@@ -6,6 +6,8 @@
     Blender -b -P tools/blender/render.py -- --skin base --skin noche     # barco parcial, sin manifiesto
     Blender -b -P tools/blender/render.py -- --all --style muestra         # estilo: tools/blender/styles/<nombre>.py
     Blender -b -P tools/blender/render.py -- --ship-style pixel-art        # sólo el barco en un estilo de exploración
+    Blender -b -P tools/blender/render.py -- --mundo arcilla               # sólo el arte de un mundo
+    Blender -b -P tools/blender/render.py -- --mundo arcilla --lugar cala  # sólo un lugar de ese mundo (repetible)
 
 Salida (en --out, por defecto art/), una carpeta por recurso:
     barco/          <skin>/<dir>.png, <skin>/<dir>_p.png (con pasajera), base/S_bob_<n>.png
@@ -15,6 +17,8 @@ Salida (en --out, por defecto art/), una carpeta por recurso:
     boia-tutorial/  idle_<n>.png (bucle de reposo)
     costa/          izquierda.png, derecha.png (losas que se repiten en vertical)
     planeta/        globo.png, nubes.png, banda-mar.png, isla.png (capas de la entrada)
+    mundos/<mundo>/<lugar>/   el arte de cada lugar del mapa compartido en cada mundo de WORLDS
+                    (mundos_arte.py, mundo_<id>.py; ids de lugar en lugares.json)
 y manifest.json en cada una. Los tiempos van a tools/blender/out/render_stats.json.
 """
 import argparse
@@ -31,6 +35,7 @@ sys.path.insert(0, HERE)
 import rig    # noqa: E402
 import ship   # noqa: E402
 import ship_styles  # noqa: E402
+import mundos_arte  # noqa: E402
 import style  # noqa: E402
 import world  # noqa: E402
 
@@ -41,6 +46,7 @@ BOB_FPS = 8
 BOB_SKIN, BOB_DIRECTION = "base", "S"
 ANCHOR_NAMES = ["pivot", "mast_top", "slot_passenger", "wake_origin", "bow"]
 RESOURCES = ["barco", "isla-evento", "isla-pequena", "boia-tutorial", "roca-a", "roca-b", "costa", "planeta"]
+WORLDS = ["arcilla"]                 # art/mundos/<id>/: un manifiesto por lugar (mundos_arte.WORLDS da el módulo)
 COMMAND = "Blender -b -P tools/blender/render.py -- --all"
 LICENSE = "muestra interna"
 STYLES_SUBDIR = "estilos"           # art/barco/estilos/<id>/: el barco en los estilos de exploración (T11)
@@ -282,11 +288,13 @@ def main():
     ap.add_argument("--style", default=style.DEFAULT, choices=style.available())
     ap.add_argument("--ship-style", action="append", choices=ship_styles.IDS,
                     help="sólo el barco en este estilo de exploración (repetible); con el barco completo van todos")
+    ap.add_argument("--mundo", action="append", choices=WORLDS, help="sólo el arte de este mundo (repetible)")
+    ap.add_argument("--lugar", action="append", help="con --mundo: sólo este lugar (repetible)")
     ap.add_argument("--out", default=os.path.join(REPO, "art"), help="carpeta raíz; cada recurso va en <out>/<id>")
     ap.add_argument("--stats", default=os.path.join(HERE, "out", "render_stats.json"))
     a = ap.parse_args(argv)
-    if not a.all and not a.skin and not a.only and not a.ship_style:
-        ap.error("usá --all, --only <recurso>, --ship-style <estilo> o al menos un --skin")
+    if not a.all and not a.skin and not a.only and not a.ship_style and not a.mundo:
+        ap.error("usá --all, --only <recurso>, --ship-style <estilo>, --mundo <mundo> o al menos un --skin")
     S = style.load(a.style)
     ship.use_style(a.style)
     root = os.path.abspath(a.out)
@@ -306,6 +314,9 @@ def main():
     for rid in todo:
         if rid != ASSET_ID:
             counts[rid] = render_world(rid, S, os.path.join(root, rid), stats)
+    for wid in (WORLDS if a.all else (a.mundo or [])):
+        for pid, n in mundos_arte.render_world(wid, os.path.join(root, "mundos", wid), stats, only=a.lugar).items():
+            counts["mundos/%s/%s" % (wid, pid)] = n
 
     total = time.perf_counter() - t_start
     render_secs = [x["seconds"] for x in stats]

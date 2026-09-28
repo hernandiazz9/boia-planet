@@ -9,6 +9,10 @@
 El barco (kind "ship") se valida con manifest.schema.json y sus reglas del
 encargo 01; el resto (sprite, tile, layers) con asset.schema.json y las reglas
 de check_world(). Tienen que existir todos los recursos que lista render.py.
+El arte de los mundos (art/mundos/<mundo>/<lugar>/, kind "place") se valida con
+place.schema.json: una carpeta por lugar de lugares.json en cada mundo de
+WORLDS, referencias a mapa.json, la misma cámara y densidad que el barco del
+mundo, y por pieza anclajes, huella, pistas, animaciones, losas y esquinas.
 Exit 0 si todo pasa; 1 si algo falla (lista cada fallo).
 """
 import argparse
@@ -23,6 +27,8 @@ import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, HERE)
+import lugares as LG  # noqa: E402
 
 # Lo que pide el encargo 01: 3 skins × 8 direcciones × con/sin pasajera + 8 fotogramas de balanceo base/S.
 SKINS = ["base", "noche", "fiesta"]
@@ -710,6 +716,391 @@ def check_world(res_dir, schema, diff_dir, known_ids):
     return fails, info, len(pngs)
 
 
+# --- Mundos: art/mundos/<mundo>/<lugar>/manifest.json (place.schema.json) -----------------
+MUNDOS_SUBDIR = "mundos"
+NEEDS_FOOTPRINT = {"bloquear", "rebote", "ralentizar", "recoger"}
+FADE_PX = 40                       # mundos_arte.FILL_FADE_PX: franja de tierra que funde hacia outer_fill
+
+
+def near(a, b, tol=1e-3):
+    return all(abs(x - y) <= tol for x, y in zip(a, b))
+
+
+def col_diff(p, x0, x1):
+    c = p.channels
+    tot = 0
+    for y in range(p.h):
+        i, j = (y * p.w + x0) * c, (y * p.w + x1) * c
+        tot += sum(abs(u - v) for u, v in zip(p.px[i:i + c], p.px[j:j + c]))
+    return tot / float(p.h * c)
+
+
+def check_anims(part, pngs, fails, info, label):
+    anims = part.get("animations", {})
+    for name, spec in anims.items():
+        mine = sorted((im["frame"], im["file"]) for im in part["images"] if im.get("animation") == name)
+        if "reverse_of" in spec:
+            src = anims.get(spec["reverse_of"])
+            if not src or "reverse_of" in src or src["frames"] != spec["frames"]:
+                fails.append("%s: animación %s: reverse_of %r no es una animación con %d fotogramas" % (
+                    label, name, spec["reverse_of"], spec["frames"]))
+            if mine:
+                fails.append("%s: animación %s: es reverse_of y no puede tener imágenes propias" % (label, name))
+            continue
+        if [f for f, _ in mine] != list(range(spec["frames"])):
+            fails.append("%s: animación %s: fotogramas %r, se esperaban 0..%d" % (label, name, [f for f, _ in mine], spec["frames"] - 1))
+            continue
+        distinct = len({bytes(pngs[f].px) for _, f in mine if f in pngs})
+        if distinct < max(2, spec["frames"] // 2):
+            fails.append("%s: animación %s: sólo %d fotogramas distintos de %d" % (label, name, distinct, spec["frames"]))
+    for im in part["images"]:
+        if "animation" in im and im["animation"] not in anims:
+            fails.append("%s: %s nombra la animación %r, que no está en animations" % (label, im["file"], im["animation"]))
+        if "animation" not in im and im["frame"] != 0:
+            fails.append("%s: %s: imagen fija con frame %d" % (label, im["file"], im["frame"]))
+    variants = [im["variant"] for im in part["images"] if "variant" in im]
+    if len(set(variants)) != len(variants):
+        fails.append("%s: variantes repetidas %r" % (label, variants))
+
+
+def check_part_sprite(part, pngs, fails, info, ppu, label):
+    W, H = part["image"]["width"], part["image"]["height"]
+    pv = part["pivot_px"]
+    anchors = part["anchors"]
+    if anchors.get("pivot") != pv:
+        fails.append("%s: anchors.pivot %r no coincide con pivot_px %r" % (label, anchors.get("pivot"), pv))
+    for k, pt in anchors.items():
+        if not inside(pt, W, H):
+            fails.append("%s: anclaje %s fuera de la imagen %r" % (label, k, pt))
+    for k in part["anchors_on_art"]:
+        if k not in anchors:
+            fails.append("%s: anchors_on_art nombra %r, que no es un anclaje" % (label, k))
+            continue
+        for im in part["images"]:
+            p = pngs.get(im["file"])
+            if p and not p.near_opaque(anchors[k], ANCHOR_NEAR_PX):
+                fails.append("%s: %s: el anclaje %s %r no cae sobre el arte" % (label, im["file"], k, anchors[k]))
+    if part["role"] == "puerta" and not {"pie_a", "pie_b"} <= set(anchors):
+        fails.append("%s: una puerta necesita los anclajes pie_a y pie_b" % label)
+    if part["collision"] in NEEDS_FOOTPRINT and not ("footprint" in part and "hitbox_hint" in part):
+        fails.append("%s: colisión %s sin footprint y hitbox_hint" % (label, part["collision"]))
+    if "footprint" in part:
+        pts = part["footprint"]["points_px"]
+        for pt in pts:
+            if not inside(pt, W, H):
+                fails.append("%s: huella: punto fuera de la imagen %r" % (label, pt))
+        radii = [math.hypot(x - pv[0], 2.0 * (y - pv[1])) for x, y in pts]
+        hit = part.get("hitbox_hint")
+        if not hit:
+            fails.append("%s: footprint sin hitbox_hint" % label)
+        else:
+            if not min(radii) <= hit["radius_px"] <= max(radii) * 1.02:
+                fails.append("%s: hitbox_hint: radio %.1f px fuera de la huella (%.1f a %.1f)" % (
+                    label, hit["radius_px"], min(radii), max(radii)))
+            r = hit["radius_px"]
+            if not (0 <= pv[0] - r and pv[0] + r <= W and 0 <= pv[1] - r / 2 and pv[1] + r / 2 <= H):
+                fails.append("%s: hitbox_hint: la elipse de %.1f px no cabe en la imagen" % (label, r))
+    for name in ("hitbox_hint", "proximity_hint"):
+        c = part.get(name)
+        if c is None:
+            continue
+        if c["center_px"] != pv:
+            fails.append("%s: %s: el centro %r no es el pivote %r" % (label, name, c["center_px"], pv))
+        if abs(c["radius_units"] * ppu - c["radius_px"]) > 0.05:
+            fails.append("%s: %s: radius_units × pixels_per_unit (%.2f) ≠ radius_px (%.2f)" % (
+                label, name, c["radius_units"] * ppu, c["radius_px"]))
+    if part.get("proximity_hint") and part.get("hitbox_hint") and \
+            part["proximity_hint"]["radius_px"] < part["hitbox_hint"]["radius_px"]:
+        fails.append("%s: proximity_hint más pequeño que hitbox_hint" % label)
+    check_anims(part, pngs, fails, info, label)
+
+
+class Along:
+    """Vista de una losa con ejes (across, along): across va de tierra a agua o al revés; along, a lo largo de la costa."""
+
+    def __init__(self, p, axis):
+        self.p, self.axis = p, axis
+        self.n_across, self.n_along = (p.w, p.h) if axis == "y" else (p.h, p.w)
+
+    def xy(self, a, b):
+        return (a, b) if self.axis == "y" else (b, a)
+
+    def alpha(self, a, b):
+        return self.p.alpha(*self.xy(a, b))
+
+    def rgb(self, a, b):
+        x, y = self.xy(a, b)
+        i = (y * self.p.w + x) * self.p.channels
+        return tuple(self.p.px[i:i + 3])
+
+
+def check_place_tile(part, pngs, fails, info, label):
+    t = part["tile"]
+    axis, land = t["axis"], t["land_side"]
+    if (axis == "y") != (land in ("left", "right")):
+        fails.append("%s: losa de eje %s con tierra %s" % (label, axis, land))
+        return
+    if len(part["images"]) != 1:
+        fails.append("%s: una losa lleva una sola imagen" % label)
+    p = pngs.get(part["images"][0]["file"])
+    if not p:
+        return
+    v = Along(p, axis)
+    if t["period_px"] != v.n_along:
+        fails.append("%s: period_px %d; la imagen mide %d a lo largo de la costa" % (label, t["period_px"], v.n_along))
+    high = land in ("right", "bottom")          # la tierra está del lado de las coordenadas altas
+    land_lines = range(v.n_across - TILE_LAND_COLS, v.n_across) if high else range(TILE_LAND_COLS)
+    water_lines = range(TILE_WATER_COLS) if high else range(v.n_across - TILE_WATER_COLS, v.n_across)
+    fill = tuple(int(t["outer_fill"][i:i + 2], 16) for i in (1, 3, 5))
+    not_opaque = sum(1 for a in land_lines for b in range(v.n_along) if v.alpha(a, b) != 255)
+    same = sum(1 for a in land_lines for b in range(v.n_along) if v.rgb(a, b) == fill)
+    frac = same / float(len(land_lines) * v.n_along)
+    if not_opaque:
+        fails.append("%s: %d píxeles no opacos en el borde de tierra" % (label, not_opaque))
+    if frac < TILE_FILL_MIN:
+        fails.append("%s: sólo el %.1f %% del borde de tierra es outer_fill %s" % (label, 100 * frac, t["outer_fill"]))
+    not_clear = sum(1 for a in water_lines for b in range(v.n_along) if v.alpha(a, b) != 0)
+    if not_clear:
+        fails.append("%s: %d píxeles no transparentes en el borde del agua" % (label, not_clear))
+    s, c = t["shore_px"], t["collision_px"]
+    if not (0 < s["min"] <= s["mean"] <= s["max"] < v.n_across):
+        fails.append("%s: shore_px incoherente %r" % (label, s))
+        return
+    if not (0 < c < v.n_across) or (high and c >= s["min"]) or (not high and c <= s["max"]):
+        fails.append("%s: collision_px %.1f no queda del lado del agua de la orilla" % (label, c))
+        return
+    if not 0 <= t["map_line"]["px"] <= v.n_across:
+        fails.append("%s: map_line.px %.1f fuera de la losa" % (label, t["map_line"]["px"]))
+    # Los números tienen que describir el arte: tierra opaca detrás de la orilla; agua pasada la colisión. En la
+    # losa de abajo lo que está de pie en tierra (farolas, casitas) sube sobre el agua en pantalla: ahí sólo se
+    # mide la tierra.
+    land_a = int(s["max"] + 4) if high else int(s["min"] - 4)
+    bad_land = sum(1 for b in range(v.n_along) if v.alpha(land_a, b) != 255)
+    if bad_land:
+        fails.append("%s: en %d (detrás de la orilla) hay %d líneas sin tierra opaca" % (label, land_a, bad_land))
+    if axis == "y":
+        water_a = int(c - 2) if high else int(c + 2)
+        bad_water = sum(1 for b in range(v.n_along) if v.alpha(water_a, b) == 255)
+        if bad_water:
+            fails.append("%s: en %d (pasada la colisión) hay %d líneas opacas" % (label, water_a, bad_water))
+    # Costura: la última línea tiene que continuar en la primera como dos líneas vecinas cualesquiera.
+    diff = (lambda i, j: row_diff(p, i, j)) if axis == "y" else (lambda i, j: col_diff(p, i, j))
+    diffs = sorted(diff(i, i + 1) for i in range(v.n_along - 1))
+    median = diffs[len(diffs) // 2]
+    seam = diff(v.n_along - 1, 0)
+    limit = max(SEAM_FACTOR * median, diffs[int(0.95 * len(diffs))])
+    if seam > limit:
+        fails.append("%s: la costura salta %.2f (límite %.2f)" % (label, seam, limit))
+    info.append("%s: losa en %s, tierra %s, orilla %.0f–%.0f px, colisión %.0f px, línea del mapa %.0f px, relleno %s "
+                "(%.1f %%), costura %.2f (mediana %.2f, límite %.2f)" % (
+                    label, axis, land, s["min"], s["max"], c, t["map_line"]["px"], t["outer_fill"], 100 * frac,
+                    seam, median, limit))
+
+
+def check_corner(part, pngs, fails, info, label):
+    k = part["corner"]
+    p = pngs.get(part["images"][0]["file"])
+    if not p:
+        return
+    for side in k["land"]:
+        fill_hex = k["outer_fill"].get(side)
+        if not fill_hex:
+            fails.append("%s: falta outer_fill de %s" % (label, side))
+            continue
+        fill = tuple(int(fill_hex[i:i + 2], 16) for i in (1, 3, 5))
+        others = [s for s in k["land"] if s != side]
+        v = Along(p, "y" if side in ("left", "right") else "x")
+        lines = range(v.n_across - TILE_LAND_COLS, v.n_across) if side in ("right", "bottom") else range(TILE_LAND_COLS)
+
+        def skip(b):
+            # a lo largo del borde, la franja que funde hacia el otro lado de tierra tiene su propio color
+            return any((o == "bottom" and b >= v.n_along - FADE_PX) or (o == "left" and b < FADE_PX)
+                       or (o == "right" and b >= v.n_along - FADE_PX) for o in others)
+
+        bs = [b for b in range(v.n_along) if not skip(b)]
+        not_opaque = sum(1 for a in lines for b in range(v.n_along) if v.alpha(a, b) != 255)
+        frac = sum(1 for a in lines for b in bs if v.rgb(a, b) == fill) / float(len(lines) * len(bs))
+        if not_opaque:
+            fails.append("%s: %d píxeles no opacos en el borde de tierra %s" % (label, not_opaque, side))
+        if frac < TILE_FILL_MIN:
+            fails.append("%s: sólo el %.1f %% del borde %s es outer_fill %s" % (label, 100 * frac, side, fill_hex))
+    # La esquina opuesta a la tierra es agua.
+    xs = range(p.w - 8, p.w) if "left" in k["land"] else range(8)
+    corner_clear = all(p.alpha(x, y) == 0 for x in xs for y in range(8))
+    if not corner_clear:
+        fails.append("%s: la esquina del lado del agua no es transparente" % label)
+    info.append("%s: esquina con tierra %s, relleno %s" % (label, "+".join(k["land"]), k["outer_fill"]))
+
+
+def check_place(res_dir, wid, schema, ship_proj, catalog, M, diff_dir):
+    fails, info = [], []
+    with open(os.path.join(res_dir, "manifest.json"), encoding="utf-8") as f:
+        man = json.load(f)
+    fails += validate(man, schema, schema)
+    if fails:
+        return fails, info, 0
+    pid = man["id"]
+    if pid != os.path.basename(res_dir):
+        fails.append("el id %r no es el nombre de la carpeta" % pid)
+    if man["world"] != wid:
+        fails.append("world %r; la carpeta es del mundo %r" % (man["world"], wid))
+    entry = catalog.get(pid)
+    pl = man["place"]
+    if entry is None:
+        fails.append("%r no es un lugar de tools/blender/lugares.json" % pid)
+    else:
+        try:
+            LG.resolve(M, entry["ref"])
+            pos = LG.point(LG.resolve(M, entry["pos"]))
+            inst = LG.instances(M, entry) if entry.get("instancias") else None
+        except (KeyError, ValueError) as e:
+            fails.append("lugares.json apunta a algo que no está en mapa.json: %s" % e)
+            pos, inst = pl["pos"], pl.get("instances")
+        if pl["ref"] != entry["ref"]:
+            fails.append("place.ref %r; lugares.json dice %r" % (pl["ref"], entry["ref"]))
+        if not near(pl["pos"], pos, 1e-6):
+            fails.append("place.pos %r; mapa.json dice %r" % (pl["pos"], pos))
+        if inst is not None and (len(pl.get("instances", [])) != len(inst)
+                                 or not all(near(a, b, 1e-6) for a, b in zip(pl.get("instances", []), inst))):
+            fails.append("place.instances no son las de mapa.json (%d)" % len(inst))
+        if pl["event_island"] != bool(entry.get("isla_evento")):
+            fails.append("place.event_island %r; lugares.json dice %r" % (pl["event_island"], bool(entry.get("isla_evento"))))
+        if pl["event_island"] and not pl["shared_name"]:
+            fails.append("una isla de evento lleva el nombre compartido (shared_name)")
+    # La misma cámara y densidad que el barco del mundo.
+    proj = man["projection"]
+    for k in ("camera_elevation_deg", "camera_azimuth_deg", "pixels_per_unit"):
+        if abs(proj[k] - ship_proj[k]) > 1e-3:
+            fails.append("projection.%s %r; el barco usa %r" % (k, proj[k], ship_proj[k]))
+    ppu = man["scale"]["pixels_per_unit"]
+    if abs(ppu - proj["pixels_per_unit"]) > 1e-6:
+        fails.append("scale.pixels_per_unit no es projection.pixels_per_unit")
+    parts = man["parts"]
+    ids = [p["id"] for p in parts]
+    if len(set(ids)) != len(ids):
+        fails.append("piezas repetidas: %r" % ids)
+    listed = [im["file"] for p in parts for im in p["images"]]
+    if len(set(listed)) != len(listed):
+        fails.append("imágenes repetidas entre piezas: %r" % sorted({f for f in listed if listed.count(f) > 1}))
+    on_disk = sorted(fn for fn in os.listdir(res_dir) if fn.endswith(".png"))
+    if on_disk != sorted(set(listed)):
+        fails.append("en disco hay %s; el manifiesto lista %s" % (on_disk, sorted(set(listed))))
+    undocumented = sorted({k for p in parts for k in p["anchors"]} - set(man["anchors_doc"]))
+    if undocumented:
+        fails.append("anclajes sin documentar en anchors_doc: %s" % undocumented)
+    pngs = {}
+    for part in parts:
+        label = part["id"]
+        if "map_pos" in part and "offset_units" in part:
+            want = [part["map_pos"][0] - pl["pos"][0], part["map_pos"][1] - pl["pos"][1]]
+            if not near(part["offset_units"], want):
+                fails.append("%s: offset_units %r ≠ map_pos - place.pos %r" % (label, part["offset_units"], want))
+        W, H, border = part["image"]["width"], part["image"]["height"], part["image"]["transparent_border_px"]
+        mine = {}
+        for im in part["images"]:
+            path = os.path.join(res_dir, im["file"])
+            if not os.path.exists(path):
+                continue
+            p = Png(path)
+            mine[im["file"]] = pngs[im["file"]] = p
+            if (p.w, p.h) != (W, H):
+                fails.append("%s: %s mide %dx%d, se esperaba %dx%d" % (label, im["file"], p.w, p.h, W, H))
+                continue
+            if not p.has_alpha:
+                fails.append("%s: %s sin canal alfa" % (label, im["file"]))
+                continue
+            if opaque_bbox(p) is None:
+                fails.append("%s: %s: imagen vacía" % (label, im["file"]))
+            if border:
+                n = border_opaque_fast(p, border)
+                if n:
+                    fails.append("%s: %s: %d píxeles no transparentes en el borde de %d px" % (label, im["file"], n, border))
+        if len(mine) != len(part["images"]) or any((q.w, q.h) != (W, H) for q in mine.values()):
+            continue
+        if "tile" in part:
+            check_place_tile(part, mine, fails, info, label)
+        elif "corner" in part:
+            check_corner(part, mine, fails, info, label)
+        else:
+            check_part_sprite(part, mine, fails, info, ppu, label)
+        if "attach" in part:
+            path = os.path.join(REPO, part["attach"]["sprites"])
+            if not os.path.exists(path):
+                fails.append("%s: attach.sprites %s no existe" % (label, part["attach"]["sprites"]))
+            else:
+                with open(path, encoding="utf-8") as f:
+                    ship_man = json.load(f)
+                if part["attach"]["anchor"] not in ship_man.get("anchors_doc", {}):
+                    fails.append("%s: el barco no tiene el anclaje %r" % (label, part["attach"]["anchor"]))
+    if diff_dir:
+        same, worst = 0, (0.0, None)
+        for name, p in sorted(pngs.items()):
+            other = os.path.join(diff_dir, name)
+            if not os.path.exists(other):
+                fails.append("--diff: falta %s" % other)
+                continue
+            with open(other, "rb") as f1, open(os.path.join(res_dir, name), "rb") as f2:
+                if f1.read() == f2.read():
+                    same += 1
+                    continue
+            b = Png(other)
+            frac = diff_pixels(p, b) / float(p.w * p.h) if (b.w, b.h) == (p.w, p.h) else 1.0
+            if frac > worst[0]:
+                worst = (frac, name)
+            if frac > MAX_DIFF_FRACTION:
+                fails.append("--diff: %s difiere en %.3f %% de píxeles" % (name, 100 * frac))
+        info.append("diff: %d/%d PNG idénticos byte a byte; peor %.4f %% (%s)" % (same, len(pngs), 100 * worst[0], worst[1]))
+    kinds = {}
+    for part in parts:
+        kinds[part["role"]] = kinds.get(part["role"], 0) + 1
+    info.append("%d piezas (%s), %d imágenes, %d bytes" % (len(parts), ", ".join("%s %d" % kv for kv in sorted(kinds.items())),
+                                                          len(pngs), sum(p.size for p in pngs.values())))
+    return fails, info, len(pngs)
+
+
+def check_worlds(art, diff_root, worlds):
+    """Cada mundo de WORLDS: una carpeta por lugar de lugares.json, ni una más; cada manifiesto válido."""
+    with open(os.path.join(HERE, "place.schema.json"), encoding="utf-8") as f:
+        schema = json.load(f)
+    cat = LG.load_catalog()
+    catalog = LG.by_id(cat)
+    M = LG.load_map(cat)
+    results = []
+    for wid in worlds:
+        wdir = os.path.join(art, MUNDOS_SUBDIR, wid)
+        found = sorted(d for d in os.listdir(wdir) if os.path.isdir(os.path.join(wdir, d))) if os.path.isdir(wdir) else []
+        missing = [pid for pid in catalog if pid not in found]
+        extra = [d for d in found if d not in catalog]
+        if missing or extra:
+            results.append(("%s/%s" % (MUNDOS_SUBDIR, wid), "place",
+                            ["lugares sin arte: %s; carpetas que no son lugares: %s" % (missing, extra)], [], 0))
+        ship_path = None
+        for pid in [p for p in catalog if p in found]:
+            res_dir = os.path.join(wdir, pid)
+            label = "%s/%s/%s" % (MUNDOS_SUBDIR, wid, pid)
+            if not os.path.exists(os.path.join(res_dir, "manifest.json")):
+                results.append((label, "place", ["falta manifest.json"], [], 0))
+                continue
+            if ship_path is None:
+                with open(os.path.join(res_dir, "manifest.json"), encoding="utf-8") as f:
+                    style = json.load(f).get("style")
+                ship_path = os.path.join(art, "barco", STYLES_SUBDIR, style, "manifest.json")
+                with open(ship_path, encoding="utf-8") as f:
+                    ship_proj = json.load(f)["projection"]
+            diff_dir = os.path.join(diff_root, MUNDOS_SUBDIR, wid, pid) if diff_root else None
+            results.append((label, "place") + check_place(res_dir, wid, schema, ship_proj, catalog, M, diff_dir))
+    return results
+
+
+def expected_worlds():
+    with open(os.path.join(HERE, "render.py"), encoding="utf-8") as f:
+        tree = ast.parse(f.read())
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(getattr(t, "id", None) == "WORLDS" for t in node.targets):
+            return ast.literal_eval(node.value)
+    return []
+
+
 def expected_resources():
     """La lista RESOURCES de render.py: el check exige exactamente esas carpetas."""
     with open(os.path.join(HERE, "render.py"), encoding="utf-8") as f:
@@ -735,6 +1126,7 @@ def main():
         print("FALLO recursos: render.py lista %s; en %s hay %s" % (sorted(expected), os.path.relpath(a.art, REPO), found))
         total_fails += 1
     counts = {}
+    batches = []
     for rid in [r for r in expected if r in found] + [r for r in found if r not in expected]:
         res_dir = os.path.join(a.art, rid)
         diff_dir = os.path.join(a.diff, rid) if a.diff else None
@@ -745,6 +1137,15 @@ def main():
             results += check_ship_styles(rid, res_dir, diff_dir)
         else:
             results = [(rid, kind) + check_world(res_dir, schema, diff_dir, found)]
+        batches.append(results)
+    worlds = expected_worlds()
+    batches.append(check_worlds(a.art, a.diff, worlds))
+    mdir = os.path.join(a.art, MUNDOS_SUBDIR)
+    extra_worlds = sorted(set(os.listdir(mdir)) - set(worlds)) if os.path.isdir(mdir) else []
+    if extra_worlds:
+        print("FALLO mundos: hay carpetas de mundos que render.py no lista en WORLDS: %s" % extra_worlds)
+        total_fails += 1
+    for results in batches:
         for label, kind_, fails, info, n in results:
             for line in info:
                 print("%s: %s" % (label, line))
@@ -761,6 +1162,9 @@ def main():
         return 1
     print("%d manifiestos válidos, %d imágenes (%s)" % (
         len(counts), sum(counts.values()), ", ".join("%s %d" % kv for kv in counts.items())))
+    for wid in worlds:
+        mine = {k: v for k, v in counts.items() if k.startswith("%s/%s/" % (MUNDOS_SUBDIR, wid))}
+        print("mundo %s: %d lugares válidos, %d imágenes" % (wid, len(mine), sum(mine.values())))
     return 0
 
 

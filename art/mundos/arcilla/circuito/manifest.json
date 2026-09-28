@@ -1,0 +1,1631 @@
+{
+  "id": "circuito",
+  "kind": "place",
+  "category": "circuito",
+  "world": "arcilla",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "arcilla",
+  "ship": "B05",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/world.py",
+      "tools/blender/lugares.py",
+      "tools/blender/lugares.json",
+      "tools/blender/mundos_arte.py",
+      "tools/blender/mundo_arcilla.py",
+      "tools/blender/render.py",
+      "tools/blender/styles/05_arcilla_maqueta.py",
+      "mundos/temas.py",
+      "mundos/arcilla/escena.py",
+      "mundos/arcilla/piezas.py",
+      "mundos/arcilla/herramientas/mapa.py",
+      "mundos/arcilla/mapa.json",
+      "mundos/arcilla/zonas/circuito.py"
+    ],
+    "sources_sha256": "910b3a6766c9eaea6d2837379b4dd62fa8c63b556dbf92055ee3241ce717d626",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 64,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma cámara y densidad que los sprites del barco (D-13, D-15): una unidad de la maqueta mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua. Tamaños a 1:1 con el barco; las posiciones del mapa las escala el motor (mapa.json, ritmo.factor_juego)"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). map_pos y offset_units en unidades del mapa (u_maq, ejes de mapa.json: x a la derecha, y hacia el espectador); offset_units = map_pos - place.pos. En los círculos sobre el agua radius_px es el semieje horizontal; el vertical mide la mitad",
+  "place": {
+    "ref": "zonas/circuito",
+    "pos": [
+      12.6,
+      5.6
+    ],
+    "event_island": false,
+    "name": "El Freu",
+    "shared_name": false,
+    "catalog": "tools/blender/lugares.json"
+  },
+  "anchors_doc": {
+    "pivot": "punto del mapa a ras de agua que da map_pos: centro de la isla u objeto; fijo en todas las imágenes",
+    "pie_a": "pie izquierdo del arco a ras de agua (mirando en el sentido de la carrera)",
+    "pie_b": "pie derecho del arco a ras de agua",
+    "arco": "clave del arco",
+    "luces": "cabeza del semáforo: luces de la cuenta atrás",
+    "rotulo": "encima del punto más alto del arte: nombre o aviso del lugar"
+  },
+  "parts": [
+    {
+      "id": "salida",
+      "role": "puerta",
+      "collision": "disparador",
+      "map_pos": [
+        12.6,
+        5.6
+      ],
+      "offset_units": [
+        0.0,
+        -0.0
+      ],
+      "doc": "arco sobre el carril: el paso se cuenta al cruzar el segmento pie_a–pie_b",
+      "image": {
+        "width": 304,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        152.0,
+        113.0
+      ],
+      "anchors": {
+        "pivot": [
+          152.0,
+          113.0
+        ],
+        "pie_a": [
+          37.77,
+          118.52
+        ],
+        "pie_b": [
+          266.23,
+          107.48
+        ],
+        "arco": [
+          152.0,
+          26.15
+        ]
+      },
+      "anchors_on_art": [
+        "pie_a",
+        "pie_b",
+        "arco"
+      ],
+      "images": [
+        {
+          "file": "salida.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "cp1",
+      "role": "puerta",
+      "collision": "disparador",
+      "map_pos": [
+        12.2,
+        1.0
+      ],
+      "offset_units": [
+        -0.4,
+        -4.6
+      ],
+      "doc": "arco sobre el carril: el paso se cuenta al cruzar el segmento pie_a–pie_b",
+      "image": {
+        "width": 304,
+        "height": 128,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        152.0,
+        99.0
+      ],
+      "anchors": {
+        "pivot": [
+          152.0,
+          99.0
+        ],
+        "pie_a": [
+          37.35,
+          101.47
+        ],
+        "pie_b": [
+          266.65,
+          96.54
+        ],
+        "arco": [
+          152.0,
+          26.38
+        ]
+      },
+      "anchors_on_art": [
+        "pie_a",
+        "pie_b",
+        "arco"
+      ],
+      "images": [
+        {
+          "file": "cp1.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "cp-s",
+      "role": "puerta",
+      "collision": "disparador",
+      "map_pos": [
+        7.8,
+        -11.7
+      ],
+      "offset_units": [
+        -4.8,
+        -17.3
+      ],
+      "doc": "arco sobre el carril: el paso se cuenta al cruzar el segmento pie_a–pie_b",
+      "image": {
+        "width": 304,
+        "height": 128,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        152.0,
+        100.0
+      ],
+      "anchors": {
+        "pivot": [
+          152.0,
+          100.0
+        ],
+        "pie_a": [
+          37.26,
+          101.12
+        ],
+        "pie_b": [
+          266.74,
+          98.89
+        ],
+        "arco": [
+          152.0,
+          27.37
+        ]
+      },
+      "anchors_on_art": [
+        "pie_a",
+        "pie_b",
+        "arco"
+      ],
+      "images": [
+        {
+          "file": "cp-s.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "cp-a",
+      "role": "puerta",
+      "collision": "disparador",
+      "map_pos": [
+        12.9,
+        -12.0
+      ],
+      "offset_units": [
+        0.3,
+        -17.6
+      ],
+      "doc": "arco sobre el carril: el paso se cuenta al cruzar el segmento pie_a–pie_b",
+      "image": {
+        "width": 176,
+        "height": 112,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        88.0,
+        85.0
+      ],
+      "anchors": {
+        "pivot": [
+          88.0,
+          85.0
+        ],
+        "pie_a": [
+          35.04,
+          85.19
+        ],
+        "pie_b": [
+          140.96,
+          84.81
+        ],
+        "arco": [
+          88.0,
+          25.37
+        ]
+      },
+      "anchors_on_art": [
+        "pie_a",
+        "pie_b",
+        "arco"
+      ],
+      "images": [
+        {
+          "file": "cp-a.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "cp2",
+      "role": "puerta",
+      "collision": "disparador",
+      "map_pos": [
+        11.4,
+        -22.0
+      ],
+      "offset_units": [
+        -1.2,
+        -27.6
+      ],
+      "doc": "arco sobre el carril: el paso se cuenta al cruzar el segmento pie_a–pie_b",
+      "image": {
+        "width": 272,
+        "height": 160,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        136.0,
+        103.0
+      ],
+      "anchors": {
+        "pivot": [
+          136.0,
+          103.0
+        ],
+        "pie_a": [
+          37.76,
+          132.66
+        ],
+        "pie_b": [
+          234.24,
+          73.34
+        ],
+        "arco": [
+          136.0,
+          30.37
+        ]
+      },
+      "anchors_on_art": [
+        "pie_a",
+        "pie_b",
+        "arco"
+      ],
+      "images": [
+        {
+          "file": "cp2.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "meta",
+      "role": "puerta",
+      "collision": "disparador",
+      "map_pos": [
+        8.8,
+        -25.0
+      ],
+      "offset_units": [
+        -3.8,
+        -30.6
+      ],
+      "doc": "arco sobre el carril: el paso se cuenta al cruzar el segmento pie_a–pie_b",
+      "image": {
+        "width": 256,
+        "height": 176,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        128.0,
+        112.0
+      ],
+      "anchors": {
+        "pivot": [
+          128.0,
+          112.0
+        ],
+        "pie_a": [
+          42.62,
+          150.34
+        ],
+        "pie_b": [
+          213.38,
+          73.66
+        ],
+        "arco": [
+          128.0,
+          25.15
+        ]
+      },
+      "anchors_on_art": [
+        "pie_a",
+        "pie_b",
+        "arco"
+      ],
+      "images": [
+        {
+          "file": "meta.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "semaforo",
+      "role": "decoracion",
+      "collision": "ninguna",
+      "map_pos": [
+        14.95,
+        5.25
+      ],
+      "offset_units": [
+        2.35,
+        -0.35
+      ],
+      "doc": "semáforo de salida; va en la playa este, junto al arco de salida",
+      "image": {
+        "width": 64,
+        "height": 160,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        32.0,
+        138.0
+      ],
+      "anchors": {
+        "pivot": [
+          32.0,
+          138.0
+        ],
+        "luces": [
+          32.0,
+          39.38
+        ]
+      },
+      "anchors_on_art": [
+        "pivot",
+        "luces"
+      ],
+      "images": [
+        {
+          "file": "semaforo.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "cartel",
+      "role": "obstaculo",
+      "collision": "bloquear",
+      "map_pos": [
+        12.3,
+        -4.68
+      ],
+      "offset_units": [
+        -0.3,
+        -10.28
+      ],
+      "doc": "cartel «ATAJO →» sobre tres rocas, a la izquierda de la entrada del atajo",
+      "image": {
+        "width": 128,
+        "height": 128,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        64.0,
+        91.0
+      ],
+      "anchors": {
+        "pivot": [
+          64.0,
+          91.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            97.54,
+            91.0
+          ],
+          [
+            96.4,
+            95.34
+          ],
+          [
+            93.05,
+            99.39
+          ],
+          [
+            87.72,
+            102.86
+          ],
+          [
+            80.77,
+            105.53
+          ],
+          [
+            72.68,
+            107.2
+          ],
+          [
+            64.0,
+            107.77
+          ],
+          [
+            55.32,
+            107.2
+          ],
+          [
+            47.23,
+            105.53
+          ],
+          [
+            40.28,
+            102.86
+          ],
+          [
+            34.95,
+            99.39
+          ],
+          [
+            31.6,
+            95.34
+          ],
+          [
+            30.45,
+            91.0
+          ],
+          [
+            31.6,
+            86.66
+          ],
+          [
+            34.95,
+            82.61
+          ],
+          [
+            40.28,
+            79.14
+          ],
+          [
+            47.23,
+            76.48
+          ],
+          [
+            55.32,
+            74.8
+          ],
+          [
+            64.0,
+            74.23
+          ],
+          [
+            72.68,
+            74.8
+          ],
+          [
+            80.77,
+            76.48
+          ],
+          [
+            87.72,
+            79.14
+          ],
+          [
+            93.05,
+            82.61
+          ],
+          [
+            96.4,
+            86.66
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          91.0
+        ],
+        "radius_px": 33.54,
+        "radius_units": 0.38
+      },
+      "images": [
+        {
+          "file": "cartel.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "dents",
+      "role": "isla",
+      "collision": "bloquear",
+      "map_pos": [
+        10.7,
+        -11.6
+      ],
+      "offset_units": [
+        -1.9,
+        -17.2
+      ],
+      "image": {
+        "width": 272,
+        "height": 240,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        134.0,
+        144.0
+      ],
+      "anchors": {
+        "pivot": [
+          134.0,
+          144.0
+        ],
+        "rotulo": [
+          134.0,
+          12.34
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            156.99,
+            209.2
+          ],
+          [
+            141.07,
+            209.78
+          ],
+          [
+            124.97,
+            208.73
+          ],
+          [
+            109.1,
+            206.1
+          ],
+          [
+            93.84,
+            201.93
+          ],
+          [
+            79.57,
+            196.34
+          ],
+          [
+            66.63,
+            189.46
+          ],
+          [
+            55.36,
+            181.46
+          ],
+          [
+            46.02,
+            172.53
+          ],
+          [
+            38.85,
+            162.91
+          ],
+          [
+            34.03,
+            152.82
+          ],
+          [
+            31.66,
+            142.51
+          ],
+          [
+            31.81,
+            132.24
+          ],
+          [
+            34.48,
+            122.25
+          ],
+          [
+            39.6,
+            112.81
+          ],
+          [
+            47.05,
+            104.13
+          ],
+          [
+            56.63,
+            96.43
+          ],
+          [
+            68.13,
+            89.91
+          ],
+          [
+            81.24,
+            84.71
+          ],
+          [
+            95.65,
+            80.98
+          ],
+          [
+            111.01,
+            78.8
+          ],
+          [
+            126.93,
+            78.22
+          ],
+          [
+            143.03,
+            79.27
+          ],
+          [
+            158.9,
+            81.91
+          ],
+          [
+            174.16,
+            86.07
+          ],
+          [
+            188.43,
+            91.66
+          ],
+          [
+            201.37,
+            98.55
+          ],
+          [
+            212.64,
+            106.55
+          ],
+          [
+            221.98,
+            115.47
+          ],
+          [
+            229.15,
+            125.1
+          ],
+          [
+            233.98,
+            135.19
+          ],
+          [
+            236.34,
+            145.5
+          ],
+          [
+            236.19,
+            155.77
+          ],
+          [
+            233.52,
+            165.75
+          ],
+          [
+            228.4,
+            175.19
+          ],
+          [
+            220.95,
+            183.87
+          ],
+          [
+            211.37,
+            191.57
+          ],
+          [
+            199.88,
+            198.09
+          ],
+          [
+            186.76,
+            203.29
+          ],
+          [
+            172.35,
+            207.02
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          134.0,
+          144.0
+        ],
+        "radius_px": 117.48,
+        "radius_units": 1.3308
+      },
+      "images": [
+        {
+          "file": "dents.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "freu",
+      "role": "isla",
+      "collision": "bloquear",
+      "map_pos": [
+        14.6,
+        -12.0
+      ],
+      "offset_units": [
+        2.0,
+        -17.6
+      ],
+      "image": {
+        "width": 192,
+        "height": 176,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        93.0,
+        92.0
+      ],
+      "anchors": {
+        "pivot": [
+          93.0,
+          92.0
+        ],
+        "rotulo": [
+          93.0,
+          8.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            93.0,
+            136.14
+          ],
+          [
+            83.33,
+            135.6
+          ],
+          [
+            73.9,
+            133.98
+          ],
+          [
+            64.95,
+            131.33
+          ],
+          [
+            56.68,
+            127.71
+          ],
+          [
+            49.31,
+            123.21
+          ],
+          [
+            43.01,
+            117.94
+          ],
+          [
+            37.94,
+            112.04
+          ],
+          [
+            34.23,
+            105.64
+          ],
+          [
+            31.97,
+            98.91
+          ],
+          [
+            31.21,
+            92.0
+          ],
+          [
+            31.97,
+            85.1
+          ],
+          [
+            34.23,
+            78.36
+          ],
+          [
+            37.94,
+            71.96
+          ],
+          [
+            43.01,
+            66.06
+          ],
+          [
+            49.31,
+            60.79
+          ],
+          [
+            56.68,
+            56.29
+          ],
+          [
+            64.95,
+            52.67
+          ],
+          [
+            73.9,
+            50.02
+          ],
+          [
+            83.33,
+            48.41
+          ],
+          [
+            93.0,
+            47.86
+          ],
+          [
+            102.67,
+            48.41
+          ],
+          [
+            112.1,
+            50.02
+          ],
+          [
+            121.05,
+            52.67
+          ],
+          [
+            129.32,
+            56.29
+          ],
+          [
+            136.69,
+            60.79
+          ],
+          [
+            142.99,
+            66.06
+          ],
+          [
+            148.06,
+            71.96
+          ],
+          [
+            151.77,
+            78.36
+          ],
+          [
+            154.03,
+            85.1
+          ],
+          [
+            154.79,
+            92.0
+          ],
+          [
+            154.03,
+            98.91
+          ],
+          [
+            151.77,
+            105.64
+          ],
+          [
+            148.06,
+            112.04
+          ],
+          [
+            142.99,
+            117.94
+          ],
+          [
+            136.69,
+            123.21
+          ],
+          [
+            129.32,
+            127.71
+          ],
+          [
+            121.05,
+            131.33
+          ],
+          [
+            112.1,
+            133.98
+          ],
+          [
+            102.67,
+            135.6
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          93.0,
+          92.0
+        ],
+        "radius_px": 75.62,
+        "radius_units": 0.8566
+      },
+      "images": [
+        {
+          "file": "freu.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "roca",
+      "role": "obstaculo",
+      "collision": "rebote",
+      "map_pos": [
+        13.4,
+        -8.0
+      ],
+      "offset_units": [
+        0.8,
+        -13.6
+      ],
+      "doc": "COLISIÓN rebote",
+      "image": {
+        "width": 176,
+        "height": 96,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        88.0,
+        50.0
+      ],
+      "anchors": {
+        "pivot": [
+          88.0,
+          50.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            123.31,
+            50.0
+          ],
+          [
+            122.11,
+            54.57
+          ],
+          [
+            118.58,
+            58.83
+          ],
+          [
+            112.97,
+            62.48
+          ],
+          [
+            105.65,
+            65.29
+          ],
+          [
+            97.14,
+            67.05
+          ],
+          [
+            88.0,
+            67.66
+          ],
+          [
+            78.86,
+            67.05
+          ],
+          [
+            70.34,
+            65.29
+          ],
+          [
+            63.03,
+            62.48
+          ],
+          [
+            57.42,
+            58.83
+          ],
+          [
+            53.89,
+            54.57
+          ],
+          [
+            52.69,
+            50.0
+          ],
+          [
+            53.89,
+            45.43
+          ],
+          [
+            57.42,
+            41.17
+          ],
+          [
+            63.03,
+            37.52
+          ],
+          [
+            70.34,
+            34.71
+          ],
+          [
+            78.86,
+            32.95
+          ],
+          [
+            88.0,
+            32.35
+          ],
+          [
+            97.14,
+            32.95
+          ],
+          [
+            105.65,
+            34.71
+          ],
+          [
+            112.97,
+            37.52
+          ],
+          [
+            118.58,
+            41.17
+          ],
+          [
+            122.11,
+            45.43
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          88.0,
+          50.0
+        ],
+        "radius_px": 35.31,
+        "radius_units": 0.4
+      },
+      "images": [
+        {
+          "file": "roca.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "medusa",
+      "role": "obstaculo",
+      "collision": "ralentizar",
+      "map_pos": [
+        12.95,
+        -15.3
+      ],
+      "offset_units": [
+        0.35,
+        -20.9
+      ],
+      "doc": "COLISIÓN ralentizar 40 % 1,5 s (provisional)",
+      "image": {
+        "width": 112,
+        "height": 80,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        56.0,
+        46.0
+      ],
+      "anchors": {
+        "pivot": [
+          56.0,
+          46.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            86.9,
+            46.0
+          ],
+          [
+            85.84,
+            50.0
+          ],
+          [
+            82.76,
+            53.73
+          ],
+          [
+            77.85,
+            56.92
+          ],
+          [
+            71.45,
+            59.38
+          ],
+          [
+            64.0,
+            60.92
+          ],
+          [
+            56.0,
+            61.45
+          ],
+          [
+            48.0,
+            60.92
+          ],
+          [
+            40.55,
+            59.38
+          ],
+          [
+            34.15,
+            56.92
+          ],
+          [
+            29.24,
+            53.73
+          ],
+          [
+            26.16,
+            50.0
+          ],
+          [
+            25.1,
+            46.0
+          ],
+          [
+            26.16,
+            42.0
+          ],
+          [
+            29.24,
+            38.28
+          ],
+          [
+            34.15,
+            35.08
+          ],
+          [
+            40.55,
+            32.62
+          ],
+          [
+            48.0,
+            31.08
+          ],
+          [
+            56.0,
+            30.55
+          ],
+          [
+            64.0,
+            31.08
+          ],
+          [
+            71.45,
+            32.62
+          ],
+          [
+            77.85,
+            35.08
+          ],
+          [
+            82.76,
+            38.28
+          ],
+          [
+            85.84,
+            42.0
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          56.0,
+          46.0
+        ],
+        "radius_px": 30.9,
+        "radius_units": 0.35
+      },
+      "images": [
+        {
+          "file": "medusa.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "cocodrilo",
+      "role": "obstaculo",
+      "collision": "ralentizar",
+      "map_pos": [
+        7.9,
+        -12.9
+      ],
+      "offset_units": [
+        -4.7,
+        -18.5
+      ],
+      "doc": "cocodrilo móvil: va y viene entre circuito/obstaculos/cocodrilo/vaiven mirando hacia donde nada (variantes derecha e izquierda); COLISIÓN ralentizar 60 % 2 s",
+      "image": {
+        "width": 192,
+        "height": 80,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        96.0,
+        42.0
+      ],
+      "anchors": {
+        "pivot": [
+          96.0,
+          42.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            144.55,
+            42.0
+          ],
+          [
+            142.9,
+            48.28
+          ],
+          [
+            138.05,
+            54.14
+          ],
+          [
+            130.33,
+            59.17
+          ],
+          [
+            120.28,
+            63.02
+          ],
+          [
+            108.57,
+            65.45
+          ],
+          [
+            96.0,
+            66.28
+          ],
+          [
+            83.43,
+            65.45
+          ],
+          [
+            71.72,
+            63.02
+          ],
+          [
+            61.67,
+            59.17
+          ],
+          [
+            53.95,
+            54.14
+          ],
+          [
+            49.1,
+            48.28
+          ],
+          [
+            47.45,
+            42.0
+          ],
+          [
+            49.1,
+            35.72
+          ],
+          [
+            53.95,
+            29.86
+          ],
+          [
+            61.67,
+            24.84
+          ],
+          [
+            71.72,
+            20.98
+          ],
+          [
+            83.43,
+            18.55
+          ],
+          [
+            96.0,
+            17.73
+          ],
+          [
+            108.57,
+            18.55
+          ],
+          [
+            120.28,
+            20.98
+          ],
+          [
+            130.33,
+            24.84
+          ],
+          [
+            138.05,
+            29.86
+          ],
+          [
+            142.9,
+            35.72
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          96.0,
+          42.0
+        ],
+        "radius_px": 48.55,
+        "radius_units": 0.55
+      },
+      "images": [
+        {
+          "file": "cocodrilo_derecha.png",
+          "frame": 0,
+          "variant": "derecha"
+        },
+        {
+          "file": "cocodrilo_izquierda.png",
+          "frame": 0,
+          "variant": "izquierda"
+        }
+      ]
+    },
+    {
+      "id": "boia_carril",
+      "role": "decoracion",
+      "collision": "bloquear",
+      "doc": "boia de carril: alternar a y b a los dos lados del eje de cada rama, cada 1,0 u (0,7 en el atajo), sin ponerlas en los pies de los arcos ni junto a los obstáculos (zonas/circuito.py)",
+      "image": {
+        "width": 48,
+        "height": 48,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        24.0,
+        31.0
+      ],
+      "anchors": {
+        "pivot": [
+          24.0,
+          31.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            33.71,
+            31.0
+          ],
+          [
+            33.38,
+            32.26
+          ],
+          [
+            32.41,
+            33.43
+          ],
+          [
+            30.87,
+            34.43
+          ],
+          [
+            28.86,
+            35.21
+          ],
+          [
+            26.51,
+            35.69
+          ],
+          [
+            24.0,
+            35.86
+          ],
+          [
+            21.49,
+            35.69
+          ],
+          [
+            19.14,
+            35.21
+          ],
+          [
+            17.13,
+            34.43
+          ],
+          [
+            15.59,
+            33.43
+          ],
+          [
+            14.62,
+            32.26
+          ],
+          [
+            14.29,
+            31.0
+          ],
+          [
+            14.62,
+            29.74
+          ],
+          [
+            15.59,
+            28.57
+          ],
+          [
+            17.13,
+            27.57
+          ],
+          [
+            19.14,
+            26.8
+          ],
+          [
+            21.49,
+            26.31
+          ],
+          [
+            24.0,
+            26.15
+          ],
+          [
+            26.51,
+            26.31
+          ],
+          [
+            28.86,
+            26.8
+          ],
+          [
+            30.87,
+            27.57
+          ],
+          [
+            32.41,
+            28.57
+          ],
+          [
+            33.38,
+            29.74
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          24.0,
+          31.0
+        ],
+        "radius_px": 9.71,
+        "radius_units": 0.11
+      },
+      "images": [
+        {
+          "file": "boia_carril_a.png",
+          "frame": 0,
+          "variant": "a"
+        },
+        {
+          "file": "boia_carril_b.png",
+          "frame": 0,
+          "variant": "b"
+        }
+      ]
+    }
+  ]
+}

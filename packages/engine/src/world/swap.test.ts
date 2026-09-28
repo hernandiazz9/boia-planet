@@ -25,7 +25,7 @@ const ART = fileURLToPath(new URL('../../../../art/', import.meta.url));
 function loadArt(): Map<string, ArtManifest> {
   const out = new Map<string, ArtManifest>();
   for (const dir of readdirSync(ART)) {
-    if (dir === 'barco') continue;
+    if (dir === 'barco' || dir === 'mundos') continue;
     const r = parseArtManifest(JSON.parse(readFileSync(`${ART}${dir}/manifest.json`, 'utf8')));
     if (!r.ok) throw new Error(`${dir}: ${r.error}`);
     out.set(r.manifest.id, r.manifest);

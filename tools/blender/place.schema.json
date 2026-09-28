@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "boia-planet/tools/blender/place.schema.json",
+  "title": "Manifiesto del arte de un lugar del mapa compartido en un mundo",
+  "description": "Lo escribe tools/blender/mundos_arte.py (render.py -- --all) en art/mundos/<mundo>/<lugar>/manifest.json y lo valida tools/blender/check.py. Un lugar (id de tools/blender/lugares.json, que apunta a mundos/arcilla/mapa.json) tiene una o más piezas (parts): cada una es un sprite con su pivote, anclajes, huella y pistas de colisión y proximidad (v14 §49.17), una losa de costa (tile) o una esquina (corner). Anclajes en píxeles continuos: (0,0) arriba a la izquierda, y hacia abajo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "category", "world", "version", "status", "license", "style", "ship", "generator", "projection",
+               "scale", "coordinates", "place", "anchors_doc", "parts"],
+  "properties": {
+    "id": {"$ref": "#/$defs/slug"},
+    "kind": {"const": "place"},
+    "category": {"enum": ["puerto", "isla", "encuentro", "marvivo", "circuito", "minijuego", "costa"]},
+    "world": {"$ref": "#/$defs/slug"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["muestra", "pendiente", "aprobado"]},
+    "license": {"type": "string", "minLength": 1},
+    "style": {"$ref": "#/$defs/slug"},
+    "ship": {"type": "string", "pattern": "^B[0-9]+$"},
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scripts", "sources_sha256", "blender", "engine", "samples", "command"],
+      "properties": {
+        "scripts": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^(tools/blender|mundos)/[a-z0-9_/]+\\.(py|json)$"}},
+        "sources_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "blender": {"type": "string", "minLength": 1},
+        "engine": {"type": "string", "minLength": 1},
+        "samples": {"type": "integer", "minimum": 1},
+        "command": {"type": "string", "minLength": 1}
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "camera_elevation_deg", "camera_azimuth_deg", "pixels_per_unit"],
+      "properties": {
+        "type": {"const": "dimetric-2:1"},
+        "camera_elevation_deg": {"type": "number", "minimum": 0, "maximum": 90},
+        "camera_azimuth_deg": {"type": "number", "minimum": 0, "maximum": 360},
+        "pixels_per_unit": {"type": "number", "minimum": 0}
+      }
+    },
+    "scale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pixels_per_unit", "reference", "doc"],
+      "properties": {
+        "pixels_per_unit": {"type": "number", "minimum": 0},
+        "reference": {"$ref": "#/$defs/slug"},
+        "doc": {"type": "string", "minLength": 1}
+      }
+    },
+    "coordinates": {"type": "string", "minLength": 1},
+    "place": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "pos", "event_island", "name", "shared_name", "catalog"],
+      "properties": {
+        "ref": {"type": "string", "minLength": 1},
+        "pos": {"$ref": "#/$defs/point"},
+        "instances": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/point"}},
+        "event_island": {"type": "boolean"},
+        "name": {"type": "string", "minLength": 1},
+        "shared_name": {"type": "boolean"},
+        "catalog": {"type": "string", "minLength": 1}
+      }
+    },
+    "anchors_doc": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}},
+    "parts": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/part"}}
+  },
+  "$defs": {
+    "slug": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "file": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*\\.png$"},
+    "hex": {"type": "string", "pattern": "^#[0-9A-F]{6}$"},
+    "point": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+    "anchors": {"type": "object", "required": ["pivot"], "additionalProperties": {"$ref": "#/$defs/point"}},
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mean", "min", "max"],
+      "properties": {"mean": {"type": "number"}, "min": {"type": "number"}, "max": {"type": "number"}}
+    },
+    "imageInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "format", "mode", "transparent_border_px"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "format": {"const": "png"},
+        "mode": {"const": "RGBA"},
+        "transparent_border_px": {"type": "integer", "minimum": 0}
+      }
+    },
+    "circle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "center_px", "radius_px", "radius_units"],
+      "properties": {
+        "shape": {"const": "circle"},
+        "center_px": {"$ref": "#/$defs/point"},
+        "radius_px": {"type": "number", "minimum": 0},
+        "radius_units": {"type": "number", "minimum": 0}
+      }
+    },
+    "animation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frames", "fps", "loop"],
+      "properties": {
+        "frames": {"type": "integer", "minimum": 1},
+        "fps": {"type": "number", "minimum": 0},
+        "loop": {"type": "boolean"},
+        "reverse_of": {"$ref": "#/$defs/slug"}
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "frame"],
+      "properties": {
+        "file": {"$ref": "#/$defs/file"},
+        "frame": {"type": "integer", "minimum": 0},
+        "animation": {"$ref": "#/$defs/slug"},
+        "variant": {"$ref": "#/$defs/slug"}
+      }
+    },
+    "tile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["axis", "land_side", "period_px", "period_units", "shore_px", "collision_px", "outer_fill", "map_line", "doc"],
+      "properties": {
+        "axis": {"enum": ["x", "y"]},
+        "land_side": {"enum": ["left", "right", "bottom"]},
+        "period_px": {"type": "integer", "minimum": 1},
+        "period_units": {"type": "number", "minimum": 0},
+        "shore_px": {"$ref": "#/$defs/range"},
+        "collision_px": {"type": "number"},
+        "outer_fill": {"$ref": "#/$defs/hex"},
+        "map_line": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["px", "doc"],
+          "properties": {"px": {"type": "number"}, "doc": {"type": "string", "minLength": 1}}
+        },
+        "doc": {"type": "string", "minLength": 1}
+      }
+    },
+    "corner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["land", "map_point", "covers_map", "outer_fill", "doc"],
+      "properties": {
+        "land": {"type": "array", "minItems": 1, "items": {"enum": ["left", "right", "bottom"]}},
+        "map_point": {"$ref": "#/$defs/point"},
+        "covers_map": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {"x": {"$ref": "#/$defs/point"}, "y": {"$ref": "#/$defs/point"}}
+        },
+        "outer_fill": {"type": "object", "additionalProperties": {"$ref": "#/$defs/hex"}},
+        "doc": {"type": "string", "minLength": 1}
+      }
+    },
+    "attach": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ship", "sprites", "anchor", "doc"],
+      "properties": {
+        "ship": {"type": "string", "pattern": "^B[0-9]+$"},
+        "sprites": {"type": "string", "minLength": 1},
+        "anchor": {"$ref": "#/$defs/slug"},
+        "doc": {"type": "string", "minLength": 1}
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role", "collision", "image", "pivot_px", "anchors", "anchors_on_art", "images"],
+      "properties": {
+        "id": {"$ref": "#/$defs/slug"},
+        "role": {"enum": ["puerto", "isla", "spawn", "personaje", "decoracion", "objeto", "obstaculo", "recogible",
+                          "remolino", "puerta", "tripulante", "losa", "esquina"]},
+        "collision": {"enum": ["bloquear", "rebote", "ralentizar", "recoger", "disparador", "ninguna"]},
+        "map_pos": {"$ref": "#/$defs/point"},
+        "offset_units": {"$ref": "#/$defs/point"},
+        "attach": {"$ref": "#/$defs/attach"},
+        "doc": {"type": "string", "minLength": 1},
+        "image": {"$ref": "#/$defs/imageInfo"},
+        "pivot_px": {"$ref": "#/$defs/point"},
+        "anchors": {"$ref": "#/$defs/anchors"},
+        "anchors_on_art": {"type": "array", "items": {"$ref": "#/$defs/slug"}},
+        "footprint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shape", "points_px", "doc"],
+          "properties": {
+            "shape": {"const": "polygon"},
+            "points_px": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/point"}},
+            "doc": {"type": "string", "minLength": 1}
+          }
+        },
+        "hitbox_hint": {"$ref": "#/$defs/circle"},
+        "proximity_hint": {"$ref": "#/$defs/circle"},
+        "animations": {"type": "object", "additionalProperties": {"$ref": "#/$defs/animation"}},
+        "tile": {"$ref": "#/$defs/tile"},
+        "corner": {"$ref": "#/$defs/corner"},
+        "images": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/image"}}
+      }
+    }
+  }
+}

@@ -253,6 +253,31 @@
       "req": [
         "REQ-MUN-011"
       ]
+    },
+    {
+      "id": "costa_sur",
+      "nombre": "Costa sur, el paseo del puerto",
+      "tipo": "infranqueable",
+      "linea": [
+        [
+          -15,
+          27.8
+        ],
+        [
+          15,
+          27.8
+        ]
+      ],
+      "nota": "Borde de abajo: la orilla del paseo (zonas/puerto/islas/paseo). El Varadero se abre en el centro; a los lados, losas que se repiten (art/mundos/<mundo>/costa_sur).",
+      "comportamientos": [
+        {
+          "modulo": "COLISIÓN",
+          "parametros": "bloquear; restitución 0,15 (wallRestitution)"
+        }
+      ],
+      "req": [
+        "REQ-MUN-011"
+      ]
     }
   ],
   "zonas": [
@@ -3208,10 +3233,12 @@
       "cerca_de": "ultima"
     }
   ],
-  "solares_l2": [
+  "solares_l2": [],
+  "minijuegos": [
     {
-      "id": "solar",
-      "nombre": "Solar L2 (Faro · Cañón)",
+      "id": "faro",
+      "nombre": "Isla del Faro",
+      "minijuego": "faro",
       "pos": [
         -10.5,
         -25.2
@@ -3229,7 +3256,34 @@
         "rol": "rock",
         "bajio": true
       },
-      "nota": "Vacío a propósito (D-02, D-08): estacas, cuerda y un cartel «L2»."
+      "comportamientos": "PROXIMIDAD + MINIJUEGO (start_minigame faro)",
+      "proximidad": 3.4,
+      "nota": "Vigilancia del faro. D-20 adelanta los minijuegos de L2 a la demo: ocupa el antiguo solar L2 (D-02, D-08)."
+    },
+    {
+      "id": "canon",
+      "nombre": "Isla del Cañón",
+      "minijuego": "canon",
+      "pos": [
+        -9.0,
+        -18.6
+      ],
+      "isla": {
+        "centro": [
+          -9.0,
+          -18.6
+        ],
+        "a": 1.5,
+        "b": 1.1,
+        "giro": -15,
+        "alto": 0.45,
+        "p": 2.4,
+        "rol": "rock",
+        "bajio": true
+      },
+      "comportamientos": "PROXIMIDAD + MINIJUEGO (start_minigame canon)",
+      "proximidad": 3.0,
+      "nota": "Cañón contra tiburones (D-20). Entre el Puerto de Fotos y el faro, fuera de las rutas."
     }
   ],
   "ritmo": {

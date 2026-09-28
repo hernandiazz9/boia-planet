@@ -1,0 +1,258 @@
+{
+  "id": "restos",
+  "kind": "place",
+  "category": "marvivo",
+  "world": "arcilla",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "arcilla",
+  "ship": "B05",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/world.py",
+      "tools/blender/lugares.py",
+      "tools/blender/lugares.json",
+      "tools/blender/mundos_arte.py",
+      "tools/blender/mundo_arcilla.py",
+      "tools/blender/render.py",
+      "tools/blender/styles/05_arcilla_maqueta.py",
+      "mundos/temas.py",
+      "mundos/arcilla/escena.py",
+      "mundos/arcilla/piezas.py",
+      "mundos/arcilla/herramientas/mapa.py",
+      "mundos/arcilla/mapa.json",
+      "mundos/arcilla/zonas/marvivo.py"
+    ],
+    "sources_sha256": "c0e593c1d48f2bb1a0cbfd8c995ace38ddda3e6590fea484dbb7f3f71690d8e3",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 64,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma cámara y densidad que los sprites del barco (D-13, D-15): una unidad de la maqueta mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua. Tamaños a 1:1 con el barco; las posiciones del mapa las escala el motor (mapa.json, ritmo.factor_juego)"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). map_pos y offset_units en unidades del mapa (u_maq, ejes de mapa.json: x a la derecha, y hacia el espectador); offset_units = map_pos - place.pos. En los círculos sobre el agua radius_px es el semieje horizontal; el vertical mide la mitad",
+  "place": {
+    "ref": "zonas/marvivo/piezas/restos",
+    "pos": [
+      -3.4,
+      18.4
+    ],
+    "event_island": false,
+    "name": "Grupos de restos flotantes",
+    "shared_name": false,
+    "catalog": "tools/blender/lugares.json",
+    "instances": [
+      [
+        -3.4,
+        18.4
+      ],
+      [
+        -8.8,
+        12.4
+      ],
+      [
+        -12.8,
+        6.2
+      ],
+      [
+        -6.4,
+        -3.2
+      ],
+      [
+        2.4,
+        16.0
+      ],
+      [
+        3.2,
+        -7.6
+      ],
+      [
+        -1.6,
+        -21.6
+      ],
+      [
+        10.2,
+        21.4
+      ]
+    ]
+  },
+  "anchors_doc": {
+    "pivot": "punto del mapa a ras de agua que da map_pos: centro de la isla u objeto; fijo en todas las imágenes"
+  },
+  "parts": [
+    {
+      "id": "restos",
+      "role": "recogible",
+      "collision": "recoger",
+      "map_pos": [
+        -3.4,
+        18.4
+      ],
+      "offset_units": [
+        0.0,
+        0.0
+      ],
+      "doc": "grupo de restos flotantes; tres variantes para repartir por las posiciones de zonas/marvivo/restos",
+      "image": {
+        "width": 112,
+        "height": 80,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        56.0,
+        42.0
+      ],
+      "anchors": {
+        "pivot": [
+          56.0,
+          42.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            95.72,
+            42.0
+          ],
+          [
+            94.37,
+            47.14
+          ],
+          [
+            90.4,
+            51.93
+          ],
+          [
+            84.09,
+            56.05
+          ],
+          [
+            75.86,
+            59.2
+          ],
+          [
+            66.28,
+            61.19
+          ],
+          [
+            56.0,
+            61.86
+          ],
+          [
+            45.72,
+            61.19
+          ],
+          [
+            36.14,
+            59.2
+          ],
+          [
+            27.91,
+            56.05
+          ],
+          [
+            21.6,
+            51.93
+          ],
+          [
+            17.63,
+            47.14
+          ],
+          [
+            16.28,
+            42.0
+          ],
+          [
+            17.63,
+            36.86
+          ],
+          [
+            21.6,
+            32.07
+          ],
+          [
+            27.91,
+            27.96
+          ],
+          [
+            36.14,
+            24.8
+          ],
+          [
+            45.72,
+            22.82
+          ],
+          [
+            56.0,
+            22.14
+          ],
+          [
+            66.28,
+            22.82
+          ],
+          [
+            75.86,
+            24.8
+          ],
+          [
+            84.09,
+            27.96
+          ],
+          [
+            90.4,
+            32.07
+          ],
+          [
+            94.37,
+            36.86
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          56.0,
+          42.0
+        ],
+        "radius_px": 39.72,
+        "radius_units": 0.45
+      },
+      "images": [
+        {
+          "file": "restos_a.png",
+          "frame": 0,
+          "variant": "a"
+        },
+        {
+          "file": "restos_b.png",
+          "frame": 0,
+          "variant": "b"
+        },
+        {
+          "file": "restos_c.png",
+          "frame": 0,
+          "variant": "c"
+        }
+      ]
+    }
+  ]
+}

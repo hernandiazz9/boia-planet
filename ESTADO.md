@@ -4,6 +4,49 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T18: arte del mundo Arcilla (B05) desde la exploración de mundos
+
+El arte de juego del mundo de arcilla, lugar a lugar, con la misma cámara (30°, D-13) y la misma densidad (88,2759 px/u) que el barco B05. Todo es `muestra`.
+
+Qué existe:
+- `art/mundos/arcilla/<lugar>/`: 19 lugares, 51 piezas y 116 PNG, con un `manifest.json` por lugar (kind `place`, `tools/blender/place.schema.json`). Cada pieza trae su imagen, `pivot_px`, `map_pos` y `offset_units` (unidades de la maqueta, relativas a `place.pos`), anclajes (con `anchors_doc`), huella, `hitbox_hint` y `proximity_hint`, el tipo de colisión (`bloquear`, `rebote`, `ralentizar`, `recoger`, `disparador` o `ninguna`), animaciones y variantes. Las losas llevan `tile` y las esquinas `corner`. `place` dice a qué entrada de mapa.json apunta, sus instancias, `event_island` y `shared_name`: el nombre compartido de las islas de evento, que es sólo `allday`.
+- **Ids de lugar** (catálogo compartido `tools/blender/lugares.json`, con `ref` y `pos` a mapa.json). Otro mundo sólo tiene que dar arte a estos mismos ids:
+  - `puerto`: El Varadero. Piezas: paseo central con muelle y caseta, `escollera_oeste`, `escollera_este`, `baliza_verde`, `baliza_roja`, `anillo` (spawn), `boia` (la de la entrada), `bocadillo` y `whatsapp`.
+  - `cala`, `allday` (isla de evento, variantes `venta` y `recuerdo`), `fotos`, `tienda` y `ultima`: una isla por lugar.
+  - `fiestera`: la Fiestera pidiendo ayuda (`pide`, 6 fotogramas), `cocodrilo_1..4` (`idle` 4, `sumergirse` 6, `emerger` = `reverse_of` sumergirse), `posidonia`, `roca_1..3` y `tripulante`: la Fiestera a bordo (`baile`, 6), con `attach` al `slot_passenger` de `art/barco/estilos/arcilla`.
+  - `naufrago` (banco, náufrago y balsa), `restos` (variantes a, b y c; instancias = `zonas/marvivo/restos`), `cofres`, `botellas` (la botella de REQ-IDE-040), `delfin` (`salto`, 8) y `remolino` (`giro`, 8).
+  - `circuito`: `salida`, `cp1`, `cp-s`, `cp-a`, `cp2` y `meta` (arcos con anclajes `pie_a`/`pie_b`), `semaforo`, `cartel`, `dents`, `freu`, `roca`, `medusa`, `cocodrilo` (variantes derecha/izquierda) y `boia_carril` (a y b).
+  - `faro` y `canon`: islas de los minijuegos, con anclajes `linterna` y `boca`.
+  - `costa_oeste` y `costa_este`: losas verticales de 640×768 px. `costa_sur`: el paseo, en losa horizontal de 768×288, y las piezas `esquina_oeste` y `esquina_este`, de 1008×768. Las losas llevan `shore_px`, `collision_px`, `outer_fill` y `map_line` (la línea de mapa.json en px). Las fases encajan con las esquinas: las laterales empiezan en y = −2,65 + n·17,40 y el paseo en x = −8,70 + n·8,70.
+- mapa.json (misma estructura, sólo añadidos): `minijuegos` con `faro` (−10,5, −25,2; el antiguo solar L2) y `canon` (−9,0, −18,6), y `costas/costa_sur` (y = 27,8). `solares_l2` queda vacío. `herramientas/mapa.py` cuenta las islas de `minijuegos` como tierra. `validar.py` da 0 errores.
+- `tools/blender/mundos_arte.py` (genérico: encuadre, cámara, render, losas de tres periodos con recorte del central y fundido a `outer_fill`, manifiestos) y `mundo_arcilla.py` (el mundo: escenas desde `mundos/arcilla/zonas/*.py`, piezas por nombre y distancia, y lo que no está en la maqueta: faro, cañón, losas, esquinas, fotogramas y tripulante). Para añadir un mundo: `mundo_<id>.py` y una entrada en `WORLDS` (render.py y mundos_arte.py).
+- `render.py -- --all` renderiza también los mundos; `--mundo arcilla [--lugar cala]` hace sólo uno. `check.py` valida `art/mundos/<mundo>/`: un lugar por id del catálogo, referencias a mapa.json, la cámara y la densidad del barco del mundo, y cada pieza. `contact_sheet_mundo.py` saca la hoja de contacto.
+
+Comandos:
+```
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/render.py -- --all        # exit 0, 386 imágenes, ~170 s (Arcilla: 116 imágenes, ~83 s de render)
+cp -R art tools/blender/out/run1 && (otra vez el mismo --all) && diff -r tools/blender/out/run1 art   # exit 0, 421 archivos idénticos
+python3 tools/blender/check.py            # exit 0: 35 manifiestos, 386 imágenes; «mundo arcilla: 19 lugares válidos, 116 imágenes»
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/contact_sheet_mundo.py -- --mundo arcilla
+python3 mundos/arcilla/herramientas/validar.py   # 0 errores
+```
+Hoja de contacto a escala de juego (48 px de eslora × densidad 2) sobre el mar del mundo: `docs/informes/img/p002-t18-hoja-arcilla.png`.
+
+Desviaciones:
+- **Reproducibilidad.** Con las piezas de la maqueta tal cual, dos corridas no daban los mismos bytes, por dos causas:
+  - `bmesh` crea las caras de `create_uvsphere` en otro orden y con otro vértice inicial en cada sesión, así que cambia la diagonal con la que se dibuja cada cuadrilátero. `mundo_arcilla.py` sustituye `Builder.mk` por una copia que triangula por la diagonal más corta, orienta cada grupo de caras por el signo de su volumen y ordena vértices y caras. `mundos/arcilla/escena.py` no se toca.
+  - La dispersión subsuperficial (SSS) de Eevee da ±1 en algunos píxeles de un render a otro. El arte de los mundos se renderiza sin SSS (`TemaJuego`): de media cambia unos 4 niveles y no se nota a escala de juego. El barco B05 la conserva.
+- El sol, la luz y la hora son los de «día» del tema, que coinciden con el estudio del barco. Día y noche siguen siendo L2 (REQ-MUN-005).
+- Los manifiestos existentes (`art/barco/**`, costa, islas, rocas, boia, planeta) llevan `sources_sha256` de antes de este cambio en `render.py`. Al regenerarlos sólo cambia esa línea; se dejan como estaban porque `art/barco/**` queda fuera del encargo. El próximo `--all` los pone al día sin tocar ningún PNG.
+- El puerto de la maqueta ocupa todo el borde de abajo. Aquí la pieza `puerto` es el tramo central del paseo (x = ±6,4), con muelle, caseta, dos casitas y farolas; el resto del borde lo ponen las losas de `costa_sur`.
+- La tripulante es una capa aparte que se dibuja encima del barco (imágenes `base/<dir>.png`, sin `_p`) en `slot_passenger`. No hay fotogramas nuevos en `art/barco/`.
+- Los secretos (cueva, ánfora, campana, círculo de boies), la fila de boies del borde de arriba y la grada con el juez del circuito no tienen arte: no estaban en la lista.
+
+Sin probar:
+- Nada lo carga todavía en el motor (T17 y T20). Tampoco se ha probado cómo casan en el juego las losas con las esquinas y con el paseo del puerto: por ahora sólo se ha visto en la hoja de contacto.
+
+Fuera del alcance, con permiso del orquestador: `packages/engine/src/world/swap.test.ts` leía como manifiesto cada carpeta de `art/` salvo `barco`, y con `art/mundos/` fallaba. Ahora también se salta `mundos`.
+
 ## 2026-09-29 — plan 002 T23: minijuegos, Vigilancia del faro y Cañón contra tiburones
 
 Los dos minijuegos de REQ-AVE-035…039 (L1 por D-20) detrás de INICIAR_MINIJUEGO, con ids `faro` y `canon`. Reglas, números, textos y dibujo son `muestra`.
