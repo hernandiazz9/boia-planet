@@ -27,7 +27,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: 17 files renamed to boia/boies, D-18 added, v14 untouched → f6ebab0
 
 ## T06 — Supabase schema, migrations, RLS
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T00
 - Goal: The data layer of docs/spec/08-arquitectura-y-datos.md for Launch 1: users and carnets (5 public questions, member-since date), events with the seven states of §49.4 and island separated from event, islands, world objects and versioned world snapshots (draft/published), home blocks, achievements with trigger conditions, points and coins ledger (idempotent transactions with stable ids), bottles, audit log. No Docker on this Mac (D-17): migrations are plain SQL in supabase/migrations/ and are tested against the local Homebrew PostgreSQL 17 (port 5432, database `boia_planet_test`, created and dropped by the test harness) with a Supabase-compatible shim (roles anon/authenticated/service_role, schema auth with auth.uid() reading request.jwt.claims). Migrations cumulative; seed data labeled `muestra`; RLS so that no client can write balances, roles, stamps or purchase states.
 - Context: docs/DECISIONES.md (D-04, D-09, D-10, D-17); docs/spec/08-arquitectura-y-datos.md, docs/spec/06-comercial.md (event states table), docs/spec/07-admin.md; skills `supabase` and `supabase-postgres-best-practices` (load them before writing SQL).
@@ -36,7 +36,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm db:test` (added by this task) → exit 0: applies every migration to an empty `boia_planet_test`, then re-applies the new ones on top of seeded data without a destructive reset
   - `pnpm test --filter db` → exit 0: RLS tests prove an anonymous or member role cannot insert into ledger, stamps, roles or event state; a second identical reward transaction id is rejected
   - `pnpm typecheck` → exit 0 with generated types committed
-- Outcome:
+- Outcome: 7 migrations + seeds, Supabase shim on local PG17, RLS/ledger tests, generated types; enums aligned with @boia/contracts → 6af3a0c
 
 ## T02 — Landing by blocks, tickets panel, analytics
 - Status: done
@@ -65,10 +65,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T07 — Public auth (OTP + magic link), guest session, idempotent merge
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T00, T06, T02
 - Goal: D-10: sign in by email with a 6-digit code and a magic link in the same mail; guest identity stored locally with a server-side anonymous id; on sign-in, merge guest progress by ids (union of discoveries, rewards synced once per id, never importing local balances as truth); return to the same panel after verification; "Continuar sin registrarme" always available.
-- Context: docs/DECISIONES.md (D-09, D-10, D-17); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-* for §49.10), docs/spec/08-arquitectura-y-datos.md; supabase/**, packages/db/**, apps/web/**. Auth runs against the cloud dev project `boia-planet-dev` (D-17): if `.env.local` has no Supabase URL and keys, stop with STATUS: blocked and ask Hernán to create the project and load the keys with the `pedir-token` skill; never create accounts or paste secrets.
+- Context: docs/DECISIONES.md (D-09, D-10, D-17); docs/spec/05-identidad-y-comunidad.md (REQ-IDE-* for §49.10), docs/spec/08-arquitectura-y-datos.md; supabase/**, packages/db/**, apps/web/**. Auth runs against the cloud dev project `boia-planet-dev` (D-17). Build and unit-test everything first against the local PostgreSQL shim from T06; only the e2e needs the cloud project. When you reach it, read the keys from the main checkout's `/Users/heralc/Desktop/boya.planet/.env.local` (Hernán may add them after your worktree was created; never copy them into the repo). If they are still missing, commit your work and stop with STATUS: blocked asking Hernán to create the project and load the keys with the `pedir-token` skill; never create accounts or paste secrets.
 - Scope: may touch ESTADO.md (own top section), apps/web/app/(auth)/** (new), apps/web/lib/auth/** (new), packages/db/**, supabase/** (new migrations only) / must not touch packages/engine/**, apps/web/app/juego/**.
 - Done when:
   - `pnpm test` → exit 0; adds tests: merging the same guest twice grants each reward once; a tampered local balance is ignored; OTP and link both create the same session
@@ -174,8 +174,13 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 T02: PostHog via its EU capture API without SDK (posthog-js pulls core-js, whose build script pnpm 11 blocks); in-memory id, no cookies, nothing sent without NEXT_PUBLIC_POSTHOG_KEY (agent)
 - 2026-09-28 T02: tickets panel at /#tickets opens with CSS :target without JS; sample links to example.com; positioning line = §37.11 working phrase; artist order shuffled with a fixed seed (agent)
 - 2026-09-28 T02: touched outside scope: vitest.config.ts (jsx automatic), root package.json e2e script, old apps/web/app/page.tsx moved to app/(landing)/page.tsx (agent)
+- 2026-09-28 T06: event states and home block types as English enums aligned with @boia/contracts (a test keeps them equal); clients never write state/publish columns; ledger ids chosen by the server, balances derived by trigger; admin needs aal2 (agent)
+- 2026-09-28 T06: root `test` script maps `--filter X` to a vitest path filter; seeds in supabase/seeds/, removable with supabase/sample/remove-sample.sql; each test file uses its own throwaway database (agent)
+- 2026-09-28 T07: context changed so the agent builds everything locally first and blocks only at the e2e if the cloud keys are missing (orchestrator)
 
 ## Proposals (new scope)
+- 2026-09-28 T06: tables for discounts, discoveries, cosmetics catalogue, races and the common event location (REQ-COM-010) are not in the schema yet
+- 2026-09-28 T06: migrations not yet applied to the real boia-planet-dev project; no supabase/config.toml or .env.example entry for BOIA_PG_URL
 - 2026-09-28 T02: create the PostHog EU project and load NEXT_PUBLIC_POSTHOG_KEY (pedir-token); real sends untested
 - 2026-09-28 T02: legal texts, official links, contact email, store and ticketing URLs pending from Álvaro
 - 2026-09-28 T02: ESTADO.md and plans/ fail `prettier --check` (pre-existing); decide whether to exclude them or format
@@ -187,3 +192,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-28 19:58 T02 launched · attempt 1 · agent a7e2f22a4a0f6d626
 - 2026-09-28 19:58 T01 launched · attempt 1 · agent af5e76d10c58b5de8
 - 2026-09-28 20:08 T02 done · branch worktree-agent-a7e2f22a4a0f6d626 → e680599
+- 2026-09-28 20:12 T06 done · branch worktree-agent-a5a08a5e7cb452cb5 (1 conflict round) → 6af3a0c
