@@ -2,6 +2,7 @@
 
 import {
   IntroController,
+  titlePoses,
   viewMoved,
   type BootEntry,
   type IntroFrame,
@@ -13,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { IntroDiagnostics } from '../../../lib/intro/bridge';
 import type { IntroData } from '../../../lib/intro/load';
+import { clearTitle, drawTitle, fitTitle, sizeTitleCanvas } from '../../../lib/intro/title-canvas';
 import { offerWorld } from '../../../lib/world-handoff';
 
 /** Vistas de k guardadas en el diagnóstico durante el aterrizaje (tope). */
@@ -31,6 +33,7 @@ const MAX_K_SAMPLES = 600;
 export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLabel: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLParagraphElement>(null);
+  const title3dRef = useRef<HTMLCanvasElement>(null);
   const enterRef = useRef<HTMLButtonElement>(null);
   const controllerRef = useRef<IntroController<IntroScene> | null>(null);
   const [overlay, setOverlay] = useState(true);
@@ -79,6 +82,7 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       slowFrames: 0,
       history: [],
       explored: false,
+      title: { mode: 'flat', requestedMs: null, loadedMs: null, draws: 0, pose: null },
     };
     window.__boiaIntro = diag;
 
@@ -92,6 +96,65 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     let lastSize = '';
     let lastFrameAt = 0;
     let focused = false;
+
+    // Título 3D (T27): la hoja se pide cuando el mini-mundo ya está listo, no
+    // antes (no compite con la escena). Hasta que llega, el título es texto.
+    const sheet = data.title;
+    let titleImg: HTMLImageElement | null = null;
+    /** ms de la pausa en los que empezó a entrar (0 si la hoja llegó antes de la pausa). */
+    let titleFrom = 0;
+    /** Últimos ms de pausa vistos (la salida sigue el bucle desde ahí). */
+    let pauseMs = 0;
+    const requestTitle = () => {
+      if (!sheet || diag.title.requestedMs !== null) return;
+      diag.title.requestedMs = performance.now() - t0;
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = sheet.url;
+      img
+        .decode()
+        .then(() => {
+          const c = controllerRef.current;
+          // Si ya se está aterrizando (o se fue), se queda el título plano.
+          if (!c || (c.phase !== 'waiting' && c.phase !== 'appearing' && c.phase !== 'paused'))
+            return;
+          titleImg = img;
+          titleFrom = c.phase === 'paused' && !reduced ? pauseMs : 0;
+          diag.title.mode = '3d';
+          diag.title.loadedMs = performance.now() - t0;
+          if (titleRef.current) titleRef.current.dataset.title = '3d';
+          lastFrame = null;
+          kick();
+        })
+        .catch(() => {
+          console.warn('[boia] no cargó la hoja del título; se queda el título plano');
+        });
+    };
+    const paintTitle = (f: IntroFrame) => {
+      const canvas = title3dRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (!sheet || !titleImg || !canvas || !ctx) return false;
+      if (f.act === 'pause') pauseMs = f.t;
+      if (f.act !== 'pause' && f.act !== 'landing') {
+        clearTitle(ctx);
+        return true;
+      }
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const layout = fitTitle(sheet, window.innerWidth, window.innerHeight);
+      sizeTitleCanvas(canvas, layout, dpr);
+      const exiting = f.act === 'landing';
+      const poses = titlePoses(config.title, sheet, sheet.letters.length, {
+        shownMs: pauseMs - titleFrom + (exiting ? f.t : 0),
+        exitMs: exiting ? f.t : null,
+        reduced,
+      });
+      drawTitle(ctx, titleImg, sheet, poses, layout, dpr);
+      diag.title.draws++;
+      diag.title.pose = poses
+        .map((p) => `${p.frame}:${p.y.toFixed(3)}:${p.roll.toFixed(3)}:${p.alpha.toFixed(2)}`)
+        .join('|');
+      return true;
+    };
 
     const viewport = () => ({
       width: Math.max(1, host.clientWidth),
@@ -118,8 +181,10 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       // La escena llega con el canvas ya borrado (color del espacio): se
       // muestra enseguida, así el navegador lo compone antes del primer
       // fotograma y no en mitad de la aparición.
-      if (c.sceneStatus === 'ready') host.dataset.ready = '';
-      else delete host.dataset.ready;
+      if (c.sceneStatus === 'ready') {
+        host.dataset.ready = '';
+        requestTitle();
+      } else delete host.dataset.ready;
       // Acto 2: el botón recibe el foco (Enter lo activa).
       if (c.phase === 'paused' && !focused) {
         focused = true;
@@ -211,7 +276,10 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
         if (phase === 'landing' && diag.landingK.length < MAX_K_SAMPLES) diag.landingK.push(diag.k);
         if (lastFrame && size === lastSize && viewMoved(lastFrame, f)) diag.cameraMoves++;
         lastFrame = f;
-        if (titleRef.current) titleRef.current.style.opacity = String(f.title);
+        // Con el título 3D las letras llevan su propia entrada y salida; en
+        // movimiento reducido se funde como el texto.
+        const own = paintTitle(f) && !reduced;
+        if (titleRef.current) titleRef.current.style.opacity = own ? '1' : String(f.title);
         if (enterRef.current) enterRef.current.style.opacity = String(f.button);
         if (controller.phase === 'landing' && f.content > 0)
           html.setAttribute('data-intro', 'arrive');
@@ -360,6 +428,9 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
           </div>
           <p className="intro-overlay__title" ref={titleRef}>
             {copy.title}
+            {data?.title && (
+              <canvas className="intro-title3d" ref={title3dRef} aria-hidden="true" />
+            )}
           </p>
           <button
             type="button"

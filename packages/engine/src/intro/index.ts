@@ -10,5 +10,6 @@ export * from './assets';
 export * from './math';
 export * from './sphere';
 export * from './timeline';
+export * from './title';
 export * from './entry';
 export * from './controller';

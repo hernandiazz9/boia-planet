@@ -33,6 +33,20 @@ export interface IntroDiagnostics {
   history: string[];
   /** EXPLORAR arrancó el juego desde esta landing (cediendo la escena si la había). */
   explored: boolean;
+  /** Título del acto 2 (T27). */
+  title: TitleDiagnostics;
+}
+
+export interface TitleDiagnostics {
+  /** `3d`: letras de Blender en el canvas; `flat`: el texto plano (sin hoja o aún sin cargar). */
+  mode: 'flat' | '3d';
+  /** ms desde la carga hasta tener la hoja decodificada, y desde cuándo se pidió. */
+  requestedMs: number | null;
+  loadedMs: number | null;
+  /** Veces que se pintó el canvas. */
+  draws: number;
+  /** Pose del último pintado (columna, desplazamiento y opacidad de cada letra), para comparar. */
+  pose: string | null;
 }
 
 declare global {

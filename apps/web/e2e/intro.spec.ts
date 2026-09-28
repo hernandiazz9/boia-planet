@@ -27,6 +27,16 @@ const title = (page: Page) => page.locator('.intro-overlay__title');
 const enterButton = (page: Page) => page.getByRole('button', { name: 'Zarpar' });
 const ticketsOnly = (page: Page) =>
   page.getByRole('link', { name: 'Solo quiero ver las entradas' });
+const title3d = (page: Page) => page.locator('.intro-title3d');
+/** Píxeles con tinta en el canvas del título 3D. */
+const titleInk = (page: Page) =>
+  title3d(page).evaluate((c: HTMLCanvasElement) => {
+    const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i]! > 0) n++;
+    return n;
+  });
+const titlePose = async (page: Page) => (await diag(page))!.title.pose;
 const opacity = (page: Page, sel: string) =>
   page.locator(sel).evaluate((el) => Number(getComputedStyle(el).opacity));
 
@@ -86,9 +96,21 @@ test('primera visita: el mini-mundo, luego «BOIA» y el botón; al pulsar, ater
   await expect(title(page)).toHaveText('BOIA');
   await expect(enterButton(page)).toBeVisible();
   await expect(enterButton(page)).toBeFocused();
+  // Título 3D (T27): la hoja de Blender llega después del mini-mundo y las
+  // letras se ven en el canvas; se mueven solas (balanceo y giro).
+  await expect(title(page)).toHaveAttribute('data-title', '3d', { timeout: 10_000 });
   await page.waitForTimeout(2500);
   expect((await diag(page))!.phase).toBe('paused');
   expect(await opacity(page, '.intro-overlay__title')).toBe(1);
+  await expect(title3d(page)).toBeVisible();
+  expect(await titleInk(page), 'las letras tienen tinta').toBeGreaterThan(2000);
+  const t = (await diag(page))!.title;
+  expect(t.requestedMs!, 'la hoja se pide después del mini-mundo').toBeGreaterThanOrEqual(
+    (await diag(page))!.sceneReadyMs!,
+  );
+  const pose = await titlePose(page);
+  await page.waitForTimeout(400);
+  expect(await titlePose(page), 'las letras se mueven en reposo').not.toBe(pose);
   await expect(ticketsOnly(page)).toBeVisible();
 
   // Acto 3: Enter (el botón tiene el foco) → aterrizaje continuo.
@@ -245,8 +267,20 @@ test.describe('movimiento reducido', () => {
     await phaseIs(page, 'paused');
     await expect(title(page)).toHaveText('BOIA');
     await expect(enterButton(page)).toBeVisible();
+    // Título 3D quieto: un solo fotograma, que no cambia (T27).
+    await expect(title(page)).toHaveAttribute('data-title', '3d', { timeout: 10_000 });
+    await expect(title3d(page)).toBeVisible();
+    await page.waitForFunction(
+      () =>
+        Number(getComputedStyle(document.querySelector('.intro-overlay__title')!).opacity) === 1,
+    );
+    expect(await titleInk(page)).toBeGreaterThan(2000);
+    const still = await titlePose(page);
+    const draws = (await diag(page))!.title.draws;
     await page.waitForTimeout(800);
     expect((await diag(page))!.phase).toBe('paused');
+    expect(await titlePose(page)).toBe(still);
+    expect((await diag(page))!.title.draws, 'no se repinta en reposo').toBe(draws);
     await enterButton(page).click();
     const d = await waitLanded(page);
     expect(d.mode).toBe('reduced');

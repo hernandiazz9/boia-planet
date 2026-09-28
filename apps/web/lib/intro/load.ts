@@ -1,12 +1,15 @@
 import {
   DEFAULT_INTRO_CONFIG,
   INTRO_MANIFEST_IDS,
+  TITLE_MANIFEST_ID,
   resolveIntroAssets,
+  resolveTitleSheet,
   validateIntroConfig,
   type ArtImage,
   type IntroAssets,
   type IntroConfig,
   type IntroGeometry,
+  type TitleSheet,
 } from '@boia/engine/intro';
 import { worldIntroGeometry } from '@boia/engine/intro/world-geometry';
 import { readFileSync } from 'node:fs';
@@ -34,6 +37,11 @@ export interface IntroData {
    * arranque las pide ya, antes de hidratar, sólo si toca la entrada.
    */
   preload: string[];
+  /**
+   * Título 3D «BOIA» (T27): la hoja de sprites de Blender. Se pide después
+   * del mini-mundo (no va en `preload`); sin ella, el título es texto plano.
+   */
+  title: TitleSheet | null;
 }
 
 type Obj = Record<string, unknown>;
@@ -94,7 +102,30 @@ export function loadIntroData(): IntroData | null {
     return null;
   }
   const preload = [...new Set([resolved.assets.ship.url, ...worldImages()])];
-  return { config: checked.config, assets: resolved.assets, geometry, preload };
+  return {
+    config: checked.config,
+    assets: resolved.assets,
+    geometry,
+    preload,
+    title: titleSheet(checked.config),
+  };
+}
+
+function titleSheet(config: IntroConfig): TitleSheet | null {
+  let manifest: unknown = null;
+  try {
+    manifest = JSON.parse(
+      readFileSync(path.join(ART_ROOT, TITLE_MANIFEST_ID, 'manifest.json'), 'utf8'),
+    );
+  } catch {
+    // resolveTitleSheet dice que falta.
+  }
+  const r = resolveTitleSheet(manifest, ART_BASE_URL, config.copy.title);
+  if (!r.ok) {
+    console.warn('[boia] sin título 3D; la entrada usa el título plano: ' + r.error);
+    return null;
+  }
+  return r.sheet;
 }
 
 const pct = (f: number) => `${(f * 100).toFixed(3)}%`;

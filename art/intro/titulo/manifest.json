@@ -1,0 +1,81 @@
+{
+  "id": "intro/titulo",
+  "kind": "title-sheet",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "text": "BOIA",
+  "colors": {
+    "face": "#F26A1B",
+    "side": "#12233F",
+    "source": "docs/barcos/barcos.json › referencias.marca"
+  },
+  "images": {
+    "png": "letras.png",
+    "webp": "letras.webp"
+  },
+  "sheet": {
+    "width": 3128,
+    "height": 704,
+    "rows": 4,
+    "cols": 17,
+    "cell": [
+      184,
+      176
+    ]
+  },
+  "frames": {
+    "count": 17,
+    "yaw_deg": [
+      -24.0,
+      24.0
+    ],
+    "doc": "columna c = guiñada YAW_MIN + (YAW_MAX - YAW_MIN)·c/(cols-1), grados; positiva: la letra gira hacia la derecha de la imagen (la luz clave viene de la izquierda)"
+  },
+  "cap_px": 112,
+  "pivot_px": [
+    92.0,
+    88.0
+  ],
+  "pivot_doc": "centro de cada celda = centro de la letra en x y media mayúscula en y; ahí gira",
+  "word": {
+    "width_px": 489.15,
+    "gap_px": 15.68
+  },
+  "letters": [
+    {
+      "char": "B",
+      "row": 0,
+      "width_px": 103.23,
+      "center_px": 51.61
+    },
+    {
+      "char": "O",
+      "row": 1,
+      "width_px": 146.86,
+      "center_px": 192.34
+    },
+    {
+      "char": "I",
+      "row": 2,
+      "width_px": 42.37,
+      "center_px": 302.64
+    },
+    {
+      "char": "A",
+      "row": 3,
+      "width_px": 149.65,
+      "center_px": 414.33
+    }
+  ],
+  "generator": {
+    "scripts": [
+      "tools/blender/intro/titulo.py"
+    ],
+    "sources_sha256": "8f8681a48644e8679ba0a8d01556bdc1478a391e3392c9d9cea494efd41a150a",
+    "blender": "5.2.2 LTS",
+    "engine": "CYCLES",
+    "samples": 64,
+    "command": "Blender -b -P tools/blender/intro/titulo.py"
+  }
+}

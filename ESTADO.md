@@ -4,6 +4,42 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T27: título 3D «BOIA» de la entrada, renderizado en Blender
+
+El título del acto 2 ya no es texto plano: son las letras «BOIA» en 3D (extruidas, con bisel suave, cara naranja BOIA #F26A1B y cantos azul marino #12233F), que se mueven como el título de messenger.abeto.co. Todo es `muestra`.
+
+Qué existe:
+- `tools/blender/intro/titulo.py` (punto de entrada propio): cada letra es un texto de Blender (fuente integrada, engrosada) pasado a malla canónica. Se renderiza girada sobre su eje vertical de −24° a +24° en 17 pasos, con luz fija (clave arriba a la izquierda, contraluz y un relleno cálido): al girar, el bisel y la cara atrapan la luz. Todo sale en un solo render (cámara ortográfica y luz direccional; cada copia en su celda) de una hoja de 3128×704 px (fila = letra, columna = guiñada, celdas de 184×176).
+- `art/intro/titulo/`: `letras.png` (1,58 MB, la que valida check.py), `letras.webp` (203 KB, la que pide la web) y `manifest.json` (kind `title-sheet`: rejilla, guiñada de cada columna, pivote, posición y ancho de cada letra en la palabra, generador con `sources_sha256`).
+- `tools/blender/intro/check_titulo.py`, que `check.py` llama: rejilla = PNG, WebP del mismo tamaño, cada celda con su letra entera y margen transparente, centrada a guiñada ~0, el giro cambia la imagen, y el manifiesto es del `titulo.py` actual. Con `--diff` compara byte a byte con otra corrida.
+- Motor (`packages/engine/src/intro/title.ts`, puro): `resolveTitleSheet` (manifiesto → hoja; si el texto de `copy.title` no es el de la hoja, no hay título 3D) y `titlePoses` (tiempo → pose de cada letra). Las letras suben una a una con rebote girando hacia la luz, luego se balancean, bambolean y giran cada una a su aire en un bucle de 6 s que cierra sin salto (armónicos enteros del periodo). Al pulsar «Zarpar» dan un saltito y se hunden una a una. Con movimiento reducido, un fotograma quieto.
+- Configuración de la entrada **v3** (`entrada-mini-mundo-muestra-v3`): sección `title` con los tiempos y amplitudes de subida, reposo, salida y la guiñada del fotograma quieto.
+- Web: `apps/web/lib/intro/title-canvas.ts` compone los recortes en un canvas 2D (sin WebGL; D-05). `intro-stage.tsx` pide la hoja **cuando el mini-mundo está listo** (no va en la precarga del arranque), y al decodificarla cambia el título a `data-title="3d"`. El texto «BOIA» sigue en el `<p>` para lectores de pantalla y como respaldo (sin hoja, o si llega ya aterrizando). `__boiaIntro.title` da `mode`, `requestedMs`, `loadedMs`, `draws` y la última `pose`.
+
+Comandos:
+```
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/intro/titulo.py      # ~17 s (Cycles en CPU), escribe art/intro/titulo/
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/intro/titulo.py -- --out tools/blender/out/rerun/intro/titulo
+python3 tools/blender/intro/check_titulo.py --diff tools/blender/out/rerun                  # idénticos byte a byte
+python3 tools/blender/check.py                                                              # exit 0; incluye intro/titulo
+pnpm test && pnpm typecheck && pnpm lint                                                    # exit 0; 45 archivos, 474 pruebas (9 nuevas en title.test.ts)
+E2E_PORT=3148 pnpm e2e --workers=2                                                          # exit 0; 60 pasadas, 14 omitidas (grabaciones y la prueba de T13)
+pnpm build                                                                                  # ruta crítica de /: 168,5 kB gzip (límite de T14: 192); la hoja no entra
+RECORD_TITLE=1 pnpm e2e record-titulo.spec.ts --workers=1                                   # grabaciones y capturas (GPU del Mac)
+```
+Grabaciones: `docs/informes/img/p002-t27-titulo-{movil,escritorio}.webm` (mini-mundo, subida, 5 s de reposo, «Zarpar» y salida). Capturas en reposo: `p002-t27-titulo-{movil,escritorio}.png`; fotograma quieto con movimiento reducido: `p002-t27-titulo-reducido-{movil,escritorio}.png`.
+
+Desviaciones:
+- **Cycles en CPU, no Eevee.** Con Eevee (GPU) dos corridas daban ±1 en uno o dos píxeles de la hoja, incluso sin SSS ni sombras. Cycles en CPU con semilla fija, 64 muestras y sin eliminador de ruido da los mismos píxeles. Además, el PNG que escribe Blender no salía igual byte a byte con los mismos píxeles (otro IDAT en una imagen tan grande): `titulo.py` relee el render y escribe el PNG él mismo con zlib. La WebP la escribe Blender y sí sale igual.
+- La animación no está «horneada» en una secuencia de fotogramas: Blender da la luz del giro de cada letra (17 guiñadas) y la web pone la subida, el balanceo, el bamboleo y la salida con la pose de `titlePoses`. Así la hoja pesa 203 KB, el bucle cierra por construcción y el movimiento se ajusta en la configuración sin volver a renderizar.
+- `packages/engine/src/world/swap.test.ts` (fuera del alcance escrito) leía como manifiesto cada carpeta de `art/` y fallaba con `art/intro/`: ahora se salta las carpetas sin `manifest.json` propio (una línea). Sin eso `pnpm test` no pasa.
+- `render.py` no se toca: el título tiene su propio punto de entrada y `render.py -- --all` no lo regenera. `check.py` sólo gana la llamada a `check_titulo` (dos líneas y el comentario).
+- La fuente es la integrada de Blender (Inter), engrosada con `offset`: no hay tipografía de BOIA todavía.
+
+Sin probar:
+- Móviles reales: nitidez (la hoja tiene la mayúscula a 112 px; en un móvil de densidad 3 se amplía ×1,6) y el coste del canvas en la pausa (4 `drawImage` por fotograma).
+- Con movimiento reducido, si la hoja llega después de que el título termine de fundirse, el título plano cambia al 3D de golpe (sin fundido).
+
 ## 2026-09-29 — plan 002 T18: arte del mundo Arcilla (B05) desde la exploración de mundos
 
 El arte de juego del mundo de arcilla, lugar a lugar, con la misma cámara (30°, D-13) y la misma densidad (88,2759 px/u) que el barco B05. Todo es `muestra`.

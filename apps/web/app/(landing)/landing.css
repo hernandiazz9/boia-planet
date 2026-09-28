@@ -392,6 +392,26 @@ html[data-intro='play'][data-intro-act='waiting'] .intro-loading {
   opacity: 0;
 }
 
+/* Título 3D (T27): letras de Blender pintadas en un canvas 2D encima del
+   texto, que sigue ahí para los lectores de pantalla y como respaldo. */
+.intro-title3d {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  pointer-events: none;
+}
+
+.intro-overlay__title[data-title='3d'] {
+  color: transparent;
+  text-shadow: none;
+}
+
+.intro-overlay__title[data-title='3d'] .intro-title3d {
+  display: block;
+}
+
 .intro-overlay__enter {
   pointer-events: auto;
   position: absolute;

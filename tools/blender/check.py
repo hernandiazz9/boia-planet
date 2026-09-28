@@ -13,6 +13,8 @@ El arte de los mundos (art/mundos/<mundo>/<lugar>/, kind "place") se valida con
 place.schema.json: una carpeta por lugar de lugares.json en cada mundo de
 WORLDS, referencias a mapa.json, la misma cámara y densidad que el barco del
 mundo, y por pieza anclajes, huella, pistas, animaciones, losas y esquinas.
+El título 3D de la entrada (art/intro/titulo/, kind "title-sheet") lo valida
+intro/check_titulo.py.
 Exit 0 si todo pasa; 1 si algo falla (lista cada fallo).
 """
 import argparse
@@ -29,6 +31,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import lugares as LG  # noqa: E402
+from intro import check_titulo  # noqa: E402
 
 # Lo que pide el encargo 01: 3 skins × 8 direcciones × con/sin pasajera + 8 fotogramas de balanceo base/S.
 SKINS = ["base", "noche", "fiesta"]
@@ -1140,6 +1143,7 @@ def main():
         batches.append(results)
     worlds = expected_worlds()
     batches.append(check_worlds(a.art, a.diff, worlds))
+    batches.append([check_titulo.check_title(a.art, Png, a.diff)])   # art/intro/titulo/ (T27)
     mdir = os.path.join(a.art, MUNDOS_SUBDIR)
     extra_worlds = sorted(set(os.listdir(mdir)) - set(worlds)) if os.path.isdir(mdir) else []
     if extra_worlds:

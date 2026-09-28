@@ -15,6 +15,9 @@
  * 3. aterrizaje: gira hasta el punto de aterrizaje, acerca con aceleración y
  *    frenada y aplana la curvatura (k 1 → 0) hasta el isométrico del juego.
  *
+ * v3 (T27): `title`, el movimiento del título 3D «BOIA» (letras de Blender en
+ * una hoja de sprites; `title.ts`). El texto sigue en `copy.title`.
+ *
  * Unidades:
  * - Tiempos: ms. Tramos dentro de un acto: fracciones del acto (0..1).
  * - Mundo: coordenadas del mundo (`@boia/world`); en pantalla, px de juego a
@@ -22,7 +25,7 @@
  * - `zoom` de un encuadre: múltiplo de la escala de juego (D-15).
  */
 
-export const INTRO_CONFIG_VERSION = 2 as const;
+export const INTRO_CONFIG_VERSION = 3 as const;
 
 export type Easing = 'linear' | 'easeInOutSine' | 'easeInOutCubic';
 export const EASINGS: readonly Easing[] = ['linear', 'easeInOutSine', 'easeInOutCubic'];
@@ -49,6 +52,50 @@ export interface Framing {
 
 export const SHIP_VIEWS = ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'] as const;
 export type ShipView = (typeof SHIP_VIEWS)[number];
+
+/**
+ * Movimiento del título 3D (T27), al estilo del título de messenger.abeto.co:
+ * las letras suben una a una, se balancean y bambolean cada una a su aire
+ * con un giro suave que les pasa la luz, y salen al aterrizar. Distancias en
+ * alturas de mayúscula; ángulos en grados.
+ */
+export interface TitleMotion {
+  rise: {
+    /** Desde el inicio de la pausa hasta que empieza a subir la primera letra. */
+    delayMs: number;
+    staggerMs: number;
+    durationMs: number;
+    /** Sube desde tantas alturas por debajo de su sitio. */
+    from: number;
+    /** Rebote al llegar (easeOutBack; 0 sin rebote). */
+    overshoot: number;
+    /** Parte de la subida en la que aparece (opacidad 0 → 1). */
+    fadeShare: number;
+    scaleFrom: number;
+    /** Giro con el que entra, respecto a su guiñada de reposo. */
+    spinDeg: number;
+  };
+  idle: {
+    /** Periodo del bucle de reposo: todas las ondas cierran en él. */
+    periodMs: number;
+    bob: number;
+    rollDeg: number;
+    yawDeg: number;
+    restYawDeg: number;
+  };
+  exit: {
+    staggerMs: number;
+    durationMs: number;
+    /** Saltito antes de hundirse y cuánto se hunde. */
+    hop: number;
+    drop: number;
+    rollDeg: number;
+    /** Cuánto encoge al salir (fracción). */
+    shrink: number;
+  };
+  /** Movimiento reducido: un fotograma quieto con esta guiñada. */
+  stillYawDeg: number;
+}
 
 export interface IntroConfig {
   version: typeof INTRO_CONFIG_VERSION;
@@ -128,6 +175,8 @@ export interface IntroConfig {
   framings: readonly Framing[];
   /** Movimiento reducido: mini-mundo quieto, título y botón; al pulsar, este fundido. */
   reduced: { fadeMs: number };
+  /** Título 3D (acto 2). Sin la hoja de Blender, se queda `copy.title` en texto plano. */
+  title: TitleMotion;
   /** Textura del mundo en la esfera: ancho en px (el alto sale del mundo). */
   texturePx: number;
   ship: {
@@ -145,7 +194,7 @@ export interface IntroConfig {
 /** Configuración de muestra v2 (D-19). */
 export const DEFAULT_INTRO_CONFIG: IntroConfig = {
   version: INTRO_CONFIG_VERSION,
-  id: 'entrada-mini-mundo-muestra-v2',
+  id: 'entrada-mini-mundo-muestra-v3',
   status: 'muestra',
   copy: {
     title: 'BOIA',
@@ -190,6 +239,21 @@ export const DEFAULT_INTRO_CONFIG: IntroConfig = {
     },
   ],
   reduced: { fadeMs: 400 },
+  title: {
+    rise: {
+      delayMs: 80,
+      staggerMs: 120,
+      durationMs: 820,
+      from: 0.9,
+      overshoot: 1.9,
+      fadeShare: 0.3,
+      scaleFrom: 0.7,
+      spinDeg: -18,
+    },
+    idle: { periodMs: 6000, bob: 0.05, rollDeg: 3.5, yawDeg: 14, restYawDeg: -6 },
+    exit: { staggerMs: 70, durationMs: 460, hop: 0.12, drop: 1.4, rollDeg: 10, shrink: 0.25 },
+    stillYawDeg: -8,
+  },
   texturePx: 2048,
   ship: { lengthPx: 48, view: 'W', dx: 150, dy: 45, bobPx: 1.5 },
 };
@@ -316,6 +380,35 @@ export function validateIntroConfig(input: unknown): ConfigResult {
     'reduced.fadeMs',
     '0–1000 (un fundido breve)',
   );
+  const title = obj(c.title, 'title');
+  const rise = obj(title.rise, 'title.rise');
+  need(inRange(rise.delayMs, 0, 5000), 'title.rise.delayMs', '0–5000');
+  need(inRange(rise.staggerMs, 0, 2000), 'title.rise.staggerMs', '0–2000');
+  need(inRange(rise.durationMs, 0, 5000), 'title.rise.durationMs', '0–5000');
+  need(inRange(rise.from, 0, 4), 'title.rise.from', '0–4');
+  need(inRange(rise.overshoot, 0, 4), 'title.rise.overshoot', '0–4');
+  need(
+    isNum(rise.fadeShare) && rise.fadeShare > 0 && rise.fadeShare <= 1,
+    'title.rise.fadeShare',
+    '(0, 1]',
+  );
+  need(inRange(rise.scaleFrom, 0, 1), 'title.rise.scaleFrom', '0..1');
+  need(inRange(rise.spinDeg, -90, 90), 'title.rise.spinDeg', '±90');
+  const idle = obj(title.idle, 'title.idle');
+  need(inRange(idle.periodMs, 1000, 60_000), 'title.idle.periodMs', '1000–60000');
+  need(inRange(idle.bob, 0, 1), 'title.idle.bob', '0–1');
+  need(inRange(idle.rollDeg, 0, 30), 'title.idle.rollDeg', '0–30');
+  need(inRange(idle.yawDeg, 0, 90), 'title.idle.yawDeg', '0–90');
+  need(inRange(idle.restYawDeg, -90, 90), 'title.idle.restYawDeg', '±90');
+  const exit = obj(title.exit, 'title.exit');
+  need(inRange(exit.staggerMs, 0, 2000), 'title.exit.staggerMs', '0–2000');
+  need(inRange(exit.durationMs, 0, 3000), 'title.exit.durationMs', '0–3000');
+  need(inRange(exit.hop, 0, 2), 'title.exit.hop', '0–2');
+  need(inRange(exit.drop, 0, 6), 'title.exit.drop', '0–6');
+  need(inRange(exit.rollDeg, 0, 90), 'title.exit.rollDeg', '0–90');
+  need(inRange(exit.shrink, 0, 1), 'title.exit.shrink', '0..1');
+  need(inRange(title.stillYawDeg, -90, 90), 'title.stillYawDeg', '±90');
+
   need(
     Number.isInteger(c.texturePx) && inRange(c.texturePx, 512, 4096),
     'texturePx',

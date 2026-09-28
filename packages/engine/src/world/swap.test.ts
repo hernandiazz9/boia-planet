@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   type ArtManifest,
@@ -26,6 +26,8 @@ function loadArt(): Map<string, ArtManifest> {
   const out = new Map<string, ArtManifest>();
   for (const dir of readdirSync(ART)) {
     if (dir === 'barco' || dir === 'mundos') continue;
+    // Carpetas sin manifiesto propio (art/intro/: el título de la entrada, T27).
+    if (!existsSync(`${ART}${dir}/manifest.json`)) continue;
     const r = parseArtManifest(JSON.parse(readFileSync(`${ART}${dir}/manifest.json`, 'utf8')));
     if (!r.ok) throw new Error(`${dir}: ${r.error}`);
     out.set(r.manifest.id, r.manifest);
