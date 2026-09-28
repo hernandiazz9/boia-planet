@@ -46,7 +46,7 @@ Sello de compra no es asistencia: la asistencia confirmada sólo la da el check-
 ## Logros, avisos y economía
 
 - **REQ-IDE-024** `L1` — Unificar misiones y logros en un solo sistema de LOGROS/PROGRESO que responde qué he conseguido y qué me falta, con progreso, puntos y recompensas. *Fuente: §14, P3*
-- **REQ-IDE-025** `L1` — Cargar la lista de logros de lanzamiento aprobada [pendiente Álvaro], con los ejemplos de la v14 como base: primera boya, X/6 boyas, islas descubiertas, entrada comprada, 5/20 minutos jugando, Boya Fiestera rescatada y entregada, circuito y secretos. *Fuente: §14, §28, §33*
+- **REQ-IDE-025** `L1` — Cargar la lista de logros de lanzamiento aprobada [pendiente Álvaro], con los ejemplos de la v14 como base: primera boia, X/6 boies, islas descubiertas, entrada comprada, 5/20 minutos jugando, Boia Fiestera rescatada y entregada, circuito y secretos. *Fuente: §14, §28, §33*
 - **REQ-IDE-026** `L1` — Mostrar cada aviso de descubrimiento o logro 4 s, arriba, con estética azul marino y naranja y sonido corto, en cola y de uno en uno. *Fuente: §14, §46, P3, D-07, D-08*
 - **REQ-IDE-027** `L1` — Llevar puntos de prestigio y monedas gastables como saldos separados: los puntos dan prestigio, rango y ranking; las monedas compran personalización; gastar monedas nunca reduce puntos, rango ni ranking. *Fuente: §14, §21, P1*
 - **REQ-IDE-028** `L1` — Derivar de los puntos unos rangos lúdicos configurables desde el Admin [pendiente Álvaro]. *Fuente: §14, P3*
@@ -85,7 +85,7 @@ Las botellas son la única mecánica social abierta: mensajes breves para quien 
 
 ## Encuestas y Mensajes de BOIA (L2)
 
-- **REQ-IDE-045** `L2` — Ofrecer encuestas voluntarias vinculadas a boya, objeto, evento o panel, anunciadas con un icono persistente de botella de misiones distinto de las botellas sociales, que dicen para qué se pregunta, siempre ofrecen «Ahora no» y nunca bloquean navegar, comprar ni conservar el progreso. *Fuente: §49.8*
+- **REQ-IDE-045** `L2` — Ofrecer encuestas voluntarias vinculadas a boia, objeto, evento o panel, anunciadas con un icono persistente de botella de misiones distinto de las botellas sociales, que dicen para qué se pregunta, siempre ofrecen «Ahora no» y nunca bloquean navegar, comprar ni conservar el progreso. *Fuente: §49.8*
 - **REQ-IDE-046** `L2` — Guardar las respuestas como privadas del equipo, fuera del Carnet y sin puntuaciones públicas de artistas, una por cuenta y versión con envío idempotente y sin puntos globales sin validación; los invitados responden con sesión anónima que se reconcilia al vincular. *Fuente: §49.8*
 - **REQ-IDE-047** `L2` — Añadir Mensajes al Menú de a bordo con campana y contador de no leídos: un buzón editorial de BOIA para todos, invitados incluidos, que avisa con una señal discreta y un banner opcional una vez y nunca interrumpe una carrera. *Fuente: §49.9*
 - **REQ-IDE-048** `L2` — Guardar leído, descartado y versión por cuenta o sesión invitada y fusionarlos al registrarse; una errata no vuelve a marcar como nuevo, una revisión importante sí, y los caducados salen de no leídos. *Fuente: §49.9*

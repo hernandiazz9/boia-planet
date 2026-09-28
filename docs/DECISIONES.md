@@ -20,7 +20,7 @@ a la §47 se citan aquí como **§47-A** (ajustes de pacing) y **§47-B**
 La v14 se contradice: la introducción y §49.5 dicen "conservar el repositorio",
 el Prompt 1 dice "iniciar desde cero". En este Mac no hay ningún repo del
 piloto y la carpeta del proyecto estaba vacía. Se construye desde cero en
-`/Users/heralc/Desktop/boya.planet`. Si el piloto aparece, es referencia
+`/Users/heralc/Desktop/boia.planet`. Si el piloto aparece, es referencia
 visual y funcional (§45 lo audita), nunca base de código.
 
 ## D-02 · Alcance: tres lanzamientos, no uno · 2026-09-28 · orquestador · pendiente Álvaro
@@ -39,7 +39,7 @@ incluye Faro y Cañón). Eso es más de un año de trabajo sin fecha. Se corta a
 - Objetos modulares (§48) con catálogo inicial: colisión (bloquear, rebotar,
   frenar, ralentizar, boost), proximidad, diálogo, recogible, recompensa,
   contenido, ticket, checkpoint, teletransporte, spawn, logro, decorativo.
-- Aventura: boya tutorial, misión Fiestera completa con cocodrilos, islas por
+- Aventura: boia tutorial, misión Fiestera completa con cocodrilos, islas por
   proximidad con recuerdos y próximos eventos, náufrago con descuento, restos,
   cofres, delfín, remolino, botellas (una por cuenta, 140 caracteres),
   circuito con récord personal local.
@@ -161,7 +161,7 @@ Valores iniciales, ajustables tras probar en móvil:
 - Cinemática: el copy inicial es "BOIA.PLANET" (§47-B); "Bienvenido a BOIA"
   sólo como variante a probar en copy, nunca como pantalla previa.
 - "Tripulación" no se usa para relaciones entre usuarios (§44.2, §46);
-  "tripulante" sí se usa para la Boya Fiestera a bordo (§8.1), que es otra cosa.
+  "tripulante" sí se usa para la Boia Fiestera a bordo (§8.1), que es otra cosa.
 - Prompt 1 pide a la IA "seleccionar la ticketera": la selecciona Álvaro con
   un ADR comparativo delante (D-06).
 
@@ -238,6 +238,18 @@ proyectos. Por tanto:
   proyectos activos, Hernán decide si pausa uno o paga.
 - Si más adelante se instala OrbStack, se puede pasar a `supabase start` sin
   cambiar las migraciones.
+
+## D-18 · «Boia», con i · 2026-09-28 · Hernán
+
+Se usa la grafía valenciana en todo el proyecto: la boia (femenino, como
+antes), plural «boies»: «Boia Fiestera», «boia tutorial», «primera boia».
+Vale para la spec, el código, los textos del juego y la documentación.
+`docs/fuente/v14-maestro.md` conserva la grafía castellana, con y griega,
+porque es texto histórico y no se toca. La carpeta del proyecto en el
+Escritorio todavía lleva esa grafía con y; Hernán la renombra a
+`/Users/heralc/Desktop/boia.planet` cuando cierre el plan 001, y las rutas
+del repo ya apuntan a `boia.planet` desde ahora, antes del cambio. Palabras
+que sólo contienen «boy» (el artista Bdboy) no cambian.
 
 ## Preguntas abiertas
 

@@ -8,7 +8,7 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 - **Carta de Navegación, Mi Carta.** Nombres históricos del Carnet. No existen como pantalla (D-08).
 - **Miembro de BOIA.** Término formal para quien tiene Carnet. Crear la cuenta es hacerse miembro (§40.3, §42.1).
 - **Bollero.** Apodo interno y humorístico entre miembros, de uso puntual y explicado a quien llega. Las relaciones «Mis bolleros» están diferidas (§44.2; REQ-IDE-020, REQ-IDE-049).
-- **Tripulación, tripulante.** «Tripulación» no se usa para relaciones entre usuarios. «Tripulante» sí se usa para la Boya Fiestera a bordo (D-08).
+- **Tripulación, tripulante.** «Tripulación» no se usa para relaciones entre usuarios. «Tripulante» sí se usa para la Boia Fiestera a bordo (D-08).
 - **Invitado.** Quien navega o juega sin cuenta. Guarda su progreso en el dispositivo y valida recompensas con una identidad anónima de servidor (§49.10; REQ-IDE-004, REQ-IDE-005).
 - **Fusión.** Vinculación del progreso de invitado a una cuenta, por IDs, sin duplicar premios (§49.10; REQ-IDE-006).
 - **Sello.** Marca de un evento en el Carnet por una compra confirmada vinculada a la cuenta. No acredita asistencia (§42.2, §49.12; REQ-IDE-021).
@@ -20,7 +20,7 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 ## Progreso y economía
 
 - **Logro.** Objetivo con condición del catálogo de triggers, que puede dar puntos, monedas o cosméticos (§14, §23.3; REQ-IDE-024).
-- **Trigger.** Hecho del motor que una condición de logro puede observar: visitar isla, encontrar boya, recoger objetos, completar circuito, tiempo jugado, comprar entrada, rescatar o entregar (§23.3).
+- **Trigger.** Hecho del motor que una condición de logro puede observar: visitar isla, encontrar boia, recoger objetos, completar circuito, tiempo jugado, comprar entrada, rescatar o entregar (§23.3).
 - **Logro global.** Logro disponible para todas las cuentas desde su publicación. Retroactivo y concesión masiva son L2 (§49.1).
 - **Puntos de prestigio.** Saldo que da rango y ranking. Nunca baja por gastar (§14; REQ-IDE-027).
 - **Monedas.** Saldo gastable en personalización, separado de los puntos (§14).
@@ -58,8 +58,8 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 
 ## Aventura
 
-- **Primera boya.** Boya tutorial tras el spawn (§7; REQ-AVE-001).
-- **Boya Fiestera.** Personaje de la misión principal: se rescata entre cocodrilos y se lleva a la última isla (§8; REQ-AVE-005).
+- **Primera boia.** Boia tutorial tras el spawn (§7; REQ-AVE-001).
+- **Boia Fiestera.** Personaje de la misión principal: se rescata entre cocodrilos y se lleva a la última isla (§8; REQ-AVE-005).
 - **Última isla.** Destino de la misión, fijado por ID de temporada (§49.7; REQ-AVE-010).
 - **Náufrago.** Personaje que pide ser acercado a una fiesta y entrega un descuento (§12; REQ-AVE-020).
 - **Restos (flotsam).** Maderas flotantes que se recogen al pasar y se regeneran (§11.1; REQ-AVE-016).

@@ -2,23 +2,23 @@
 
 Fuente: v14 §7, §8, §9, §11, §12, §13, §47-A, §49.11 (sólo como L2) y los encuentros que enumeran los Prompts 1 y 3. Todos los encuentros se construyen con los comportamientos de [03-mundo-y-motor](03-mundo-y-motor.md): nada de lógica pegada a «la isla 3» o «el cocodrilo». Los logros y la economía que reparten están en [05-identidad-y-comunidad](05-identidad-y-comunidad.md).
 
-## Primera boya y diálogos
+## Primera boia y diálogos
 
-El mundo enseña a jugar sin modales: una boya habla, el jugador puede saltarla y sigue navegando.
+El mundo enseña a jugar sin modales: una boia habla, el jugador puede saltarla y sigue navegando.
 
-- **REQ-AVE-001** `L1` — Colocar tras el spawn inicial una primera boya informativa prácticamente imposible de ignorar, que habla por proximidad con bocadillos y sonidos «plop», sin modal ni bloqueo. *Fuente: §7, P3*
-- **REQ-AVE-002** `L1` — Avanzar los bocadillos de boyas, náufragos, personajes y demás encuentros cada 1,5 s, permitir avanzar o saltar con un toque sin obligar a esperar, e interrumpir con una reacción juguetona si el barco se aleja. *Fuente: §7, §25, §47-A, D-07*
-- **REQ-AVE-003** `L1` — Hacer que el diálogo tutorial explique la misión (encontrar a la Boya Fiestera y llevarla a la última isla) y mencione descuentos, monedas y secretos [pendiente Álvaro]. *Fuente: §7, §31.2*
+- **REQ-AVE-001** `L1` — Colocar tras el spawn inicial una primera boia informativa prácticamente imposible de ignorar, que habla por proximidad con bocadillos y sonidos «plop», sin modal ni bloqueo. *Fuente: §7, P3*
+- **REQ-AVE-002** `L1` — Avanzar los bocadillos de boies, náufragos, personajes y demás encuentros cada 1,5 s, permitir avanzar o saltar con un toque sin obligar a esperar, e interrumpir con una reacción juguetona si el barco se aleja. *Fuente: §7, §25, §47-A, D-07*
+- **REQ-AVE-003** `L1` — Hacer que el diálogo tutorial explique la misión (encontrar a la Boia Fiestera y llevarla a la última isla) y mencione descuentos, monedas y secretos [pendiente Álvaro]. *Fuente: §7, §31.2*
 - **REQ-AVE-004** `L1` — Cerrar el tutorial señalando el Menú de a bordo con un pulso breve de su icono de ancla, sin abrirlo; al explicar el minimapa, una sola vez («tocar para ampliar, mantener pulsado para mover»), hacerlo pulsar entre 1 y 2 s sin abrirlo. *Fuente: §7, §10, §46, P3*
 
-## Misión principal: Boya Fiestera
+## Misión principal: Boia Fiestera
 
-«Tripulante» sí se usa aquí: la Boya Fiestera sube a bordo. No se usa para relaciones entre usuarios (D-08).
+«Tripulante» sí se usa aquí: la Boia Fiestera sube a bordo. No se usa para relaciones entre usuarios (D-08).
 
-- **REQ-AVE-005** `L1` — Presentar a la Boya Fiestera flotando entre 3 y 4 cocodrilos que, al acercarse el barco, reaccionan y se sumergen uno a uno con ondas o burbujas, mientras la boya pide ayuda en bocadillos para llegar a la última isla. *Fuente: §8.1, P3*
-- **REQ-AVE-006** `L1` — Al rescatarla, animarla saliendo del agua y subiendo físicamente al barco, y mostrar el aviso «Nueva tripulante a bordo · Boya Fiestera rescatada · Destino: última isla». *Fuente: §8.1, D-08*
-- **REQ-AVE-007** `L1` — Mantener a la Boya Fiestera visible a bordo durante el trayecto, en el slot TRIPULANTE, con reacciones ocasionales a descubrimientos y sin recordatorio permanente de misión en pantalla. *Fuente: §8.2, §35.1*
-- **REQ-AVE-008** `L1` — Al llegar a la última isla desde cualquier lado navegable, lanzar una secuencia corta en la que la Boya Fiestera baja y queda en la isla, con celebración, sonido, logro y una recompensa importante [pendiente Álvaro]. *Fuente: §8.3, P3*
+- **REQ-AVE-005** `L1` — Presentar a la Boia Fiestera flotando entre 3 y 4 cocodrilos que, al acercarse el barco, reaccionan y se sumergen uno a uno con ondas o burbujas, mientras la boia pide ayuda en bocadillos para llegar a la última isla. *Fuente: §8.1, P3*
+- **REQ-AVE-006** `L1` — Al rescatarla, animarla saliendo del agua y subiendo físicamente al barco, y mostrar el aviso «Nueva tripulante a bordo · Boia Fiestera rescatada · Destino: última isla». *Fuente: §8.1, D-08*
+- **REQ-AVE-007** `L1` — Mantener a la Boia Fiestera visible a bordo durante el trayecto, en el slot TRIPULANTE, con reacciones ocasionales a descubrimientos y sin recordatorio permanente de misión en pantalla. *Fuente: §8.2, §35.1*
+- **REQ-AVE-008** `L1` — Al llegar a la última isla desde cualquier lado navegable, lanzar una secuencia corta en la que la Boia Fiestera baja y queda en la isla, con celebración, sonido, logro y una recompensa importante [pendiente Álvaro]. *Fuente: §8.3, P3*
 - **REQ-AVE-009** `L1` — Dejar el mundo abierto tras la misión y permitir, entre rescate y entrega, descubrir islas, eventos, descuentos, restos, cofres, delfín, remolinos, botellas, secretos y circuito sin romper el hilo principal, con el estado de la misión persistente. *Fuente: §8.3, §46, P3*
 - **REQ-AVE-010** `L1` — Guardar el destino de la misión por ID y versión de temporada, nunca por coordenada ni por el evento prioritario del día; una ampliación no cambia misiones empezadas o completadas y no se publica una misión con destino inexistente. *Fuente: §13, §49.7, P1*
 - **REQ-AVE-011** `L1` — Dejar que el Admin fije el destino de nuevas partidas y exigir una migración previsualizada y auditada para cambiar el de partidas existentes. *Fuente: §49.7*
@@ -41,9 +41,9 @@ El mundo enseña a jugar sin modales: una boya habla, el jugador puede saltarla 
 - **REQ-AVE-020** `L1` — Situar antes de una primera isla un náufrago que pide que lo acerquen a una fiesta BOIA y, al ayudarlo, entrega un código de descuento para entradas (ejemplo de la v14: 10 %) [pendiente Álvaro]. *Fuente: §12*
 - **REQ-AVE-021** `L1` — Permitir que restos o tesoros entreguen descuentos para la tienda (ejemplo de la v14: 20 %), configurables y no fijados a ese valor [pendiente Álvaro]. *Fuente: §12*
 - **REQ-AVE-022** `L1` — Situar en el mundo un puerto de Fotos como localización de la galería. *Fuente: §4.3, P1, P3*
-- **REQ-AVE-023** `L1` — Colocar una boya de WhatsApp que, por proximidad, abre el acceso voluntario al WhatsApp de BOIA [provisional] [pendiente Álvaro]. *Fuente: §4.4, P1, P3*
-- **REQ-AVE-024** `L2` — Colocar una boya musical con 4 canciones autorizadas o de prueba [provisional]. *Fuente: P1, P3*
-- **REQ-AVE-025** `diferido` — Guardar en reserva las corrientes o estelas musicales y la ruta de boyas musicales que construye un beat por capas. *Fuente: §11.5, D-02*
+- **REQ-AVE-023** `L1` — Colocar una boia de WhatsApp que, por proximidad, abre el acceso voluntario al WhatsApp de BOIA [provisional] [pendiente Álvaro]. *Fuente: §4.4, P1, P3*
+- **REQ-AVE-024** `L2` — Colocar una boia musical con 4 canciones autorizadas o de prueba [provisional]. *Fuente: P1, P3*
+- **REQ-AVE-025** `diferido` — Guardar en reserva las corrientes o estelas musicales y la ruta de boies musicales que construye un beat por capas. *Fuente: §11.5, D-02*
 
 Los códigos de descuento que entregan náufrago y restos siguen las reglas de REQ-COM-020 a REQ-COM-022.
 

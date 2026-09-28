@@ -34,7 +34,7 @@ Nada de código. Blender **no** está instalado. Hay `python3` 3.9 del sistema,
    constante).
 3. Tres **skins** en el mismo script, elegidas por argumento: `base`,
    `noche`, `fiesta`. Cambian sólo materiales y bandera; la geometría es una.
-4. Un **slot de pasajera**: un cilindro con una cara sencilla ("Boya Fiestera"
+4. Un **slot de pasajera**: un cilindro con una cara sencilla ("Boia Fiestera"
    placeholder) que se coloca en un empty llamado `slot_passenger` sobre la
    cubierta. Se renderiza con y sin pasajera.
 5. Cámara ortográfica **dimétrica 2:1** (elevación 26,57°, azimut 45°). Render

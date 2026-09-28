@@ -1,6 +1,6 @@
 # 03 · Mundo y motor
 
-Fuente: v14 §6, §10, §24, §34, §35, §48 (48.1 a 48.3, 48.6, 48.9), §49.7, §49.14, §49.16, §49.17, MAP 01 y ART 01; D-04, D-05 y D-12. El editor que coloca estos objetos está en [07-admin](07-admin.md); los encuentros concretos (boyas, Fiestera, circuito), en [04-aventura](04-aventura.md).
+Fuente: v14 §6, §10, §24, §34, §35, §48 (48.1 a 48.3, 48.6, 48.9), §49.7, §49.14, §49.16, §49.17, MAP 01 y ART 01; D-04, D-05 y D-12. El editor que coloca estos objetos está en [07-admin](07-admin.md); los encuentros concretos (boies, Fiestera, circuito), en [04-aventura](04-aventura.md).
 
 ## Dirección visual y técnica
 
@@ -31,7 +31,7 @@ Antes de construir bastan las reglas; el mapa de lanzamiento se diseña, se nave
 - **REQ-MUN-015** `L1` — Ordenar la navegación desde la zona inicial hacia las islas principales de eventos, intercalando islas secundarias, personajes, eventos y actividades, sin agrupar las actividades en una esquina ni poner todas las islas comerciales seguidas. *Fuente: §49.16*
 - **REQ-MUN-016** `L1` — Entregar un plano con ruta principal, desvíos opcionales y circuito diferenciados, y comprobar que las actividades opcionales se pueden rodear, que la salida del circuito lleva al destino configurado y que el mapa se amplía sin cambiar misiones existentes. *Fuente: §49.16 · alias MAP 01*
 - **REQ-MUN-017** `L1` — Ajustar velocidad, distancias y señales hacia dos objetivos medidos con el barco base en móvil: 1 minuto de navegación directa al destino principal y 10 minutos para explorar el mapa inicial y sus sorpresas principales, sin contar carga, lectura, compra ni actividades largas. *Fuente: §49.7, P3*
-- **REQ-MUN-018** `L1` — Documentar el boceto del mapa de lanzamiento: inicio, islas principales, destino de la Boya Fiestera, circuito y atajo, costas, Fotos, Tienda, zonas de sorpresas, orden narrativo, evento prioritario provisional y relación de cada isla con sus eventos. *Fuente: §49.14, P3*
+- **REQ-MUN-018** `L1` — Documentar el boceto del mapa de lanzamiento: inicio, islas principales, destino de la Boia Fiestera, circuito y atajo, costas, Fotos, Tienda, zonas de sorpresas, orden narrativo, evento prioritario provisional y relación de cada isla con sus eventos. *Fuente: §49.14, P3*
 
 Los objetivos de tiempo son objetivos, no resultados garantizados; los logros de 20 minutos siguen siendo retos opcionales de retorno (§49.7). Faro y Cañón, que la v14 sitúa en este mapa, son L2 (D-02, D-08).
 
@@ -63,7 +63,7 @@ Catálogo inicial de comportamientos (§48.3, con el corte de D-02):
 | LOGRO/TRIGGER | Dispara o avanza una condición de logros | trigger |
 | DECORATIVO | Sin interacción | loop o animación |
 
-Ejemplos de §48.5: cocodrilo con colisión que ralentiza un 60 % durante 2 s; tronco o roca con frenazo o rebote; boya informativa con proximidad y diálogo; boya con premio que además entrega monedas y logro una sola vez; isla de evento con proximidad y panel de evento; cofre recogible con aparición temporal.
+Ejemplos de §48.5: cocodrilo con colisión que ralentiza un 60 % durante 2 s; tronco o roca con frenazo o rebote; boia informativa con proximidad y diálogo; boia con premio que además entrega monedas y logro una sola vez; isla de evento con proximidad y panel de evento; cofre recogible con aparición temporal.
 
 - **REQ-MUN-023** `L1` — Modelar todo objeto del mundo, islas incluidas, como asset + geometría + comportamientos del catálogo + parámetros, sin lógica ligada a un asset ni a una isla concreta. *Fuente: §9, §24, §48.1, §48.9*
 - **REQ-MUN-024** `L1` — Describir cada objeto con las 9 partes de §48.2: identidad, apariencia, posición, geometría, comportamientos, parámetros, contenido, estado y recompensa o trigger. *Fuente: §48.2*
@@ -76,7 +76,7 @@ Ejemplos de §48.5: cocodrilo con colisión que ralentiza un 60 % durante 2 s; t
 El barco es el riesgo número uno del arte (D-05). Es modular: cambiar la bandera sustituye sólo su sprite; cambiar el barco sustituye la base (§35).
 
 - **REQ-MUN-028** `L1` — Construir el barco por slots (BASE, SKIN/COLOR, BANDERA, ACCESORIO, ESTELA y TRIPULANTE) con anclajes compartidos por orientación, sin GIF monolítico para lo personalizable. *Fuente: §35, §35.1, §49.17*
-- **REQ-MUN-029** `L1` — Producir un barco base y al menos 3 skins distinguibles, cada una en 8 direcciones y en los estados del contrato: giro, parada, drift, regreso y con la Boya Fiestera a bordo. *Fuente: §49.17, D-05*
+- **REQ-MUN-029** `L1` — Producir un barco base y al menos 3 skins distinguibles, cada una en 8 direcciones y en los estados del contrato: giro, parada, drift, regreso y con la Boia Fiestera a bordo. *Fuente: §49.17, D-05*
 - **REQ-MUN-030** `L1` — Mantener coherentes proa, popa, cubierta, mástil, sombra y pasajera al ir hacia abajo, de vuelta o marcha atrás; nunca invertir verticalmente un sprite y, si hay marcha atrás, distinguir la dirección del casco de la del desplazamiento. *Fuente: §49.17*
 - **REQ-MUN-031** `L1` — Acompañar cada recurso con un manifiesto (ID, versión, archivo o atlas, fotogramas, direcciones, escala, anclajes, pivote y licencia u origen) y separar la geometría de juego de la imagen. *Fuente: §49.17, D-05*
 - **REQ-MUN-032** `L1` — Generar los sprites que rotan con scripts de Blender sin interfaz reproducibles desde el repositorio (sombreado toon con contorno, cámara ortográfica a 30° de elevación que da la proyección 2:1, PNG con alfa y manifiesto), y hacer islas, decoración y personajes que no rotan como ilustración 2D de una sola vista. *Fuente: §34, D-05, D-13*

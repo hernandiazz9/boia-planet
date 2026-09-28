@@ -92,11 +92,11 @@ L1, en tres fases con un hito de revisión con Álvaro al cerrar cada una.
 - [pendiente] entrada-cinematica — planeta→mar→landing con máquina de
   estados, saltar, movimiento reducido, alternativa ligera, ENT 01–06.
   Front: lo prueba Hernán en iPhone y Android.
-- [pendiente] objetos-y-boya-tutorial — esquema de objeto (§48.2), catálogo
-  inicial de comportamientos, isla de prueba por proximidad, boya tutorial
+- [pendiente] objetos-y-boia-tutorial — esquema de objeto (§48.2), catálogo
+  inicial de comportamientos, isla de prueba por proximidad, boia tutorial
   con bocadillos a 1,5 s.
 - Hito 1: Álvaro entra desde su móvil, ve el planeta, la landing, conduce
-  hasta la boya. Se cierran P4 y P5.
+  hasta la boia. Se cierran P4 y P5.
 
 ### Fase 2 — datos, cuenta y Admin esencial
 - [pendiente] supabase-esquema — eventos, islas, objetos, mundo versionado,
@@ -140,5 +140,5 @@ L1, en tres fases con un hito de revisión con Álvaro al cerrar cada una.
 
 - Tres prompts de la v14 §50 como unidad de trabajo: sustituidos por los
   encargos de este plan. Se conservan en la fuente como referencia de alcance.
-- Corrientes y boyas musicales por capas (§11.5): la propia v14 las deja en
+- Corrientes y boies musicales por capas (§11.5): la propia v14 las deja en
   reserva.

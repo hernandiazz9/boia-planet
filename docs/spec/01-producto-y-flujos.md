@@ -20,7 +20,7 @@ El objetivo principal es vender entradas (§2.1). Los secundarios (§2.2) son un
 - **REQ-PRO-001** `L1` — Ofrecer desde la landing dos caminos igual de comprensibles, COMPRAR TICKETS y EXPLORAR EL UNIVERSO; Explorar puede ser el CTA más llamativo, pero Tickets nunca queda escondido. *Fuente: §2.1, §3*
 - **REQ-PRO-002** `L1` — No condicionar la compra de entradas a jugar, conducir, registrarse ni conseguir logros. *Fuente: §2.1, §25, §26, P1*
 - **REQ-PRO-003** `L1` — Implementar el flujo comercial directo (landing, Tickets, isla con el panel de entradas abierto, Comprar), que llega al checkout externo del evento prioritario en 2 toques. *Fuente: §4.3, §26*
-- **REQ-PRO-004** `L1` — Implementar el flujo experiencial: entrada automática, landing, Explorar, barco, primera boya, Boya Fiestera y cocodrilos, rescate, exploración de islas, eventos, descuentos y secretos, posible compra, última isla y mundo abierto, sin que login ni Carnet lo interrumpan. *Fuente: §26, §46*
+- **REQ-PRO-004** `L1` — Implementar el flujo experiencial: entrada automática, landing, Explorar, barco, primera boia, Boia Fiestera y cocodrilos, rescate, exploración de islas, eventos, descuentos y secretos, posible compra, última isla y mundo abierto, sin que login ni Carnet lo interrumpan. *Fuente: §26, §46*
 - **REQ-PRO-005** `L1` — Tratar el juego como segunda vía de conversión (explorar, descubrir, obtener sorpresa o descuento, conocer el evento, comprar) sin añadir fricción a la compra. *Fuente: §2.1*
 
 El tercer flujo, el de atajo (landing, Fotos, Tienda o evento, barco en esa localización con el contenido abierto, cerrar y seguir navegando), es REQ-ENT-034.
@@ -52,9 +52,9 @@ La v14 audita el piloto (§45) y pide que ninguna mejora probada desaparezca al 
 | Home y mundo conectados físicamente | REQ-ENT-024, REQ-ENT-034 |
 | Compra directa y compra por descubrimiento | REQ-PRO-003, REQ-PRO-005 |
 | Artistas rotativos y A–Z completo | REQ-COM-026, REQ-COM-027 |
-| Tutorial por boya con bocadillos, sin modal | REQ-AVE-001, REQ-AVE-002, REQ-AVE-004 |
+| Tutorial por boia con bocadillos, sin modal | REQ-AVE-001, REQ-AVE-002, REQ-AVE-004 |
 | Islas por proximidad y minimapa manipulable | REQ-AVE-012, REQ-MUN-020, REQ-MUN-021 |
-| Misión Boya Fiestera completa | REQ-AVE-005 a REQ-AVE-011 |
+| Misión Boia Fiestera completa | REQ-AVE-005 a REQ-AVE-011 |
 | Drift, estela y navegación táctil | REQ-MUN-004, REQ-MUN-006, REQ-MUN-007 |
 | Mar vivo: restos, cofres, delfín y remolino | REQ-AVE-016 a REQ-AVE-019 |
 | Circuito con boost, 3 obstáculos y atajo | REQ-AVE-029, REQ-AVE-030, REQ-AVE-031 |
@@ -73,7 +73,7 @@ La v14 audita el piloto (§45) y pide que ninguna mejora probada desaparezca al 
 - **REQ-PRO-016** `L1` — Revisar en cada hito las 14 preguntas de §30, cada una con sí o no y su evidencia. *Fuente: §30*
 - **REQ-PRO-017** `L1` — Llevar el estado de cada REQ con los valores No integrado, En proceso, Implementado mejorable e Implementado satisfactorio, con evidencia y prueba, separando decisión, implementación, comprobación automática y validación real. *Fuente: §49.15, §49.18, P2*
 
-Las 14 preguntas de §30, resumidas: comprar en pocos pasos sin jugar; explorar hace más atractivo comprar; misión comprensible sin HUD permanente; razones para volver a navegar; Carnets y botellas hacen el mundo habitado; circuito comprensible y rejugable; puntos con uso claro; menú completo sin ocupar la pantalla; minimapa que ayuda sin molestar; temporada nueva sin rehacer el juego; Admin cambia spawn, prioritario, islas, boyas y logros; arte sustituible sin romper la lógica; todo con prioridad en móvil; se siente BOIA y no una plantilla.
+Las 14 preguntas de §30, resumidas: comprar en pocos pasos sin jugar; explorar hace más atractivo comprar; misión comprensible sin HUD permanente; razones para volver a navegar; Carnets y botellas hacen el mundo habitado; circuito comprensible y rejugable; puntos con uso claro; menú completo sin ocupar la pantalla; minimapa que ayuda sin molestar; temporada nueva sin rehacer el juego; Admin cambia spawn, prioritario, islas, boies y logros; arte sustituible sin romper la lógica; todo con prioridad en móvil; se siente BOIA y no una plantilla.
 
 ## Contenido de BOIA y publicación
 
@@ -83,7 +83,7 @@ Identidad, negocio y publicación los aprueba Álvaro (§33). La IA puede propon
 |---|---|
 | Identidad | Definición en 1 a 3 frases, historia y origen, valores y antivalores, tono y nivel de humor pirata |
 | Marca | Logo y variantes, paleta y referencias, tipografías con licencia |
-| Arte | Referencias sí y no; aprobación de barco, Boya Fiestera y temas de islas |
+| Arte | Referencias sí y no; aprobación de barco, Boia Fiestera y temas de islas |
 | Artistas | Lista final con géneros, fotos oficiales, biografías |
 | Eventos y negocio | Carteles y datos, ticketera y URLs, evento prioritario de lanzamiento, reglas y valores de descuentos |
 | Tienda | Productos, precios, fotos y stock |

@@ -125,13 +125,13 @@ Definidos en [04-aventura](04-aventura.md). 39 requisitos: 31 L1, 7 L2, 1 diferi
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
-| REQ-AVE-001 | Primera boya tras el spawn | §7, P3 | L1 | En móvil, la boya es visible en el primer encuadre tras Explorar y habla sin modal | — |
+| REQ-AVE-001 | Primera boia tras el spawn | §7, P3 | L1 | En móvil, la boia es visible en el primer encuadre tras Explorar y habla sin modal | — |
 | REQ-AVE-002 | Bocadillos cada 1,5 s con salto | §7, §25, §47-A, D-07 | L1 | Test: intervalo de 1,5 s; un toque avanza; alejarse interrumpe | — |
 | REQ-AVE-003 | Guion del tutorial | §7, §31.2 | L1 | Texto aprobado por Álvaro cargado | [pendiente Álvaro] |
 | REQ-AVE-004 | Pulsos del ancla y del minimapa | §7, §10, §46, P3 | L1 | Grabación: la última intervención hace pulsar el ancla; el minimapa pulsa 1–2 s sin abrirse; la explicación no se repite | — |
-| REQ-AVE-005 | Boya Fiestera entre cocodrilos | §8.1, P3 | L1 | Grabación del encuentro con 3 o 4 cocodrilos que se sumergen uno a uno | — |
+| REQ-AVE-005 | Boia Fiestera entre cocodrilos | §8.1, P3 | L1 | Grabación del encuentro con 3 o 4 cocodrilos que se sumergen uno a uno | — |
 | REQ-AVE-006 | Rescate y aviso de tripulante | §8.1, D-08 | L1 | Grabación de la subida al barco y del aviso con su texto | — |
-| REQ-AVE-007 | Boya Fiestera visible a bordo | §8.2, §35.1 | L1 | Captura durante el trayecto: pasajera visible, sin HUD de misión | — |
+| REQ-AVE-007 | Boia Fiestera visible a bordo | §8.2, §35.1 | L1 | Captura durante el trayecto: pasajera visible, sin HUD de misión | — |
 | REQ-AVE-008 | Entrega en la última isla | §8.3, P3 | L1 | Test de llegada por 2 lados; logro y recompensa concedidos 1 vez | [pendiente Álvaro] |
 | REQ-AVE-009 | Mundo abierto y desvíos | §8.3, §46, P3 | L1 | Tras rescatar, visitar 3 encuentros y recargar conserva la misión | — |
 | REQ-AVE-010 | Destino por ID de temporada | §13, §49.7, P1 | L1 | Cambiar la prioridad o añadir una isla no altera una misión iniciada; publicar sin destino falla | — |
@@ -147,8 +147,8 @@ Definidos en [04-aventura](04-aventura.md). 39 requisitos: 31 L1, 7 L2, 1 diferi
 | REQ-AVE-020 | Náufrago con descuento | §12 | L1 | Test: acercarlo entrega el código configurado | [pendiente Álvaro] Valor y código reales de Álvaro |
 | REQ-AVE-021 | Descuentos de tienda en restos | §12 | L1 | Test: un resto configurado entrega un código de tienda | [pendiente Álvaro] |
 | REQ-AVE-022 | Puerto de Fotos | §4.3, P1, P3 | L1 | Fotos desde la landing lleva al puerto y abre la galería | — |
-| REQ-AVE-023 | Boya de WhatsApp | §4.4, P1, P3 | L1 | Por proximidad abre el enlace configurado | [pendiente Álvaro] [provisional] Alcance: D-02 no la nombra; enlace real de Álvaro |
-| REQ-AVE-024 | Boya musical | P1, P3 | L2 | Reproduce 4 pistas con derechos | [provisional] Alcance: D-02 no la nombra |
+| REQ-AVE-023 | Boia de WhatsApp | §4.4, P1, P3 | L1 | Por proximidad abre el enlace configurado | [pendiente Álvaro] [provisional] Alcance: D-02 no la nombra; enlace real de Álvaro |
+| REQ-AVE-024 | Boia musical | P1, P3 | L2 | Reproduce 4 pistas con derechos | [provisional] Alcance: D-02 no la nombra |
 | REQ-AVE-025 | Ideas musicales en reserva | §11.5, D-02 | diferido | No se implementa | La v14 ya las deja en reserva |
 | REQ-AVE-026 | Circuito lateral como atajo | §13, §49.16 | L1 | La salida del circuito lleva al destino configurado (MAP 01) | — |
 | REQ-AVE-027 | Récord personal local | §13, P3, D-09 | L1 | Test: el mejor tiempo persiste en el dispositivo | — |

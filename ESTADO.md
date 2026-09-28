@@ -4,6 +4,29 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-28 — plan 001 T00: «boia» con i en todo el repo
+
+Qué existe:
+- D-18 en `docs/DECISIONES.md`: grafía valenciana «boia» (femenino), plural «boies». La v14 (`docs/fuente/v14-maestro.md`) conserva la grafía con y como texto histórico.
+- 17 archivos versionados cambiados (spec, DECISIONES, PLAN, prompt 01, informes 01 y 02, CLAUDE.md, skill `encargo`, docstrings de `tools/blender/ship.py`). Las rutas absolutas a la carpeta del proyecto ya dicen `/Users/heralc/Desktop/boia.planet`, antes de que Hernán renombre la carpeta al cerrar el plan 001.
+- Formas derivadas adaptadas: el slug de la tarea `objetos-y-boia-tutorial` de `docs/PLAN.md` (antes con y).
+
+Comandos:
+```
+git grep -I -i -n -E "bo[y]a" -- ':!docs/fuente/v14-maestro.md' ':!plans/'   # sin salida, exit 1
+python3 tools/spec/check.py        # exit 0, 279 requisitos, centinelas 10/10
+python3 tools/spec/test_check.py   # exit 0, 18 pruebas
+python3 tools/blender/check.py     # exit 0, 56 imágenes
+pnpm test                          # exit 0, 42 pruebas
+```
+
+Desviaciones:
+- No se re-renderizó el barco: en `ship.py` sólo cambian un docstring y un comentario.
+- `plans/001-demo-l1.md` sigue con la grafía con y (5 veces): el plan es del orquestador.
+
+Sin probar:
+- La skill `encargo` apunta a `/Users/heralc/Desktop/boia.planet`, que todavía no existe: hasta el renombrado, el `cd` de su paso 0 falla.
+
 ## 2026-09-28 — encargo 01: pipeline de arte del barco en Blender
 
 Qué existe:

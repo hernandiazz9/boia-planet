@@ -3,7 +3,7 @@
 BOIA.PLANET: la web-universo de BOIA, colectivo de eventos musicales de
 Alicante. Vende entradas de los "All Day BOIA" y, como segunda vía de
 conversión, ofrece un mundo 2.5D isométrico navegable en barco (islas de
-eventos, Boya Fiestera, descuentos escondidos, Carnet BOIA). El cliente y
+eventos, Boia Fiestera, descuentos escondidos, Carnet BOIA). El cliente y
 quien aprueba identidad, negocio y publicación es Álvaro (BOIA); Hernán
 dirige la construcción.
 

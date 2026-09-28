@@ -134,8 +134,8 @@ Nada de front.
    | ENT-016 | Admin de la entrada: recursos, parámetros, vista previa y restaurar | L2 | L1. Un revisor señala que D-02 cita §4.4 entero en L1 y que ENT 06 pide «configuración editable» |
    | ENT-031 | Bloques de actividades y comunidad en la landing | L2 | L1 |
    | MUN-005 | Ciclo de día y noche (P1, P3) | L2 | L1 |
-   | AVE-023 | Boya de WhatsApp | L1, porque sólo configura comportamientos de L1 | L2, junto a la promoción de WhatsApp |
-   | AVE-024 | Boya musical con 4 canciones | L2 | L1 |
+   | AVE-023 | Boia de WhatsApp | L1, porque sólo configura comportamientos de L1 | L2, junto a la promoción de WhatsApp |
+   | AVE-024 | Boia musical con 4 canciones | L2 | L1 |
    | IDE-008, IDE-009 | Invitaciones a crear Carnet (5 min o 3 logros; 3 min entre avisos; 3 por sesión) | L1 con valores fijos | L2 |
    | IDE-016 | Editar las preguntas del Carnet desde el Admin | L2 | L1 |
    | IDE-023 | QR alternativo de sello | L2 | L1 si la ticketera no tiene webhook (D-06) |

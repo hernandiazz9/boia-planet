@@ -118,8 +118,8 @@ Esta parte debe cerrarse antes de la producción visual definitiva. La filosofí
 | Filosofía | Manifiesto completo + versión breve | CLAVE | Pendiente |
 | Artistas | Introducción a Personas detrás del sonido + A–Z | MEDIA | Pendiente |
 | Carnet BOIA | Crear/editar, preguntas, estados vacíos | CLAVE | Pendiente |
-| Primera boya | Diálogo tutorial completo | CLAVE | Pendiente |
-| Boya Fiestera | Rescate, reacciones y final de misión | CLAVE | Pendiente |
+| Primera boia | Diálogo tutorial completo | CLAVE | Pendiente |
+| Boia Fiestera | Rescate, reacciones y final de misión | CLAVE | Pendiente |
 | Náufrago | Diálogo y recompensa/descuento | MEDIA | Pendiente |
 | Islas/eventos | Llegada, descubrir, explorar, comprar | CLAVE | Pendiente |
 | Logros | Nombres, descripciones y mensajes | MEDIA | Pendiente |

@@ -13,7 +13,7 @@ Una sesión de trabajo lee este índice y los archivos que nombre su encargo, no
 | [01-producto-y-flujos](01-producto-y-flujos.md) | Visión, dos caminos, flujos, tipos de evento, reglas UX, cobertura del piloto, contenido de BOIA y publicación | §1–3, §25–28, §30, §33, §39, §45–47, §49.18 |
 | [02-entrada-y-landing](02-entrada-y-landing.md) | Cinemática automática, landing en el mundo, home por bloques, accesos con la isla visible, ENT 01–06 | §4, §47-B, §49.3, §49.6 |
 | [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
-| [04-aventura](04-aventura.md) | Tutorial, Boya Fiestera, islas, mar vivo, náufrago, circuito y minijuegos de L2 | §7–9, §11–13, §47-A, §49.11 |
+| [04-aventura](04-aventura.md) | Tutorial, Boia Fiestera, islas, mar vivo, náufrago, circuito y minijuegos de L2 | §7–9, §11–13, §47-A, §49.11 |
 | [05-identidad-y-comunidad](05-identidad-y-comunidad.md) | Invitado y cuenta, Carnet, sellos, logros, economía, Mi Barco, menú, ranking, botellas, encuestas y mensajes | §14–17, §19–21, §40, §42–44, §46, §49.8–49.10 |
 | [06-comercial](06-comercial.md) | Eventos y sus 7 estados, ticketera, descuentos y promociones, artistas, filosofía, fotos y tienda | §5, §18, §22, §49.4, §49.12 |
 | [07-admin](07-admin.md) | Acceso y roles, editor del mundo, publicación, logros, Carnets, moderación, borrado, temporadas, criterios de §49.15 | §23, §48.4–48.8, §49.1, §49.2, §49.13, §49.15 |

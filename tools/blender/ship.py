@@ -1,7 +1,7 @@
 """Barco de vela procedural: low-poly, sombreado toon de tres tonos y contorno.
 
 La geometría es una sola; las skins sólo cambian colores de materiales (y con
-ellos la bandera y las franjas de la vela). La pasajera ("Boya Fiestera",
+ellos la bandera y las franjas de la vela). La pasajera ("Boia Fiestera",
 placeholder) cuelga del empty `slot_passenger` y se muestra u oculta.
 
 Uso suelto, para inspeccionar el modelo en Blender:
@@ -426,7 +426,7 @@ def build_rigging(mats, parent):
 
 
 def build_passenger(mats, slot):
-    """Placeholder de la Boya Fiestera: cilindro con cara y gorro de fiesta."""
+    """Placeholder de la Boia Fiestera: cilindro con cara y gorro de fiesta."""
     R, segs = 0.16, 12
     zs = [0.0, 0.13, 0.29, 0.40]
     roles = ["buoy_a", "buoy_b", "hat", "face"]

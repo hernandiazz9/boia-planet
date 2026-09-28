@@ -18,7 +18,7 @@ Fuente: v14 §23, §48.4 a §48.8, §49.1, §49.2, §49.13, §49.15 y las seccio
 
 - **REQ-ADM-009** `L1` — Ofrecer, con la opción «Editar mundo», un editor visual isométrico con lienzo, biblioteca de assets, inspector, capas, selección, mover, escalar, rotar, orientaciones compatibles, activar o desactivar, eliminar, ajuste opcional a rejilla, deshacer y rehacer, donde también se fijan el spawn y la orientación inicial del barco. *Fuente: §23.1, P1, P2*
 - **REQ-ADM-010** `L1` — Crear un objeto sin código en 10 pasos: añadir, elegir categoría (aporta valores por defecto, no fija la lógica), elegir asset, colocarlo, definir radio, hitbox, zona y punto seguro, añadir comportamientos, editar parámetros, asociar contenido, evento, logro, recompensa o destino, previsualizar y guardar o publicar. *Fuente: §23.2, §48.4*
-- **REQ-ADM-011** `L1` — Guardar y duplicar objetos como plantillas («Obstáculo lento», «Boya de diálogo», «Isla de evento», «Cofre», «Boost») que conservan comportamientos y parámetros. *Fuente: §48.7*
+- **REQ-ADM-011** `L1` — Guardar y duplicar objetos como plantillas («Obstáculo lento», «Boia de diálogo», «Isla de evento», «Cofre», «Boost») que conservan comportamientos y parámetros. *Fuente: §48.7*
 - **REQ-ADM-012** `L1` — Validar formato, extensión, peso y dimensiones de cada asset antes de publicarlo, guardar el original y crear variantes optimizadas. *Fuente: §48.8, P2*
 - **REQ-ADM-013** `L1` — Limitar los parámetros a rangos seguros y advertir cuando una hitbox, radio u objeto queda fuera del mar o de la zona válida. *Fuente: §48.8*
 - **REQ-ADM-014** `L1` — Bloquear la publicación si una isla cierra la navegación, un teletransporte cae en tierra, una misión no tiene destino, un circuito no tiene rutas válidas o una referencia eliminada rompe home, mapa, evento o logro, y comprobar textos esenciales, tickets y destinos. *Fuente: §49.7, P1, P2*
@@ -39,7 +39,7 @@ Fuente: v14 §23, §48.4 a §48.8, §49.1, §49.2, §49.13, §49.15 y las seccio
 
 Publicar un logro nuevo para todos desde su publicación es L1; evaluar hechos anteriores (retroactivo) y conceder en masa son L2 (D-02).
 
-- **REQ-ADM-021** `L1` — Crear, duplicar, activar, desactivar y versionar logros con una condición legible del catálogo de triggers (visitar isla, encontrar boya, recoger X objetos, completar circuito, tiempo jugado, comprar entrada, rescatar o entregar personaje), ámbito, puntos, monedas, icono, secreto o visible y fechas, sin constructor de lógica arbitraria. *Fuente: §23.3, §49.1, P2*
+- **REQ-ADM-021** `L1` — Crear, duplicar, activar, desactivar y versionar logros con una condición legible del catálogo de triggers (visitar isla, encontrar boia, recoger X objetos, completar circuito, tiempo jugado, comprar entrada, rescatar o entregar personaje), ámbito, puntos, monedas, icono, secreto o visible y fechas, sin constructor de lógica arbitraria. *Fuente: §23.3, §49.1, P2*
 - **REQ-ADM-022** `L1` — Crear una versión o un logro nuevo en vez de cambiar la condición de un logro ya obtenido, y hacer que desactivar sólo evite nuevas concesiones. *Fuente: P2*
 - **REQ-ADM-023** `L2` — Marcar un logro global como retroactivo para que una tarea segura evalúe hechos históricos compatibles y lo conceda una sola vez. *Fuente: §49.1, P2, D-02*
 - **REQ-ADM-024** `L2` — Conceder un logro a todas las cuentas o a un segmento con vista previa de afectados, premio y política para cuentas futuras, motivo, proceso por lotes idempotente con progreso y errores, y compensación auditada en vez de borrar historial. *Fuente: §49.1, P1, P2, D-02*

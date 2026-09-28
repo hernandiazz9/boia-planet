@@ -12,7 +12,7 @@ contradicen, avisá antes de empezar.
 
 ## 0. Dónde estás parado, y si esto corre acá
 
-Antes de nada, `pwd`. Si no estás en `/Users/heralc/Desktop/boya.planet`, `cd` ahí y trabajá
+Antes de nada, `pwd`. Si no estás en `/Users/heralc/Desktop/boia.planet`, `cd` ahí y trabajá
 ahí. Un chip o una tarea pueden abrirte en un **worktree** —una copia del
 repo en otra carpeta— y un worktree no lleva nada que git ignore: acá
 faltarían `node_modules/` (cuando exista el monorepo), `.env.local` y las salidas intermedias de Blender en `tools/blender/out/`. Sin `node_modules/` no corre nada de `pnpm`: se reinstala con `pnpm install` en el worktree. Sin `.env.local` no hay Supabase: las pruebas que lo necesiten se declaran no corridas, no se inventan. Si ya
