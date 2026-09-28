@@ -1,0 +1,320 @@
+{
+  "version": 1,
+  "estado": "muestra",
+  "nota": "Registro de los barcos como entidades. 'render' es la vista SE a 512 px con alfa que genera el script (tools/blender/out/, fuera de git); 'imagen' y 'hoja' son las capturas del informe 01, con fondo pintado. Los colores NO se copian aquí: se leen de cada script de Blender (campo 'script') por su nombre ('ref'). Nombres e historias los aprueba Álvaro; mientras tanto van como null o 'pendiente'.",
+  "referencias": {
+    "marca": [
+      {"nombre": "Naranja BOIA", "hex": "#F26A1B", "fuente": "tools/blender/ship.py, BOIA_PALETTE_MUESTRA (muestra)"},
+      {"nombre": "Azul marino BOIA", "hex": "#12233F", "fuente": "tools/blender/ship.py, BOIA_PALETTE_MUESTRA (muestra)"}
+    ],
+    "mar": [
+      {"nombre": "Mar del juego", "hex": "#0F5F7D", "fuente": "packages/engine/src/water.ts, capa base"},
+      {"nombre": "Olas del juego", "hex": "#2A8FAE", "fuente": "packages/engine/src/water.ts, capa de olas"}
+    ]
+  },
+  "barcos": [
+    {
+      "id": "B01",
+      "nombre": null,
+      "estilo": "Boceto a lápiz",
+      "aspecto": "Remolcador dibujado a lápiz sobre papel: casco claro, tramado gris en las sombras, neumáticos en el costado y cajas en cubierta.",
+      "script": "tools/blender/styles/01_boceto_lapiz.py",
+      "render": "tools/blender/out/styles/01_boceto_lapiz/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-01-boceto-lapiz-hero.png",
+      "hoja": "docs/informes/img/01-estilo-01-boceto-lapiz.png",
+      "notas_render": ["Monocromo: no admite skins de color.", "El tramado va en coordenadas de pantalla y se queda quieto si el barco se balancea."],
+      "paleta": [
+        {"grupo": "Papel (relleno)", "colores": [
+          {"ref": ["PAPER", 0], "uso": "Luz"},
+          {"ref": ["PAPER", 1], "uso": "Medio"},
+          {"ref": ["PAPER", 2], "uso": "Sombra"}]},
+        {"grupo": "Grafito", "colores": [
+          {"ref": ["HATCH_1"], "uso": "Tramado"},
+          {"ref": ["HATCH_2"], "uso": "Tramado cruzado"},
+          {"ref": ["LINE_GRAY"], "uso": "Contorno"}]},
+        {"grupo": "Planos sin sombra", "colores": [
+          {"ref": ["FLAT", "glass"], "uso": "Cristal"},
+          {"ref": ["FLAT", "rope"], "uso": "Cabo"},
+          {"ref": ["FLAT", "window"], "uso": "Ventana"},
+          {"ref": ["FLAT", "soot"], "uso": "Hollín"}]}
+      ]
+    },
+    {
+      "id": "B02",
+      "nombre": null,
+      "estilo": "Acuarela ilustrada",
+      "aspecto": "Remolcador de casco azul con franja y toldo crema, chimenea negra, macetas con plantas y bandera naranja con olas.",
+      "script": "tools/blender/styles/02_acuarela_ilustrada.py",
+      "render": "tools/blender/out/styles/02_acuarela_ilustrada/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-02-acuarela-ilustrada-hero.png",
+      "hoja": "docs/informes/img/01-estilo-02-acuarela-ilustrada.png",
+      "notas_render": ["Las sombras son un glaseado azul violeta.", "En el informe 01 el casco azul se confundía con el fondo azul de las capturas; el velo semitransparente ensucia otros fondos."],
+      "paleta": [
+        {"grupo": "Casco", "colores": [
+          {"ref": ["PAL", "hull"], "uso": "Casco"},
+          {"ref": ["PAL", "cream"], "uso": "Franja y regala"}]},
+        {"grupo": "Cubierta y madera", "colores": [
+          {"ref": ["PAL", "deck"], "uso": "Cubierta"},
+          {"ref": ["PAL", "wood"], "uso": "Madera"},
+          {"ref": ["PAL", "rope"], "uso": "Cabo"}]},
+        {"grupo": "Caseta", "colores": [
+          {"ref": ["PAL", "cabin"], "uso": "Paredes"},
+          {"ref": ["PAL", "awning"], "uso": "Toldo"},
+          {"ref": ["PAL", "window"], "uso": "Ventanas"}]},
+        {"grupo": "Chimenea y metal", "colores": [
+          {"ref": ["PAL", "chimney"], "uso": "Chimenea"},
+          {"ref": ["PAL", "metal"], "uso": "Metal"},
+          {"ref": ["PAL", "lantern"], "uso": "Farol"}]},
+        {"grupo": "Bandera y salvavidas", "colores": [
+          {"ref": ["PAL", "flag"], "uso": "Bandera"},
+          {"ref": ["PAL", "ring_red"], "uso": "Salvavidas"},
+          {"ref": ["PAL", "ring_white"], "uso": "Salvavidas, franja"}]},
+        {"grupo": "Carga y plantas", "colores": [
+          {"ref": ["PAL", "crate"], "uso": "Cajas"},
+          {"ref": ["PAL", "crate_frame"], "uso": "Marco de cajas"},
+          {"ref": ["PAL", "barrel"], "uso": "Barriles"},
+          {"ref": ["PAL", "pot"], "uso": "Macetas"},
+          {"ref": ["PAL", "leaf"], "uso": "Hojas"},
+          {"ref": ["PAL", "leaf2"], "uso": "Hojas claras"},
+          {"ref": ["PAL", "flower"], "uso": "Flores"}]},
+        {"grupo": "Luz y técnica", "colores": [
+          {"ref": ["GLOW"], "uso": "Vidrio del farol"},
+          {"ref": ["SHADOW_TINT"], "uso": "Tinte de sombra"},
+          {"ref": ["PAPER"], "uso": "Papel"},
+          {"ref": ["OUTLINE_COLOR", 0], "uso": "Contorno"},
+          {"ref": ["OUTLINE_COLOR", 1], "uso": "Contorno claro"}]}
+      ]
+    },
+    {
+      "id": "B03",
+      "nombre": null,
+      "estilo": "Low-poly",
+      "aspecto": "Remolcador de facetas limpias: casco rojo y blanco, caseta blanca con techo azul, cajas de colores y bandera roja con olas.",
+      "script": "tools/blender/styles/03_low_poly.py",
+      "render": "tools/blender/out/styles/03_low_poly/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-03-low-poly-hero.png",
+      "hoja": "docs/informes/img/01-estilo-03-low-poly.png",
+      "notas_render": ["Colores planos sin contorno: limpio pero con poca personalidad.", "Resolvió la bandera de canto plegándola y abriéndola 24°."],
+      "paleta": [
+        {"grupo": "Casco", "colores": [
+          {"ref": ["PAL", "red"], "uso": "Casco"},
+          {"ref": ["PAL", "white"], "uso": "Franja"},
+          {"ref": ["PAL", "rim"], "uso": "Regala"},
+          {"ref": ["PAL", "bulwark_in"], "uso": "Borda por dentro"},
+          {"ref": ["PAL", "fender"], "uso": "Defensas"}]},
+        {"grupo": "Cubierta y caseta", "colores": [
+          {"ref": ["PAL", "deck"], "uso": "Cubierta"},
+          {"ref": ["PAL", "cabin"], "uso": "Caseta"},
+          {"ref": ["PAL", "roof"], "uso": "Techo"},
+          {"ref": ["PAL", "glass"], "uso": "Ventanas"},
+          {"ref": ["PAL", "mast"], "uso": "Mástil"}]},
+        {"grupo": "Chimenea y bandera", "colores": [
+          {"ref": ["PAL", "funnel_dark"], "uso": "Remate de chimenea"},
+          {"ref": ["PAL", "flag"], "uso": "Bandera"}]},
+        {"grupo": "Carga", "colores": [
+          {"ref": ["PAL", "crate_red"], "uso": "Caja roja"},
+          {"ref": ["PAL", "crate_blue"], "uso": "Caja azul"},
+          {"ref": ["PAL", "crate_beige"], "uso": "Caja beige"},
+          {"ref": ["PAL", "barrel"], "uso": "Barril"},
+          {"ref": ["PAL", "barrel_top"], "uso": "Tapa de barril"}]},
+        {"grupo": "Luz", "colores": [
+          {"ref": ["LANTERN"], "uso": "Farol"}]}
+      ]
+    },
+    {
+      "id": "B04",
+      "nombre": null,
+      "estilo": "Semi-realista",
+      "aspecto": "Remolcador veterano: casco verde azulado gastado con óxido, neumáticos negros, caseta crema, chimenea roja y blanca y bandera azul.",
+      "script": "tools/blender/styles/04_semi_realista.py",
+      "render": "tools/blender/out/styles/04_semi_realista/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-04-semi-realista-hero.png",
+      "hoja": "docs/informes/img/01-estilo-04-semi-realista.png",
+      "notas_render": ["El view transform AgX desatura los colores al renderizar.", "Sin contorno se funde con el agua; el óxido queda en ruido de 1 o 2 px a tamaño de juego."],
+      "paleta": [
+        {"grupo": "Casco", "colores": [
+          {"ref": ["TEAL"], "uso": "Casco"},
+          {"ref": ["TEAL_FADED"], "uso": "Casco gastado"},
+          {"ref": ["BOOT_RED"], "uso": "Obra viva"},
+          {"ref": ["RUST"], "uso": "Óxido"},
+          {"ref": ["RUST_DARK"], "uso": "Óxido oscuro"},
+          {"ref": ["GRIME"], "uso": "Mugre"},
+          {"ref": ["RUBBER"], "uso": "Neumáticos"}]},
+        {"grupo": "Caseta", "colores": [
+          {"ref": ["CREAM"], "uso": "Paredes"},
+          {"ref": ["CREAM_FADED"], "uso": "Paredes gastadas"},
+          {"ref": ["GLASS"], "uso": "Cristal"}]},
+        {"grupo": "Cubierta y madera", "colores": [
+          {"ref": ["WOOD_A"], "uso": "Tablas"},
+          {"ref": ["WOOD_B"], "uso": "Tablas claras"},
+          {"ref": ["WOOD_DARK"], "uso": "Madera oscura"},
+          {"ref": ["ROPE"], "uso": "Cabo"}]},
+        {"grupo": "Chimenea y bandera", "colores": [
+          {"ref": ["FUNNEL_RED"], "uso": "Chimenea"},
+          {"ref": ["FUNNEL_WHITE"], "uso": "Banda blanca"},
+          {"ref": ["SOOT"], "uso": "Hollín"},
+          {"ref": ["FLAG_BLUE"], "uso": "Bandera"}]},
+        {"grupo": "Carga y salvavidas", "colores": [
+          {"ref": ["CRATE_A"], "uso": "Cajas"},
+          {"ref": ["CRATE_B"], "uso": "Cajas claras"},
+          {"ref": ["BARREL"], "uso": "Barril"},
+          {"ref": ["IRON"], "uso": "Hierro"},
+          {"ref": ["RING_ORANGE"], "uso": "Salvavidas"},
+          {"ref": ["RING_WHITE"], "uso": "Salvavidas, franja"}]},
+        {"grupo": "Luz", "colores": [
+          {"ref": ["LAMP"], "uso": "Farol"}]}
+      ]
+    },
+    {
+      "id": "B05",
+      "nombre": null,
+      "estilo": "Arcilla, maqueta",
+      "aspecto": "Remolcador de juguete blando: casco verde redondo con franja naranja, caseta con techo de paja y palmera, guirnalda de farolillos y bandera naranja.",
+      "script": "tools/blender/styles/05_arcilla_maqueta.py",
+      "render": "tools/blender/out/styles/05_arcilla_maqueta/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-05-arcilla-maqueta-hero.png",
+      "hoja": "docs/informes/img/01-estilo-05-arcilla-maqueta.png",
+      "notas_render": ["Usa el view transform AgX Punchy, que desatura algo.", "Sin contorno; las skins temáticas piden modelado nuevo."],
+      "paleta": [
+        {"grupo": "Casco", "colores": [
+          {"ref": ["C", "hull"], "uso": "Casco"},
+          {"ref": ["C", "band"], "uso": "Franja de flotación"},
+          {"ref": ["C", "roll"], "uso": "Churro de la regala"}]},
+        {"grupo": "Cubierta y madera", "colores": [
+          {"ref": ["C", "deck"], "uso": "Cubierta"},
+          {"ref": ["C", "wood"], "uso": "Madera"},
+          {"ref": ["C", "wood_dark"], "uso": "Madera oscura"},
+          {"ref": ["C", "barrel"], "uso": "Barriles"}]},
+        {"grupo": "Caseta", "colores": [
+          {"ref": ["C", "wall"], "uso": "Paredes"},
+          {"ref": ["C", "thatch"], "uso": "Techo de paja"},
+          {"ref": ["C", "leaf"], "uso": "Palmera"},
+          {"ref": ["C", "glass"], "uso": "Ventanas"},
+          {"ref": ["C", "frame"], "uso": "Marcos"},
+          {"ref": ["C", "door"], "uso": "Puerta"}]},
+        {"grupo": "Chimenea y bandera", "colores": [
+          {"ref": ["C", "chimney"], "uso": "Chimenea"},
+          {"ref": ["C", "iron"], "uso": "Hierro"},
+          {"ref": ["C", "flag"], "uso": "Bandera"},
+          {"ref": ["C", "dark"], "uso": "Oscuro"}]},
+        {"grupo": "Salvavidas", "colores": [
+          {"ref": ["C", "red"], "uso": "Salvavidas"},
+          {"ref": ["C", "white"], "uso": "Salvavidas, franja"}]},
+        {"grupo": "Guirnalda", "colores": [
+          {"ref": ["C", "bulb"], "uso": "Bombilla"},
+          {"ref": ["C", "glow"], "uso": "Resplandor"},
+          {"ref": ["C", "wire"], "uso": "Cable"}]}
+      ]
+    },
+    {
+      "id": "B06",
+      "nombre": null,
+      "estilo": "Cartoon años 30",
+      "aspecto": "Remolcador de dibujo animado antiguo: casco negro con franja roja y crema, chimenea alta, ojos de buey que parecen ojos, semitono de imprenta y bandera roja.",
+      "script": "tools/blender/styles/06_cartoon_anos_30.py",
+      "render": "tools/blender/out/styles/06_cartoon_anos_30/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-06-cartoon-anos-30-hero.png",
+      "hoja": "docs/informes/img/01-estilo-06-cartoon-anos-30.png",
+      "notas_render": ["Paleta de 3 colores más tinta: una skin «fiesta» rompería el estilo.", "El semitono va en coordenadas de pantalla."],
+      "paleta": [
+        {"grupo": "Negro (luz, sombra, semitono)", "colores": [
+          {"ref": ["TONES", "black", 0], "uso": "Luz"},
+          {"ref": ["TONES", "black", 1], "uso": "Sombra"},
+          {"ref": ["TONES", "black", 2], "uso": "Semitono"}]},
+        {"grupo": "Rojo (luz, sombra, semitono)", "colores": [
+          {"ref": ["TONES", "red", 0], "uso": "Luz"},
+          {"ref": ["TONES", "red", 1], "uso": "Sombra"},
+          {"ref": ["TONES", "red", 2], "uso": "Semitono"}]},
+        {"grupo": "Crema (luz, sombra, semitono)", "colores": [
+          {"ref": ["TONES", "cream", 0], "uso": "Luz"},
+          {"ref": ["TONES", "cream", 1], "uso": "Sombra"},
+          {"ref": ["TONES", "cream", 2], "uso": "Semitono"}]},
+        {"grupo": "Madera (luz, sombra, semitono)", "colores": [
+          {"ref": ["TONES", "wood", 0], "uso": "Luz"},
+          {"ref": ["TONES", "wood", 1], "uso": "Sombra"},
+          {"ref": ["TONES", "wood", 2], "uso": "Semitono"}]},
+        {"grupo": "Tinta y luz", "colores": [
+          {"ref": ["INK"], "uso": "Tinta y contorno"},
+          {"ref": ["GLOW"], "uso": "Farol"}]}
+      ]
+    },
+    {
+      "id": "B07",
+      "nombre": null,
+      "estilo": "Cel-shaded cómic",
+      "aspecto": "Remolcador de cómic con tinta de tres grosores: casco azul cielo con obra viva azul profundo y franja blanca, caseta blanca con techo azul y bandera azul con olas blancas.",
+      "script": "tools/blender/styles/07_cel_shaded_comic.py",
+      "render": "tools/blender/out/styles/07_cel_shaded_comic/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-07-cel-shaded-comic-hero.png",
+      "hoja": "docs/informes/img/01-estilo-07-cel-shaded-comic.png",
+      "notas_render": ["Sombras duras teñidas de azul cómic y brillo de borde.", "En el informe 01 el casco azul se confundía con el fondo de las capturas; los faroles se empastan a tamaño de juego."],
+      "paleta": [
+        {"grupo": "Casco", "colores": [
+          {"ref": ["COLORS", "hull"], "uso": "Casco"},
+          {"ref": ["COLORS", "boot"], "uso": "Obra viva"},
+          {"ref": ["COLORS", "stripe"], "uso": "Franja"},
+          {"ref": ["COLORS", "wood_rim"], "uso": "Borda de madera"}]},
+        {"grupo": "Cubierta y madera", "colores": [
+          {"ref": ["COLORS", "deck"], "uso": "Cubierta"},
+          {"ref": ["COLORS", "wood"], "uso": "Mástiles y postes"},
+          {"ref": ["COLORS", "door"], "uso": "Puerta"},
+          {"ref": ["COLORS", "rope"], "uso": "Cabo"}]},
+        {"grupo": "Caseta", "colores": [
+          {"ref": ["COLORS", "cabin"], "uso": "Paredes"},
+          {"ref": ["COLORS", "roof"], "uso": "Techo"},
+          {"ref": ["COLORS", "glass"], "uso": "Ventanas"},
+          {"ref": ["COLORS", "glint"], "uso": "Reflejo"}]},
+        {"grupo": "Chimenea y bandera", "colores": [
+          {"ref": ["COLORS", "chimney"], "uso": "Chimenea"},
+          {"ref": ["COLORS", "chimney_band"], "uso": "Banda"},
+          {"ref": ["COLORS", "hoop"], "uso": "Remates y aros"},
+          {"ref": ["COLORS", "flag"], "uso": "Bandera"},
+          {"ref": ["COLORS", "flag_waves"], "uso": "Olas de la bandera"}]},
+        {"grupo": "Carga y salvavidas", "colores": [
+          {"ref": ["COLORS", "crate"], "uso": "Cajas"},
+          {"ref": ["COLORS", "crate_frame"], "uso": "Marco de cajas"},
+          {"ref": ["COLORS", "ring_a"], "uso": "Salvavidas"},
+          {"ref": ["COLORS", "ring_b"], "uso": "Salvavidas, franja"}]},
+        {"grupo": "Luz y técnica", "colores": [
+          {"ref": ["COLORS", "lantern"], "uso": "Farol"},
+          {"ref": ["COLORS", "brass"], "uso": "Latón"},
+          {"ref": ["SHADOW_TINT"], "uso": "Tinte de sombra"},
+          {"ref": ["RIM_TINT"], "uso": "Brillo de borde"}]}
+      ]
+    },
+    {
+      "id": "B08",
+      "nombre": null,
+      "estilo": "Pixel art",
+      "aspecto": "Remolcador en pixel art de 64 px de arte con contorno de 1 px: casco rojo y blanco, caseta blanca, chimenea roja, cajas de madera y bandera roja.",
+      "script": "tools/blender/styles/08_pixel_art.py",
+      "render": "tools/blender/out/styles/08_pixel_art/hero_SE.png",
+      "imagen": "docs/informes/img/01-estilo-08-pixel-art-hero.png",
+      "hoja": "docs/informes/img/01-estilo-08-pixel-art.png",
+      "notas_render": ["Paleta fija de 16 colores: es su identidad.", "Obliga a que el resto del juego sea pixel art."],
+      "paleta": [
+        {"grupo": "Contorno y hierro", "colores": [
+          {"ref": ["PALETTE", 0], "uso": "Contorno"},
+          {"ref": ["PALETTE", 1], "uso": "Hierro y goma"}]},
+        {"grupo": "Rojo", "colores": [
+          {"ref": ["PALETTE", 2], "uso": "Sombra"},
+          {"ref": ["PALETTE", 3], "uso": "Medio"},
+          {"ref": ["PALETTE", 4], "uso": "Luz"}]},
+        {"grupo": "Blanco", "colores": [
+          {"ref": ["PALETTE", 5], "uso": "Sombra"},
+          {"ref": ["PALETTE", 6], "uso": "Medio"},
+          {"ref": ["PALETTE", 7], "uso": "Luz"}]},
+        {"grupo": "Madera", "colores": [
+          {"ref": ["PALETTE", 8], "uso": "Sombra"},
+          {"ref": ["PALETTE", 9], "uso": "Medio"},
+          {"ref": ["PALETTE", 10], "uso": "Luz"},
+          {"ref": ["PALETTE", 11], "uso": "Cubierta"}]},
+        {"grupo": "Farol y cristal", "colores": [
+          {"ref": ["PALETTE", 12], "uso": "Farol, sombra"},
+          {"ref": ["PALETTE", 13], "uso": "Farol"},
+          {"ref": ["PALETTE", 14], "uso": "Cristal oscuro"},
+          {"ref": ["PALETTE", 15], "uso": "Cristal, brillo"}]}
+      ]
+    }
+  ]
+}
