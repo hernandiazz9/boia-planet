@@ -24,6 +24,18 @@ async function captured(
   return page.evaluate(() => window.__boiaAnalytics ?? []);
 }
 
+// Estas pruebas son de la landing, no de la entrada (esa está en intro.spec.ts):
+// cada página se abre como visita posterior, sin cinemática.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('boia.intro.v1', 'seen');
+    } catch {
+      // sin almacenamiento: la entrada se reproduciría, y las esperas lo cubren
+    }
+  });
+});
+
 const hero = (page: Page) => page.locator('.hero');
 const exploreCta = (page: Page) => hero(page).getByRole('link', { name: /explorar el universo/i });
 const heroTickets = (page: Page) => hero(page).getByRole('link', { name: 'Tickets', exact: true });
@@ -72,13 +84,13 @@ test('el panel de Tickets abre sin WebGL y con el bundle del juego bloqueado', a
     } as typeof HTMLCanvasElement.prototype.getContext;
   });
 
-  // Bundle del juego, su ruta y su arte, bloqueados.
+  // Bundle del juego y su ruta, bloqueados. El arte (/api/art) no: la landing
+  // lo usa para la ilustración ligera del hero (T03).
   const blocked: string[] = [];
   await page.route(
     (url) =>
       gameChunks.some((c) => url.pathname.endsWith(c.replace(/^static\//, ''))) ||
-      url.pathname.startsWith('/juego') ||
-      url.pathname.startsWith('/api/art/'),
+      url.pathname.startsWith('/juego'),
     (route) => {
       blocked.push(route.request().url());
       return route.abort('blockedbyclient');
@@ -117,8 +129,8 @@ test('el panel de Tickets abre sin WebGL y con el bundle del juego bloqueado', a
   expect(new URL(page.url()).hash).toBe('');
   await expect(heroTickets(page)).toBeFocused();
 
-  // La landing ni siquiera pidió el juego.
-  expect(blocked).toEqual([]);
+  // La landing ni siquiera pidió la ruta del juego.
+  expect(blocked.filter((u) => new URL(u).pathname.startsWith('/juego'))).toEqual([]);
 });
 
 test('el enlace /#tickets abre el panel directamente', async ({ page }) => {

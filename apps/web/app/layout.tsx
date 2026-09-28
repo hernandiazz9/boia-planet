@@ -15,7 +15,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es">
+    // El script de arranque de la landing marca <html data-entry/data-intro>
+    // antes de hidratar (entrada cinemática, T03).
+    <html lang="es" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

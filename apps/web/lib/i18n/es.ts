@@ -74,6 +74,10 @@ export const es = {
   'footer.terms': 'Condiciones',
   'footer.cookies': 'Preferencias de cookies',
   'footer.copyright': '© BOIA, Alicante',
+  'footer.replayIntro': 'Ver la introducción',
+
+  'intro.skip': 'Saltar animación',
+  'intro.label': 'Introducción animada',
 
   'legal.pending':
     'Texto pendiente de redacción y revisión profesional. Esta página existe para que el enlace funcione.',

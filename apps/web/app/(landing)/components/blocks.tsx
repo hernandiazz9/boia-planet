@@ -1,5 +1,6 @@
 import type { HomeBlock, HomeContent } from '@boia/contracts';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { t } from '../../../lib/i18n';
 import { resolveBlock, type ResolvedBlock } from '../../../lib/landing/resolve';
 import { ArtistRotator } from './artist-rotator';
@@ -13,13 +14,18 @@ export function Block({
   block,
   content,
   now,
+  heroScene,
 }: {
   block: HomeBlock;
   content: HomeContent;
   now: Date;
+  /** Escena del hero (entrada cinemática, T03). Sin ella, mar en CSS. */
+  heroScene?: ReactNode;
 }) {
   const resolved = resolveBlock(block, content, now);
-  return resolved ? <ResolvedBlockView block={resolved} content={content} /> : null;
+  return resolved ? (
+    <ResolvedBlockView block={resolved} content={content} heroScene={heroScene} />
+  ) : null;
 }
 
 /** Lista de bloques en el orden configurado. */
@@ -27,26 +33,36 @@ export function HomeBlocks({
   blocks,
   content,
   now,
+  heroScene,
 }: {
   blocks: readonly HomeBlock[];
   content: HomeContent;
   now: Date;
+  heroScene?: ReactNode;
 }) {
   return (
     <>
       {blocks.map((b) => (
-        <Block key={b.id} block={b} content={content} now={now} />
+        <Block key={b.id} block={b} content={content} now={now} heroScene={heroScene} />
       ))}
     </>
   );
 }
 
-function ResolvedBlockView({ block, content }: { block: ResolvedBlock; content: HomeContent }) {
+function ResolvedBlockView({
+  block,
+  content,
+  heroScene,
+}: {
+  block: ResolvedBlock;
+  content: HomeContent;
+  heroScene?: ReactNode;
+}) {
   switch (block.type) {
     case 'hero':
       return (
         <section id="inicio" className="hero" aria-labelledby="hero-title" data-block={block.id}>
-          <div className="hero__sea" aria-hidden="true" />
+          {heroScene ?? <div className="hero__sea" aria-hidden="true" />}
           <div className="hero__content">
             <p className="hero__brand">{t('hero.brand')}</p>
             <h1 id="hero-title" className="hero__title">
@@ -320,6 +336,11 @@ function ResolvedBlockView({ block, content }: { block: ResolvedBlock; content: 
                 </li>
               </ul>
             </nav>
+            <p className="site-footer__small">
+              {/* Carga completa a propósito: la entrada la decide el script de arranque. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a href="/?intro=1">{t('footer.replayIntro')}</a>
+            </p>
             <p className="site-footer__small">{t('footer.copyright')}</p>
             <p className="site-footer__small">{t('site.sampleNotice')}</p>
           </div>

@@ -24,7 +24,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
   }
   try {
     const body = await readFile(file);
-    return new Response(body, { headers: { 'content-type': type, 'cache-control': 'no-store' } });
+    // En desarrollo el arte cambia al re-renderizar; en `next start` no, y la
+    // entrada precarga el planeta antes de que el motor lo pida (T03).
+    const cache = process.env.NODE_ENV === 'production' ? 'public, max-age=3600' : 'no-store';
+    return new Response(body, { headers: { 'content-type': type, 'cache-control': cache } });
   } catch {
     const optional = new URL(req.url).searchParams.has('optional');
     return new Response(null, { status: optional ? 204 : 404 });

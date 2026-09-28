@@ -3,6 +3,7 @@
 import type { FunnelEventProps } from '@boia/contracts/analytics';
 import { useEffect } from 'react';
 import { track } from '../../../lib/analytics';
+import { onLanded } from '../../../lib/intro/bridge';
 
 type PanelSource = FunnelEventProps['tickets_panel_open']['source'];
 type ExploreSource = FunnelEventProps['explore_start']['source'];
@@ -118,10 +119,12 @@ export function LandingClient() {
     window.addEventListener('popstate', syncFromUrl);
     window.addEventListener('hashchange', syncFromUrl);
 
-    track('landing_view', { intro: 'none' });
+    // La vista de landing cuenta cuando se ve: tras la entrada, si la hubo.
+    const stopWaiting = onLanded((intro) => track('landing_view', { intro }));
     syncFromUrl();
 
     return () => {
+      stopWaiting();
       document.removeEventListener('click', onClick);
       document.removeEventListener('keydown', onKey);
       panel.removeEventListener('click', onBackdrop);
