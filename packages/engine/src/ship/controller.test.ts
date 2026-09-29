@@ -132,3 +132,36 @@ describe('ShipController', () => {
     expect(bounced).toBe(true);
   });
 });
+
+describe('golpe y sensibilidad', () => {
+  it('collideShip deja en `impact` la velocidad del golpe, y stepShip la vuelve a 0', () => {
+    const s = createShipState(500, 500, 0);
+    s.vx = 180;
+    const wall: ShipEnvironment = { bounds: { ...bounds, right: 500 }, obstacles: [] };
+    expect(collideShip(s, wall, cfg, DT)).toBe(true);
+    expect(s.impact).toBeCloseTo(180, 6);
+    stepShip(s, IDLE_INPUT, cfg, DT);
+    expect(s.impact).toBe(0);
+
+    const o = createShipState(0, 0, 0);
+    o.vx = 120;
+    const rock: ShipEnvironment = { ...openSea, obstacles: [{ x: 20, y: 0, radius: 10 }] };
+    collideShip(o, rock, cfg, DT);
+    expect(o.impact).toBeCloseTo(120, 6);
+  });
+
+  it('la sensibilidad (turnScale) escala el giro del casco', () => {
+    const turned = (turnScale?: number) => {
+      const s = createShipState(0, 0, 0);
+      s.vx = cfg.maxSpeed;
+      const input: ShipInput = { dirX: 0, dirY: 1, throttle: 1, drift: false };
+      if (turnScale !== undefined) input.turnScale = turnScale;
+      stepShip(s, input, cfg, DT);
+      return s.heading;
+    };
+    const base = turned();
+    expect(turned(1)).toBeCloseTo(base, 12);
+    expect(turned(1.5)).toBeCloseTo(base * 1.5, 9);
+    expect(turned(0.5)).toBeCloseTo(base * 0.5, 9);
+  });
+});

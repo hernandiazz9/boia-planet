@@ -180,6 +180,42 @@ export class KeyboardControls {
 const IDLE = { dirX: 0, dirY: 0, throttle: 0, drift: false };
 
 /**
+ * Sensibilidad de los controles (REQ-MUN-008): multiplica el giro máximo del
+ * casco, por separado para teclado y táctil. 1 = el giro de `ShipConfig`.
+ */
+export interface ControlSensitivity {
+  keyboard: number;
+  touch: number;
+}
+
+/** Rango de la sensibilidad en Ajustes/Controles. muestra */
+export const SENSITIVITY_RANGE = { min: 0.5, max: 1.5, step: 0.1 } as const;
+export const DEFAULT_SENSITIVITY: ControlSensitivity = { keyboard: 1, touch: 1 };
+
+export function clampSensitivity(v: unknown, fallback = 1): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return fallback;
+  return clamp(v, SENSITIVITY_RANGE.min, SENSITIVITY_RANGE.max);
+}
+
+/**
+ * La que usa el juego en curso. Es del módulo (no de la partida) porque la
+ * aplica la interfaz desde Ajustes sin tocar la partida: hay un solo barco
+ * por página. `readShipInput` la toma si no se le pasa otra.
+ */
+let activeSensitivity: ControlSensitivity = { ...DEFAULT_SENSITIVITY };
+
+export function setControlSensitivity(s: Partial<ControlSensitivity>): void {
+  activeSensitivity = {
+    keyboard: clampSensitivity(s.keyboard, activeSensitivity.keyboard),
+    touch: clampSensitivity(s.touch, activeSensitivity.touch),
+  };
+}
+
+export function controlSensitivity(): ControlSensitivity {
+  return { ...activeSensitivity };
+}
+
+/**
  * Combina táctil y teclado en la entrada del barco, en coordenadas de mundo.
  * `heading` (rumbo actual del casco) sólo lo usa el modo tanque.
  */
@@ -187,6 +223,7 @@ export function readShipInput(
   touch: TouchControls,
   keys: KeyboardControls,
   heading = 0,
+  sensitivity: ControlSensitivity = activeSensitivity,
 ): ShipInput {
   if (!touch.active && keys.mode === 'tank') {
     const { turn, throttle } = keys.tank();
@@ -194,7 +231,13 @@ export function readShipInput(
     // La proyección sólo aplasta y: el sentido de giro en pantalla y en el
     // plano del agua coincide (ángulo positivo = horario en pantalla).
     const a = heading + turn * TANK_STEER_ANGLE;
-    return { dirX: Math.cos(a), dirY: Math.sin(a), throttle, drift: keys.drift };
+    return {
+      dirX: Math.cos(a),
+      dirY: Math.sin(a),
+      throttle,
+      drift: keys.drift,
+      turnScale: sensitivity.keyboard,
+    };
   }
   const useTouch = touch.active;
   const v = useTouch ? touch.vector() : keys.vector();
@@ -206,5 +249,6 @@ export function readShipInput(
     dirY: w.y / len,
     throttle: v.magnitude,
     drift: useTouch ? touch.drift : keys.drift,
+    turnScale: useTouch ? sensitivity.touch : sensitivity.keyboard,
   };
 }

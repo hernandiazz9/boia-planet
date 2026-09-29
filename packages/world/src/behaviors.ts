@@ -32,6 +32,30 @@ export const BEHAVIOR_TRIGGERS = [
 export const BehaviorTrigger = z.enum(BEHAVIOR_TRIGGERS);
 export type BehaviorTrigger = z.infer<typeof BehaviorTrigger>;
 
+// --- Respuesta: sonido y animación (REQ-PRO-011) ------------------------------
+
+/**
+ * Sonidos cortos de serie que un comportamiento puede declarar. La web los
+ * sintetiza (no hay audio grabado todavía). Todos `muestra`.
+ */
+export const FEEDBACK_SOUNDS = ['ping', 'whoosh', 'bump', 'plop', 'chime', 'fanfare'] as const;
+export const FeedbackSound = z.enum(FEEDBACK_SOUNDS);
+export type FeedbackSound = z.infer<typeof FeedbackSound>;
+
+/** Animaciones cortas de serie del objeto al dispararse el comportamiento. */
+export const FEEDBACK_ANIMATIONS = ['pop', 'bounce', 'shake', 'spin', 'pulse'] as const;
+export const FeedbackAnimation = z.enum(FEEDBACK_ANIMATIONS);
+export type FeedbackAnimation = z.infer<typeof FeedbackAnimation>;
+
+/**
+ * Respuesta inmediata de un comportamiento con efecto visible: un sonido y
+ * una animación de serie. Sin valor, la de por defecto del juego (o ninguna).
+ */
+const feedback = {
+  sound: FeedbackSound.optional(),
+  animation: FeedbackAnimation.optional(),
+};
+
 // --- COLISIÓN ---------------------------------------------------------------
 
 export const COLLISION_MODES = ['block', 'bounce', 'brake', 'slow', 'boost'] as const;
@@ -51,6 +75,7 @@ export const CollisionParams = z.object({
   duration: seconds(10).default(2),
   /** Si el casco no puede atravesarlo. Sin valor: sí para block/bounce/brake. */
   solid: z.boolean().optional(),
+  ...feedback,
 });
 
 /** Intensidad y solidez por defecto de cada modo. muestra */
@@ -69,6 +94,7 @@ export const ProximityParams = z.object({
   radius: z.number().finite().positive().max(2000).optional(),
   /** u extra para salir: evita entradas y salidas repetidas en el borde. */
   hysteresis: z.number().finite().min(0).max(200).default(12),
+  ...feedback,
 });
 
 // --- DIÁLOGO ----------------------------------------------------------------
@@ -109,6 +135,7 @@ export const CollectibleParams = z.object({
   radius: z.number().finite().positive().max(500).optional(),
   /** s hasta que reaparece en la misma sesión. Sin valor, no reaparece. */
   respawn: seconds(3600).optional(),
+  ...feedback,
 });
 
 export const REWARD_KINDS = ['coins', 'points', 'discount', 'item', 'achievement'] as const;
@@ -124,6 +151,7 @@ export const RewardParams = z.object({
   /** Una vez por cuenta, por sesión, por temporada o siempre. */
   frequency: RewardFrequency.default('once'),
   on: BehaviorTrigger.optional(),
+  ...feedback,
 });
 
 // --- EVENTO/CONTENIDO y TICKET ----------------------------------------------
@@ -137,11 +165,13 @@ export const ContentParams = z.object({
   /** Cierra el panel al salir del radio de proximidad. */
   closeOnExit: z.boolean().default(true),
   on: BehaviorTrigger.optional(),
+  ...feedback,
 });
 
 export const TicketParams = z.object({
   eventId: id,
   on: BehaviorTrigger.optional(),
+  ...feedback,
 });
 
 // --- CHECKPOINT/BOOST, TELETRANSPORTE, SPAWN --------------------------------
@@ -154,6 +184,7 @@ export const CheckpointParams = z.object({
   /** 2 s (D-07). */
   duration: seconds(10).default(2),
   on: BehaviorTrigger.optional(),
+  ...feedback,
 });
 
 export const TeleportParams = z.object({
@@ -162,6 +193,7 @@ export const TeleportParams = z.object({
   /** Rumbo al llegar, en rad; sin valor, conserva el suyo. */
   heading: z.number().finite().optional(),
   on: BehaviorTrigger.optional(),
+  ...feedback,
 });
 
 export const SpawnParams = z.object({
@@ -185,6 +217,7 @@ export const AchievementParams = z.object({
   trigger: id,
   amount: z.number().int().min(1).max(1000).default(1),
   on: BehaviorTrigger.optional(),
+  ...feedback,
 });
 
 export const DecorativeParams = z.object({
@@ -197,6 +230,7 @@ export const DecorativeParams = z.object({
 export const StartMinigameParams = z.object({
   gameId: id.optional(),
   on: BehaviorTrigger.optional(),
+  ...feedback,
 });
 
 // --- Catálogo ---------------------------------------------------------------

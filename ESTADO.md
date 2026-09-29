@@ -4,6 +4,32 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T46: sonido, estela y tacto de los controles
+
+Qué existe:
+- **Audio sólo tras el primer gesto** (`app/juego/sound.ts`): no se crea ningún `AudioContext` ni suena nada hasta el primer toque, clic o tecla (`installAudioLifecycle`, montado en `/juego`). El desbloqueo reanuda el contexto y hace sonar un búfer mudo dentro del gesto (iOS). Con la pestaña oculta el contexto se suspende y los efectos no se acumulan; al volver sigue. Una pantalla sin el ciclo de vida (`/mar`) se desbloquea sola en el primer efecto si la página ya tuvo un gesto (`navigator.userActivation`), así `/mar` no pierde sus sonidos.
+- **Ambiente por mundo** (`app/juego/ambient.ts`, O10, `muestra`): loop de 16 s generado en el navegador (pad de cuatro acordes, bajo, campanas pentatónicas y oleaje de ruido filtrado) con tónica, progresión y campanas sacadas del id del mundo; empalma sin chasquido. Suena en el canal de música al 30 % (`AMBIENT_LEVEL`) sólo si la música está activa; cambia con fundido al cambiar de mundo y se calla al salir de `/juego` (la landing no suena).
+- **Efectos**: «ping» al recoger, WHOOSH en cada boost, golpe al chocar con costa o roca (fuerza según la velocidad del choque, mínimo 40 u/s, uno cada 0,35 s). `SOUNDS`/`playSound` cubren todo `FEEDBACK_SOUNDS`.
+- **Sonido y animación declarables** (REQ-PRO-011, `packages/world/src/behaviors.ts`): los comportamientos con efecto visible (colisión, proximidad, recogible, recompensa, contenido, ticket, checkpoint, teletransporte, logro, minijuego) admiten `sound` (`ping`, `whoosh`, `bump`, `plop`, `chime`, `fanfare`) y `animation` (`pop`, `bounce`, `shake`, `spin`, `pulse`). `app/juego/feedback.ts` (`feedbackFor`) decide qué suena con cada evento: lo declarado manda; si no, el de serie.
+- **Estela reactiva** (REQ-MUN-004, `packages/engine/src/wake.ts`): además de velocidad y drift, crece girando (hasta +60 % a 2,4 rad/s, espuma más abierta), con boost (velocidad por encima de la máxima: más intensa y más larga) y salpica al chocar (anillo de espuma y extra de 0,4 s). Todo sale de lo que el barco hace paso a paso: un frenazo normal, acabar un boost o un teletransporte no salpican. `reading()` da intensidad, giro, boost y golpe.
+- **Golpe en el barco**: `collideShip` deja en `ShipState.impact` la velocidad del choque (la vuelve a 0 `stepShip`); `/juego` la lee en `onStep` para el sonido.
+- **Sensibilidad** (REQ-MUN-008): Controles tiene «Sensibilidad del giro» para teclado y táctil (50–150 %, testid `sensibilidad`), guardada en `Settings.sensitivity`. `ShipInput.turnScale` multiplica el giro del casco; `readShipInput` lo pone según de dónde venga la entrada. La aplica `setControlSensitivity` (estado del módulo de controles: la interfaz la cambia sin tocar la partida).
+- **HUD** (O11, REQ-PRO-009): la caja de fps y velocidad sólo se ve con `?debug` (`hudLayout(vp, zona, { debug })`). Sin él el nodo `data-testid="hud"` sigue en el DOM con `hidden` (fuera de la vista y del lector de pantalla): las pruebas e2e lo siguen usando para saber que el motor corre.
+- Pruebas: `wake.test.ts` (giro, boost y choque suben la estela de forma distinta; frenar, acabar un boost y teletransportarse no son choque), `controller.test.ts` (`impact`, `turnScale` escala el giro), `controls.test.ts` (sensibilidad por fuente y más sensibilidad gira antes), `hud-layout.test.ts` (sin `?debug` no hay caja), `minimap.test.ts` (sensibilidad guardada y recortada), `app/juego/sound.test.ts` (sin audio antes del primer gesto; desbloqueo con ambiente; música apagada; pestaña oculta; todos los sonidos de serie suenan), `ambient.test.ts`, `feedback.test.ts`. e2e `juego-hud.spec.ts`: sin caja de fps sin `?debug`, sin `AudioContext` antes del primer toque, sensibilidad guardada.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 78 archivos, 766 pruebas
+E2E_PORT=<libre> pnpm e2e --workers=2      # ver el informe de la tarea
+```
+
+Pendiente / para otros encargos:
+- **`/mar`** (fuera por plan 003): ni ambiente ni ciclo de vida del audio (pausa con la pestaña oculta), ni WHOOSH en su turbo, ni golpe al chocar; su estela (`app/mar/engine/effects.ts`) no reacciona a choques. Hace falta `installAudioLifecycle()` + `setAmbientWorld(<mundo>)` en `mar-client.tsx`, `whoosh()` al pulsar el turbo, `bump()` en el choque de `mar3d.ts` y el mismo criterio de salpicadura en su `wake.update`.
+- **Animaciones declaradas**: el esquema las admite y `feedbackFor` las devuelve, pero nadie las pinta aún: falta que `ObjectView` (`packages/engine/src/world/object-view.ts`, zona de T47) reproduzca `pop`/`bounce`/`shake`/`spin`/`pulse` sobre el objeto.
+- **Sensibilidad por la partida**: ahora vive en el módulo de controles; si algún día hay dos juegos en la misma página, pasarla a `Game.setSensitivity` en `game.ts` (fuera de alcance por T47).
+- La estela deduce el golpe de la velocidad (no recibe `ShipState.impact` porque el emisor lo arma `game.ts`): entrar en una zona de ralentizar o frenar también salpica, y el primer paso del viaje automático («Ir a la isla») también. Pasar `impact` desde `game.ts` lo haría exacto.
+- El ambiente y los efectos son sintetizados y `muestra` hasta las pistas con licencia (P18); la música que sube el Admin (T48) no suena todavía.
+
 ## 2026-09-29 — plan 004 T47: el mundo se carga por sectores
 
 Qué existe:

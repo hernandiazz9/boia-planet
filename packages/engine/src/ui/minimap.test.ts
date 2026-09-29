@@ -10,6 +10,7 @@ import {
   SETTINGS_KEY,
 } from './settings';
 import { MemoryStore } from './storage';
+import { SENSITIVITY_RANGE } from '../input/controls';
 
 const world = parseWorldConfig(SAMPLE_WORLD);
 
@@ -146,6 +147,7 @@ describe('ajustes guardados', () => {
     s.music.enabled = false;
     s.sfx.volume = 0.3;
     s.keyboardMode = 'tank';
+    s.sensitivity = { keyboard: SENSITIVITY_RANGE.max, touch: SENSITIVITY_RANGE.min };
     saveSettings(store, s);
     const back = loadSettings(store);
     expect(back).toEqual(s);
@@ -167,5 +169,12 @@ describe('ajustes guardados', () => {
     expect(s.music).toEqual({ enabled: false, volume: 1 });
     expect(s.sfx).toEqual(DEFAULT_SETTINGS.sfx);
     expect(s.keyboardMode).toBe(DEFAULT_SETTINGS.keyboardMode);
+  });
+
+  it('la sensibilidad se guarda por separado y se recorta a su rango', () => {
+    const s = parseSettings({ sensitivity: { keyboard: 99, touch: 'mucha' } });
+    expect(s.sensitivity.keyboard).toBe(SENSITIVITY_RANGE.max);
+    expect(s.sensitivity.touch).toBe(DEFAULT_SETTINGS.sensitivity.touch);
+    expect(parseSettings({}).sensitivity).toEqual(DEFAULT_SETTINGS.sensitivity);
   });
 });

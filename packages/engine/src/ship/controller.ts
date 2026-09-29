@@ -10,6 +10,12 @@ export interface ShipState {
   /** Rumbo del casco en el plano del agua (0 = este, π/2 = hacia el espectador). */
   heading: number;
   drifting: boolean;
+  /**
+   * u/s con que el casco chocó en el último paso (componente de la velocidad
+   * contra la costa o el obstáculo); 0 sin choque. Lo pone a 0 `stepShip` y
+   * lo sube `collideShip`: para el golpe sonoro y quien quiera reaccionar.
+   */
+  impact?: number;
 }
 
 /** Lo que pide el jugador en un paso, ya pasado a coordenadas de mundo. */
@@ -20,6 +26,11 @@ export interface ShipInput {
   /** 0..1. 0 = soltar: frena suave. */
   throttle: number;
   drift: boolean;
+  /**
+   * Multiplica el giro máximo del casco: la sensibilidad de los controles
+   * (REQ-MUN-008). Sin valor, 1.
+   */
+  turnScale?: number;
 }
 
 export const IDLE_INPUT: ShipInput = { dirX: 0, dirY: 0, throttle: 0, drift: false };
@@ -38,7 +49,7 @@ export interface ShipEnvironment {
 }
 
 export function createShipState(x: number, y: number, heading = -Math.PI / 2): ShipState {
-  return { x, y, vx: 0, vy: 0, heading, drifting: false };
+  return { x, y, vx: 0, vy: 0, heading, drifting: false, impact: 0 };
 }
 
 export function shipSpeed(s: ShipState): number {
@@ -55,6 +66,7 @@ export function stepShip(s: ShipState, input: ShipInput, cfg: ShipConfig, dt: nu
   const throttle = len > 1e-6 ? clamp(input.throttle, 0, 1) : 0;
   const drifting = input.drift && throttle > 0;
   s.drifting = drifting;
+  s.impact = 0;
 
   const speed = shipSpeed(s);
   let align = 1;
@@ -64,7 +76,12 @@ export function stepShip(s: ShipState, input: ShipInput, cfg: ShipConfig, dt: nu
     const speedFactor =
       cfg.minTurnFactor + (1 - cfg.minTurnFactor) * clamp(speed / (0.5 * cfg.maxSpeed), 0, 1);
     const maxTurn =
-      cfg.turnRate * (drifting ? cfg.drift.turnMultiplier : 1) * speedFactor * dt * throttle;
+      cfg.turnRate *
+      (drifting ? cfg.drift.turnMultiplier : 1) *
+      (input.turnScale ?? 1) *
+      speedFactor *
+      dt *
+      throttle;
     s.heading = wrapAngle(s.heading + clamp(delta, -maxTurn, maxTurn));
     // Con el rumbo pedido muy de espaldas, gira antes de acelerar.
     align = clamp((Math.cos(wrapAngle(target - s.heading)) + 0.5) / 1.5, 0.15, 1);
@@ -107,7 +124,8 @@ export function stepShip(s: ShipState, input: ShipInput, cfg: ShipConfig, dt: nu
  * Colisiones: costas laterales y borde inferior deslizan con poca
  * restitución; el borde superior está abierto y, pasado, una corriente
  * suave devuelve el barco (§49.7); los obstáculos circulares rebotan suave.
- * Muta `s`. Devuelve si hubo contacto (para la estela y el sonido futuros).
+ * Muta `s`. Devuelve si hubo contacto y deja en `s.impact` la velocidad
+ * del golpe (la mayor de este paso), para el sonido y la estela.
  */
 export function collideShip(
   s: ShipState,
@@ -118,19 +136,29 @@ export function collideShip(
   const r = cfg.radius;
   const b = env.bounds;
   let hit = false;
+  let impact = s.impact ?? 0;
 
   if (s.x < b.left + r) {
     s.x = b.left + r;
-    if (s.vx < 0) s.vx = -s.vx * cfg.wallRestitution;
+    if (s.vx < 0) {
+      impact = Math.max(impact, -s.vx);
+      s.vx = -s.vx * cfg.wallRestitution;
+    }
     hit = true;
   } else if (s.x > b.right - r) {
     s.x = b.right - r;
-    if (s.vx > 0) s.vx = -s.vx * cfg.wallRestitution;
+    if (s.vx > 0) {
+      impact = Math.max(impact, s.vx);
+      s.vx = -s.vx * cfg.wallRestitution;
+    }
     hit = true;
   }
   if (s.y > b.bottom - r) {
     s.y = b.bottom - r;
-    if (s.vy > 0) s.vy = -s.vy * cfg.wallRestitution;
+    if (s.vy > 0) {
+      impact = Math.max(impact, s.vy);
+      s.vy = -s.vy * cfg.wallRestitution;
+    }
     hit = true;
   }
 
@@ -157,11 +185,13 @@ export function collideShip(
     s.y = o.y + ny * minDist;
     const vn = s.vx * nx + s.vy * ny;
     if (vn < 0) {
+      impact = Math.max(impact, -vn);
       const e = o.restitution ?? cfg.obstacleRestitution;
       s.vx -= (1 + e) * vn * nx;
       s.vy -= (1 + e) * vn * ny;
     }
     hit = true;
   }
+  s.impact = impact;
   return hit;
 }

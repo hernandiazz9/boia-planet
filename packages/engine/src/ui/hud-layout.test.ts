@@ -55,12 +55,17 @@ describe('tamaño del minimapa (D-07)', () => {
 describe('zonas seguras del minimapa', () => {
   it('ninguna zona segura pisa la zona del joystick ni el HUD fijo, y todas caben', () => {
     for (const vp of VIEWPORTS) {
-      const safe = safeMinimapZones(vp);
+      // Con `?debug` sale además la caja de datos: el caso con más cosas.
+      const safe = safeMinimapZones(vp, { debug: true });
       expect(safe.length, name(vp)).toBeGreaterThan(0);
-      const layout = hudLayout(vp);
-      const fixed = [layout.home, layout.compass, layout.menu, layout.stats, layout.balances].filter(
-        (r): r is Rect => r !== null,
-      );
+      const layout = hudLayout(vp, null, { debug: true });
+      const fixed = [
+        layout.home,
+        layout.compass,
+        layout.menu,
+        layout.stats,
+        layout.balances,
+      ].filter((r): r is Rect => r !== null);
       const rects = minimapZoneRects(vp);
       for (const z of safe) {
         expect(inside(rects[z], vp), `${name(vp)} ${z}`).toBe(true);
@@ -72,7 +77,7 @@ describe('zonas seguras del minimapa', () => {
 
   it('el HUD fijo tampoco toca la zona del joystick ni se pisa entre sí', () => {
     for (const vp of VIEWPORTS) {
-      const l = hudLayout(vp);
+      const l = hudLayout(vp, null, { debug: true });
       const all = [l.home, l.compass, l.menu, l.stats, l.balances, l.minimap].filter(
         (r): r is Rect => r !== null,
       );
@@ -87,11 +92,24 @@ describe('zonas seguras del minimapa', () => {
 
   it('los saldos caben en la fila de arriba en móvil y escritorio, antes que los datos', () => {
     for (const vp of VIEWPORTS.filter((v) => v.width >= 360)) {
-      const l = hudLayout(vp);
+      const l = hudLayout(vp, null, { debug: true });
       expect(l.balances, name(vp)).not.toBeNull();
       expect(l.balances!.y, name(vp)).toBe(l.home.y);
       if (l.stats) expect(l.stats.x, name(vp)).toBeGreaterThan(l.balances!.x);
     }
+  });
+
+  it('la caja de fps sólo sale con ?debug (O11); lo demás no cambia de sitio', () => {
+    for (const vp of VIEWPORTS) {
+      const plain = hudLayout(vp);
+      const debug = hudLayout(vp, null, { debug: true });
+      expect(plain.stats, name(vp)).toBeNull();
+      expect(plain.home).toEqual(debug.home);
+      expect(plain.balances).toEqual(debug.balances);
+      expect(plain.compass).toEqual(debug.compass);
+      expect(plain.menu).toEqual(debug.menu);
+    }
+    expect(hudLayout({ width: 1280, height: 800 }, null, { debug: true }).stats).not.toBeNull();
   });
 
   it('en vertical están las cuatro; en horizontal bajo, sólo las de arriba', () => {

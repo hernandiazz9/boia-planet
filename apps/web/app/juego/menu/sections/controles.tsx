@@ -1,4 +1,10 @@
-import { KEYBOARD_MODES, type KeyboardMode, type MinimapZone } from '@boia/engine/ui';
+import {
+  type ControlSensitivity,
+  KEYBOARD_MODES,
+  type KeyboardMode,
+  type MinimapZone,
+  SENSITIVITY_RANGE,
+} from '@boia/engine/ui';
 import type { MenuSection } from '../types';
 
 const MODE_LABEL: Record<KeyboardMode, { title: string; help: string }> = {
@@ -10,6 +16,11 @@ const MODE_LABEL: Record<KeyboardMode, { title: string; help: string }> = {
     title: 'Control de tanque',
     help: 'Arriba acelera; izquierda y derecha giran el barco; abajo suelta.',
   },
+};
+
+const SENSITIVITY_LABEL: Record<keyof ControlSensitivity, string> = {
+  keyboard: 'Teclado',
+  touch: 'Táctil',
 };
 
 const ZONE_LABEL: Record<MinimapZone, string> = {
@@ -56,6 +67,32 @@ export const controlesSection: MenuSection = {
               </span>
             </label>
           ))}
+        </fieldset>
+
+        <fieldset className="juego-field" data-testid="sensibilidad">
+          <legend>Sensibilidad del giro</legend>
+          {(Object.keys(SENSITIVITY_LABEL) as (keyof ControlSensitivity)[]).map((k) => (
+            <label key={k} className="juego-range">
+              <span>
+                {SENSITIVITY_LABEL[k]} · {Math.round(ctx.settings.sensitivity[k] * 100)} %
+              </span>
+              <input
+                type="range"
+                min={Math.round(SENSITIVITY_RANGE.min * 100)}
+                max={Math.round(SENSITIVITY_RANGE.max * 100)}
+                step={Math.round(SENSITIVITY_RANGE.step * 100)}
+                value={Math.round(ctx.settings.sensitivity[k] * 100)}
+                aria-label={`Sensibilidad del giro: ${SENSITIVITY_LABEL[k].toLowerCase()}`}
+                onChange={(e) =>
+                  ctx.updateSettings((s) => ({
+                    ...s,
+                    sensitivity: { ...s.sensitivity, [k]: Number(e.target.value) / 100 },
+                  }))
+                }
+              />
+            </label>
+          ))}
+          <small>Más, el barco gira antes; menos, gira más suave.</small>
         </fieldset>
 
         <h3>Minimapa y brújula</h3>

@@ -29,6 +29,7 @@ import {
   safeMinimapZones,
   saveMinimapZone,
   saveSettings,
+  setControlSensitivity,
 } from '@boia/engine/ui';
 import { voyagePreload } from '@boia/engine/streaming';
 import type { FoundDiscount } from '@boia/store';
@@ -103,7 +104,17 @@ import { discoveryNotice } from './notice-copy';
 import { NoticeToast, useNoticeQueue } from './notices';
 import { gameRepository, useRepoData } from './repo';
 import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
-import { applyAudioSettings, chime, fanfare, plop } from './sound';
+import { feedbackFor } from './feedback';
+import {
+  applyAudioSettings,
+  bump,
+  chime,
+  fanfare,
+  installAudioLifecycle,
+  playSound,
+  plop,
+  setAmbientWorld,
+} from './sound';
 import { useViewport } from './use-viewport';
 import { adminWorldId, currentWorld, syncWorldParam, visitorWorldChoice } from './world-choice';
 import { EventPanel } from './world-ui';
@@ -122,6 +133,12 @@ const minigameSink = () => gameRepository().progress;
 
 /** Progreso del mar (premios, descuentos, récords): el mismo libro. */
 const progressApi = () => gameRepository().progress;
+
+/** u/s de golpe a partir de los cuales suena el choque, y el golpe que suena a tope. muestra */
+const BUMP_MIN_SPEED = 40;
+const BUMP_FULL_SPEED = 200;
+/** s mínimos entre dos golpes: rozar una costa no es una ráfaga. muestra */
+const BUMP_COOLDOWN_S = 0.35;
 
 /** `?cerca=<lugar>`: empezar junto a un lugar (pruebas y enlaces), al sur de él. */
 const NEAR_PARAM = 'cerca';
@@ -184,6 +201,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const rescueNotices = useRef<Promise<Notice[]> | null>(null);
   const [celebration, setCelebration] = useState(0);
   const reactions = useRef(0);
+  const bumpCooldown = useRef(0);
   // «Ir a la isla» (T43): el barco navega solo hasta la isla de un código; se puede saltar.
   const voyageRef = useRef<Voyage | null>(null);
   /** Viaje pedido que espera al arte del primer tramo de su ruta (T47). */
@@ -194,6 +212,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [zonePref, setZonePref] = useState<MinimapZone | null>(null);
+  // `?debug`: la caja de fps y velocidad (O11); sin él no se pinta.
+  const [debug, setDebug] = useState(false);
 
   // Mundo que se juega (T17). Arranca con el por defecto; al montar se elige el
   // de la URL o el guardado. Lo que el minimapa dibuja y la brújula persigue
@@ -328,6 +348,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     world.config.objects.find((o) => o.identity.id === id)?.identity.category === 'remolino';
 
   const onWorldEvent = (e: WorldEvent) => {
+    // Respuesta inmediata (REQ-PRO-011): el sonido del comportamiento o el de serie.
+    const fb = feedbackFor(e, world.config);
+    if (fb?.sound) playSound(fb.sound);
     // Premios y logros avisan cuando el repositorio los concede (world-progress.ts,
     // achievements.ts): un logro ya obtenido no vuelve a avisar.
     if (e.type === 'achievement') {
@@ -439,7 +462,14 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   };
 
   /** Cada paso fijo del motor: la misión mueve cocodrilos, Fiestera y tripulante. */
-  const onStep = (ship: { x: number; y: number }, dt: number) => {
+  const onStep = (ship: { x: number; y: number; impact?: number }, dt: number) => {
+    // Golpe contra una costa o una roca: suena según lo fuerte que fue.
+    bumpCooldown.current = Math.max(0, bumpCooldown.current - dt);
+    const impact = ship.impact ?? 0;
+    if (impact >= BUMP_MIN_SPEED && bumpCooldown.current === 0) {
+      bumpCooldown.current = BUMP_COOLDOWN_S;
+      bump(impact / BUMP_FULL_SPEED);
+    }
     const v = voyageRef.current;
     if (v) {
       const r = stepVoyage(v, ship, dt);
@@ -522,9 +552,11 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     settingsRef.current = saved;
     setSettings(saved);
     applyAudioSettings(saved);
+    setControlSensitivity(saved.sensitivity);
     setZonePref(loadMinimapZone(store));
 
     const query = new URLSearchParams(window.location.search);
+    setDebug(query.has('debug'));
     // `?mundo=<id>` o el elegido en este navegador (T17); el activo del Admin
     // vive en el repositorio y se lee antes de arrancar el motor (abajo).
     const base = currentWorld(window.location.search);
@@ -713,6 +745,20 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       }
     };
   }, [shipCatalog, adoptWorld, sessionId]);
+
+  // Sonido (O10): el primer gesto lo desbloquea (también en iOS), ocultar la
+  // pestaña lo pausa, y al salir de /juego se calla el ambiente.
+  useEffect(() => {
+    const off = installAudioLifecycle();
+    return () => {
+      off();
+      setAmbientWorld(null);
+    };
+  }, []);
+  // Un loop de ambiente por mundo: cambia con el mundo.
+  useEffect(() => {
+    setAmbientWorld(world.id);
+  }, [world.id]);
 
   // Tiempo a bordo para los logros de 5 y 20 minutos: sólo con la pestaña a la vista.
   useEffect(() => {
@@ -911,6 +957,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     setSettings(next);
     if (storeRef.current) saveSettings(storeRef.current, next);
     applyAudioSettings(next);
+    setControlSensitivity(next.sensitivity);
     gameRef.current?.setKeyboardMode(next.keyboardMode);
   };
 
@@ -1029,7 +1076,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     setVoyage(null);
     if (skip && v) gameRef.current?.moveShip(v.arrival.x, v.arrival.y);
   }
-  const layout = vp ? hudLayout(vp, zonePref) : null;
+  const layout = vp ? hudLayout(vp, zonePref, { debug }) : null;
   const ship = stats ? { x: stats.x, y: stats.y, heading: stats.heading } : null;
   const target = ship ? tracker.nextTarget(ship) : null;
   const discoveredSet = new Set(discovered);
@@ -1049,7 +1096,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         achievements,
         discovered: targets.filter((t) => discoveredSet.has(t.id)),
         minimapZone: layout.minimapZone,
-        minimapZones: safeMinimapZones(vp!),
+        minimapZones: safeMinimapZones(vp!, { debug }),
         setMinimapZone,
         ship: {
           catalog: shipCatalog,
@@ -1123,29 +1170,35 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             Inicio
           </Link>
           {layout.balances ? <BalancesChip rect={layout.balances} /> : null}
-          {layout.stats ? (
-            <div
-              data-testid="hud"
-              data-hud="datos"
-              className="juego-stats"
-              style={{
-                left: layout.stats.x,
-                top: layout.stats.y,
-                width: layout.stats.w,
-                height: layout.stats.h,
-              }}
-            >
-              <div>
-                {stats ? stats.fps.toFixed(0) : '–'} fps · {stats ? stats.speed.toFixed(0) : '–'}{' '}
-                u/s{stats?.drifting ? ' · drift' : ''}
-              </div>
-              <div style={{ opacity: 0.65 }}>
-                {stats
-                  ? `${stats.direction} · ${stats.shipSource === 'manifest' ? 'sprites 01' : 'provisional'}`
-                  : ''}
-              </div>
+          {/* Datos del motor: caja visible sólo con `?debug` (O11). Sin él quedan
+              ocultos, fuera de la vista y del lector de pantalla: sólo los leen
+              las pruebas para saber que el motor ya corre. */}
+          <div
+            data-testid="hud"
+            data-hud="datos"
+            className="juego-stats"
+            hidden={!layout.stats}
+            style={
+              layout.stats
+                ? {
+                    left: layout.stats.x,
+                    top: layout.stats.y,
+                    width: layout.stats.w,
+                    height: layout.stats.h,
+                  }
+                : undefined
+            }
+          >
+            <div>
+              {stats ? stats.fps.toFixed(0) : '–'} fps · {stats ? stats.speed.toFixed(0) : '–'} u/s
+              {stats?.drifting ? ' · drift' : ''}
             </div>
-          ) : null}
+            <div style={{ opacity: 0.65 }}>
+              {stats
+                ? `${stats.direction} · ${stats.shipSource === 'manifest' ? 'sprites 01' : 'provisional'}`
+                : ''}
+            </div>
+          </div>
           <Compass
             rect={layout.compass}
             angle={ship && target ? compassAngle(ship, target) : null}

@@ -1,4 +1,11 @@
-import { DEFAULT_KEYBOARD_MODE, type KeyboardMode, isKeyboardMode } from '../input/controls';
+import {
+  type ControlSensitivity,
+  DEFAULT_KEYBOARD_MODE,
+  DEFAULT_SENSITIVITY,
+  type KeyboardMode,
+  clampSensitivity,
+  isKeyboardMode,
+} from '../input/controls';
 import type { KeyValueStore } from './storage';
 
 /**
@@ -24,6 +31,8 @@ export interface Settings {
   music: AudioChannel;
   sfx: AudioChannel;
   keyboardMode: KeyboardMode;
+  /** Sensibilidad del giro con teclado y con el dedo (REQ-MUN-008). */
+  sensitivity: ControlSensitivity;
 }
 
 export const SETTINGS_KEY = 'boia.ajustes';
@@ -33,6 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   music: { enabled: true, volume: 0.6 },
   sfx: { enabled: true, volume: 0.8 },
   keyboardMode: DEFAULT_KEYBOARD_MODE,
+  sensitivity: { ...DEFAULT_SENSITIVITY },
 };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
@@ -60,6 +70,16 @@ export function parseSettings(raw: unknown): Settings {
     keyboardMode: isKeyboardMode(raw.keyboardMode)
       ? raw.keyboardMode
       : DEFAULT_SETTINGS.keyboardMode,
+    sensitivity: sensitivity(raw.sensitivity),
+  };
+}
+
+function sensitivity(raw: unknown): ControlSensitivity {
+  const d = DEFAULT_SETTINGS.sensitivity;
+  if (!isObj(raw)) return { ...d };
+  return {
+    keyboard: clampSensitivity(raw.keyboard, d.keyboard),
+    touch: clampSensitivity(raw.touch, d.touch),
   };
 }
 

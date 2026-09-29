@@ -1,4 +1,9 @@
-import { MINIMAP_MAX_WIDTH_FRACTION, MINIMAP_ZONE_KEY, SETTINGS_KEY } from '@boia/engine/ui';
+import {
+  MINIMAP_MAX_WIDTH_FRACTION,
+  MINIMAP_ZONE_KEY,
+  SENSITIVITY_RANGE,
+  SETTINGS_KEY,
+} from '@boia/engine/ui';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -165,6 +170,57 @@ test('Menú de a bordo: siete iconos, separación y modo de teclado guardado', a
   await expect(
     page.getByTestId('modo-teclado').getByRole('radio', { name: /Control de tanque/ }),
   ).toBeChecked();
+});
+
+test('la caja de fps y velocidad sólo sale con ?debug (O11)', async ({ page }) => {
+  await openGame(page);
+  // Sin `?debug` el motor corre (los datos están) pero no hay caja a la vista.
+  await expect(page.getByTestId('hud')).toBeHidden();
+  await expect(page.locator('[data-hud="datos"]:visible')).toHaveCount(0);
+
+  await page.goto('/juego?debug');
+  await expect(page.getByTestId('hud')).toBeVisible();
+  await expect(page.getByTestId('hud')).toContainText(/\d+ fps/, { timeout: 20_000 });
+});
+
+test('sin audio antes del primer gesto; el primer toque lo desbloquea', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as Window & { __audioContexts?: number };
+    const Original = window.AudioContext;
+    w.__audioContexts = 0;
+    window.AudioContext = class extends Original {
+      constructor(options?: AudioContextOptions) {
+        super(options);
+        w.__audioContexts = (w.__audioContexts ?? 0) + 1;
+      }
+    };
+  });
+  await openGame(page);
+  const contexts = () =>
+    page.evaluate(() => (window as Window & { __audioContexts?: number }).__audioContexts);
+  expect(await contexts()).toBe(0);
+
+  const vp = page.viewportSize()!;
+  await page.mouse.click(vp.width / 2, vp.height - 40);
+  await expect.poll(contexts).toBe(1);
+});
+
+test('la sensibilidad del giro se ajusta en Controles y se guarda', async ({ page }) => {
+  await openGame(page);
+  await page.getByTestId('menu-ancla').click();
+  const menu = page.getByTestId('menu');
+  await menu.getByRole('tab', { name: 'Controles' }).click();
+  const sens = menu.getByTestId('sensibilidad');
+  await sens.getByRole('slider', { name: /teclado/ }).fill(String(SENSITIVITY_RANGE.max * 100));
+  await sens.getByRole('slider', { name: /táctil/ }).fill(String(SENSITIVITY_RANGE.min * 100));
+  const stored = await page.evaluate(
+    (k) => JSON.parse(localStorage.getItem(k) ?? '{}'),
+    SETTINGS_KEY,
+  );
+  expect(stored.sensitivity).toEqual({
+    keyboard: SENSITIVITY_RANGE.max,
+    touch: SENSITIVITY_RANGE.min,
+  });
 });
 
 test('un logro sale como aviso arriba, de uno en uno', async ({ page }) => {

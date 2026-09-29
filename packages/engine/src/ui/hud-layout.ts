@@ -35,7 +35,10 @@ export const HUD_MARGIN = 8;
 export const HUD_GAP = 8;
 /** Botones del HUD: 44 px, el mínimo táctil. */
 export const HUD_BUTTON = 44;
-/** Caja de datos de depuración (FPS, velocidad) junto a Inicio. muestra */
+/**
+ * Caja de datos de depuración (FPS, velocidad) junto a Inicio. Sólo con
+ * `?debug` (O11, REQ-PRO-009). muestra
+ */
 export const HUD_STATS = { w: 120, h: 44 };
 /**
  * Saldos (puntos y monedas, REQ-IDE-027) junto a Inicio, antes que los datos
@@ -97,17 +100,22 @@ export function joystickZone(vp: Viewport): Rect {
   return { x: 0, y, w: vp.width, h: vp.height - y };
 }
 
+export interface HudOptions {
+  /** `?debug`: enseña la caja de fps y velocidad (O11). Sin él, no hay caja. */
+  debug?: boolean;
+}
+
 export interface FixedHud {
   home: Rect;
   /** Puntos y monedas; null si no cabe entre Inicio y la brújula. */
   balances: Rect | null;
-  /** null si no cabe entre Inicio (y los saldos) y la brújula. */
+  /** null sin `debug` o si no cabe entre Inicio (y los saldos) y la brújula. */
   stats: Rect | null;
   compass: Rect;
   menu: Rect;
 }
 
-export function fixedHud(vp: Viewport): FixedHud {
+export function fixedHud(vp: Viewport, opts: HudOptions = {}): FixedHud {
   const m = margins(vp);
   const B = HUD_BUTTON;
   const home = { x: m.left, y: m.top, w: B, h: B };
@@ -124,7 +132,7 @@ export function fixedHud(vp: Viewport): FixedHud {
   return {
     home,
     balances: hasBalances ? balances : null,
-    stats: fits(stats) ? stats : null,
+    stats: opts.debug && fits(stats) ? stats : null,
     compass,
     menu,
   };
@@ -148,8 +156,8 @@ export function minimapZoneRects(vp: Viewport): Record<MinimapZone, Rect> {
 }
 
 /** Rectángulos del HUD fijo (sin el minimapa ni el aviso). */
-function fixedRects(vp: Viewport): Rect[] {
-  const f = fixedHud(vp);
+function fixedRects(vp: Viewport, opts: HudOptions): Rect[] {
+  const f = fixedHud(vp, opts);
   return [
     f.home,
     f.compass,
@@ -164,11 +172,11 @@ function fixedRects(vp: Viewport): Rect[] {
  * pantalla, fuera de la zona del joystick (con un hueco) y sin pisar el HUD
  * fijo. En horizontal, por ejemplo, las medias desaparecen.
  */
-export function safeMinimapZones(vp: Viewport): MinimapZone[] {
+export function safeMinimapZones(vp: Viewport, opts: HudOptions = {}): MinimapZone[] {
   const joy = joystickZone(vp);
   const guard = { ...joy, y: joy.y - HUD_GAP, h: joy.h + HUD_GAP };
   const rects = minimapZoneRects(vp);
-  const fixed = fixedRects(vp);
+  const fixed = fixedRects(vp, opts);
   return MINIMAP_ZONES.filter((z) => {
     const r = rects[z];
     return inside(r, vp) && !intersects(r, guard) && !fixed.some((f) => intersects(r, f));
@@ -180,8 +188,12 @@ export function safeMinimapZones(vp: Viewport): MinimapZone[] {
  * este viewport; si no, la de arriba de su mismo lado; si tampoco, la de por
  * defecto. La preferencia no se toca: al volver a vertical, vuelve.
  */
-export function resolveMinimapZone(vp: Viewport, preferred: MinimapZone | null): MinimapZone {
-  const safe = safeMinimapZones(vp);
+export function resolveMinimapZone(
+  vp: Viewport,
+  preferred: MinimapZone | null,
+  opts: HudOptions = {},
+): MinimapZone {
+  const safe = safeMinimapZones(vp, opts);
   if (preferred && safe.includes(preferred)) return preferred;
   const side = preferred?.endsWith('left') ? 'top-left' : 'top-right';
   if (safe.includes(side)) return side;
@@ -215,12 +227,16 @@ export interface HudLayout extends FixedHud {
   joystick: Rect;
 }
 
-export function hudLayout(vp: Viewport, preferred: MinimapZone | null = null): HudLayout {
+export function hudLayout(
+  vp: Viewport,
+  preferred: MinimapZone | null = null,
+  opts: HudOptions = {},
+): HudLayout {
   const m = margins(vp);
-  const minimapZone = resolveMinimapZone(vp, preferred);
+  const minimapZone = resolveMinimapZone(vp, preferred, opts);
   const w = Math.min(NOTICE_MAX_WIDTH, vp.width - m.left - m.right);
   return {
-    ...fixedHud(vp),
+    ...fixedHud(vp, opts),
     minimap: minimapZoneRects(vp)[minimapZone],
     minimapZone,
     notice: { x: Math.round((vp.width - w) / 2), y: m.top, w, h: NOTICE_HEIGHT },

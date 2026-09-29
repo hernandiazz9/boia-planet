@@ -6,9 +6,12 @@ import {
   DEFAULT_KEYBOARD_MODE,
   KeyboardControls,
   TANK_TURN_THROTTLE,
+  SENSITIVITY_RANGE,
   TouchControls,
+  controlSensitivity,
   isKeyboardMode,
   readShipInput,
+  setControlSensitivity,
 } from './controls';
 
 describe('joystick táctil', () => {
@@ -197,5 +200,53 @@ describe('modos de teclado (D-14)', () => {
     expect(i.throttle).toBe(TANK_TURN_THROTTLE);
     expect(i.dirX).toBeGreaterThan(0);
     expect(i.dirY).toBeLessThan(0);
+  });
+});
+
+describe('sensibilidad (REQ-MUN-008)', () => {
+  it('teclado y dedo llevan su propia sensibilidad a la entrada del barco', () => {
+    const sens = { keyboard: 1.4, touch: 0.6 };
+    const k = new KeyboardControls();
+    const t = new TouchControls();
+    k.down('ArrowRight');
+    expect(readShipInput(t, k, 0, sens).turnScale).toBe(sens.keyboard);
+    k.mode = 'tank';
+    expect(readShipInput(t, k, 0, sens).turnScale).toBe(sens.keyboard);
+    t.down(1, 0, 0);
+    t.move(1, 100, 0);
+    expect(readShipInput(t, k, 0, sens).turnScale).toBe(sens.touch);
+  });
+
+  it('más sensibilidad, el barco gira antes hacia el rumbo pedido', () => {
+    const turnAfter = (keyboard: number) => {
+      const k = new KeyboardControls();
+      const t = new TouchControls();
+      k.down('ArrowDown');
+      const s = createShipState(0, 0, 0);
+      for (let i = 0; i < 20; i++) {
+        const input = readShipInput(t, k, s.heading, { keyboard, touch: 1 });
+        stepShip(s, input, DEFAULT_SHIP_CONFIG, 1 / 60);
+      }
+      return Math.abs(wrapAngle(s.heading));
+    };
+    const { min, max } = SENSITIVITY_RANGE;
+    expect(turnAfter(max)).toBeGreaterThan(turnAfter(1));
+    expect(turnAfter(1)).toBeGreaterThan(turnAfter(min));
+  });
+
+  it('setControlSensitivity cambia la que usa el juego y recorta al rango', () => {
+    const before = controlSensitivity();
+    try {
+      setControlSensitivity({ keyboard: 9 });
+      expect(controlSensitivity()).toEqual({
+        keyboard: SENSITIVITY_RANGE.max,
+        touch: before.touch,
+      });
+      const k = new KeyboardControls();
+      k.down('ArrowUp');
+      expect(readShipInput(new TouchControls(), k).turnScale).toBe(SENSITIVITY_RANGE.max);
+    } finally {
+      setControlSensitivity(before);
+    }
   });
 });

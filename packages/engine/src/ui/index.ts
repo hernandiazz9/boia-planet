@@ -11,8 +11,12 @@ export * from './settings';
 export * from './storage';
 export {
   DEFAULT_KEYBOARD_MODE,
+  DEFAULT_SENSITIVITY,
   KEYBOARD_MODES,
+  SENSITIVITY_RANGE,
   isKeyboardMode,
+  setControlSensitivity,
+  type ControlSensitivity,
   type KeyboardMode,
 } from '../input/controls';
 // Estilos y skins del barco (T11, T12): sin Pixi, para el menú y el servidor.

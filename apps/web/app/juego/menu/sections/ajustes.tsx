@@ -81,7 +81,8 @@ export const ajustesSection: MenuSection = {
           onChange={(sfx) => set({ sfx })}
         />
         <p className="juego-muted">
-          Los efectos siguen sonando aunque quites la música. Todo se guarda en este dispositivo.
+          Los efectos siguen sonando aunque quites la música. La música es un ambiente de muestra,
+          uno por mundo, y empieza al primer toque. Todo se guarda en este dispositivo.
         </p>
       </>
     );
