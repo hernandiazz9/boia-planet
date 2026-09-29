@@ -86,6 +86,18 @@ function prefersReducedMotion(): boolean {
   }
 }
 
+/**
+ * «Entradas» vuela (experimento): el barco despliega alas y vuela a la isla
+ * del evento. `?vuelo=0` vuelve al viaje en turbo por el mar, para comparar.
+ */
+function ticketsFly(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('vuelo') !== '0';
+  } catch {
+    return true;
+  }
+}
+
 function readPref(key: string): string | null {
   try {
     return window.localStorage.getItem(key);
@@ -470,7 +482,12 @@ export function MarClient() {
       return;
     }
     const g = engineRef.current;
-    if (prefersReducedMotion() || !g || !g.startVoyage(next.placeId)) {
+    const started = g
+      ? ticketsFly()
+        ? g.startFlight(next.placeId)
+        : g.startVoyage(next.placeId)
+      : false;
+    if (prefersReducedMotion() || !started) {
       openCheckout(next.eventId);
       return;
     }
@@ -663,6 +680,19 @@ export function MarClient() {
     setSheet(null);
   };
 
+  /** Ir en nave a un lugar (experimento): despega, vuela y se posa en su orilla. */
+  const flyTo = (placeId: string) => {
+    const g = engineRef.current;
+    if (!g) return;
+    // Sin animaciones (o si no despega), navega como siempre.
+    if (prefersReducedMotion() || !g.startFlight(placeId)) {
+      courseTo(placeId);
+      return;
+    }
+    navigator.vibrate?.(20);
+    setSheet(null);
+  };
+
   const steerToEvent = (eventId: string) => {
     const w = worldRef.current;
     const o = w?.objects.find((x) => eventOfPlace(x) === eventId);
@@ -703,7 +733,12 @@ export function MarClient() {
     race?.phase === 'countdown' && race.countdown !== null ? Math.ceil(race.countdown) : null;
 
   return (
-    <main className="mar" data-status={status} data-mood={mood}>
+    <main
+      className="mar"
+      data-status={status}
+      data-mood={mood}
+      data-flight={stats?.flight ?? undefined}
+    >
       <canvas
         ref={canvasRef}
         className="mar-canvas"
@@ -711,6 +746,8 @@ export function MarClient() {
         aria-label="El mar de BOIA en 3D"
       />
       <div ref={overlayRef} className="mar-overlay" />
+      {/* Líneas de velocidad del vuelo de «Entradas» (sólo se ven en crucero). */}
+      <div className="mar-speedlines" aria-hidden="true" />
 
       {status !== 'ready' ? (
         <div className="mar-splash" role="status">
@@ -1000,7 +1037,11 @@ export function MarClient() {
           >
             <span aria-hidden="true">🎟️</span>
             <strong>Entradas</strong>
-            {trip ? <small>Rumbo a {trip.placeName}…</small> : null}
+            {trip ? (
+              <small>
+                {stats?.flight ? 'Volando' : 'Rumbo'} a {trip.placeName}…
+              </small>
+            ) : null}
           </button>
         </div>
       ) : null}
@@ -1012,6 +1053,7 @@ export function MarClient() {
           distance={distance}
           onClose={() => setSheet(null)}
           onCourse={courseTo}
+          onFly={flyTo}
           onBuy={(id) => setCheckoutFor(id)}
           onSteerEvent={steerToEvent}
         />

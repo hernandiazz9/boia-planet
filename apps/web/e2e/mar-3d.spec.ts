@@ -63,7 +63,8 @@ test('el mar 3D arranca, pasa a mapa por el minimapa y fija rumbo a la isla del 
   await minimap(page).click();
   await expect(minimap(page)).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-pin="allday"]').click();
-  await expect(page.getByTestId('mar-ficha')).toContainText('Navegar aquí');
+  await expect(page.getByTestId('mar-ficha')).toContainText('Navegar');
+  await expect(page.getByTestId('mar-volar')).toBeVisible();
   await page.getByTestId('mar-rumbo').click();
   await expect(page.getByTestId('mar-rumbo-activo')).toBeVisible();
   expect(errors).toEqual([]);
@@ -91,9 +92,10 @@ test('«Entradas» se ve de cerca, en el mapa y con la ficha; «Saltar» abre el
   await expect(page.getByTestId('mar-ficha')).toBeVisible();
   await expectOnTop(button);
 
-  // Tocarlo: rumbo en turbo a la isla del evento, de vuelta a la vista del barco.
+  // Tocarlo: vuela a la isla del evento (experimento), de vuelta a la vista del barco.
   await button.click();
-  await expect(button).toContainText(`Rumbo a ${islandName}`);
+  await expect(button).toContainText(`Volando a ${islandName}`);
+  await expect(page.locator('main.mar')).toHaveAttribute('data-flight', /lift|cruise/);
   await expect(page.getByTestId('mar-rumbo-activo')).toContainText(islandName);
   await expect(page.getByTestId('mar-turbo')).toHaveClass(/is-on/);
   await expect(minimap(page)).toHaveAttribute('aria-pressed', 'false');
@@ -107,9 +109,7 @@ test('«Entradas» se ve de cerca, en el mapa y con la ficha; «Saltar» abre el
   expect(errors).toEqual([]);
 });
 
-test('«Entradas»: otro toque abre el checkout ya; el viaje en turbo llega y lo abre', async ({
-  page,
-}) => {
+test('«Entradas»: otro toque abre el checkout ya; el vuelo llega y lo abre', async ({ page }) => {
   test.setTimeout(90_000);
   const errors = await openMar(page);
   const button = page.getByTestId('mar-entradas');
@@ -122,15 +122,13 @@ test('«Entradas»: otro toque abre el checkout ya; el viaje en turbo llega y lo
   await page.getByTestId('checkout-cerrar').click();
   await expect(page.getByTestId('checkout')).toHaveCount(0);
 
-  // Sin tocar nada más: navega solo (la distancia baja) y, al llegar (o al
-  // tope de tiempo del viaje), se abre el checkout del evento.
+  // Sin tocar nada más: despega, vuela solo y, al posarse, se abre el
+  // checkout del evento. («Saltar» ya lo dejó posado junto a la isla: el
+  // vuelo es corto, pero pasa por sus fases.)
   await button.click();
-  const meters = async () => {
-    const text = (await page.getByTestId('mar-rumbo-activo').textContent()) ?? '';
-    return Number(text.match(/(\d+) m/)?.[1] ?? NaN);
-  };
-  const start = await meters();
-  await expect.poll(meters, { timeout: 10_000 }).toBeLessThan(start - 20);
+  await expect(page.locator('main.mar')).toHaveAttribute('data-flight', /cruise|land/, {
+    timeout: 10_000,
+  });
   await expect(checkoutEvent(page)).toHaveText(islandEvent.name, { timeout: 40_000 });
   await expect(page.getByTestId('mar-entradas-saltar')).toHaveCount(0);
   expect(errors).toEqual([]);
