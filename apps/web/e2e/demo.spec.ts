@@ -6,8 +6,8 @@ import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 
 /**
  * Demo de punta a punta (T12), con datos de muestra y sin Supabase: entrada
- * «mini-mundo» (T14) → landing → EXPLORAR → /juego con el mismo mundo → isla de evento → menú
- * «Barco» → artistas. Corre en móvil 360×640 y en escritorio.
+ * «mini-mundo» (T14; en cada carga de `/`, D-21) → landing → EXPLORAR →
+ * /juego con el mismo mundo → isla de evento → menú «Barco» → artistas. Corre en móvil 360×640 y en escritorio.
  *
  * Con DEMO_SHOTS=1 guarda además capturas del recorrido en docs/informes/img/
  * (p001-t12-<paso>-<móvil|escritorio>.png).
@@ -49,7 +49,7 @@ async function openBarco(page: Page) {
   return menu;
 }
 
-test('primera visita → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con el mismo mundo → isla de evento', async ({
+test('`/` → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con el mismo mundo → isla de evento', async ({
   page,
 }, info) => {
   test.setTimeout(120_000);
@@ -167,13 +167,7 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
 });
 
 test('«Ver todos los artistas» enseña los 26 artistas', async ({ page }, info) => {
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('boia.intro.v2', 'seen');
-    } catch {
-      // sin almacenamiento
-    }
-  });
+  // Enlace directo: sin cinemática (REQ-ENT-011).
   await page.goto('/#artistas');
   await page.getByTestId('ver-artistas').click();
   await expect(page).toHaveURL(/\/artistas$/);

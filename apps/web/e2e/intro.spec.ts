@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Entrada «mini-mundo» en tres actos (T14, D-19; REQ-ENT-001…020, ENT 01–03).
- * Cada prueba abre un contexto nuevo: sin almacenamiento, es primera visita.
+ * La entrada depende sólo de la URL (D-21): `/` a secas la reproduce en cada
+ * carga completa; una URL que apunta a algo concreto entra directa.
  * El estado se lee de `window.__boiaIntro` (diagnóstico público de la entrada).
  */
 
@@ -73,7 +74,7 @@ async function oneWorldNoGame(page: Page) {
   return d;
 }
 
-test('primera visita: el mini-mundo, luego «BOIA» y el botón; al pulsar, aterriza en la landing (ENT 01, 02)', async ({
+test('`/`: el mini-mundo, luego «BOIA» y el botón; al pulsar, aterriza en la landing (ENT 01, 02)', async ({
   page,
 }, info) => {
   test.setTimeout(60_000);
@@ -247,7 +248,8 @@ test('Atrás en la pausa: no repite la entrada ni duplica el mundo (ENT 03)', as
   await phaseIs(page, 'paused');
   await page.goto('/legal/privacidad');
   await page.goBack();
-  // Vuelta desde la caché del navegador (la pausa sigue) o carga nueva (ya vista: directa).
+  // Vuelta desde la caché del navegador (la pausa sigue) o carga nueva de `/`
+  // (la entrada vuelve a empezar, D-21).
   await page.waitForFunction(() => ['paused', 'landed'].includes(window.__boiaIntro?.phase ?? ''));
   const d = (await diag(page))!;
   expect(d.history).not.toContain('landing');
@@ -356,21 +358,34 @@ test('recursos lentos: «Cargando» y luego la landing ligera, sin alargar la es
   await expect(exploreCta(page)).toBeVisible();
 });
 
-test('visita posterior, enlace directo y «Ver la introducción» (REQ-ENT-009, 011)', async ({
+test('cada carga completa de `/` reproduce la entrada, aunque ya se viera (D-21, REQ-ENT-009)', async ({
+  page,
+}) => {
+  // La marca de «ya la vio» de antes de D-21 ya no cuenta.
+  await page.addInitScript(() => localStorage.setItem('boia.intro.v2', 'seen'));
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
+  await phaseIs(page, 'paused');
+  await enterButton(page).click();
+  await waitLanded(page);
+
+  // Recarga: otra vez la entrada entera.
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
+  await phaseIs(page, 'paused');
+  expect((await diag(page))!.history).toEqual(['waiting', 'appearing', 'paused']);
+
+  // Y abrir `/` de nuevo, igual.
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
+  await phaseIs(page, 'paused');
+});
+
+test('una URL que apunta a algo entra directa; «Ver la introducción» la repite (REQ-ENT-009, 011)', async ({
   page,
   browser,
 }, info) => {
-  await page.goto('/');
-  await phaseIs(page, 'paused');
-  expect(await page.evaluate(() => localStorage.getItem('boia.intro.v2'))).toBe('seen');
-
-  // Segunda carga: directa.
-  await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-entry', 'direct');
-  let d = await waitLanded(page);
-  expect(d.history).toEqual(['landed']);
-
-  // Enlace directo en un contexto nuevo (primera visita): directo al panel.
+  // Enlace directo a Tickets: directo al panel.
   const fresh = await browser.newContext({ baseURL: info.project.use.baseURL ?? '' });
   const other = await fresh.newPage();
   await other.goto('/#tickets');
@@ -379,21 +394,53 @@ test('visita posterior, enlace directo y «Ver la introducción» (REQ-ENT-009, 
   expect((await diag(other))!.history).not.toContain('appearing');
   await fresh.close();
 
+  // Un parámetro: directa a la landing.
+  await page.goto('/?menu=carnet');
+  await expect(page.locator('html')).toHaveAttribute('data-entry', 'direct');
+  const d = await waitLanded(page);
+  expect(d.history).toEqual(['landed']);
+  await expect(page.locator('.intro-overlay')).toHaveCount(0);
+
   // Pedirla desde el pie la vuelve a reproducir.
   await page.getByRole('link', { name: 'Ver la introducción' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
   await phaseIs(page, 'paused');
-  d = (await diag(page))!;
-  expect(d.history).toEqual(['waiting', 'appearing', 'paused']);
+  expect((await diag(page))!.history).toEqual(['waiting', 'appearing', 'paused']);
 });
 
-test('quien ya vio la entrada de T03 (boia.intro.v1) ve la nueva una vez', async ({ page }) => {
-  await page.addInitScript(() => {
-    if (!sessionStorage.getItem('v1-puesta')) {
-      localStorage.setItem('boia.intro.v1', 'seen');
-      sessionStorage.setItem('v1-puesta', '1');
-    }
-  });
+test('volver a `/` navegando dentro de la app no repite la entrada (D-21)', async ({ page }) => {
+  test.setTimeout(90_000);
+  const home = page.locator('[data-hud="inicio"]');
+  const backHomeWithoutIntro = async () => {
+    await page.evaluate(
+      () => ((window as Window & { __sinRecarga?: boolean }).__sinRecarga = true),
+    );
+    await home.click();
+    await expect(page).toHaveURL(/\/$/);
+    await page.waitForFunction(
+      () => window.__boiaIntro?.mode === 'direct' && window.__boiaIntro.phase === 'landed',
+    );
+    expect(
+      await page.evaluate(() => (window as Window & { __sinRecarga?: boolean }).__sinRecarga),
+      'sin recarga',
+    ).toBe(true);
+    await expect(page.locator('html')).not.toHaveAttribute('data-intro', /.*/);
+    await expect(page.locator('.intro-overlay')).toHaveCount(0);
+    await expect(exploreCta(page)).toBeVisible();
+  };
+
+  // `/` con su entrada → EXPLORAR → «Inicio».
   await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-entry', 'intro');
+  await phaseIs(page, 'paused');
+  await page.getByRole('button', { name: 'Saltar animación' }).click();
+  await waitLanded(page);
+  await exploreCta(page).click();
+  await expect(page).toHaveURL(/\/juego$/);
+  await expect(home).toBeVisible({ timeout: 30_000 });
+  await backHomeWithoutIntro();
+
+  // Carga completa de /juego (sin script de arranque) → «Inicio».
+  await page.goto('/juego');
+  await expect(home).toBeVisible({ timeout: 30_000 });
+  await backHomeWithoutIntro();
 });

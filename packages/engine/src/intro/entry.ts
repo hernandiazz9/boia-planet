@@ -1,35 +1,54 @@
 import type { IntroMode } from './timeline';
 
 /**
- * Qué entrada toca al cargar la página (REQ-ENT-001, 009, 010, 011):
- * - `?intro=1` pide volver a ver la introducción («Ver introducción»);
- * - un enlace directo (cualquier `#…`, p. ej. `/#tickets`) abre su
- *   contenido sin introducción;
- * - una visita posterior entra directa a la landing;
- * - la primera visita con movimiento reducido: mini-mundo quieto, título y
- *   botón, y un fundido al pulsar;
- * - si no, la cinemática en tres actos.
+ * La puerta de la entrada (REQ-ENT-001, 009, 010, 011; D-21): qué toca al
+ * cargar la página, según la URL y nada más.
+ * - `/` a secas, en cada carga completa o recarga: la entrada (la cinemática
+ *   en tres actos, o su variante quieta con movimiento reducido). No hay marca
+ *   de «ya la vio».
+ * - Una URL que apunta a algo concreto entra directa a su contenido, sin
+ *   entrada: cualquier `#…` (`/#tickets`, `/#fotos`), cualquier parámetro
+ *   (`?menu=…`, `?intro=0`) o una ruta distinta de `/`. Los parámetros de
+ *   campaña (`utm_*`, `fbclid`, `gclid`…) no apuntan a nada y no cuentan.
+ * - `?intro=1` la pide explícitamente («Ver la introducción») aunque la URL
+ *   apunte a otra cosa.
  *
  * Autocontenida a propósito: `bootScript` la serializa con `toString()` y
  * la ejecuta en línea antes del primer pintado, sin esperar a React.
  */
 export function decideEntry(input: {
+  pathname: string;
   search: string;
   hash: string;
-  seen: boolean;
   reducedMotion: boolean;
 }): IntroMode {
-  const replay = /[?&]intro=1(?:&|$)/.test(input.search);
-  if (!replay && input.hash.length > 1) return 'direct';
-  if (!replay && input.seen) return 'direct';
+  let plainHome = input.pathname === '/' && input.hash.length <= 1;
+  let replay = false;
+  for (const part of input.search.replace(/^\?/, '').split('&')) {
+    if (!part) continue;
+    const eq = part.indexOf('=');
+    const key = eq < 0 ? part : part.slice(0, eq);
+    if (key === 'intro' && eq > 0 && part.slice(eq + 1) === '1') replay = true;
+    else if (!/^(utm_\w+|fbclid|gclid|msclkid|ttclid|igsh|igshid)$/.test(key)) plainHome = false;
+  }
+  if (!plainHome && !replay) return 'direct';
   return input.reducedMotion ? 'reduced' : 'intro';
 }
 
 /**
- * Marca de «ya la vio». v2 (T14): la intro «mini-mundo» es nueva, así que
- * todo el mundo la ve una vez aunque ya hubiera visto la de T03 (v1).
+ * Modo con el que arranca el montaje de la escena del hero: la entrada sólo
+ * se reproduce si el script de arranque de esta carga la pidió y nadie la ha
+ * resuelto aún (saltada antes de hidratar, plazo agotado o ya reclamada).
+ * Volver a `/` navegando dentro de la app no es una carga completa: React no
+ * ejecuta el `<script>` de arranque que inserta, así que el montaje encuentra
+ * la entrada de la carga anterior ya resuelta, o ninguna, y entra directo.
  */
-export const INTRO_SEEN_KEY = 'boia.intro.v2';
+export function mountMode(
+  entry: Pick<BootEntry, 'mode' | 'claimed' | 'landed'> | undefined,
+): IntroMode {
+  if (!entry || entry.claimed || entry.landed) return 'direct';
+  return entry.mode;
+}
 
 /** Estado que el script de arranque deja en `window.__boiaEntry`. */
 export interface BootEntry {
@@ -71,10 +90,9 @@ export function bootScript(opts: {
 }): string {
   return `(function(){try{
 var decide=${decideEntry.toString()};
-var d=document.documentElement,w=window,seen=false,reduced=false;
-try{seen=localStorage.getItem(${JSON.stringify(INTRO_SEEN_KEY)})==="seen";localStorage.setItem(${JSON.stringify(INTRO_SEEN_KEY)},"seen");}catch(e){}
+var d=document.documentElement,w=window,reduced=false;
 try{reduced=w.matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){}
-var mode=decide({search:location.search,hash:location.hash,seen:seen,reducedMotion:reduced});
+var mode=decide({pathname:location.pathname,search:location.search,hash:location.hash,reducedMotion:reduced});
 var entry=w.__boiaEntry={mode:mode,t0:performance.now(),claimed:false,skipped:false,landed:null,timer:0,
 reveal:function(o){if(entry.landed)return;entry.landed=o;clearTimeout(entry.timer);d.removeAttribute("data-intro");
 try{w.dispatchEvent(new CustomEvent(${JSON.stringify(LANDED_EVENT)},{detail:{intro:o}}));}catch(e){}}};

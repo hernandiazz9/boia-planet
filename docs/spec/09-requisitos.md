@@ -38,15 +38,15 @@ Definidos en [02-entrada-y-landing](02-entrada-y-landing.md). 39 requisitos: 37 
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
-| REQ-ENT-001 | Entrada en tres actos: mini-mundo, botón y aterrizaje en el mar | §4.1, §4.4, §47-B, D-19 · alias ENT 01 | L1 | e2e primera visita en móvil: aparece el mini-mundo, luego «BOIA» y el botón, y pulsarlo termina en la landing sobre el mar; grabación sin flashes, fotogramas vacíos ni saltos | D-19 sustituye la entrada sin clic de §47-B |
-| REQ-ENT-002 | Sólo el botón de entrar antes de la landing; entradas siempre a mano | §4.1, §4.4, §47-B, D-19 | L1 | e2e primera visita: el botón de entrar es la única acción obligatoria y el enlace a entradas lleva a Tickets sin pulsarlo | — |
+| REQ-ENT-001 | Entrada en tres actos: mini-mundo, botón y aterrizaje en el mar | §4.1, §4.4, §47-B, D-19, D-21 · alias ENT 01 | L1 | e2e al abrir `/` en móvil: aparece el mini-mundo, luego «BOIA» y el botón, y pulsarlo termina en la landing sobre el mar; grabación sin flashes, fotogramas vacíos ni saltos | D-19 sustituye la entrada sin clic de §47-B |
+| REQ-ENT-002 | Sólo el botón de entrar antes de la landing; entradas siempre a mano | §4.1, §4.4, §47-B, D-19 | L1 | e2e al abrir `/`: el botón de entrar es la única acción obligatoria y el enlace a entradas lleva a Tickets sin pulsarlo | — |
 | REQ-ENT-003 | Título «BOIA» en letras 3D y botón de entrar | §4.1, §47-B, D-05, D-08, D-19, D-20 | L1 | La configuración de entrada trae la secuencia renderizada de «BOIA» y un texto de botón marcado `muestra`; con movimiento reducido, un fotograma quieto; ninguna librería 3D en el bundle; ninguna ruta muestra pantalla de bienvenida | [pendiente Álvaro] Texto definitivo del botón (P9) y letras 3D (P12) |
 | REQ-ENT-004 | Dirección artística de la entrada | §4.4 | L1 | Revisión visual de ENT 06 aprobada por Álvaro | — |
 | REQ-ENT-005 | Planeta 2D/2.5D reconocible | §4.4, D-05 | L1 | Revisión de ENT 06; ninguna librería 3D en el bundle | — |
 | REQ-ENT-006 | Aparición, pausa, acercamiento con aplanado y llegada | §4.4, D-19 | L1 | Storyboard de los 4 tiempos aprobado y grabación que los muestra; test: la curvatura va de 1 a 0 sin retroceder durante el aterrizaje | — |
 | REQ-ENT-007 | Duración por tramos (~2 s + ~2 s), nunca espera vacía | §4.4, D-19 | L1 | La configuración trae los dos tramos; con red lenta simulada aparece la landing ligera sin esperar la cinemática | — |
-| REQ-ENT-008 | Sin audio y Saltar idempotente | §4.4 | L1 | Pulsar Saltar 5 veces deja 1 mundo y 1 barco; 0 audio al cargar | — |
-| REQ-ENT-009 | Visitas posteriores directas | §4.4 | L1 | La segunda carga no reproduce la cinemática; «ver introducción» la reproduce | — |
+| REQ-ENT-008 | Sin audio y Saltar idempotente | §4.4, D-21 | L1 | Pulsar Saltar 5 veces deja 1 mundo y 1 barco; 0 audio al cargar | — |
+| REQ-ENT-009 | La entrada según la URL, en cada carga de `/` | §4.4, D-21 | L1 | Una segunda carga completa de `/` reproduce la cinemática; un enlace directo (`/#tickets`, `?menu=…`) y volver a `/` dentro de la web no; «Ver la introducción» (`/?intro=1`) la reproduce | [pendiente Álvaro] Repetir la entrada en cada visita (P9) |
 | REQ-ENT-010 | Movimiento reducido | §4.4 | L1 | e2e con movimiento reducido emulado: 0 desplazamientos de cámara | — |
 | REQ-ENT-011 | Enlaces directos sin introducción | §4.4, §49.6 | L1 | e2e: el enlace a un evento abre su panel sin cinemática | — |
 | REQ-ENT-012 | Explorar sin reiniciar el mundo, desde el puerto | §4.3, §4.4, D-20 | L1 | Tras Explorar el barco es el mismo objeto de escena y el encuadre muestra el puerto del mundo activo con el barco dentro; los gestos de la página no lo mueven | — |

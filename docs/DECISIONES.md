@@ -387,6 +387,33 @@ terceros una versión con sello de prueba y Admin abierto (P13). Hasta que
 conteste se avanza con esta decisión. Los puntos 2, 3, 4 y 7 son técnicos o
 temporales y los decide Hernán.
 
+## D-21 · La entrada se ve en cada carga de `/`, según la URL · 2026-09-29 · Hernán · pendiente Álvaro
+
+Hernán quiere ver la entrada (mini-mundo, letras 3D «BOIA», «Zarpar» y
+aterrizaje) cada vez que abre o recarga la web, no sólo la primera vez.
+Decide que **la entrada depende de la URL, no de si ya se vio**:
+
+1. **`/` a secas, en cada carga completa o recarga, reproduce la entrada.**
+   Desaparece la marca de «ya la vio» (`boia.intro.v2`, D-19); nada se
+   guarda en el navegador para decidirlo.
+2. **Una URL que apunta a algo concreto entra directa a su contenido**:
+   cualquier ancla (`/#tickets`, `/#fotos`), cualquier parámetro
+   (`?menu=…`, `?intro=0`), un evento, una galería o una ruta que no sea `/`
+   (REQ-ENT-011 sigue igual). Los parámetros de campaña (`utm_*`, `fbclid`,
+   `gclid` y parecidos) no apuntan a nada y no quitan la entrada.
+3. **Volver a `/` navegando dentro de la web** (el botón Inicio del juego,
+   un enlace interno) no es una carga completa y no la repite.
+4. Sigue todo lo demás: «Saltar animación» y «Solo quiero ver las entradas»
+   funcionan desde el primer momento, el movimiento reducido tiene su
+   variante quieta, la landing ligera es el respaldo si los recursos no
+   llegan, y `/?intro=1` («Ver la introducción») la pide explícitamente.
+
+Modifica REQ-ENT-009 (que entraba directo en visitas posteriores) y la marca
+de «ya la vio» de D-19; REQ-ENT-001 y REQ-ENT-008 dejan de hablar de
+«primera visita». Todos citan ahora D-21. Repetir la entrada en cada visita
+es identidad y experiencia de Álvaro (P9): falta su visto bueno; hasta que
+conteste se avanza con esta decisión.
+
 ## Preguntas abiertas
 
 | # | Pregunta | Para | Traba |

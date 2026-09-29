@@ -25,17 +25,6 @@ async function gameRunning(page: Page) {
   await expect(page.getByTestId('hud')).toContainText(/\d+ fps/, { timeout: 30_000 });
 }
 
-test.beforeEach(async ({ page }) => {
-  // Visita posterior: sin cinemática de entrada.
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('boia.intro.v2', 'seen');
-    } catch {
-      // sin almacenamiento, la prueba falla más abajo con un motivo claro
-    }
-  });
-});
-
 test('landing → compra de prueba → Mi Carnet; isla → compra de prueba → los dos sellos', async ({
   page,
 }, info) => {
@@ -43,8 +32,8 @@ test('landing → compra de prueba → Mi Carnet; isla → compra de prueba → 
   expect(islandEvent, 'hay un evento a la venta con isla').toBeDefined();
   expect(landingEvent, 'hay otro evento a la venta').toBeDefined();
 
-  // Landing → Tickets → «Comprar entradas».
-  await page.goto('/');
+  // Landing → Tickets → «Comprar entradas». Con un parámetro, sin cinemática (D-21).
+  await page.goto('/?intro=0');
   await page.locator('.hero').getByRole('link', { name: 'Tickets', exact: true }).click();
   const panel = page.getByRole('dialog', { name: 'Elige tu evento' });
   await expect(panel).toBeVisible();

@@ -4,6 +4,32 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T31: la entrada se ve en cada carga de `/`
+
+La entrada (mini-mundo, letras 3D «BOIA», «Zarpar» y aterrizaje) ya no se ve sólo la primera vez: depende de la URL (D-21, pendiente Álvaro).
+
+Qué existe:
+- La puerta es `decideEntry({ pathname, search, hash, reducedMotion })` en `packages/engine/src/intro/entry.ts`, que el script de arranque serializa en línea. `/` a secas, en cada carga completa o recarga → entrada (o su variante quieta con movimiento reducido). Cualquier ancla, cualquier parámetro (`?menu=…`, `?intro=0`) o una ruta distinta de `/` → directa. Los parámetros de campaña (`utm_*`, `fbclid`, `gclid`, `msclkid`, `ttclid`, `igsh`, `igshid`) no cuentan. `?intro=1` la pide siempre («Ver la introducción» del pie).
+- Sin marca de «ya la vio»: el script de arranque ya no lee ni escribe `boia.intro.v2` (la marca que quede en navegadores viejos se ignora).
+- `mountMode(entry)` (mismo archivo) decide con qué modo arranca el montaje del hero: sólo reproduce la entrada que pidió el script de esta carga y nadie resolvió. Volver a `/` dentro de la app (Inicio del juego, enlaces internos) no ejecuta el script, encuentra la entrada ya resuelta o ninguna y entra directa. `intro-stage.tsx` la usa.
+- D-21 en `docs/DECISIONES.md`; REQ-ENT-009 reescrito y REQ-ENT-001/008 sin «primera visita» en `docs/spec/02-entrada-y-landing.md` y en el índice `09-requisitos.md`.
+- Pruebas: `entry.test.ts` (la URL decide, campaña, `?intro=1`, `mountMode`, una segunda carga con la marca vieja reproduce la entrada). e2e en `intro.spec.ts`: recarga y segunda carga de `/` reproducen la entrada; `/#tickets` y `/?menu=carnet` entran directas; «Ver la introducción» la repite; volver a `/` con Inicio desde `/juego` (tras EXPLORAR y tras cargar `/juego` directamente) no la repite ni recarga. Las pruebas de landing y tickets abren `/?intro=0`.
+
+Comandos:
+```
+python3 tools/spec/check.py                                                   # exit 0
+pnpm test && pnpm typecheck && pnpm lint                                      # exit 0; 45 archivos, 478 pruebas
+E2E_PORT=3131 pnpm e2e --workers=2 e2e/landing.spec.ts e2e/intro.spec.ts e2e/demo.spec.ts e2e/tickets.spec.ts   # exit 0; 46 pasadas
+```
+
+Desviaciones:
+- `docs/spec/09-requisitos.md` (fuera del alcance escrito) cambia en las filas de REQ-ENT-001, 002, 008 y 009: `check.py` exige que el índice repita la fuente y las marcas de cada definición.
+- Por orden del orquestador (máquina compartida), sólo se corrieron las specs e2e de landing, intro, demo y tickets, no la suite entera.
+
+Sin probar:
+- Móviles reales y el navegador interno de Instagram (que añade sus parámetros): la lista de parámetros de campaña es una suposición razonable, no está medida.
+- Atrás del navegador hacia `/` sin caché de página (bfcache) es una carga completa y reproduce la entrada; con caché, sigue donde estaba.
+
 ## 2026-09-29 — plan 002 T27: título 3D «BOIA» de la entrada, renderizado en Blender
 
 El título del acto 2 ya no es texto plano: son las letras «BOIA» en 3D (extruidas, con bisel suave, cara naranja BOIA #F26A1B y cantos azul marino #12233F), que se mueven como el título de messenger.abeto.co. Todo es `muestra`.

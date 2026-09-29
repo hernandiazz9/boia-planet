@@ -2,6 +2,7 @@
 
 import {
   IntroController,
+  mountMode,
   titlePoses,
   viewMoved,
   type BootEntry,
@@ -24,8 +25,8 @@ const MAX_K_SAMPLES = 600;
  * Escena del hero y entrada «mini-mundo» (D-19, REQ-ENT-001…020). Lo que
  * pinta el servidor funciona solo: mar en CSS con la isla y el barco en
  * `<img>` (ilustración ligera, REQ-ENT-038), y los textos de la entrada. Al
- * hidratar carga bajo demanda la escena Pixi y la pone encima. En la primera
- * visita: carga (sólo si hace falta) → el mini-mundo aparece y gira → «BOIA»
+ * hidratar carga bajo demanda la escena Pixi y la pone encima. En cada carga
+ * completa de `/` (D-21): carga (sólo si hace falta) → el mini-mundo aparece y gira → «BOIA»
  * y el botón → al pulsar, aterrizaje continuo en el mar y la landing encima.
  * El script de arranque ya ocultó la landing antes del primer pintado (ver
  * `bootScript`).
@@ -50,11 +51,10 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     }
     const { config, geometry } = data;
 
-    // La entrada sólo se reproduce en la carga en la que el script de
-    // arranque la pidió y aún no se resolvió (saltada antes de hidratar,
-    // plazo agotado o ya reclamada por otro montaje).
-    let mode: IntroMode = entry?.mode ?? 'direct';
-    if (mode !== 'direct' && (!entry || entry.claimed || entry.landed)) mode = 'direct';
+    // La entrada sólo se reproduce en la carga completa en la que el script
+    // de arranque la pidió y aún no se resolvió; volver a `/` dentro de la
+    // app no la repite (D-21).
+    const mode: IntroMode = mountMode(entry);
     if (entry) {
       entry.claimed = true;
       clearTimeout(entry.timer);

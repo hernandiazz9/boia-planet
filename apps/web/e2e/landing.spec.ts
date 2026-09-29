@@ -25,16 +25,8 @@ async function captured(
 }
 
 // Estas pruebas son de la landing, no de la entrada (esa está en intro.spec.ts):
-// cada página se abre como visita posterior, sin cinemática.
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('boia.intro.v2', 'seen');
-    } catch {
-      // sin almacenamiento: la entrada se reproduciría, y las esperas lo cubren
-    }
-  });
-});
+// se abre con un parámetro, que entra directo sin cinemática (D-21).
+const LANDING = '/?intro=0';
 
 const hero = (page: Page) => page.locator('.hero');
 const exploreCta = (page: Page) => hero(page).getByRole('link', { name: /explorar el universo/i });
@@ -42,7 +34,7 @@ const heroTickets = (page: Page) => hero(page).getByRole('link', { name: 'Ticket
 const ticketsPanel = (page: Page) => page.getByRole('dialog', { name: 'Elige tu evento' });
 
 test('CTA Explorar y Tickets se ven sin scroll', async ({ page }, info) => {
-  await page.goto('/');
+  await page.goto(LANDING);
   const vp = page.viewportSize()!;
   if (info.project.name === 'mobile') expect(vp).toEqual({ width: 360, height: 640 });
 
@@ -74,8 +66,7 @@ test('el panel de Tickets abre sin WebGL y con el bundle del juego bloqueado', a
   const probe = await page.context().newPage();
   const loadedByBuy = new Set<string>();
   probe.on('request', (r) => loadedByBuy.add(new URL(r.url()).pathname));
-  await probe.addInitScript(() => localStorage.setItem('boia.intro.v2', 'seen'));
-  await probe.goto('/');
+  await probe.goto(LANDING);
   await heroTickets(probe).click();
   await ticketsPanel(probe)
     .getByRole('button', { name: /comprar entradas/i })
@@ -120,7 +111,7 @@ test('el panel de Tickets abre sin WebGL y con el bundle del juego bloqueado', a
       r.fulfill({ contentType: 'text/html', body: '<title>sandbox</title>' }),
     );
 
-  await page.goto('/');
+  await page.goto(LANDING);
   await heroTickets(page).click();
 
   const panel = ticketsPanel(page);
@@ -169,7 +160,7 @@ test.describe('sin JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
   test('Tickets sigue abriendo el panel con enlaces de compra', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(LANDING);
     await heroTickets(page).click();
     await expect(ticketsPanel(page)).toBeVisible();
     await expect(
@@ -181,7 +172,7 @@ test.describe('sin JavaScript', () => {
 });
 
 test('axe: sin violaciones serias ni críticas en / (y con el panel abierto)', async ({ page }) => {
-  await page.goto('/');
+  await page.goto(LANDING);
   // Deja terminar las animaciones de entrada (fundido de artistas): con la
   // escena del mundo cargando de fondo y las pruebas en paralelo, 600 ms fijos
   // no siempre bastaban. Las animaciones infinitas (pulso del CTA) no cuentan.
