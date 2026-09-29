@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SHIP_CONFIG as cfg } from '../ship/config';
 import { IDLE_INPUT, type ShipInput, shipSpeed } from '../ship/controller';
 import type { WorldEvent } from './events';
+import { READABLE_MAX_MS, READABLE_MIN_MS, readableDurationMs } from '../ui/notifications';
 import { MemoryRewardStore } from './rewards';
 import { WorldRuntime } from './runtime';
 import { simulate } from './simulate';
@@ -204,6 +205,64 @@ describe('DIÁLOGO', () => {
     expect(ofType(r.events, 'dialogue_end')).toEqual([
       { type: 'dialogue_end', objectId: 'boia', reason: 'completed' },
     ]);
+  });
+
+  it('con tiempo de lectura cada línea dura máx(3 s, su texto), con tope de 8 s', () => {
+    const long =
+      'Por el mar hay descuentos, monedas y secretos escondidos. Mira bien al navegar, grumete.';
+    const huge = 'x'.repeat(140);
+    const mixed = ['¡Plop!', long, huge];
+    const w = world(
+      obj('boia', 500, 1000, { proximityRadius: 150 }, [
+        { type: 'proximity' },
+        { type: 'dialogue', params: { lines: mixed } },
+      ]),
+    );
+    const r = simulate(w, {
+      seconds: 25,
+      start: stay,
+      input: () => IDLE_INPUT,
+      readableDialogue: true,
+    });
+    const at = (type: 'dialogue_line' | 'dialogue_end') =>
+      r.trace.filter((s) => s.events.some((e) => e.type === type)).map((s) => s.step * DT);
+    const lineAt = at('dialogue_line');
+    const endAt = at('dialogue_end');
+    expect(lineAt).toHaveLength(mixed.length);
+    expect(endAt).toHaveLength(1);
+    const lasted = [...lineAt.slice(1), endAt[0]!].map((t, i) => t - lineAt[i]!);
+    const want = mixed.map((t) => readableDurationMs(t) / 1000);
+    expect(want[0]).toBe(READABLE_MIN_MS / 1000);
+    expect(want[1]).toBeGreaterThan(READABLE_MIN_MS / 1000);
+    expect(want[2]).toBe(READABLE_MAX_MS / 1000);
+    lasted.forEach((d, i) => expect(d).toBeCloseTo(want[i]!, 1));
+    // Nunca menos de 3 s en pantalla.
+    for (const d of lasted) expect(d).toBeGreaterThanOrEqual(READABLE_MIN_MS / 1000 - DT);
+  });
+
+  it('con tiempo de lectura, un intervalo mayor manda y tocar sigue avanzando al instante', () => {
+    const slow = simulate(boia({ interval: 5 }), {
+      seconds: 6,
+      start: stay,
+      input: () => IDLE_INPUT,
+      readableDialogue: true,
+    });
+    const slowAt = slow.trace
+      .filter((s) => s.events.some((e) => e.type === 'dialogue_line'))
+      .map((s) => s.step * DT);
+    expect(slowAt[1]! - slowAt[0]!).toBeCloseTo(5, 1);
+
+    const tapped = simulate(boia(), {
+      seconds: 1,
+      start: stay,
+      input: () => IDLE_INPUT,
+      readableDialogue: true,
+      before: (_t, rt, step) => {
+        if (step === 10) rt.advanceDialogue();
+      },
+    });
+    const texts = ofType(tapped.events, 'dialogue_line').map((e) => e.text);
+    expect(texts).toEqual(lines.slice(0, 2));
   });
 
   it('tocar avanza al instante y saltar lo cierra entero', () => {

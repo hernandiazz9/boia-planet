@@ -75,6 +75,57 @@ python3 tools/spec/check.py        # exit 0; 294 requisitos, 0 duplicados, centi
 python3 tools/spec/test_check.py   # exit 0; 18 pruebas
 ```
 
+## 2026-09-29 — plan 003 T36: logros que se reclaman: almacén, catálogo y señales
+
+Los logros ya no se conceden al cumplirse: se completan (listos para reclamar) y el premio llega al reclamarlos, una vez, igual en `/juego` y en `/mar`. Sin interfaz nueva (el panel con «Reclamar» es T37): hasta entonces nadie puede reclamar desde la web, y los logros completados salen como conseguidos en el panel viejo de `/juego`.
+
+Qué hay:
+- Catálogo aprobado (25 logros, 3 ocultos) en `packages/store/src/sample/progress.ts` y `docs/propuestas/logros-catalogo.md` (sin «borrador», con los cambios de Hernán). Cosméticos nuevos: Bandera a cuadros, Estela de burbujas, Estela de rayo y los barcos de estilo Cel-shaded cómic, Boceto a lápiz y Pixel art (ranura nueva `ship`, `assetKey` = id del estilo). «Rayo del Freu» = 43,6 s (`FAST_LAP_MS`): el 80 % de una vuelta limpia medida con el barco base (54,5 s por la ruta segura, 51,3 s por el atajo).
+- `@boia/store` (esquema v2): `progress.completeAchievement` (marca en `players[].achievements`, sin libro), `claimAchievement` (fila `achievement` con puntos y monedas + cosmético o barco; `duplicate` si ya estaba, `not_ready` si no se completó), `achievements()` con `state` (`in_progress` / `ready` / `claimed`), `hidden` (ocultos como «???»), `claimedAt` y `reward` (`kind`: coins, badge, ship, cosmetic), `badges()` y `CarnetView.badges` (insignias de lo reclamado), `ships()` (barcos bloqueables y si se tienen). Sale `grantAchievement`. Migración v1 → v2: lo concedido cuenta como completado y reclamado con los mismos saldos; `secretos` recibe su barco (fila de 0/0) y `entrada` su insignia (derivada de la definición).
+- `@boia/contracts`: `ACHIEVEMENT_TRIGGERS_DB` (los de Supabase) + `ACHIEVEMENT_TRIGGERS_NEW` (`win_minigame`, `complete_encounter`, `read_bottle`, `throw_bottle`, `create_carnet`, `answer_question`, `visit_world`), `ACHIEVEMENT_STATES`, `ACHIEVEMENT_REWARD_KINDS`.
+- `apps/web/app/juego/achievements.ts`: condiciones sólo a partir de lo contado (`achievementFacts` + `achievementGoal` con `done`, también para vuelta, atajo, tiempo, minijuegos, botellas, Carnet, mundos y entradas por eventos distintos), `completeBySignal`, `recordSignal` (avisos «¡Logro completado! Reclama tu premio»), `emitSignal` + `onAchievementNotices` para las señales sin cola de avisos. Sólo necesita `progress`.
+- Señales: vuelta con tiempo y ruta (`CircuitRace.checkpoint(order, now, objectId?)` y `finish.route`; `finishLap(progress, spec, ms, route?)`), compra de prueba (`sandbox.ts`), minijuego ganado (`withWinSignal` en `minigame-layer.tsx`), delfín (`grantEncounter`), mundo (`discoverPlace` y al arrancar `/juego`), botella leída/echada (`bottle-sheet.tsx`), Carnet y preguntas (`saveCarnet`).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint          # exit 0; 62 archivos, 635 pruebas (tras unir main con T35)
+E2E_PORT=3238 pnpm e2e --workers=2                # exit 0; 101 pasadas, 19 omitidas (7,9 min, tras unir main)
+```
+
+Desviaciones:
+- `naufrago-fiesta` usa `deliver_character` (`naufrago`): el náufrago no tiene misión de llevarlo a una fiesta, así que, como `boies-3`, todavía no se puede completar.
+- El atajo sólo se detecta en `/juego`: `/mar` llama a `race.checkpoint` sin id de arco y a `finishLap` sin ruta (no se toca `apps/web/app/mar/**`). Allí la vuelta y la vuelta rápida sí cuentan.
+- En `/mar` los logros de mundo y de minijuego se completan sin aviso (no escucha `onAchievementNotices`); el del delfín sí avisa. T37 pondrá el contador.
+- `fiestera.spec.ts`: los puntos tras la entrega ya no incluyen los del logro (llegan al reclamar).
+
+Sin probar:
+- Reclamar desde la interfaz (T37). Supabase: falta la migración (valores nuevos del enum `achievement_trigger`, logros completados sin reclamar, `badge_key`).
+
+## 2026-09-29 — plan 003 T35: «Entradas» siempre a mano con viaje en turbo, y diálogos que se leen
+
+Botón «Entradas» fijo en `/mar` (REQ-ENT-040) y tiempo de lectura con botón de cerrar para bocadillos y avisos en `/mar` y `/juego` (REQ-AVE-002, REQ-IDE-026, D-22). Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `/mar`, botón «🎟️ Entradas» abajo en el centro (`data-testid="mar-entradas"`), a cualquier zoom y en el mapa; con la ficha abierta se sube encima de ella (`--lift`, medido con `ResizeObserver`) y va por encima del bocadillo y del joystick (z-index 7). Al tocarlo: la isla del evento vigente (`currentEventTrip` en `apps/web/app/mar/sheet.tsx`: islas cuyo TICKET/CONTENIDO de evento, ya re-ligado por el Admin, apunta a un evento a la venta; primero el destacado de la landing, luego el más próximo) → `Mar3D.startVoyage(placeId)`: rumbo con piloto automático, turbo sostenido (2,6× la velocidad máxima, estela a tope, `fovKick`), cámara de vuelta al barco siguiéndolo; al llegar se abre `SandboxCheckout` de ese evento. «Saltar ›» (`mar-entradas-saltar`) o tocar otra vez el botón lo abren ya; con `prefers-reduced-motion` se abre directo; sin evento vigente lleva a `/#tickets`. Si el jugador toma el timón (arrastrar, flechas, tocar el mar, quitar rumbo) el viaje se cancela; tope de 20 s (si no llega, se abre el checkout igual).
+- Tiempo de lectura: `readableDurationMs(text)` en `packages/engine/src/ui/notifications.ts` = máx(3 s, 3 s + 60 ms por carácter desde el 50), tope 8 s. `NoticeQueue({ readable: true })` lo usa por aviso (título + cuerpo); `WorldRuntime({ readableDialogue: true })` hace durar cada línea (y la reacción) máx(intervalo, lectura) con tope 8 s. Sin las opciones, todo como antes (1,5 s y 4 s de D-07). `/mar` y `/juego` encienden las dos (`useNoticeQueue(..., { readable: true })`, `runtime.readableDialogue`). El intervalo de DIÁLOGO admite ahora hasta 8 s (antes 5).
+- Cerrar: `/mar` bocadillo con × («Cerrar diálogo», `mar-bocadillo-cerrar`) y el texto sigue avanzando al tocarlo; avisos de `/mar` y `/juego` con × («Cerrar aviso»). `/juego`: × dibujado en la esquina del bocadillo de Pixi (`bubble.ts`, cierra como «Saltar») y un botón oculto «Cerrar diálogo» para el lector de pantalla (`bocadillo-cerrar`).
+- Pruebas: unitarias de la regla, la cola con `readable`, cerrar y la pausa (`notifications.test.ts`) y de las líneas del runtime (`runtime.test.ts`); e2e en `mar-3d.spec.ts` (botón encima de todo de cerca, en mapa y con ficha; turbo + «Saltar»; otro toque; llegada del viaje; movimiento reducido; bocadillo con × visible a los 2,5 s).
+- Capturas 390×844: `docs/informes/img/p003-t35-entradas.png` (viaje con estela), `p003-t35-dialogo.png` (bocadillo con ×), `p003-t35-entradas-mapa.png` (mapa con ficha, el botón encima).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 60 archivos, 591 pruebas
+E2E_PORT=3187 pnpm e2e --workers=2            # exit 0; 101 pasadas, 19 omitidas (7,3 min)
+```
+
+Desviaciones:
+- Retoques de CSS fuera de los archivos nombrados: `apps/web/app/juego/hud.css` (× del aviso y botón oculto) y `packages/engine/src/world/bubble.ts` (el × del bocadillo de `/juego` vive en el lienzo); `game-canvas.tsx` sólo enciende las opciones y pinta el botón oculto.
+- El viaje va a 2,6× (el turbo normal 1,6×): a 1,6× tardaba ~17 s desde la salida; ahora ~11 s.
+
+Sin probar:
+- Móvil real (iOS Safari) y el × del bocadillo de `/juego` con el dedo (sin e2e: está en el lienzo).
+- El viaje desde todos los puntos del mapa (sólo desde la salida y cerca de la isla).
+
 ## 2026-09-29 — plan 002 T30: última pasada de la demo y preparación del despliegue
 
 La versión de prueba entera, repasada de punta a punta en móvil, y lo que Hernán necesita para desplegarla él mismo en Vercel. No se ha desplegado nada.

@@ -16,6 +16,7 @@ import type { Notice } from '@boia/engine/ui';
 import type { ProgressApi } from '@boia/store';
 import { CIRCUIT_ID, type ComposedWorld } from '@boia/world';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { recordSignal } from './achievements';
 
 /**
  * El Freu en /juego (T20, REQ-AVE-026…033): la carrera del motor
@@ -25,32 +26,39 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
  * navegador con la versión del circuito. Textos `muestra`.
  */
 
-/** Disparador del logro del circuito en el catálogo de logros (`@boia/store`). */
+/** Disparador de los logros del circuito en el catálogo de logros (`@boia/store`). */
 export const CIRCUIT_TRIGGER = 'complete_circuit';
 
 export interface LapResult {
   best: boolean;
   bestMs: number;
-  /** Título del logro si se concedió ahora. */
+  /** Título del primer logro completado ahora, o null. */
   achievement: string | null;
+  /** Avisos de los logros completados ahora (vuelta, atajo, vuelta rápida). */
+  achievements: Notice[];
 }
 
-/** Guarda una vuelta válida y concede el logro del circuito (una vez). */
+/**
+ * Guarda una vuelta válida y completa los logros del circuito que toquen
+ * (una vez; se reclaman aparte). `route`: los arcos por los que pasó
+ * (`finish.route` de la carrera), para el logro del atajo.
+ */
 export async function finishLap(
   progress: ProgressApi,
   spec: Pick<CircuitSpec, 'id' | 'version'>,
   ms: number,
+  route: readonly string[] = [],
 ): Promise<LapResult> {
-  const r = await submitRecord(progress, spec, ms);
-  const def = (await progress.achievements()).find(
-    (a) => a.definition.trigger === CIRCUIT_TRIGGER,
-  )?.definition;
-  let achievement: string | null = null;
-  if (def) {
-    const g = await progress.grantAchievement(def.id, { circuit: spec.id, ms });
-    if (g.granted) achievement = def.title;
-  }
-  return { ...r, achievement };
+  // El récord no frena el logro: si no se puede guardar, la vuelta cuenta igual.
+  const r = await submitRecord(progress, spec, ms).catch((err: unknown) => {
+    console.warn('[boia] no se pudo guardar el récord', err);
+    return { best: false, bestMs: ms };
+  });
+  const achievements = await recordSignal(
+    { progress },
+    { trigger: CIRCUIT_TRIGGER, circuit: spec.id, ms, via: route },
+  );
+  return { ...r, achievement: achievements[0]?.title ?? null, achievements };
 }
 
 export function lapNotices(ms: number, r: LapResult): Notice[] {
@@ -62,7 +70,7 @@ export function lapNotices(ms: number, r: LapResult): Notice[] {
       body: r.best ? 'Tu mejor vuelta en El Freu.' : `Tu récord: ${formatRaceTime(r.bestMs)}`,
     },
   ];
-  if (r.achievement) out.push({ id: 'logro:circuito', kind: 'achievement', title: r.achievement });
+  out.push(...r.achievements);
   return out;
 }
 
@@ -114,7 +122,7 @@ export function useCircuit(
         if (e.type === 'finish' && spec) {
           const p = latest.current.progress();
           if (!p) continue;
-          void finishLap(p, spec, e.ms)
+          void finishLap(p, spec, e.ms, e.route)
             .then((r) => {
               for (const n of lapNotices(e.ms, r)) latest.current.notify(n);
             })
@@ -149,7 +157,7 @@ export function useCircuit(
       const r = race;
       if (!r || !spec) return;
       if (e.type === 'checkpoint' && e.circuitId === spec.id) {
-        apply(r.checkpoint(e.order, now()));
+        apply(r.checkpoint(e.order, now(), e.objectId));
       } else if (e.type === 'teleport') {
         const x = r.invalidate('teleport');
         if (x) apply([x]);

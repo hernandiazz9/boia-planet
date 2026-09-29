@@ -10,6 +10,7 @@ import {
 } from '@boia/world';
 import type { ShipConfig } from '../ship/config';
 import { type CircleObstacle, type ShipState, collideShip } from '../ship/controller';
+import { READABLE_MAX_MS, readableDurationMs } from '../ui/notifications';
 import type { WorldEvent } from './events';
 import { MemoryRewardStore, type RewardStore, rewardKey } from './rewards';
 
@@ -42,6 +43,14 @@ export interface RuntimeOptions {
   /** Si el evento está a la venta (TICKET desaparece en histórico). */
   ticketAvailable?: (eventId: string) => boolean;
   minigames?: ReadonlyMap<string, unknown>;
+  /**
+   * Bocadillos con tiempo de lectura (D-22, REQ-AVE-002): cada línea (y la
+   * reacción) dura lo que pide su texto (`readableDurationMs`: al menos 3 s,
+   * más si es larga, tope 8 s) o el intervalo del DIÁLOGO si es mayor. Sin
+   * ella, el intervalo del DIÁLOGO (1,5 s de D-07). `/mar` y `/juego` la
+   * encienden.
+   */
+  readableDialogue?: boolean;
 }
 
 /** u extra para dar por terminado un contacto (evita parpadeo en el borde). */
@@ -247,6 +256,7 @@ export class WorldRuntime {
   private readonly scope: { seasonId: string; sessionId: string };
   private readonly ticketAvailable: (eventId: string) => boolean;
   private readonly minigames: ReadonlyMap<string, unknown>;
+  private readonly readableDialogue: boolean;
   private seed: number;
   private shipRadius = 0;
   /** s simulados. */
@@ -258,6 +268,7 @@ export class WorldRuntime {
     this.scope = { seasonId: opts.seasonId ?? 'default', sessionId: opts.sessionId ?? 'session' };
     this.ticketAvailable = opts.ticketAvailable ?? (() => true);
     this.minigames = opts.minigames ?? MINIGAMES;
+    this.readableDialogue = opts.readableDialogue ?? false;
     this.seed = (opts.seed ?? 1) >>> 0 || 1;
 
     for (const o of world.objects) {
@@ -841,6 +852,14 @@ export class WorldRuntime {
     this.emit({ type: 'dialogue_end', objectId: a.obj.id, reason });
   }
 
+  /** s que se queda en pantalla la línea (o la reacción) visible. */
+  private lineSeconds(a: ActiveDialogue): number {
+    const interval = a.params.interval;
+    if (!this.readableDialogue) return interval;
+    const text = a.reaction ?? a.params.lines[a.index]!.text;
+    return Math.min(READABLE_MAX_MS / 1000, Math.max(interval, readableDurationMs(text) / 1000));
+  }
+
   private tickDialogue(ship: ShipState, dt: number): void {
     const a = this.active;
     if (!a) return;
@@ -859,7 +878,7 @@ export class WorldRuntime {
       }
     }
     a.timer += dt;
-    if (a.timer < a.params.interval - 1e-9) return;
+    if (a.timer < this.lineSeconds(a) - 1e-9) return;
     if (a.reaction !== null) this.endDialogue('interrupted');
     else if (a.index < a.params.lines.length - 1) this.showLine(a, a.index + 1);
     else this.endDialogue('completed');

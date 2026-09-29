@@ -29,7 +29,7 @@ import { STABLE_KEY, STABLE_KEY_MAX } from './ids';
  * Subir `SCHEMA_VERSION` exige añadir la migración en `migrations.ts` con su
  * prueba.
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const iso = z.string().min(1);
 const stableKey = z.string().max(STABLE_KEY_MAX).regex(STABLE_KEY);
@@ -183,6 +183,20 @@ export const timeRecordSchema = z.object({
 });
 export type TimeRecord = z.infer<typeof timeRecordSchema>;
 
+/**
+ * Logro completado y todavía sin reclamar (D-22, punto 5; T36). Completar no
+ * da nada: el premio y su fila del libro llegan al reclamar. Reclamado es
+ * tener la fila `achievement` en el libro.
+ */
+export const achievementCompletionSchema = z.object({
+  completedAt: iso,
+  /** Versión de la definición al completarlo. */
+  version: z.number().int().positive(),
+  worldId: z.string().nullable(),
+  metadata: jsonObject.default({}),
+});
+export type AchievementCompletion = z.infer<typeof achievementCompletionSchema>;
+
 export const playerSchema = z.object({
   /** Descubrimientos por clave estable (id de lugar u objeto), no por coordenadas. */
   discoveries: z.record(z.string(), discoverySchema),
@@ -197,6 +211,8 @@ export const playerSchema = z.object({
   equipped: z.record(z.string(), z.string()),
   /** Preferencias del invitado (aspecto del barco…), REQ-IDE-004 y REQ-IDE-033. */
   prefs: jsonObject,
+  /** Logros completados por id de logro (listos o ya reclamados). Desde la v2. */
+  achievements: z.record(z.string(), achievementCompletionSchema).default({}),
 });
 export type PlayerState = z.infer<typeof playerSchema>;
 
@@ -209,6 +225,7 @@ export function emptyPlayer(): PlayerState {
     counters: {},
     equipped: {},
     prefs: {},
+    achievements: {},
   };
 }
 
@@ -269,10 +286,15 @@ export const achievementDefinitionSchema = z.object({
   seasonId: z.string().optional(),
   points: z.number().int().nonnegative(),
   coins: z.number().int().nonnegative(),
-  /** Cosmético que concede directamente (REQ-IDE-031). */
+  /**
+   * Cosmético que concede al reclamarlo (REQ-IDE-031): bandera, estela,
+   * color o, en la ranura `ship`, un barco de estilo (REQ-IDE-052).
+   */
   cosmeticKey: z.string().optional(),
+  /** Insignia del Carnet que concede al reclamarlo (REQ-IDE-052). */
+  badgeKey: stableKey.optional(),
   iconKey: z.string().optional(),
-  /** Secreto: no se lista hasta obtenerlo. */
+  /** Oculto: cuenta en el total, pero se ve como «???» hasta completarlo. */
   secret: z.boolean().default(false),
   /** Desactivar sólo evita concesiones nuevas (REQ-ADM-022). */
   active: z.boolean().default(true),
@@ -282,7 +304,12 @@ export const achievementDefinitionSchema = z.object({
 });
 export type AchievementDefinition = z.infer<typeof achievementDefinitionSchema>;
 
-export const COSMETIC_SLOTS = ['flag', 'accessory', 'skin', 'wake'] as const;
+/**
+ * Ranuras de cosmético. `ship` es un barco de estilo (`assetKey`: el id del
+ * estilo de `art/barco/estilos/`): mientras exista como cosmético, el estilo
+ * está bloqueado hasta tenerlo (por un logro o, con precio, en una tienda).
+ */
+export const COSMETIC_SLOTS = ['flag', 'accessory', 'skin', 'wake', 'ship'] as const;
 export type CosmeticSlot = (typeof COSMETIC_SLOTS)[number];
 
 /** Cosmético del barco (REQ-IDE-030 a REQ-IDE-032): nunca cambia cómo navega. */

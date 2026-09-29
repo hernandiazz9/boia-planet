@@ -46,13 +46,39 @@ describe('carrera', () => {
       'checkpoint',
       'finish',
     ]);
-    expect(events.at(-1)).toEqual({ type: 'finish', ms: 58250 });
+    expect(events.at(-1)).toEqual({ type: 'finish', ms: 58250, route: [] });
     expect(race.active).toBe(false);
   });
 
   it('por el atajo vale igual', () => {
     const race = new CircuitRace(spec);
-    expect(lap(race, 0, 'atajo', 51).at(-1)).toEqual({ type: 'finish', ms: 51000 });
+    expect(lap(race, 0, 'atajo', 51).at(-1)).toEqual({ type: 'finish', ms: 51000, route: [] });
+  });
+
+  it('con el id de cada arco, la meta dice por qué rama se pasó', () => {
+    const race = new CircuitRace(spec);
+    const shortcut = spec.gates.filter((g) => g.order === 2).map((g) => g.objectId);
+    expect(shortcut).toHaveLength(2);
+    const [a, b] = shortcut as [string, string];
+    const at = (order: number) => spec.gates.find((g) => g.order === order)!.objectId;
+    race.checkpoint(0, 0, at(0));
+    race.tick(spec.countdown);
+    race.checkpoint(1, spec.countdown + 5, at(1));
+    race.checkpoint(2, spec.countdown + 10, a);
+    // La otra rama después ya no cuenta (fuera de orden).
+    race.checkpoint(2, spec.countdown + 11, b);
+    race.checkpoint(3, spec.countdown + 20, at(3));
+    const end = race.checkpoint(spec.finishOrder, spec.countdown + 30, at(spec.finishOrder));
+    expect(end.at(-1)).toEqual({
+      type: 'finish',
+      ms: 30_000,
+      route: [at(1), a, at(3), at(spec.finishOrder)],
+    });
+    // Una vuelta nueva empieza con la ruta vacía.
+    race.checkpoint(0, 100, at(0));
+    race.tick(100 + spec.countdown);
+    for (const o of [1, 2, 3]) race.checkpoint(o, 110 + o);
+    expect(race.checkpoint(spec.finishOrder, 120).at(-1)).toMatchObject({ route: [] });
   });
 
   it('un arco fuera de orden no cuenta y la meta sin pasar por todos tampoco', () => {

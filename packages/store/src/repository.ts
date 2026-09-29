@@ -1,4 +1,6 @@
 import type {
+  AchievementRewardKind,
+  AchievementState,
   BoiaEvent,
   BottleStatus,
   CarnetQuestion,
@@ -105,6 +107,17 @@ export interface AchievementView {
   obtainedAt: string;
 }
 
+/** Insignia del Carnet ganada con un logro reclamado (REQ-IDE-052). */
+export interface BadgeView {
+  key: string;
+  /** Logro que la da; su título es el nombre de la insignia. */
+  achievementId: string;
+  title: string;
+  iconKey: string | null;
+  /** Cuándo se reclamó; null en los miembros de muestra. */
+  claimedAt: string | null;
+}
+
 export interface StampView {
   eventId: string;
   eventName: string | null;
@@ -123,7 +136,10 @@ export interface CarnetView {
   answers: CarnetAnswerView[];
   points: number;
   rank: Rank | null;
+  /** Logros reclamados. */
   achievements: AchievementView[];
+  /** Insignias de los logros reclamados que dan una. */
+  badges: BadgeView[];
   stamps: StampView[];
   cosmeticIds: string[];
   equipped: Record<string, string>;
@@ -170,10 +186,70 @@ export interface WorldRewardInput {
   metadata?: Record<string, JsonValue> | undefined;
 }
 
+/** Premio de un logro, tal como lo fija su definición. */
+export interface AchievementReward {
+  /** Tipo principal: monedas (por defecto), insignia, barco o cosmético. */
+  kind: AchievementRewardKind;
+  points: number;
+  coins: number;
+  badgeKey: string | null;
+  /** Cosmético que se concede (también el del barco de estilo). */
+  cosmeticKey: string | null;
+  /** Estilo del barco que desbloquea (`assetKey` del cosmético `ship`). */
+  shipStyle: string | null;
+}
+
 export interface AchievementProgress {
+  /**
+   * Definición. La de un logro oculto sin completar sale con título «???» y
+   * sin descripción; condición y parámetros van completos (el juego los
+   * evalúa).
+   */
   definition: AchievementDefinition;
+  state: AchievementState;
+  /** Oculto y sin completar: se enseña como «???». */
+  hidden: boolean;
+  /** Conseguido: completado (listo para reclamar o reclamado). */
   obtained: boolean;
+  /** Cuándo se completó. */
   obtainedAt: string | null;
+  claimedAt: string | null;
+  reward: AchievementReward;
+}
+
+export type CompleteResult = {
+  /** true sólo la primera vez: ahora queda listo para reclamar. */
+  completed: boolean;
+  achievement: AchievementProgress;
+};
+
+export type ClaimResult =
+  | {
+      claimed: true;
+      /** La fila `achievement` del libro, con los puntos y monedas. */
+      entry: LedgerEntry;
+      reward: AchievementReward;
+      /** La fila del cosmético o barco concedido, si lo hay. */
+      cosmetic: LedgerEntry | null;
+    }
+  /** duplicate: ya reclamado · not_ready: todavía no se ha completado. */
+  | { claimed: false; reason: 'duplicate' | 'not_ready'; entry: LedgerEntry | null };
+
+/**
+ * Barco de estilo que se gana (logro) o se compra (tienda): mientras está en
+ * esta lista y no se tiene, su estilo está bloqueado en el selector. Los
+ * estilos que no están aquí son libres.
+ */
+export interface ShipUnlock {
+  /** Id del estilo (`art/barco/estilos/<id>`). */
+  style: string;
+  cosmeticId: string;
+  name: string;
+  owned: boolean;
+  /** Logro que lo desbloquea, si lo hay. */
+  achievementId: string | null;
+  /** Precio en monedas; null si sólo se gana con un logro. */
+  priceCoins: number | null;
 }
 
 export interface OwnedCosmetic {
@@ -210,13 +286,27 @@ export interface ProgressApi {
   ledger(): Promise<readonly LedgerEntry[]>;
   /** Recompensa del mundo, idempotente por (`sourceRef`, política). */
   grantWorldReward(input: WorldRewardInput): Promise<GrantResult>;
-  /** Logro del catálogo, una vez por id; el premio lo fija la definición. */
-  grantAchievement(
+  /**
+   * Marca un logro del catálogo como completado (listo para reclamar). No
+   * escribe en el libro ni da nada. Idempotente; `forbidden` si el logro
+   * está desactivado o fuera de fechas.
+   */
+  completeAchievement(
     achievementId: string,
     metadata?: Record<string, JsonValue>,
-  ): Promise<GrantResult>;
-  /** Catálogo con lo obtenido; los secretos sólo aparecen obtenidos. */
+  ): Promise<CompleteResult>;
+  /**
+   * Reclama un logro completado: escribe su fila en el libro (puntos y
+   * monedas de la definición) y concede su cosmético o barco. Una sola vez
+   * por id: reclamar otra vez no da nada.
+   */
+  claimAchievement(achievementId: string): Promise<ClaimResult>;
+  /** Catálogo entero con su estado; los ocultos sin completar, como «???». */
   achievements(): Promise<AchievementProgress[]>;
+  /** Insignias de los logros reclamados (Mi Carnet). */
+  badges(): Promise<BadgeView[]>;
+  /** Barcos de estilo bloqueables y si ya se tienen. */
+  ships(): Promise<ShipUnlock[]>;
   /** Compra un cosmético con monedas (nunca toca los puntos). */
   buyCosmetic(cosmeticId: string): Promise<GrantResult>;
   cosmetics(): Promise<OwnedCosmetic[]>;

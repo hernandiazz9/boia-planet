@@ -90,7 +90,7 @@ describe('compra de prueba: sello una vez por id de compra (REQ-COM-035)', () =>
     expect(await repo.purchases.list()).toHaveLength(2);
   });
 
-  it('concede el logro de la entrada una vez, con sus puntos', async () => {
+  it('completa el logro de la entrada una vez; sus puntos llegan al reclamarlo', async () => {
     const { repo, tickets } = setup();
     const before = await repo.progress.balances();
     const a = await tickets.confirm!(await start(tickets, naufragoEvent.id));
@@ -105,7 +105,10 @@ describe('compra de prueba: sello una vez por id de compra (REQ-COM-035)', () =>
     const got = (await repo.progress.achievements()).find(
       (x) => x.definition.id === ticketAchievement.id,
     );
-    expect(got?.obtained).toBe(true);
+    expect(got).toMatchObject({ obtained: true, state: 'ready' });
+    // Completar no da nada: el premio llega al reclamar (D-22).
+    expect(await repo.progress.balances()).toEqual(before);
+    expect((await repo.progress.claimAchievement(ticketAchievement.id)).claimed).toBe(true);
     const after = await repo.progress.balances();
     expect(after.points - before.points).toBe(ticketAchievement.points);
   });

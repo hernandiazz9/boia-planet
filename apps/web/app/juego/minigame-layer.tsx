@@ -4,11 +4,14 @@ import {
   type MinigameRewardSink,
   isMinigameId,
   minigame,
+  minigameSourceRef,
   mountMinigame,
 } from '@boia/engine/minigames';
 import { type Settings, browserStore, channelGain } from '@boia/engine/ui';
 import type { ComposedWorld } from '@boia/world';
 import { useEffect, useRef, useState } from 'react';
+import { emitSignal } from './achievements';
+import { gameRepository } from './repo';
 
 /**
  * Punto de montaje de los minijuegos (T23) en /juego. El juego vive en
@@ -20,6 +23,27 @@ import { useEffect, useRef, useState } from 'react';
  */
 
 export const MINIGAME_PARAM = 'minijuego';
+
+/**
+ * El libro de los premios, con la señal del logro al ganar: el motor sólo
+ * pide el premio de una partida ganada y válida (REQ-AVE-038), así que cada
+ * petición es una victoria de ese juego, aunque el premio de hoy ya se diera.
+ */
+export function withWinSignal(
+  sink: MinigameRewardSink | null,
+  gameId: string,
+  onWin: (gameId: string) => void,
+): MinigameRewardSink | null {
+  if (!sink) return null;
+  const ref = isMinigameId(gameId) ? minigameSourceRef(gameId) : null;
+  return {
+    grantWorldReward: async (input) => {
+      const r = await sink.grantWorldReward(input);
+      if (ref && input.sourceRef === ref) onWin(gameId);
+      return r;
+    },
+  };
+}
 
 export interface MinigameOffer {
   objectId: string;
@@ -67,7 +91,9 @@ export function MinigameLayer({
       gameId: open,
       worldId: w.id,
       theme: w.theme,
-      sink: getSink(),
+      sink: withWinSignal(getSink(), open, (game) => {
+        void emitSignal(gameRepository(), { trigger: 'win_minigame', game });
+      }),
       records: browserStore(),
       volume: channelGain(s.sfx),
       onExit: () => {

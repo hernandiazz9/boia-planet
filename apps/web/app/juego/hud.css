@@ -157,6 +157,27 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   animation: juego-notice-in 220ms ease-out;
   cursor: pointer;
+  padding-right: 44px;
+}
+/* × de cerrar (D-22), encima de la esquina del aviso. */
+.juego-notice-x {
+  pointer-events: auto;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
 }
 .juego-notice-kicker {
   font-size: 11px;
@@ -595,4 +616,30 @@
 }
 .mundos[aria-busy='true'] .mundo {
   cursor: progress;
+}
+
+/* Cierre del bocadillo para el lector de pantalla (el × visible está en el lienzo). */
+.juego-hud .juego-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.juego-hud .juego-sr-only:focus-visible {
+  top: 8px;
+  left: 50%;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 6px 12px;
+  clip: auto;
+  border-radius: 16px;
+  background: #12233f;
+  color: #fff;
+  outline: 2px solid #f26a1b;
 }

@@ -5,6 +5,12 @@ import {
   NOTICE_MAX_PENDING,
   type Notice,
   NoticeQueue,
+  READABLE_FREE_CHARS,
+  READABLE_MAX_MS,
+  READABLE_MIN_MS,
+  READABLE_MS_PER_CHAR,
+  noticeText,
+  readableDurationMs,
 } from './notifications';
 
 const n = (id: string): Notice => ({ id, kind: 'achievement', title: id });
@@ -118,5 +124,89 @@ describe('cola de avisos (REQ-IDE-026, D-07)', () => {
     q.push(n('visible'), 0);
     for (let i = 0; i < NOTICE_MAX_PENDING; i++) expect(q.push(n(`p${i}`), 0)).toBe(true);
     expect(q.push(n('sobra'), 0)).toBe(false);
+  });
+});
+
+describe('tiempo de lectura (D-22, REQ-AVE-002, REQ-IDE-026)', () => {
+  const text = (chars: number) => 'x'.repeat(chars);
+  /** La regla escrita tal cual: máx(3 s, 3 s + 60 ms por carácter desde el 50), tope 8 s. */
+  const rule = (chars: number) =>
+    Math.min(
+      READABLE_MAX_MS,
+      Math.max(
+        READABLE_MIN_MS,
+        READABLE_MIN_MS + (chars - READABLE_FREE_CHARS) * READABLE_MS_PER_CHAR,
+      ),
+    );
+
+  it('es de al menos 3 s, 60 ms más por carácter a partir del 50 y como mucho 8 s', () => {
+    expect(READABLE_MIN_MS).toBe(3000);
+    expect(READABLE_MAX_MS).toBe(8000);
+    expect(readableDurationMs('')).toBe(READABLE_MIN_MS);
+    expect(readableDurationMs('¡Plop!')).toBe(READABLE_MIN_MS);
+    expect(readableDurationMs(text(READABLE_FREE_CHARS))).toBe(READABLE_MIN_MS);
+    expect(readableDurationMs(text(READABLE_FREE_CHARS + 1))).toBe(
+      READABLE_MIN_MS + READABLE_MS_PER_CHAR,
+    );
+    for (const chars of [0, 10, 49, 50, 51, 80, 100, 120, 133, 134, 140, 500]) {
+      expect(readableDurationMs(text(chars))).toBe(rule(chars));
+    }
+    // El tope llega antes de los 140 caracteres de un bocadillo.
+    const capAt = READABLE_FREE_CHARS + (READABLE_MAX_MS - READABLE_MIN_MS) / READABLE_MS_PER_CHAR;
+    expect(readableDurationMs(text(Math.ceil(capAt)))).toBe(READABLE_MAX_MS);
+    expect(readableDurationMs(text(Math.ceil(capAt) + 60))).toBe(READABLE_MAX_MS);
+  });
+
+  it('cuenta caracteres, no bytes: las tildes y los emojis cuentan uno', () => {
+    expect(readableDurationMs('á'.repeat(READABLE_FREE_CHARS + 10))).toBe(
+      rule(READABLE_FREE_CHARS + 10),
+    );
+    expect(readableDurationMs('🎈'.repeat(READABLE_FREE_CHARS + 10))).toBe(
+      rule(READABLE_FREE_CHARS + 10),
+    );
+  });
+
+  it('con `readable`, cada aviso dura el tiempo de lectura de su título y cuerpo', () => {
+    const short: Notice = { id: 'corto', kind: 'discovery', title: 'Isla descubierta' };
+    const long: Notice = {
+      id: 'largo',
+      kind: 'achievement',
+      title: 'Logro: Capitana del Freu',
+      body: 'Has dado la vuelta al circuito de El Freu por debajo del minuto y medio. ¡Qué timón!',
+    };
+    const q = new NoticeQueue({ readable: true });
+    expect(q.durationOf(short)).toBe(READABLE_MIN_MS);
+    expect(q.durationOf(long)).toBe(readableDurationMs(noticeText(long)));
+    expect(q.durationOf(long)).toBeGreaterThan(READABLE_MIN_MS);
+    q.push(short, 0);
+    q.push(long, 0);
+    expect(q.update(READABLE_MIN_MS - 1)?.notice.id).toBe('corto');
+    expect(q.update(READABLE_MIN_MS)).toBeNull();
+    const longAt = READABLE_MIN_MS + NOTICE_GAP_MS;
+    expect(q.update(longAt)?.notice.id).toBe('largo');
+    expect(q.update(longAt + q.durationOf(long) - 1)?.notice.id).toBe('largo');
+    expect(q.update(longAt + q.durationOf(long))).toBeNull();
+    // Sin la opción, los 4 s de siempre (D-07).
+    expect(new NoticeQueue().durationOf(long)).toBe(NOTICE_DURATION_MS);
+  });
+
+  it('cerrar (×) lo quita al momento y el siguiente espera su pausa', () => {
+    const q = new NoticeQueue({ readable: true });
+    q.push(n('a'), 0);
+    q.push(n('b'), 0);
+    expect(q.update(1000)?.notice.id).toBe('a');
+    q.dismiss(1000);
+    expect(q.current).toBeNull();
+    expect(q.update(1000)).toBeNull();
+    expect(q.update(1000 + NOTICE_GAP_MS - 1)).toBeNull();
+    expect(q.nextChangeAt()).toBe(1000 + NOTICE_GAP_MS);
+    const b = q.update(1000 + NOTICE_GAP_MS);
+    expect(b?.notice.id).toBe('b');
+    expect(b!.until - b!.shownAt).toBe(READABLE_MIN_MS);
+    // Cerrar sin nada en pantalla no adelanta ni retrasa nada.
+    q.dismiss(1000 + NOTICE_GAP_MS + 10);
+    q.dismiss(1000 + NOTICE_GAP_MS + 20);
+    expect(q.current).toBeNull();
+    expect(q.size).toBe(0);
   });
 });

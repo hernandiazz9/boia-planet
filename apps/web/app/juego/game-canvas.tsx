@@ -40,7 +40,12 @@ import { liveContent } from '../../lib/landing/live-content';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
 import { claimWorld, offerWorld } from '../../lib/world-handoff';
-import { TIME_PLAYED_TICK_S, recordSignal, signalFromWorldEvent } from './achievements';
+import {
+  TIME_PLAYED_TICK_S,
+  onAchievementNotices,
+  recordSignal,
+  signalFromWorldEvent,
+} from './achievements';
 import { BalancesChip } from './balances';
 import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
 import { Celebration } from './celebration';
@@ -176,7 +181,10 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [achievements, setAchievements] = useState<readonly Notice[]>([]);
   const notified = useRef(new Set<string>());
-  const notices = useNoticeQueue(() => chime());
+  // Avisos y bocadillos con tiempo de lectura (D-22): al menos 3 s, más si el texto es largo.
+  const notices = useNoticeQueue(() => chime(), { readable: true });
+  // Hay bocadillo: su × vive en el lienzo; este botón es el mismo cierre para el lector de pantalla.
+  const [talking, setTalking] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuInitial, setMenuInitial] = useState<string | undefined>(undefined);
   const [mapOpen, setMapOpen] = useState(false);
@@ -306,6 +314,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       default:
         break;
     }
+    if (e.type === 'dialogue_line' || e.type === 'dialogue_reaction') setTalking(true);
+    else if (e.type === 'dialogue_end') setTalking(false);
     switch (e.type) {
       case 'dialogue_line':
         plop();
@@ -517,6 +527,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           ticketAvailable,
           minigames: MINIGAME_REGISTRY,
           sessionId,
+          readableDialogue: true,
           // Restos y cofres reaparecen en otro sitio en cada visita (REQ-AVE-016).
           seed: (Date.now() % 2147483646) + 1,
         },
@@ -599,6 +610,23 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     // `notifyGranted` sólo encola avisos; basta con el motor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game]);
+
+  // Logros (T36): navegar en este mundo cuenta, y los avisos de las señales
+  // sueltas (botellas, Carnet, minijuegos) llegan a la cola de avisos.
+  useEffect(() => {
+    if (!game) return;
+    notifyGranted(recordSignal(gameRepository(), { trigger: 'visit_world', worldId: world.id }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game, world.id]);
+  useEffect(
+    () =>
+      onAchievementNotices((ns) => {
+        for (const n of ns) notify(n);
+      }),
+    // `notify` sólo encola avisos con refs y colas estables.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   // Sección «Barco»: aplica estilo y skin al barco en el agua, sin recargar.
   // `remember: false` (el barco por defecto de un mundo) no lo guarda como elección.
@@ -867,6 +895,17 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             onZoneChange={setMinimapZone}
           />
           <NoticeToast shown={notices.current} rect={layout.notice} onDismiss={notices.dismiss} />
+          {talking ? (
+            <button
+              type="button"
+              className="juego-sr-only"
+              data-testid="bocadillo-cerrar"
+              aria-label="Cerrar diálogo"
+              onClick={() => gameRef.current?.skipDialogue()}
+            >
+              ×
+            </button>
+          ) : null}
           <CircuitTimer
             state={circuit.state}
             rect={{ x: layout.home.x, y: layout.home.y + layout.home.h + 6 }}

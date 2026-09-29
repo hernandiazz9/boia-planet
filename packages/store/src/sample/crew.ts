@@ -86,7 +86,7 @@ export const SAMPLE_CREW: SampleCrewMember[] = [
     },
     showcase: {
       points: 610,
-      achievementIds: ['primera-boia', 'boies-6', 'islas-3', 'entrada', 'fiestera-entregada'],
+      achievementIds: ['primera-boia', 'carnet', 'islas-3', 'entrada', 'fiestera-entregada'],
       stampEventIds: ['ev-finalizado'],
       cosmeticIds: ['bandera-fiestera', 'estela-naranja'],
     },

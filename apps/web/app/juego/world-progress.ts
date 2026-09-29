@@ -1,6 +1,7 @@
 import type { WorldEvent } from '@boia/engine';
 import type { Notice } from '@boia/engine/ui';
 import { type FoundDiscount, type ProgressApi, isStoreError } from '@boia/store';
+import { recordSignal } from './achievements';
 
 /**
  * Del mar al repositorio local (T20, D-20): lo que el motor emite (premios,
@@ -9,7 +10,8 @@ import { type FoundDiscount, type ProgressApi, isStoreError } from '@boia/store'
  * repite en la misma visita; el repositorio no repite nunca (las claves van
  * por id de lugar, así sobreviven a recargar y a cambiar de mundo).
  *
- * Los logros los concede T21; aquí sólo premios, descuentos y lugares.
+ * Los logros los completa `achievements.ts` (T21, T36); desde aquí salen las
+ * señales de los encuentros (el delfín) y del mundo en que se navega.
  */
 
 export interface ProgressContext {
@@ -104,6 +106,10 @@ export async function discoverPlace(
   ctx: ProgressContext,
 ): Promise<boolean> {
   const r = await progress.discover(`lugar:${placeId}`, { worldId: ctx.worldId });
+  // Llegar a un lugar es navegar en ese mundo (logro «Entre dos mundos»).
+  await recordSignal({ progress }, { trigger: 'visit_world', worldId: ctx.worldId }).catch(
+    (err: unknown) => console.warn('[boia] no se pudo apuntar el logro', err),
+  );
   return r.first;
 }
 
@@ -115,7 +121,19 @@ export async function discoveredPlaces(progress: ProgressApi): Promise<string[]>
     .map((k) => k.slice('lugar:'.length));
 }
 
-/** Premio de un encuentro de la web (delfín, remolino), idempotente por su origen. */
+/**
+ * El encuentro que termina un premio de encuentro: seguir al delfín hasta el
+ * final (`lugar:<id>:seguir`) es el encuentro `<id>`; el remolino no cuenta.
+ */
+export function encounterOf(sourceRef: string): string | null {
+  return /^lugar:([^:@]+):seguir$/.exec(sourceRef)?.[1] ?? null;
+}
+
+/**
+ * Premio de un encuentro de la web (delfín, remolino), idempotente por su
+ * origen, y la señal del logro del encuentro (aunque el premio de hoy ya se
+ * diera: el logro cuenta el encuentro terminado).
+ */
 export async function grantEncounter(
   progress: ProgressApi,
   sourceRef: string,
@@ -123,11 +141,22 @@ export async function grantEncounter(
   policy: 'once' | 'daily' | 'season',
 ): Promise<ProgressOutcome[]> {
   const r = await progress.grantWorldReward({ sourceRef, coins, policy });
-  if (!r.granted) return [];
-  return [
-    {
-      kind: 'notice',
-      notice: { id: `premio:${sourceRef}:${r.entry.id}`, kind: 'reward', title: rewardTitle('coins', coins) },
-    },
-  ];
+  const out: ProgressOutcome[] = r.granted
+    ? [
+        {
+          kind: 'notice',
+          notice: {
+            id: `premio:${sourceRef}:${r.entry.id}`,
+            kind: 'reward',
+            title: rewardTitle('coins', coins),
+          },
+        },
+      ]
+    : [];
+  const encounter = encounterOf(sourceRef);
+  if (encounter) {
+    const done = await recordSignal({ progress }, { trigger: 'complete_encounter', encounter });
+    out.push(...done.map((notice): ProgressOutcome => ({ kind: 'notice', notice })));
+  }
+  return out;
 }

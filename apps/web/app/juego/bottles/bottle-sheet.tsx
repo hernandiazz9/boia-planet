@@ -5,6 +5,7 @@ import { type ShipPose, findDropSpot } from '@boia/engine/bottles';
 import { type BoiaRepository, type BottleView, isStoreError } from '@boia/store';
 import type { WorldConfig } from '@boia/world';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { emitSignal } from '../achievements';
 import { useRepoData } from '../repo';
 
 /**
@@ -180,7 +181,10 @@ function MyBottle({
             return;
           }
           run(
-            () => repo.bottles.place({ message: text.trim(), x: spot.x, y: spot.y }),
+            () =>
+              repo.bottles
+                .place({ message: text.trim(), x: spot.x, y: spot.y })
+                .then((b) => emitSignal(repo, { trigger: 'throw_bottle', bottleId: b.id })),
             () => {
               setText('');
               onClose();
@@ -327,7 +331,10 @@ function FoundBottle({
   useEffect(() => {
     let alive = true;
     repo.bottles.read(id).then(
-      (b) => alive && setBottle(b),
+      (b) => {
+        if (!b.isMine) void emitSignal(repo, { trigger: 'read_bottle', bottleId: b.id });
+        if (alive) setBottle(b);
+      },
       () => alive && setBottle(null),
     );
     return () => {

@@ -209,7 +209,7 @@
   display: grid;
   gap: 2px;
   text-align: left;
-  padding: 12px 14px;
+  padding: 12px 46px 12px 14px;
   border: 0;
   border-left: 5px solid var(--orange);
   border-radius: 14px;
@@ -640,6 +640,130 @@
   color: var(--orange);
   font-weight: 800;
   font-size: 0.74rem;
+}
+
+/* El texto del bocadillo es su propio botón: tocarlo avanza. */
+.mar-bubble__text {
+  display: grid;
+  gap: 4px;
+  padding: 0 18px 0 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  line-height: inherit;
+}
+
+/* ---------- Cerrar (×): bocadillos y avisos (D-22) ---------- */
+
+.mar-x {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--indigo);
+  color: #fff !important;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgb(10 6 40 / 0.35);
+}
+
+.mar-x:active {
+  transform: scale(0.92);
+}
+
+.mar-bubble__x {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+}
+
+.mar-notices__x {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  pointer-events: auto;
+  border-color: transparent;
+  background: rgb(35 26 92 / 0.12);
+  color: var(--ink) !important;
+  box-shadow: none;
+}
+
+/* ---------- Botón «Entradas» (REQ-ENT-040) ----------
+   Siempre a mano: abajo en el centro, encima de la ficha si está abierta
+   (--lift), por encima del bocadillo y del joystick. */
+
+.mar-tickets {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 16px + var(--lift, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 7;
+  transition: bottom 0.25s ease;
+  pointer-events: none;
+}
+
+.mar-tickets > * {
+  pointer-events: auto;
+}
+
+.mar-tickets__btn {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-width: 132px;
+  min-height: 52px;
+  padding: 6px 20px;
+  border: 2px solid rgb(255 255 255 / 0.9);
+  border-radius: 26px;
+  background: linear-gradient(180deg, var(--orange-2), var(--orange));
+  color: #fff !important;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 20px rgb(242 106 27 / 0.35);
+  animation: mar-glow 2.4s ease-in-out infinite;
+}
+
+.mar-tickets__btn span {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.mar-tickets__btn small {
+  grid-column: 1 / -1;
+  max-width: 180px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mar-tickets__btn:active {
+  transform: scale(0.95);
+}
+
+.mar-tickets__skip {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--glass-strong);
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgb(10 6 40 / 0.3);
+  animation: mar-in 0.2s ease-out;
 }
 
 /* ---------- Ficha ---------- */
