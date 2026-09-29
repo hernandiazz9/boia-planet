@@ -291,3 +291,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T29 continuation agent aea36d2dd37067dc1 also stalled (600 s, stream watchdog) · WIP on worktree-agent-aea36d2dd37067dc1 (worktree kept) · asked Hernán
 - 2026-09-29 T29 attempt 3 (essentials, Hernán) · agent a14bec70134a4f16f · starts from worktree-agent-aea36d2dd37067dc1
 - 2026-09-29 13:27 T29 done · branch worktree-agent-a14bec70134a4f16f (attempts 1–2 worktrees removed) → 3ae9fa0
+- 2026-09-29 13:29 T30 launched · attempt 1 · agent aad7e5fb538b13c5e
+- 2026-09-29 15:55 T30 orphan (no activity since 13:34) · leftovers committed as 06ebc44 T30: WIP on worktree-agent-aad7e5fb538b13c5e · continuation (interrupted) agent a7a1ee88f42a08293
