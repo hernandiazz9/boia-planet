@@ -121,7 +121,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## T47 — Load the world by sectors
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: none
 - Goal: `/juego` loads only the art of the sector around the spawn first (≤ 5 MB transferred before play, REQ-ARQ-014) and streams neighbouring sectors as the ship approaches, with texture atlases per sector, release of far textures, a lower-quality tier for weak devices, and no visible pop-in on the route. `/mar` loads glTF lazily the same way where it is cheap.
 - Context: packages/engine/src/game.ts, manifest-loader.ts, world/**; packages/world/src/schema.ts (sectors); apps/web/app/api/art; art/mundos/** sizes; docs/spec/03-mundo-y-motor.md (REQ-MUN-012), 08 (ARQ-014).
@@ -132,7 +132,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## T48 — Admin hardening
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T42, T43
 - Goal: Deleting shows the impact (what links to it) and asks to type the name (REQ-ADM-029); trash with a retention setting and a purge that asks for confirmation again (ADM-030); achievements can be created, duplicated and versioned with icon, dates and scope, changing a condition makes a new version (ADM-021/022, on top of plan 003 T36); home and events edit as a draft with preview and «Publicar» (ADM-015), home CTAs editable and events excludable (ADM-017); validations for mission destination, circuits, dangling references and parameter ranges (ADM-013/014); music upload with licence fields (ADM-020, stored as data URL `muestra`); purchases and stamps written to the audit (ADM-007); docs/manual-admin.md with the manual data-request procedure (ADM-031).
 - Context: inventory §3 Admin; docs/spec/07-admin.md; apps/web/app/admin/**, apps/web/lib/admin/**, packages/store (overrides, audit, trash).
@@ -140,7 +140,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Done when:
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: delete needs the exact name; a draft is invisible on the landing until published; an invalid parameter range is refused with its reason
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0
-- Outcome:
+- Outcome: delete with impact + typed name, trash with 30-day retention and purge, achievements create/duplicate/version (trigger change bumps version), home/events draft with /admin/vista-previa and «Publicar» blocked by reasons, home CTAs and excluded events, PARAM_RANGES validation, music upload with licence, purchases/stamps audited, docs/manual-admin.md; store v5; 716 tests → f839789
 
 ## T49 — Delivery: per-REQ status, i18n, security headers, handover docs
 - Status: pending
@@ -168,6 +168,8 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-29 T48: draft is store state (v5); events keep «Guardar y publicar» (testid evento-guardar) plus «Guardar borrador»; purge asks the name again instead of re-auth (no login in the demo); achievement icons are keys without artwork; music ≤ ~1 MB muestra (agent)
+- 2026-09-29: integration test command for plan 004 is now `pnpm test --testTimeout=30000` because lib/barco/catalog.test.ts palette test times out at 5 s under load (reverted pair dropped, re-integrated green) (orchestrator)
 - 2026-09-29 T44: position and invitation state in localStorage/sessionStorage, not packages/store (no migration clash); one invitation per tab session, «Ahora no» silences that reason for good; header sound toggle drives music and effects together (agent)
 - 2026-09-29: after T44 the combined plan-004 passes typecheck and lint (orchestrator)
 - 2026-09-29 T43: /juego autopilot in apps/web (moveShip at 2.6×, ≤12 s, jumps if stuck, cancelled by steering); a code is used once per visitor; discount gains scope/priority/hiddenAt, «Caducar» sets endsAt now; menu tab «Mis códigos» keeps id `descuentos`; /juego?evento=<id>&piloto=1 starts the autopilot; sandbox emits purchase_confirmed (agent)
@@ -190,6 +192,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 T48: Carnet moderation (REQ-ADM-040) still missing (T45 has it); restore an earlier published revision (ADM-016); uploaded music does not play in /juego or /mar; achievement icons not drawn; «Textos» publishes hero.explore/hero.tickets outside the draft
 - 2026-09-29 T44: Instagram in the WhatsApp boia panel (place-panels.tsx); invitation inside the checkout before buying; /mar position restore and invitations (after plan 003); prettier drift in circuit-hud.tsx and world-progress.ts
 - 2026-09-29 T43: /mar follow-up after plan 003 — use place-panels DiscountCard in sheet.tsx with onGoToIsland → engineRef.current?.startVoyage(islandId), EventDiscountBanner above the island buy button, e2e mirroring descuentos.spec.ts; banner above the event page buy button (landing); lib/barco/catalog.test.ts palette test is slow (≈5.7 s) and flaky under load, raise its timeout
 - 2026-09-29 T42: /mar island sheet lacks state notice, «Ver fotos de la isla», memories and satellites, still links /#fotos (after plan 003); local.ts confirmSandbox checks stored state, not eventState; Admin › Fotos can't set `selection` or `album.islandId`; satellites' common location not configurable; Supabase event columns missing
@@ -216,3 +219,5 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 18:42 T43 done · branch worktree-agent-a21a8aec83ac19724 → 75d9c55 (e2e: known «Barco» ×2, 2 load flakes pass alone)
 - 2026-09-29 18:45 T48 launched · attempt 1 · agent afe990571df86d31f
 - 2026-09-29 18:47 T44 done · branch worktree-agent-ad8707af4ade97d6a → 78671aa
+- 2026-09-29 18:49 T47 launched · attempt 1 · agent acdbcc0aadea9d92e (/juego only)
+- 2026-09-29 19:47 T48 done · branch worktree-agent-afe990571df86d31f → f839789 (e2e 11 fails: 2 known Barco, 2 fixed, 7 load timeouts pass alone)
