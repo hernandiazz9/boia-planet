@@ -71,7 +71,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T19 — Acuarela world design and art (B02)
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T18
 - Goal: Design and produce the second world, Acuarela ilustrada, matching the B02 ship, on the SAME shared map as Arcilla (same place ids and positions, D-20): a story that fits the watercolour look and BOIA's Alicante roots (different from Arcilla, `muestra`), and for every place of the shared map its Acuarela identity — its own island look, landmark, name and story line (names of real coastal places of the world, except event/ticket islands, which keep their shared name), so the islands feel different while sitting on the same points. Write mundos/acuarela/diseno.md (story plus one entry per place id) following mundos/arcilla's structure, then render one skin per place id into `art/mundos/acuarela/<place-id>/` with manifests as in T18. No separate map.
 - Context: T18's Outcome and its pipeline changes; mundos/arcilla/** as the model; tools/blender/styles/02_acuarela_ilustrada.py; docs/barcos/barcos.json (B02: estilo, aspecto, paleta, notas_render); docs/spec/04-aventura.md.
@@ -80,7 +80,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - Blender `render.py -- --all` → exit 0 twice, byte-identical; `python3 tools/blender/check.py` → exit 0 listing every Acuarela manifest
   - mundos/acuarela/diseno.md covers every place id of the shared map, and every place id has an Acuarela skin (a script or check lists 0 missing)
   - A contact sheet of all Acuarela assets at game scale in docs/informes/img/ (path in the final message)
-- Outcome:
+- Outcome: Acuarela = painter's notebook on the night of Sant Joan (Explanada → Tabarca bonfire), 19 places / 116 images in art/mundos/acuarela/<place-id>/, real coastal names except `allday`; mundos/acuarela/diseno.md + herramientas/cobertura.py (0 missing); sheet p002-t19-hoja-acuarela.png → 0989c4c
 
 ## T22 — Mi Carnet and bottles
 - Status: done
@@ -223,6 +223,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T27: only the light is pre-rendered (17 angles per letter) and motion is computed in the browser, so the loop is seamless and tunable without re-rendering; letters use Blender's Inter font, orange faces and navy sides; swap.test.ts now skips art/ folders without their own manifest.json (agent)
 - 2026-09-29: the intro plays on every full load of `/` (not only the first visit); deep links and in-app navigation still skip it (Hernán) → T31
 - 2026-09-29 T31: campaign params (utm_*, fbclid, gclid, igsh…) still show the intro; browser Back to `/` without bfcache counts as a full load; also edited docs/spec/09-requisitos.md rows so check.py passes (agent)
+- 2026-09-29 T19: Acuarela story = Sant Joan night; places not in real coastal order; --all rendered into tools/blender/out to avoid rewriting 35 stale sources_sha256 lines outside scope (agent)
 
 ## Proposals (new scope)
 - 2026-09-29 T27: the title sheet is upscaled ~1.6× on 3× DPR phones; consider a 2× sheet; letters use Inter until BOIA's real wordmark font is provided
@@ -260,3 +261,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T31 launched · attempt 1 · agent a1a0db578c292eb82
 - 2026-09-29 PAUSED T20 and T19 again so T31 runs alone (Hernán: intro first). T20 WIP on worktree-agent-a9a8600bd7f3cc391, T19 WIP on worktree-agent-abbf91d7fdb9babc9; resume both with continuation agents after T31
 - 2026-09-29 02:56 T31 done · branch worktree-agent-a1a0db578c292eb82 → 3f9bd7b (Hernán checked it works)
+- 2026-09-29 03:00 merged origin/main (0e512c7 Vercel deploy fix) into local main; tests green
+- 2026-09-29 03:00 T20 continuation 2 · agent a1fcd6e146a666805 · merges worktree-agent-a9a8600bd7f3cc391
+- 2026-09-29 03:00 T19 continuation 2 · agent a3f0770e4a9a1e2c3 · merges worktree-agent-abbf91d7fdb9babc9
+- 2026-09-29 03:26 T19 done · branch worktree-agent-a3f0770e4a9a1e2c3 (3 attempts' worktrees removed) → 0989c4c
