@@ -58,7 +58,7 @@ test('Carnet → botella → recargar y encontrarla → leer una de muestra → 
   await expect(sheet).toBeHidden();
   await expect(nearby(page).filter({ hasText: 'Tu botella' })).toBeVisible({ timeout: 10_000 });
 
-  // Recarga: el barco vuelve a la salida y la botella sigue en el mar, a su lado.
+  // Recarga: el barco sigue donde estaba (T44) y la botella sigue en el mar, a su lado.
   await page.reload();
   await gameRunning(page);
   const own = nearby(page).filter({ hasText: 'Tu botella' });

@@ -1219,3 +1219,105 @@ html.panel-open {
   background: var(--line);
   color: var(--ink);
 }
+
+/* ---------- Accesos en barco, Mi Carnet, sonido e invitación del pie (T44) ----------
+   «Ir en barco» y el sonido necesitan JavaScript: sin él no se ven y la
+   sección (o el panel) sigue siendo el camino. `html.js` lo pone LandingClient. */
+
+.sail-link,
+.sound-toggle {
+  display: none;
+}
+
+.js .sail-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--violet);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.photos-all .sail-link {
+  margin-left: 16px;
+}
+
+.sail-row {
+  margin: 8px 0 0;
+}
+
+.js .sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sound-toggle[aria-pressed='false'] {
+  opacity: 0.75;
+}
+
+/* En la fila de escritorio, sólo el icono; en el menú móvil, con su nombre. */
+.sound-toggle--bar .sound-toggle__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.js .sound-toggle--bar {
+  display: none;
+}
+
+.js .sound-toggle--menu {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+}
+
+@media (min-width: 900px) {
+  .js .sound-toggle--bar {
+    display: inline-flex;
+  }
+}
+
+/* Con Mi Carnet e Instagram, la fila de escritorio aprieta un poco hasta 1100 px. */
+@media (min-width: 900px) and (max-width: 1099px) {
+  .site-header__links {
+    gap: 14px;
+  }
+}
+
+.footer-invite {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--orange);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.footer-invite__item {
+  margin: 0;
+}
+
+.footer-invite__item a {
+  color: var(--ink);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}

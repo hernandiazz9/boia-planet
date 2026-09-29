@@ -1,5 +1,6 @@
 import {
   canBuy,
+  commonIslandId,
   effectiveEvents,
   hasActivePromotion,
   isIslandlessSatellite,
@@ -174,6 +175,28 @@ export interface HomeView {
   artists: Artist[];
   /** ids de los eventos con compra disponible (`canBuy`). */
   buyable: string[];
+  /** Enlaces oficiales para cabecera y pie (REQ-ENT-032, O13); `null` si no hay. */
+  social: SocialLinks;
+  /**
+   * Isla a la que lleva «Ver su isla en el mar» del panel de Tickets (T44,
+   * REQ-ENT-034): la del evento destacado o, si no tiene (satélite), la
+   * localización común (O7).
+   */
+  ticketsIsland: string;
+}
+
+export interface SocialLinks {
+  instagram: string | null;
+  whatsapp: string | null;
+}
+
+/** Instagram y WhatsApp de los enlaces del pie y de contacto, por su nombre. */
+export function socialLinks(content: HomeContent): SocialLinks {
+  const links = content.blocks.flatMap((b) =>
+    b.type === 'footer' ? b.officialLinks : b.type === 'contact' ? b.links : [],
+  );
+  const find = (re: RegExp) => links.find((l) => re.test(l.label))?.url ?? null;
+  return { instagram: find(/instagram/i), whatsapp: find(/whatsapp/i) };
 }
 
 export function resolveHome(stored: HomeContent, now: Date): HomeView {
@@ -182,12 +205,15 @@ export function resolveHome(stored: HomeContent, now: Date): HomeView {
   const content: HomeContent = { ...stored, events: effectiveEvents(stored.events, now) };
   const resolved = (blocks: readonly HomeBlock[]) =>
     blocks.map((b) => resolveBlock(b, content, now)).filter((b): b is ResolvedBlock => b !== null);
+  const tickets = resolveTicketsPanel(content, now);
   return {
     main: resolved(content.blocks.filter((b) => b.type !== 'footer')),
     footer: resolved(content.blocks.filter((b) => b.type === 'footer')),
     sections: landingSections(content, now),
-    tickets: resolveTicketsPanel(content, now),
+    tickets,
     artists: content.artists,
     buyable: content.events.filter((e) => canBuy(e)).map((e) => e.id),
+    social: socialLinks(content),
+    ticketsIsland: tickets.featured?.islandId ?? commonIslandId(content.events, now),
   };
 }

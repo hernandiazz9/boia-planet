@@ -5,6 +5,7 @@ import '../juego/hud.css';
 import '../juego/carnet/carnet.css';
 import { CarnetCard } from '../juego/carnet/carnet-card';
 import { LOCAL_ONLY_NOTICE } from '../juego/carnet/carnet-editor';
+import { INVITE_COPY } from '../../lib/landing/invitations';
 import { useCarnet } from '../juego/carnet/use-carnet';
 
 /**
@@ -55,6 +56,10 @@ export function CarnetPage({ userId }: { userId: string | null }) {
             <Link className="juego-button" href="/juego?menu=carnet">
               Crear mi Carnet
             </Link>
+            {/* REQ-IDE-007 (T44): los límites del progreso local, antes de registrarse. */}
+            <p className="juego-muted" data-testid="aviso-progreso-local">
+              {INVITE_COPY.localLimit}
+            </p>
           </>
         )}
       </div>

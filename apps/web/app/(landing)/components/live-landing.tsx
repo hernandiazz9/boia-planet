@@ -30,7 +30,7 @@ export function LiveLanding({ initial, heroScene }: { initial: HomeView; heroSce
 
   return (
     <>
-      <SiteHeader sections={new Set(view.sections)} />
+      <SiteHeader sections={new Set(view.sections)} instagram={view.social.instagram} />
       <main id="contenido" tabIndex={-1} data-contenido={live ? 'repositorio' : 'muestra'}>
         <HomeBlocks
           blocks={view.main}
@@ -39,12 +39,18 @@ export function LiveLanding({ initial, heroScene }: { initial: HomeView; heroSce
           heroScene={heroScene}
         />
       </main>
-      <HomeBlocks blocks={view.footer} artists={view.artists} buyable={buyable} />
+      <HomeBlocks
+        blocks={view.footer}
+        artists={view.artists}
+        buyable={buyable}
+        social={view.social}
+      />
       <TicketsPanel
         featured={view.tickets.featured}
         others={view.tickets.others}
         onSale={view.tickets.onSale}
         nextAllDay={view.tickets.nextAllDay}
+        island={view.ticketsIsland}
         artists={view.artists}
         buyable={buyable}
       />

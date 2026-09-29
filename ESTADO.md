@@ -4,6 +4,32 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T44: la landing que te lleva en barco: accesos, cabecera, pie e invitaciones al Carnet
+
+Qué existe:
+- **Abrir /juego en un lugar** (`lib/world-handoff.ts`): `placeHref(lugar, { eventId })` → `/juego?ir=<lugar>[&evento=<id>]`, `readPlaceRequest`, `withoutPlaceRequest`. Es la entrada genérica «ir a la isla» (T43 puede usarla para las tarjetas de descuento).
+- **Llegada sin conducir** (`app/juego/arrival.ts`, REQ-ENT-034, REQ-AVE-022): con `?ir=`, el barco entra navegando 1,6 s (`ARRIVAL_RUN` 720 u, frena al final; una tecla o un toque lo saltan; con movimiento reducido aparece ya allí) hasta el punto seguro del lugar (al sur, fuera de todos sus radios: sin premios, visitas ni descubrimientos, REQ-ENT-039) y abre su panel: galería del Puerto de Fotos, escaparate de la tienda o el evento de la isla (el de `evento=` si existe, con la compra visible). Cerrar el panel deja el barco allí. Al llegar se quita `ir` de la URL: una recarga no repite el viaje. `approachPoint` (el de `?cerca=`) vive ahí ahora. `/juego` publica `data-barco="x,y"` y `data-llegada` (`navegando` o el id del lugar).
+- **Accesos de la landing**: el HTML sigue igual (Tickets abre su panel, Fotos y Tienda son secciones; sin JS nada cambia). Con JS aparece además «⛵ Ir en barco…»: en Fotos (junto a «Ver todas»), en Tienda y en el panel de Tickets («Ver su isla en el mar», a la isla del evento destacado o, si es un satélite sin isla, la localización común, `HomeView.ticketsIsland`). Es el sector navegable bajo demanda de REQ-ENT-038. Ids y textos en `lib/landing/access.ts`.
+- **Cabecera** (REQ-ENT-029, O13): Mi Carnet (`/carnet`), Instagram y el interruptor de sonido (`sound-toggle.tsx`, `lib/landing/sound-pref.ts`): apaga o enciende música y efectos a la vez en `boia.ajustes`, los ajustes de /juego y /mar; la landing no suena (O10). En móvil van en «Menú»; en escritorio, en la fila (el sonido como icono).
+- **Pie** (REQ-ENT-032): invitación voluntaria «¿Aún sin Carnet?… Crear mi Carnet» (`/juego?menu=carnet`) y «Entérate antes que nadie… Entrar en el WhatsApp» (URL `muestra` del bloque de contacto), sin formulario. Instagram sigue en los enlaces oficiales. `HomeView.social` saca Instagram y WhatsApp de los enlaces del contenido.
+- **Invitaciones al Carnet** (REQ-IDE-008/009): `lib/landing/invitations.ts` (lógica pura y textos de textos-zonas, zona 24), `app/juego/use-invitations.ts` y la tarjeta `app/juego/carnet/carnet-invite.tsx` (no modal, con «Crear mi Carnet» y «Ahora no», y el aviso de límites del progreso local, REQ-IDE-007). Momentos: tras una compra (en /juego y en la landing, al cerrar el checkout confirmado), al cerrar la galería del Puerto de Fotos, a los 5 minutos activos y a los 3 logros. Ritmo: nunca con Carnet; una por sesión de pestaña (`sessionStorage`); «Ahora no» se guarda en el dispositivo (`boia.carnet.invitaciones`) y ese motivo no vuelve; 5 min y 3 logros sólo una vez; nunca sobre carrera, diálogo, pago, panel, menú, minijuego ni llegada (esperan).
+- **Posición del barco** (REQ-IDE-004, `app/juego/ship-position.ts`): se guarda en `localStorage` (`boia.barco.posicion`, cada 2 s si se movió y al ocultar o salir) y se restaura con su rumbo al recargar /juego, al volver con Atrás o al volver sin recargar desde otra página; no al llegar desde EXPLORAR (sale del puerto) ni con `?ir=` o `?cerca=`. `moveShip` la deja siempre en agua navegable.
+- **Aviso de progreso local** (REQ-IDE-007): «Tu progreso se guarda sólo en este navegador…» en la invitación de Mi Carnet (menú), en `/carnet` sin Carnet y en cada tarjeta de invitación.
+- Pruebas: `invitations.test.ts` (una por sesión, «Ahora no» respetado, contexto nuevo, bloqueo, con Carnet), `ship-position.test.ts` (restaurada tras recargar, cuándo no), `arrival.test.ts` (en los dos mundos: Fotos → Puerto de Fotos con su galería, tienda, isla de evento, punto seguro fuera de los radios), `access.test.ts` (sonido compatible con `parseSettings`, enlaces oficiales, isla de Tickets); e2e `accesos.spec.ts` (Fotos desde la landing llega al Puerto de Fotos y abre la galería; invitación al cerrarla y «Ahora no»; Tickets → isla del evento; Tickets sin scroll a 360×640 con el CTA 3D; cabecera y pie; posición tras recargar).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0
+pnpm build                                 # exit 0; landing 188,9 kB gzip de 192 kB
+E2E_PORT=<libre> pnpm e2e --workers=2      # ver el informe de la tarea
+```
+
+Pendiente / para otros encargos:
+- Instagram en el panel de la boia de WhatsApp (O13): `app/juego/place-panels.tsx` lo toca T43; no se añadió.
+- `/mar` no restaura la posición ni tiene invitaciones (fuera de alcance mientras trabaja el plan 003).
+- La invitación «antes de continuar a comprar» dentro del checkout (texto `invite.purchase.skip`) no se hizo: el plan pide «después de una compra»; el checkout (`lib/ticketing/`) no cambia.
+- Los textos nuevos viven en `lib/landing/access.ts` e `invitations.ts` hasta que T49 los pase a i18n.
+
 ## 2026-09-29 — plan 004 T43: descuentos que llevan a su isla y se ven al comprar
 
 Qué existe:

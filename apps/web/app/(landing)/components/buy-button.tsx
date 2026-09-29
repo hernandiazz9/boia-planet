@@ -1,7 +1,7 @@
 'use client';
 
 import type { FunnelEventProps } from '@boia/contracts/analytics';
-import { type ComponentType, useEffect, useState } from 'react';
+import { type ComponentType, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { t } from '../../../lib/i18n';
 import type { SandboxCheckout } from '../../../lib/ticketing/checkout';
@@ -34,6 +34,9 @@ export function BuyButton({
 }) {
   const [Checkout, setCheckout] = useState<ComponentType<Parameters<Checkout>[0]> | null>(null);
   const [open, setOpen] = useState(false);
+  // Tras comprar, la invitación al Carnet (T44, REQ-IDE-008), cargada al cerrar.
+  const purchased = useRef(false);
+  const [Invite, setInvite] = useState<ComponentType<{ onDone: () => void }> | null>(null);
   const [failed, setFailed] = useState(false);
   // Sin JavaScript (o antes de hidratar) queda el enlace a la ticketera de
   // muestra, como antes (REQ-ENT-017); con JavaScript, la compra de prueba.
@@ -98,11 +101,24 @@ export function BuyButton({
             <Checkout
               eventId={eventId}
               carnet={{ href: CARNET_FROM_LANDING }}
-              onClose={() => setOpen(false)}
+              onConfirmed={() => {
+                purchased.current = true;
+              }}
+              onClose={() => {
+                setOpen(false);
+                if (!purchased.current) return;
+                purchased.current = false;
+                import('./purchase-invite')
+                  .then((m) => setInvite(() => m.PurchaseInvite))
+                  .catch((err: unknown) =>
+                    console.warn('[boia] no se pudo cargar la invitación al Carnet', err),
+                  );
+              }}
             />,
             document.body,
           )
         : null}
+      {Invite ? createPortal(<Invite onDone={() => setInvite(null)} />, document.body) : null}
     </>
   );
 }

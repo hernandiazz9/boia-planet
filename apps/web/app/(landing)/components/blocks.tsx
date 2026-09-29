@@ -2,9 +2,15 @@ import type { Artist } from '@boia/contracts';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
+import {
+  ACCESS_COPY,
+  CARNET_CREATE_HREF,
+  PHOTOS_SAIL_HREF,
+  STORE_SAIL_HREF,
+} from '../../../lib/landing/access';
 import { PHOTOS_HOME_COPY } from '../../../lib/landing/card-copy';
 import { t } from '../../../lib/landing/texts';
-import type { ResolvedBlock } from '../../../lib/landing/resolve';
+import type { ResolvedBlock, SocialLinks } from '../../../lib/landing/resolve';
 import { ArtistRotator } from './artist-rotator';
 import { BrandLogo } from './brand-logo';
 import { EventCard } from './event-card';
@@ -25,19 +31,43 @@ export function HomeBlocks({
   artists,
   buyable,
   heroScene,
+  social,
 }: {
   blocks: readonly ResolvedBlock[];
   artists: readonly Artist[];
   /** ids de los eventos con compra disponible. */
   buyable: ReadonlySet<string>;
   heroScene?: ReactNode;
+  /** WhatsApp para la invitación del pie (REQ-ENT-032). */
+  social?: SocialLinks | undefined;
 }) {
   return (
     <>
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} artists={artists} buyable={buyable} heroScene={heroScene} />
+        <BlockView
+          key={b.id}
+          block={b}
+          artists={artists}
+          buyable={buyable}
+          heroScene={heroScene}
+          social={social}
+        />
       ))}
     </>
+  );
+}
+
+/**
+ * «Ir en barco» (T44, REQ-ENT-034): la misma sección, en su isla del mar. Es
+ * un enlace normal a /juego; sin JavaScript no se ve (el mar lo necesita) y
+ * la sección sigue siendo el camino.
+ */
+function SailLink({ href, label, testId }: { href: string; label: string; testId: string }) {
+  return (
+    <a className="sail-link" href={href} data-testid={testId}>
+      <span aria-hidden="true">⛵ </span>
+      {label}
+    </a>
   );
 }
 
@@ -47,11 +77,13 @@ export function BlockView({
   artists,
   buyable,
   heroScene,
+  social,
 }: {
   block: ResolvedBlock;
   artists: readonly Artist[];
   buyable: ReadonlySet<string>;
   heroScene?: ReactNode;
+  social?: SocialLinks | undefined;
 }) {
   switch (block.type) {
     case 'hero':
@@ -258,6 +290,11 @@ export function BlockView({
               >
                 {PHOTOS_HOME_COPY.all}
               </Link>
+              <SailLink
+                href={PHOTOS_SAIL_HREF}
+                label={ACCESS_COPY.sailPhotos}
+                testId="fotos-en-barco"
+              />
             </p>
           </div>
         </section>
@@ -292,6 +329,13 @@ export function BlockView({
             >
               {t('store.cta')}
             </a>
+            <p className="sail-row">
+              <SailLink
+                href={STORE_SAIL_HREF}
+                label={ACCESS_COPY.sailStore}
+                testId="tienda-en-barco"
+              />
+            </p>
           </div>
         </section>
       );
@@ -335,6 +379,33 @@ export function BlockView({
             <p className="site-footer__brand">
               <BrandLogo size="footer" label={t('site.title')} />
             </p>
+            {/* Invitación voluntaria, sin formulario (REQ-ENT-032, T44). */}
+            <section
+              className="footer-invite"
+              aria-label={ACCESS_COPY.footerInviteLabel}
+              data-testid="pie-invitacion"
+            >
+              <p className="footer-invite__item">
+                {ACCESS_COPY.footerCarnet}{' '}
+                <a href={CARNET_CREATE_HREF} data-testid="pie-crear-carnet">
+                  {ACCESS_COPY.footerCarnetCta}
+                </a>
+              </p>
+              {social?.whatsapp ? (
+                <p className="footer-invite__item">
+                  {ACCESS_COPY.footerWhatsapp}{' '}
+                  <a
+                    href={social.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={ACCESS_COPY.whatsappAria}
+                    data-testid="pie-whatsapp"
+                  >
+                    {ACCESS_COPY.whatsappCta} ↗
+                  </a>
+                </p>
+              ) : null}
+            </section>
             {block.officialLinks.length > 0 && (
               <nav aria-label={t('footer.official')}>
                 <ul className="link-list link-list--inline">

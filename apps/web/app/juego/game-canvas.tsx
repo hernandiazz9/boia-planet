@@ -31,7 +31,7 @@ import {
   saveSettings,
 } from '@boia/engine/ui';
 import type { FoundDiscount } from '@boia/store';
-import { type ComposedWorld, type WorldObject, chooseWorld as chooseWorldIn } from '@boia/world';
+import { type ComposedWorld, chooseWorld as chooseWorldIn } from '@boia/world';
 import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SKIN_LABELS, type ShipCatalog } from '../../lib/barco/catalog';
@@ -40,7 +40,22 @@ import { track } from '../../lib/analytics';
 import { liveContent } from '../../lib/landing/live-content';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
-import { claimWorld, offerWorld } from '../../lib/world-handoff';
+import {
+  claimWorld,
+  offerWorld,
+  readPlaceRequest,
+  withoutPlaceRequest,
+} from '../../lib/world-handoff';
+import { type ArrivalPanel, approachPoint, planArrival, runArrival } from './arrival';
+import { CarnetInvite } from './carnet/carnet-invite';
+import {
+  SHIP_POSITION_SAVE_MS,
+  documentNavigationType,
+  movedEnough,
+  restoreShipPosition,
+  saveShipPosition,
+} from './ship-position';
+import { useCarnetInvitations } from './use-invitations';
 import {
   TIME_PLAYED_TICK_S,
   onAchievementNotices,
@@ -106,17 +121,17 @@ const progressApi = () => gameRepository().progress;
 
 /** `?cerca=<lugar>`: empezar junto a un lugar (pruebas y enlaces), al sur de él. */
 const NEAR_PARAM = 'cerca';
-/** u que se queda el barco fuera del radio del lugar al empezar a su lado. muestra */
-const NEAR_MARGIN = 140;
 
-/** Dónde empieza el barco con `?cerca=`: al sur del lugar, fuera de su radio. */
-function approachPoint(o: WorldObject): { x: number; y: number } {
-  const reach = Math.max(
-    o.geometry.proximityRadius ?? 0,
-    o.geometry.activation?.radius ?? 0,
-    o.geometry.collision?.radius ?? 0,
-  );
-  return { x: o.position.x, y: o.position.y + reach + NEAR_MARGIN };
+/** El juego ya arrancó en este documento: volver a /juego sin recargar sigue donde estaba. */
+let bootedInDocument = false;
+
+/** localStorage, si lo hay (la posición del barco vive en el dispositivo). */
+function deviceStore(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 /** Una visita = una carga de página: las recompensas «por sesión» vuelven en otra. */
@@ -210,6 +225,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [nearby, setNearby] = useState<readonly string[]>([]);
   const [bottleSheet, setBottleSheet] = useState<BottleSheetMode | null>(null);
   const [carnetOf, setCarnetOf] = useState<string | null>(null);
+  // Llegada a un lugar con `?ir=` (T44, REQ-ENT-034): el barco entra navegando y abre su panel.
+  const [arrival, setArrival] = useState<{ placeId: string; done: boolean } | null>(null);
+  const purchasedRef = useRef(false);
   const openMenu = (section?: string) => {
     setMenuInitial(section);
     setMenuOpen(true);
@@ -455,6 +473,26 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (!canvas) return;
     let cancelled = false;
     let g: Game | null = null;
+    let stopArrival: (() => void) | null = null;
+    /** El panel del lugar al que se llegó con `?ir=`: como si el barco lo hubiera abierto. */
+    const openArrivalPanel = (p: ArrivalPanel | null) => {
+      if (!p) return;
+      if (p.kind === 'event') {
+        setPlacePanel(null);
+        setTicketFor(p.eventId);
+        setPanel({ objectId: p.objectId, eventId: p.eventId });
+        if (trackerRef.current?.selectEvent(p.eventId)) {
+          setSelectedId(trackerRef.current.selected?.id ?? null);
+        }
+      } else {
+        setDiscountPanel(null);
+        setPlacePanel({
+          objectId: p.objectId,
+          target: p.target,
+          ...(p.ref ? { ref: p.ref } : {}),
+        });
+      }
+    };
 
     // EXPLORAR desde la landing (REQ-ENT-012): la escena llega ya en el
     // encuadre del puerto (T28) y su canvas se enseña al momento, mientras el
@@ -591,9 +629,40 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       const nearObject = near
         ? initial.config.objects.find((o) => o.identity.id === near && o.identity.active)
         : undefined;
+      // `?ir=<lugar>` (accesos de la landing, T44): entra navegando hasta el
+      // punto seguro del lugar y abre su panel, sin conducir (REQ-ENT-034).
+      const place = nearObject ? null : readPlaceRequest(window.location.search);
+      const plan = place
+        ? planArrival(initial.config.objects, place, (id) => !!findEvent(id))
+        : null;
+      const booted = bootedInDocument;
+      bootedInDocument = true;
       if (nearObject) {
         const p = approachPoint(nearObject);
         created.moveShip(p.x, p.y, -Math.PI / 2);
+      } else if (plan) {
+        setArrival({ placeId: plan.placeId, done: false });
+        const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        stopArrival = runArrival(
+          created,
+          plan,
+          () => {
+            setArrival({ placeId: plan.placeId, done: true });
+            openArrivalPanel(plan.panel);
+            // Una recarga sigue donde está el barco, sin repetir el viaje.
+            history.replaceState(history.state, '', withoutPlaceRequest(location.href));
+          },
+          { reducedMotion },
+        );
+      } else {
+        if (place) history.replaceState(history.state, '', withoutPlaceRequest(location.href));
+        // REQ-IDE-004: al recargar, el barco sigue donde estaba y con su rumbo.
+        restoreShipPosition(created, deviceStore(), {
+          navigationType: documentNavigationType(),
+          bootedBefore: booted,
+          handedOver: !!surface,
+          placeRequested: !!place,
+        });
       }
       // Acceso para pruebas desde la consola; no existe en producción.
       if (process.env.NODE_ENV !== 'production') {
@@ -607,6 +676,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
 
     return () => {
       cancelled = true;
+      stopArrival?.();
       gameRef.current = null;
       missionRef.current = null;
       missionHost.current = null;
@@ -633,6 +703,38 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     return () => window.clearInterval(id);
     // `notifyGranted` sólo encola avisos; basta con el motor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game]);
+
+  // REQ-IDE-004 (T44): posición y rumbo del barco, guardados en el dispositivo
+  // mientras se navega y al irse; una recarga los restaura (arranque, arriba).
+  useEffect(() => {
+    if (!game) return;
+    const store = deviceStore();
+    if (!store) return;
+    let last: { x: number; y: number; heading: number } | null = null;
+    const save = () => {
+      try {
+        const s = game.stats();
+        const now = { x: s.x, y: s.y, heading: s.heading };
+        if (!movedEnough(last, now)) return;
+        last = now;
+        saveShipPosition(store, now);
+      } catch {
+        // El motor ya no está: lo último guardado vale.
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') save();
+    };
+    const id = window.setInterval(save, SHIP_POSITION_SAVE_MS);
+    window.addEventListener('pagehide', save);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('pagehide', save);
+      document.removeEventListener('visibilitychange', onVisibility);
+      save();
+    };
   }, [game]);
 
   // Logros (T36): navegar en este mundo cuenta, y los avisos de las señales
@@ -812,6 +914,25 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (anyPanel) invalidateLap('panel');
   }, [anyPanel, invalidateLap]);
 
+  // Invitaciones al Carnet (T44, REQ-IDE-008/009): nunca sobre una carrera, un
+  // diálogo, el pago, un panel o la llegada a un lugar; esperan a que acaben.
+  const inviteBlocked =
+    anyPanel ||
+    talking ||
+    circuit.state.phase !== 'idle' ||
+    !!minigameOffer ||
+    !!carnetOf ||
+    (arrival !== null && !arrival.done);
+  const invitations = useCarnetInvitations({ running: !!game, blocked: inviteBlocked });
+  const inviteTrigger = invitations.trigger;
+  // Al cerrar la galería del Puerto de Fotos.
+  const galleryOpen = placePanel?.target === 'photos';
+  const wasGallery = useRef(false);
+  useEffect(() => {
+    if (wasGallery.current && !galleryOpen) inviteTrigger('gallery');
+    wasGallery.current = galleryOpen;
+  }, [galleryOpen, inviteTrigger]);
+
   const steerToEvent = (eventId: string) => {
     const t = trackerRef.current!;
     const ok = t.selectEvent(eventId);
@@ -911,6 +1032,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       data-mundo={world.id}
       data-mision={missionPhase ?? undefined}
       data-tripulante={missionPhase === 'aboard' ? 'a-bordo' : undefined}
+      // Dónde está el barco (u, redondeado) y a qué lugar llegó con `?ir=` (T44).
+      data-barco={ship ? `${Math.round(ship.x)},${Math.round(ship.y)}` : undefined}
+      data-llegada={arrival ? (arrival.done ? arrival.placeId : 'navegando') : undefined}
       style={{
         ...({
           '--mundo-acento': world.theme.ui.accent,
@@ -994,6 +1118,24 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             onZoneChange={setMinimapZone}
           />
           <NoticeToast shown={notices.current} rect={layout.notice} onDismiss={notices.dismiss} />
+          {invitations.reason && !inviteBlocked ? (
+            // Sobre la barra de botellas, fuera de la zona del joystick.
+            <CarnetInvite
+              reason={invitations.reason}
+              create={{
+                onCreate: () => {
+                  invitations.dismiss();
+                  openMenu('carnet');
+                },
+              }}
+              onLater={invitations.decline}
+              style={{
+                left: layout.notice.x,
+                width: layout.notice.w,
+                bottom: vp.height - bottleBarRect(vp).y + 8,
+              }}
+            />
+          ) : null}
           {talking ? (
             <button
               type="button"
@@ -1067,12 +1209,19 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       {checkoutFor ? (
         <SandboxCheckout
           eventId={checkoutFor}
-          onClose={() => setCheckoutFor(null)}
+          onClose={() => {
+            setCheckoutFor(null);
+            // Después de comprar, la invitación al Carnet (REQ-IDE-008).
+            if (purchasedRef.current) inviteTrigger('purchase');
+            purchasedRef.current = false;
+          }}
           onConfirmed={(o, s) => {
+            purchasedRef.current = true;
             for (const n of purchaseNotices(o, s.event.name)) notify(n);
           }}
           carnet={{
             onOpen: () => {
+              purchasedRef.current = false;
               setCheckoutFor(null);
               openMenu('carnet');
             },
@@ -1103,9 +1252,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         />
       ) : null}
       {carnetOf ? <CarnetSheet userId={carnetOf} onClose={() => setCarnetOf(null)} /> : null}
-      {celebration ? (
-        <Celebration key={celebration} onDone={() => setCelebration(0)} />
-      ) : null}
+      {celebration ? <Celebration key={celebration} onDone={() => setCelebration(0)} /> : null}
       {error && (
         <p style={{ position: 'absolute', bottom: 16, left: 16, right: 16, textAlign: 'center' }}>
           {error}

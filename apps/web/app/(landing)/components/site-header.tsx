@@ -1,5 +1,7 @@
+import { ACCESS_COPY, CARNET_PAGE } from '../../../lib/landing/access';
 import { t, type MessageKey } from '../../../lib/landing/texts';
 import { BrandLogo } from './brand-logo';
+import { SoundToggle } from './sound-toggle';
 
 const SECONDARY: ReadonlyArray<[MessageKey, string]> = [
   ['nav.artists', '#artistas'],
@@ -9,12 +11,46 @@ const SECONDARY: ReadonlyArray<[MessageKey, string]> = [
 ];
 
 /**
- * Cabecera fija: el logo (mascota y wordmark, T50), Tickets siempre a mano y el resto de accesos. En
- * móvil lo secundario va en un menú plegable que funciona sin JavaScript
- * (REQ-ENT-029). Mi Carnet y sonido llegan con sus encargos (T07, T05).
+ * Cabecera fija: el logo (mascota y wordmark, T50), Tickets siempre a mano y el
+ * resto de accesos, con Mi Carnet, el sonido del juego e Instagram (T44,
+ * REQ-ENT-029, O13). En móvil lo secundario va en un menú plegable que
+ * funciona sin JavaScript; el sonido sólo aparece con JavaScript.
  */
-export function SiteHeader({ sections }: { sections: ReadonlySet<string> }) {
+export function SiteHeader({
+  sections,
+  instagram = null,
+}: {
+  sections: ReadonlySet<string>;
+  /** Enlace oficial de Instagram (URL `muestra`, P15). */
+  instagram?: string | null;
+}) {
   const links = SECONDARY.filter(([, href]) => sections.has(href.slice(1)));
+  const items = (
+    <>
+      {links.map(([key, href]) => (
+        <li key={href}>
+          <a href={href}>{t(key)}</a>
+        </li>
+      ))}
+      <li>
+        <a href={CARNET_PAGE} data-testid="cabecera-carnet">
+          {ACCESS_COPY.carnet}
+        </a>
+      </li>
+      {instagram ? (
+        <li>
+          <a
+            href={instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={ACCESS_COPY.instagramAria}
+          >
+            {ACCESS_COPY.instagram} ↗
+          </a>
+        </li>
+      ) : null}
+    </>
+  );
   return (
     <header className="site-header">
       <a className="skip-link" href="#contenido">
@@ -25,28 +61,20 @@ export function SiteHeader({ sections }: { sections: ReadonlySet<string> }) {
           <BrandLogo />
         </a>
         <nav className="site-header__nav" aria-label={t('nav.label')}>
-          <ul className="site-header__links">
-            {links.map(([key, href]) => (
-              <li key={href}>
-                <a href={href}>{t(key)}</a>
-              </li>
-            ))}
-          </ul>
+          <ul className="site-header__links">{items}</ul>
+          <SoundToggle className="sound-toggle--bar" />
           <a className="button button--tickets-small" href="#tickets" data-tickets-open="header">
             {t('nav.tickets')}
           </a>
-          {links.length > 0 && (
-            <details className="site-header__menu">
-              <summary className="button button--ghost">{t('nav.menu')}</summary>
-              <ul className="site-header__menu-list">
-                {links.map(([key, href]) => (
-                  <li key={href}>
-                    <a href={href}>{t(key)}</a>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+          <details className="site-header__menu">
+            <summary className="button button--ghost">{t('nav.menu')}</summary>
+            <ul className="site-header__menu-list">
+              {items}
+              <li className="site-header__menu-sound">
+                <SoundToggle className="sound-toggle--menu" />
+              </li>
+            </ul>
+          </details>
         </nav>
       </div>
     </header>

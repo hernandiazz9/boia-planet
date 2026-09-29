@@ -8,6 +8,7 @@ import { CarnetEditor } from '../../carnet/carnet-editor';
 import { LOCAL_ONLY_NOTICE } from '../../carnet/carnet-editor';
 import { carnetPath } from '../../carnet/share';
 import { useCarnet } from '../../carnet/use-carnet';
+import { INVITE_COPY } from '../../../../lib/landing/invitations';
 import { useRepoData } from '../../repo';
 import type { MenuContext, MenuSection } from '../types';
 
@@ -56,6 +57,10 @@ function Carnet({ ctx }: { ctx: MenuContext }) {
           Crear mi Carnet
         </button>
         <p className="juego-muted">Sin email. {LOCAL_ONLY_NOTICE}</p>
+        {/* REQ-IDE-007 (T44): los límites del progreso local, antes de registrarse. */}
+        <p className="juego-muted" data-testid="aviso-progreso-local">
+          {INVITE_COPY.localLimit}
+        </p>
       </div>
     );
   }

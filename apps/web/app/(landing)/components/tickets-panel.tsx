@@ -1,4 +1,5 @@
 import type { Artist, BoiaEvent } from '@boia/contracts';
+import { ACCESS_COPY, ticketsSailHref } from '../../../lib/landing/access';
 import { t } from '../../../lib/landing/texts';
 import { EventCard } from './event-card';
 
@@ -15,6 +16,7 @@ export function TicketsPanel({
   artists,
   buyable,
   nextAllDay = null,
+  island,
 }: {
   featured: BoiaEvent | undefined;
   others: readonly BoiaEvent[];
@@ -23,6 +25,12 @@ export function TicketsPanel({
   buyable: ReadonlySet<string>;
   /** Para la línea «Calienta para el próximo All Day» de los satélites (O7). */
   nextAllDay?: { name: string; slug: string } | null;
+  /**
+   * Isla del evento destacado (o la localización común): «Ver su isla en el
+   * mar» abre /juego con el barco llegando allí y el panel con la compra
+   * (T44, REQ-ENT-034). Sin isla, el enlace lleva al mar a secas.
+   */
+  island?: string;
 }) {
   return (
     <section
@@ -75,8 +83,16 @@ export function TicketsPanel({
         )}
         {!onSale && <p className="tickets-panel__empty">{t('tickets.empty')}</p>}
         <p className="tickets-panel__invite">
-          <a href="/juego" data-track="explore_start" data-source="tickets_panel">
-            {t('tickets.islandInvite')}
+          {t('tickets.islandInvite')}{' '}
+          <a
+            className="sail-link"
+            href={island ? ticketsSailHref(island, featured?.id) : '/juego'}
+            data-track="explore_start"
+            data-source="tickets_panel"
+            data-testid="tickets-en-barco"
+          >
+            <span aria-hidden="true">⛵ </span>
+            {ACCESS_COPY.sailTickets}
           </a>
         </p>
       </div>
