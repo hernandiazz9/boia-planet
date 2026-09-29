@@ -60,6 +60,10 @@ function MapSvg({
   detailed: boolean;
   onSelect?: (id: string) => void;
 }) {
+  // Mientras el viewport cambia (rotar, teclado) el hueco puede quedar a 0 o
+  // menos un instante: un SVG con tamaño negativo da error en consola (T29).
+  w = Math.max(0, w);
+  h = Math.max(0, h);
   const p = minimapProjection(data.world.bounds, w, h, detailed ? 12 : 4);
   const minR = detailed ? 5 : 2.5;
   const byId = new Map(data.targets.map((t) => [t.id, t]));

@@ -35,11 +35,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm run build && pnpm exec next start --hostname 127.0.0.1 --port ${PORT}`,
+    // Un script de Node y no `pnpm … && pnpm exec next start`: así `next start`
+    // cae con Playwright y la suite termina sola (T29, `scripts/e2e-server.mjs`).
+    command: `node scripts/e2e-server.mjs ${PORT}`,
     url: BASE_URL,
     timeout: 240_000,
     reuseExistingServer: false,
     stdout: 'ignore',
     stderr: 'pipe',
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 5000 },
   },
 });

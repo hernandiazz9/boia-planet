@@ -2,7 +2,7 @@ import { bootScript } from '@boia/engine/intro';
 import type { Metadata } from 'next';
 import { t } from '../../lib/i18n';
 import { introCss, loadIntroData, stillCss } from '../../lib/intro/load';
-import { resolveBlock } from '../../lib/landing/resolve';
+import { resolveHome } from '../../lib/landing/resolve';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
 import { IntroStage } from './components/intro-stage';
 import { LandingClient } from './components/landing-client';
@@ -20,11 +20,11 @@ export default function LandingPage() {
   const content = SAMPLE_CONTENT;
   const now = new Date();
 
-  const main = content.blocks.filter((b) => b.type !== 'footer');
+  const view = resolveHome(content, now);
   // Entrada «mini-mundo» (T14, D-19): configuración, arte de la ilustración
   // ligera y geometría del mundo, leídos al construir la página.
   const intro = loadIntroData();
-  const hasHero = main.some((b) => b.type === 'hero' && resolveBlock(b, content, now) !== null);
+  const hasHero = view.main.some((b) => b.type === 'hero');
 
   return (
     <>
@@ -45,8 +45,7 @@ export default function LandingPage() {
         </>
       )}
       <LiveLanding
-        initial={content}
-        nowIso={now.toISOString()}
+        initial={view}
         heroScene={<IntroStage data={intro} skipLabel={t('intro.skip')} />}
       />
       <LandingClient />

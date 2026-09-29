@@ -7,7 +7,8 @@ import {
   coastAssets,
   worldToScreen,
 } from '@boia/world';
-import { Application, Container } from 'pixi.js';
+import type { Application} from 'pixi.js';
+import { Container } from 'pixi.js';
 import { BottleLayer } from './bottles/view';
 import { Camera } from './camera';
 import {
@@ -29,6 +30,7 @@ import {
   stepShip,
 } from './ship/controller';
 import { type CrewArt, ShipSprite } from './ship/view';
+import { newApplication } from './pixi-app';
 import { JoystickOverlay, WakeView } from './views';
 import { WakeSystem } from './wake';
 import { Water } from './water';
@@ -188,7 +190,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     app.resizeTo = canvas.parentElement ?? window;
     app.resize();
   } else {
-    app = new Application();
+    app = newApplication();
     await app.init({
       canvas,
       resizeTo: canvas.parentElement ?? window,

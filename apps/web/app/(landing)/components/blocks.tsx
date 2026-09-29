@@ -1,9 +1,9 @@
-import type { HomeBlock, HomeContent } from '@boia/contracts';
+import type { Artist } from '@boia/contracts';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
 import { t } from '../../../lib/landing/texts';
-import { resolveBlock, type ResolvedBlock } from '../../../lib/landing/resolve';
+import type { ResolvedBlock } from '../../../lib/landing/resolve';
 import { ArtistRotator } from './artist-rotator';
 import { EventCard } from './event-card';
 
@@ -11,55 +11,48 @@ import { EventCard } from './event-card';
 export const ARTISTS_PAGE = '/artistas';
 
 /**
- * Pinta un bloque de la home. Oculto, fuera de programación o sin contenido
- * útil: no pinta nada (ni contenedor vacío).
+ * Lista de bloques ya resueltos (`resolveHome`), en el orden configurado. Un
+ * bloque oculto, fuera de programación o sin contenido útil no llega aquí.
+ * Este módulo no resuelve nada: así la landing no carga zod ni los esquemas
+ * de `@boia/contracts` en su ruta crítica (T29).
  */
-export function Block({
-  block,
-  content,
-  now,
-  heroScene,
-}: {
-  block: HomeBlock;
-  content: HomeContent;
-  now: Date;
-  /** Escena del hero (entrada cinemática, T03). Sin ella, mar en CSS. */
-  heroScene?: ReactNode;
-}) {
-  const resolved = resolveBlock(block, content, now);
-  return resolved ? (
-    <ResolvedBlockView block={resolved} content={content} heroScene={heroScene} />
-  ) : null;
-}
-
-/** Lista de bloques en el orden configurado. */
 export function HomeBlocks({
   blocks,
-  content,
-  now,
+  artists,
+  buyable,
   heroScene,
 }: {
-  blocks: readonly HomeBlock[];
-  content: HomeContent;
-  now: Date;
+  blocks: readonly ResolvedBlock[];
+  artists: readonly Artist[];
+  /** ids de los eventos con compra disponible. */
+  buyable: ReadonlySet<string>;
   heroScene?: ReactNode;
 }) {
   return (
     <>
       {blocks.map((b) => (
-        <Block key={b.id} block={b} content={content} now={now} heroScene={heroScene} />
+        <BlockView
+          key={b.id}
+          block={b}
+          artists={artists}
+          buyable={buyable}
+          heroScene={heroScene}
+        />
       ))}
     </>
   );
 }
 
-function ResolvedBlockView({
+/** Pinta un bloque ya resuelto de la home. */
+export function BlockView({
   block,
-  content,
+  artists,
+  buyable,
   heroScene,
 }: {
   block: ResolvedBlock;
-  content: HomeContent;
+  artists: readonly Artist[];
+  buyable: ReadonlySet<string>;
   heroScene?: ReactNode;
 }) {
   switch (block.type) {
@@ -106,7 +99,8 @@ function ResolvedBlockView({
             </h2>
             <EventCard
               event={block.event}
-              artists={content.artists}
+              artists={artists}
+              buyable={buyable.has(block.event.id)}
               source="priority_event"
               featured
             />
@@ -129,7 +123,12 @@ function ResolvedBlockView({
             <ul className="card-grid">
               {block.events.map((e) => (
                 <li key={e.id}>
-                  <EventCard event={e} artists={content.artists} source="upcoming_events" />
+                  <EventCard
+                    event={e}
+                    artists={artists}
+                    buyable={buyable.has(e.id)}
+                    source="upcoming_events"
+                  />
                 </li>
               ))}
             </ul>

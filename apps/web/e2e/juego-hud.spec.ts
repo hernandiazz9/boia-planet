@@ -191,3 +191,24 @@ test('un logro sale como aviso arriba, de uno en uno', async ({ page }) => {
   // El primero es el logro de la boia; a los 4 s se va solo.
   await expect(page.locator('[data-kind="achievement"]')).toHaveCount(0, { timeout: 10_000 });
 });
+
+test('sin el botón de accesibilidad de Pixi y sin errores del minimapa al redimensionar', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  await openGame(page);
+  // El sistema de accesibilidad de Pixi mete en el body un <button> invisible
+  // que es parada del tabulador (en móvil); el motor lo quita (T29).
+  await expect(page.locator('button[title*="accessibility"]')).toHaveCount(0);
+
+  // Un viewport casi sin hueco no deja al minimapa con un SVG de tamaño negativo.
+  const vp = page.viewportSize()!;
+  await page.setViewportSize({ width: 40, height: 40 });
+  await page.waitForTimeout(300);
+  await page.setViewportSize(vp);
+  await expect(minimap(page)).toBeVisible();
+  expect(errors.filter((e) => /negative value/i.test(e))).toEqual([]);
+});

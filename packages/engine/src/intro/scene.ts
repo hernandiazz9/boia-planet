@@ -1,6 +1,7 @@
 import { type SeaPalette, type WorldConfig, coastAssets } from '@boia/world';
+import type {
+  Application} from 'pixi.js';
 import {
-  Application,
   Assets,
   Container,
   Geometry,
@@ -13,6 +14,7 @@ import {
   type UniformGroup,
 } from 'pixi.js';
 import type { GameSurface } from '../game';
+import { newApplication } from '../pixi-app';
 import { Water } from '../water';
 import { type ArtUrl, DEV_ART_URL, loadArt, manifestsOf } from '../world/assets';
 import { createWorldCoastView } from '../world/coast-view';
@@ -244,7 +246,7 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
     ),
   ]);
 
-  const app = new Application();
+  const app = newApplication();
   await app.init({
     canvas,
     width: opts.width,

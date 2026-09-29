@@ -119,3 +119,56 @@ export function resolveTicketsPanel(
   const onSale = others.length > 0 || (featured !== undefined && canBuy(featured));
   return { featured, others, onSale };
 }
+
+/** id de ancla de cada tipo de bloque, para enlazar sólo secciones que existen. */
+const ANCHORS: Partial<Record<string, string>> = {
+  artists: 'artistas',
+  philosophy: 'filosofia',
+  store: 'tienda',
+  photos: 'fotos',
+};
+
+/** Qué secciones de la cabecera existen con este contenido. */
+export function landingSections(content: HomeContent, now: Date): string[] {
+  return [
+    ...new Set(
+      content.blocks
+        .filter((b) => b.type !== 'footer')
+        .filter((b) => resolveBlock(b, content, now) !== null)
+        .map((b) => ANCHORS[b.type])
+        .filter((a): a is string => a !== undefined),
+    ),
+  ];
+}
+
+/**
+ * La home ya resuelta, lista para pintar: bloques visibles en su orden, pie,
+ * secciones de la cabecera, panel de Tickets y qué eventos se pueden comprar.
+ * El servidor la calcula con la muestra; el navegador sólo carga este módulo
+ * (y con él los esquemas de `@boia/contracts` y zod) cuando llega el contenido
+ * del repositorio, fuera de la ruta crítica de la landing (REQ-ARQ-014, T29).
+ */
+export interface HomeView {
+  main: ResolvedBlock[];
+  footer: ResolvedBlock[];
+  sections: string[];
+  tickets: { featured: BoiaEvent | undefined; others: BoiaEvent[]; onSale: boolean };
+  artists: Artist[];
+  /** ids de los eventos con compra disponible (`canBuy`). */
+  buyable: string[];
+}
+
+export function resolveHome(content: HomeContent, now: Date): HomeView {
+  const resolved = (blocks: readonly HomeBlock[]) =>
+    blocks
+      .map((b) => resolveBlock(b, content, now))
+      .filter((b): b is ResolvedBlock => b !== null);
+  return {
+    main: resolved(content.blocks.filter((b) => b.type !== 'footer')),
+    footer: resolved(content.blocks.filter((b) => b.type === 'footer')),
+    sections: landingSections(content, now),
+    tickets: resolveTicketsPanel(content, now),
+    artists: content.artists,
+    buyable: content.events.filter(canBuy).map((e) => e.id),
+  };
+}

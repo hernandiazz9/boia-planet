@@ -1,7 +1,7 @@
 'use client';
 
 import type { HomeContent } from '@boia/contracts';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { setTextOverrides } from './texts';
 
 /**
@@ -14,9 +14,9 @@ import { setTextOverrides } from './texts';
  * El repositorio se carga con `import()` cuando el navegador está libre, fuera
  * de la ruta crítica de la landing (REQ-ARQ-014).
  */
-export interface LiveHome {
-  content: HomeContent;
-  now: Date;
+export interface LiveHome<V> {
+  /** Lo que se pinta: la vista del servidor y, al llegar el repositorio, la derivada de él. */
+  view: V;
   /** Ya viene del repositorio (y no de la muestra del servidor). */
   live: boolean;
 }
@@ -36,12 +36,13 @@ function whenIdle(cb: () => void): () => void {
   return () => window.clearTimeout(id);
 }
 
-export function useLiveHome(initial: HomeContent, nowIso: string): LiveHome {
-  const [state, setState] = useState<LiveHome>(() => ({
-    content: initial,
-    now: new Date(nowIso),
-    live: false,
-  }));
+export function useLiveHome<V>(
+  initial: V,
+  derive: (content: HomeContent, now: Date) => V | Promise<V>,
+): LiveHome<V> {
+  const [state, setState] = useState<LiveHome<V>>(() => ({ view: initial, live: false }));
+  const deriveRef = useRef(derive);
+  deriveRef.current = derive;
 
   useEffect(() => {
     let alive = true;
@@ -53,9 +54,10 @@ export function useLiveHome(initial: HomeContent, nowIso: string): LiveHome {
           const repo = gameRepository();
           const read = async () => {
             const [content, texts] = await Promise.all([repo.content.home(), repo.content.texts()]);
+            const view = await deriveRef.current(content, new Date());
             if (!alive) return;
             setTextOverrides(texts);
-            setState({ content, now: new Date(), live: true });
+            setState({ view, live: true });
           };
           off = repo.subscribe(({ areas }) => {
             if (areas.includes('content')) void read();

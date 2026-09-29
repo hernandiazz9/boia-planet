@@ -12,7 +12,12 @@ const withState = (state: BoiaEvent['state']): BoiaEvent => ({ ...base, state })
 
 function card(event: BoiaEvent): string {
   return renderToStaticMarkup(
-    createElement(EventCard, { event, artists: SAMPLE_CONTENT.artists, source: 'tickets_panel' }),
+    createElement(EventCard, {
+      event,
+      artists: SAMPLE_CONTENT.artists,
+      buyable: canBuy(event),
+      source: 'tickets_panel',
+    }),
   );
 }
 

@@ -24,7 +24,7 @@ export default function ArtistsPage() {
         <p>
           <Link href="/#artistas">{t('artists.page.back')}</Link>
         </p>
-        <LiveArtists initial={SAMPLE_CONTENT} nowIso={new Date().toISOString()} />
+        <LiveArtists initial={SAMPLE_CONTENT.artists} />
       </div>
     </main>
   );

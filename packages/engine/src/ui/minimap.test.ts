@@ -69,6 +69,19 @@ describe('proyección del minimapa', () => {
     const b = worldToScreen({ x: right, y: bottom });
     expect(p.content.w / p.content.h).toBeCloseTo((b.x - a.x) / (b.y - a.y), 9);
   });
+
+  it('con un hueco menor que el margen (viewport cambiando) no da tamaños negativos', () => {
+    for (const [w, h] of [
+      [0, 0],
+      [3, 40],
+      [-4, -4],
+    ] as const) {
+      const p = minimapProjection(world.bounds, w, h);
+      expect(p.scale).toBeGreaterThanOrEqual(0);
+      expect(p.content.w).toBeGreaterThanOrEqual(0);
+      expect(p.content.h).toBeGreaterThanOrEqual(0);
+    }
+  });
 });
 
 describe('descubrimiento y brújula', () => {

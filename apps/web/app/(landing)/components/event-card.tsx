@@ -1,4 +1,4 @@
-import { canBuy, type Artist, type BoiaEvent } from '@boia/contracts';
+import type { Artist, BoiaEvent } from '@boia/contracts';
 import type { FunnelEventProps } from '@boia/contracts/analytics';
 import { formatEventDate, t, type MessageKey } from '../../../lib/landing/texts';
 import { BuyButton } from './buy-button';
@@ -8,12 +8,15 @@ type Source = FunnelEventProps['ticket_click_out']['source'];
 export function EventCard({
   event,
   artists,
+  buyable,
   source,
   headingLevel = 3,
   featured = false,
 }: {
   event: BoiaEvent;
   artists: readonly Artist[];
+  /** Compra disponible (`canBuy`, resuelto fuera: aquí no se carga `@boia/contracts`). */
+  buyable: boolean;
   source: Source;
   headingLevel?: 2 | 3;
   featured?: boolean;
@@ -46,7 +49,7 @@ export function EventCard({
           {lineup.join(' · ')}
         </p>
       )}
-      {canBuy(event) ? (
+      {buyable ? (
         // Versión de prueba (D-20): compra sandbox; un evento finalizado nunca llega aquí.
         <BuyButton
           eventId={event.id}

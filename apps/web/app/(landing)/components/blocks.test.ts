@@ -2,8 +2,9 @@ import type { HomeBlock, HomeContent } from '@boia/contracts';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { resolveBlock, resolveHome } from '../../../lib/landing/resolve';
 import { SAMPLE_CONTENT } from '../../../lib/landing/sample-content';
-import { Block, HomeBlocks } from './blocks';
+import { BlockView, HomeBlocks } from './blocks';
 
 // «Ahora» un día antes del primer evento de muestra: todos los listados están por venir.
 const firstListed = SAMPLE_CONTENT.events
@@ -12,8 +13,30 @@ const firstListed = SAMPLE_CONTENT.events
   .sort((a, b) => a - b)[0]!;
 const NOW = new Date(firstListed - 24 * 3600 * 1000);
 
+const buyableOf = (content: HomeContent) => new Set(resolveHome(content, NOW).buyable);
+
 function render(block: HomeBlock, content: HomeContent = SAMPLE_CONTENT, now = NOW): string {
-  return renderToStaticMarkup(createElement(Block, { block, content, now }));
+  const resolved = resolveBlock(block, content, now);
+  if (!resolved) return '';
+  return renderToStaticMarkup(
+    createElement(BlockView, {
+      block: resolved,
+      artists: content.artists,
+      buyable: buyableOf(content),
+    }),
+  );
+}
+
+/** Como la landing: resuelve la lista y pinta lo que queda. */
+function renderList(blocks: readonly HomeBlock[], content = SAMPLE_CONTENT): string {
+  const view = resolveHome({ ...content, blocks: [...blocks] }, NOW);
+  return renderToStaticMarkup(
+    createElement(HomeBlocks, {
+      blocks: [...view.main, ...view.footer],
+      artists: content.artists,
+      buyable: buyableOf(content),
+    }),
+  );
 }
 
 describe('renderizador de bloques de la home', () => {
@@ -43,9 +66,7 @@ describe('renderizador de bloques de la home', () => {
   it('la lista respeta el orden configurado y se salta los ocultos', () => {
     const [a, b, c] = SAMPLE_CONTENT.blocks.filter((x) => x.type !== 'hero');
     const blocks = [c!, { ...a!, visible: false }, b!];
-    const html = renderToStaticMarkup(
-      createElement(HomeBlocks, { blocks, content: SAMPLE_CONTENT, now: NOW }),
-    );
+    const html = renderList(blocks);
     expect(html).not.toContain(`data-block="${a!.id}"`);
     expect(html.indexOf(`data-block="${c!.id}"`)).toBeLessThan(
       html.indexOf(`data-block="${b!.id}"`),
@@ -61,13 +82,7 @@ describe('renderizador de bloques de la home', () => {
   });
 
   it('borradores y finalizados no salen en la home', () => {
-    const html = renderToStaticMarkup(
-      createElement(HomeBlocks, {
-        blocks: SAMPLE_CONTENT.blocks,
-        content: SAMPLE_CONTENT,
-        now: NOW,
-      }),
-    );
+    const html = renderList(SAMPLE_CONTENT.blocks);
     for (const e of SAMPLE_CONTENT.events.filter(
       (x) => x.state === 'draft' || x.state === 'finished',
     )) {

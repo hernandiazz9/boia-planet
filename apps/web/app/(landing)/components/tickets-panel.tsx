@@ -13,11 +13,13 @@ export function TicketsPanel({
   others,
   onSale,
   artists,
+  buyable,
 }: {
   featured: BoiaEvent | undefined;
   others: readonly BoiaEvent[];
   onSale: boolean;
   artists: readonly Artist[];
+  buyable: ReadonlySet<string>;
 }) {
   return (
     <section
@@ -43,14 +45,25 @@ export function TicketsPanel({
         {featured && (
           <div className="tickets-panel__featured">
             <p className="tickets-panel__kicker">{t('tickets.featured')}</p>
-            <EventCard event={featured} artists={artists} source="tickets_panel" featured />
+            <EventCard
+              event={featured}
+              artists={artists}
+              buyable={buyable.has(featured.id)}
+              source="tickets_panel"
+              featured
+            />
           </div>
         )}
         {others.length > 0 && (
           <ul className="tickets-panel__list">
             {others.map((e) => (
               <li key={e.id}>
-                <EventCard event={e} artists={artists} source="tickets_panel" />
+                <EventCard
+                  event={e}
+                  artists={artists}
+                  buyable={buyable.has(e.id)}
+                  source="tickets_panel"
+                />
               </li>
             ))}
           </ul>

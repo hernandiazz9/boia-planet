@@ -15,8 +15,9 @@
  *    juego. Al final entra encima el mundo vivo, en el mismo encuadre.
  */
 import { type WorldConfig } from '@boia/world';
+import type {
+  Application} from 'pixi.js';
 import {
-  Application,
   Container,
   Geometry,
   Mesh,
@@ -26,6 +27,7 @@ import {
 } from 'pixi.js';
 import { loadShipManifest } from '../manifest-loader';
 import { ShipSprite } from '../ship/view';
+import { newApplication } from '../pixi-app';
 import { Water } from '../water';
 import { loadArt, manifestsOf } from '../world/assets';
 import { createCoastView } from '../world/coast-view';
@@ -171,7 +173,7 @@ export async function createSphereProbe(opts: CreateSphereProbeOptions): Promise
   let v = view();
   let params = sphereProbeParams(world, v.width);
 
-  const app = new Application();
+  const app = newApplication();
   await app.init({
     canvas,
     width: v.width,

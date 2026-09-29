@@ -4,6 +4,30 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T29: pulido esencial, presupuesto de la landing y una suite e2e que termina sola
+
+Reducido a lo esencial tras dos intentos atascados. De sus ramas WIP se tomó sólo lo terminado y probado (landing, Playwright, minimapa); el sonido, WebKit, las specs de rendimiento y accesibilidad, el presupuesto de /juego y lo de `art/` se dejan fuera.
+
+Qué cambia:
+- Landing ≤ 192 kB gzip (`scripts/landing-budget.mjs`, presupuesto bajado de 1 MB a 192 kB; `pnpm build` falla si se pasa). El servidor resuelve la home (`resolveHome` en `lib/landing/resolve.ts`: bloques visibles, pie, secciones, panel de Tickets, ids comprables) y el cliente recibe esa vista ya resuelta; `resolve.ts` (y con él los esquemas de `@boia/contracts` y zod) sólo se carga con `import()` cuando llega el contenido del repositorio (`useLiveHome(initial, derive)`). `EventCard`, `HomeBlocks`, `TicketsPanel` reciben `buyable` en vez de llamar a `canBuy`. `/artistas` pasa sólo la lista de artistas.
+- Playwright termina solo: `webServer` corre `node scripts/e2e-server.mjs <puerto>` (`next build` y `next start` como hijos directos de Node, sin pnpm por medio; reenvía señales y se para si Playwright desaparece) con `gracefulShutdown` SIGTERM. Antes, pnpm dejaba el `next-server` fuera del grupo y Playwright esperaba por él.
+- Minimapa: `minimapProjection` nunca da escala negativa y `MapSvg` no pinta tamaños negativos (errores de SVG en consola al redimensionar).
+- Accesibilidad de Pixi apagada (`packages/engine/src/pixi-app.ts`, `newApplication()` en juego, entrada y prueba de la esfera): ya no mete el `<button>` invisible «select to enable accessibility…» que era parada del tabulador en móvil, ni activa capas con Tab en escritorio. `extensions.remove(AccessibilitySystem)` no sirve (el renderer lo recoge de la cola de extensiones al cargar su chunk, después), así que se anula `_createTouchHook` (privado de Pixi; si Pixi lo renombra, la e2e lo detecta) y `activateOnTab = false`.
+- Pruebas: `packages/engine/src/ui/minimap.test.ts` (huecos 0, menores que el margen y negativos), `blocks.test.ts` y `event-card.test.ts` adaptados, e2e nuevo en `juego-hud.spec.ts` (sin botón de accesibilidad de Pixi, sin errores «negative value» al pasar el viewport a 40×40 y volver).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint          # exit 0; 59 archivos, 579 pruebas
+pnpm build                                        # exit 0; landing 173,7 kB gzip de 192 kB
+E2E_PORT=3261 timeout 1500 pnpm e2e --workers=2   # exit 0; 85 pasadas, 15 omitidas (6,0 min); termina sola, sin next-server en el puerto
+```
+
+Desviaciones:
+- macOS no trae `timeout`: se usó un sustituto en Perl (mismo uso, sale con 124 si vence).
+
+Sin probar:
+- iOS Safari real (WebKit no está en la suite).
+
 ## 2026-09-29 — plan 002 T24: el mundo Acuarela en el juego y el cambio de mundo
 
 `/juego` tiene dos mundos terminados sobre el mismo mapa: Arcilla (B05, el por defecto) y Acuarela (B02). Se cambia desde el Menú («Mundos») o como mundo activo del Admin. Nombres, textos, colores e historia son `muestra` [pendiente Álvaro, preguntas en `mundos/acuarela/diseno.md`].
