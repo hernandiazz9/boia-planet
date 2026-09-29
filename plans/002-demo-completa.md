@@ -163,7 +163,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: /admin demo (no login, banner) with all L1 sections, rules in apps/web/lib/admin (validate, actions+audit, world overlay); spawn/port/intro point as reserved places mapa:salida/puerto/entrada; landing reads @boia/store (lazy import, landing critical path 201 kB); event↔island panels; active world in store + boia:mundo-activo → bc9ca58
 
 ## T28 — EXPLORAR reveals the port and starts the adventure there
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T20, T27
 - Goal: When EXPLORAR is pressed, the camera pulls back a little (less than the early versions) and reveals the port El Varadero with the ship in it, then hands the live scene to /juego (T12) with the ship at the port; the first boia and the path to the Boia Fiestera encounter are the first things met. The intro landing point and the port framing are config data per world. Deep links to /juego still start clean at the active world's port.
 - Context: T12 handoff (apps/web/lib/world-handoff.ts), T14/T27 intro, T20 Arcilla world (port, spawn ring), T17 registry; docs/spec/02-entrada-y-landing.md (REQ-ENT-012), D-20 point 6.
@@ -171,7 +171,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds a test that EXPLORAR ends with the ship at the active world's port
   - `pnpm e2e` → exit 0; the demo spec now checks the port is visible after EXPLORAR on mobile and desktop
-- Outcome:
+- Outcome: intro plays the active world with the Admin's landing/spawn/port points (2400 u map square on the sphere); arrival ×1.3/×1.45 then EXPLORAR pulls back to ×1 revealing El Varadero with the ship; /juego and direct links start at the port; per-world intro data in apps/web/lib/intro/worlds.ts; handed-over sea fix → 242649a
 
 ## T29 — Real-phone polish, sound and music
 - Status: pending
@@ -227,8 +227,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T20: e2e start next to places with ?cerca=<place> because the Arcilla map is too big to sail in test time; default ship is the world's own (arcilla); touched outside scope: apps/web/lib/repo.ts, lib/intro/load.ts, engine intro scene/sphere-probe, e2e specs (agent)
 - 2026-09-29 T26: «en todos los mundos» writes the name into each registered world (later worlds don't inherit); sea check copied into lib/admin/validate.ts (engine index loads Pixi); spring event island now `allday`; also edited juego game-canvas/place-panels so admin changes show in the world (agent)
 - 2026-09-29 T21: Fiestera asks for help at the crocodile radius (4.0) and boards at 2.6; she waits in the última isla niche (missionDrop); map trigger find_boia = catalogue find_buoy; time played logged every 15 s while visible; mission built from the Admin-edited world (agent)
+- 2026-09-29 T28: game runs at ×1 so the arrival is closer and EXPLORAR pulls back with no scale jump; ?mundo= carried from landing to /juego; reduced motion skips the pull-back; Acuarela uses the default intro data until it has its own (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T28: a saved themed ship skin shows as base during the intro then switches; give Acuarela its own intro framing
 - 2026-09-29 T21: «Seis boies» achievement unreachable (map has one boia trigger) — add 5 more boies to the shared map; Admin screen for the Fiestera destination of new games + audited migration (REQ-AVE-011) not built
 - 2026-09-29 T26: landing critical path is now 201 kB, over the 192 kB intro budget — T29 must bring it back under
 - 2026-09-29 T20: Playwright hangs on an orphaned next-server after the run on this machine; fix the webServer config; dolphin and whirlpool only unit-tested
@@ -278,3 +280,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 04:16 T26 done · branch worktree-agent-a66fcfe8f16ef5caf → bc9ca58
 - 2026-09-29 04:18 T28 launched · attempt 1 · agent a24eaf6fb4212430d
 - 2026-09-29 04:28 T21 done · branch worktree-agent-a8a239e3b0fba4d0a (1 conflict round) → 58bb656
+- 2026-09-29 05:21 T28 done · branch worktree-agent-a24eaf6fb4212430d (1 conflict round) → 242649a
