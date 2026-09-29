@@ -1,7 +1,11 @@
 /*
- * Landing de BOIA.PLANET. Colores y tipografía son `muestra` hasta que Álvaro
- * apruebe la identidad. Contraste AA comprobado con axe (texto navy sobre
- * naranja en el CTA: el blanco sobre naranja no llega a 4,5:1).
+ * Landing de BOIA.PLANET. Marca de Álvaro desde T50: naranja, azul y negro
+ * muestreados de art/marca/ (tokens --boia-* de globals.css), el logo
+ * (mascota y wordmark) y la display de los títulos (Titan One, provisional
+ * hasta la fuente de Álvaro). El mar y el espacio siguen siendo los de la
+ * escena. Contraste AA comprobado con axe: texto negro sobre naranja (el
+ * blanco sobre naranja no llega a 4,5:1) y, para texto naranja sobre el mar,
+ * el naranja de la mascota (--orange-text).
  */
 :root {
   --sea-deep: #0b1830;
@@ -12,7 +16,8 @@
   --ink: #ffffff;
   --ink-soft: #c9d4e6;
   --orange: var(--boia-orange);
-  --on-orange: var(--boia-navy);
+  --on-orange: var(--boia-black);
+  --orange-text: var(--boia-orange-bright);
   --violet: #b9a6ff;
   /* Mismos tonos que el motor: el mar del juego y el espacio de la entrada. */
   --water: #0f5f7d;
@@ -25,6 +30,46 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+/* La envoltura de (landing)/layout.tsx: sólo lleva la fuente de los títulos. */
+.landing-root {
+  display: contents;
+  --font-title: var(--font-display), var(--font-title-fallback);
+}
+
+/* ---------- Logo (T50) ---------- */
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 32px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.brand-logo__mascot,
+.brand-logo__wordmark {
+  display: block;
+  height: 1em;
+  background: center / contain no-repeat;
+}
+
+.brand-logo__mascot {
+  width: 1em;
+  background-image: url('./_marca/boia-mascota.svg');
+}
+
+/* El wordmark mide 620×173,5 (art/marca/logo/): a 0,72 de la mascota de alto. */
+.brand-logo__wordmark {
+  width: calc(0.72em * 620 / 173.5);
+  height: 0.72em;
+  background-image: url('./_marca/boia-wordmark.svg');
+}
+
+.brand-logo--footer {
+  font-size: 56px;
 }
 
 body {
@@ -143,10 +188,10 @@ body {
 }
 
 .site-header__brand {
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   text-decoration: none;
-  white-space: nowrap;
 }
 
 .site-header__nav {
@@ -404,9 +449,10 @@ html[data-intro='play'][data-intro-act='waiting'] .intro-loading {
   text-align: center;
   font-size: clamp(3rem, 17vw, 6.5rem);
   line-height: 1;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  color: var(--ink);
+  font-family: var(--font-title);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--orange);
   text-shadow: 0 2px 18px rgb(11 24 48 / 0.6);
   opacity: 0;
 }
@@ -545,8 +591,9 @@ html[data-intro='arrive'] .intro-overlay__links {
   margin: 0 0 12px;
   font-size: clamp(1.75rem, 7.5vw, 3.5rem);
   line-height: 1.08;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  font-family: var(--font-title);
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 .hero__positioning {
@@ -577,13 +624,14 @@ html[data-intro='arrive'] .intro-overlay__links {
   background: var(--orange);
   color: var(--on-orange);
   text-decoration: none;
-  box-shadow: 0 10px 30px rgb(242 106 27 / 0.35);
+  box-shadow: 0 10px 30px rgb(236 79 36 / 0.35);
   animation: cta-pulse 3s ease-in-out infinite;
 }
 
 .cta-explore__label {
   font-size: 1.25rem;
-  font-weight: 900;
+  font-family: var(--font-title);
+  font-weight: 400;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1.2;
@@ -699,6 +747,9 @@ html[data-intro='arrive'] .intro-overlay__links {
   margin: 0 0 16px;
   font-size: clamp(1.5rem, 5vw, 2.25rem);
   line-height: 1.15;
+  font-family: var(--font-title);
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 .section__lead {
@@ -906,7 +957,7 @@ html[data-intro='arrive'] .intro-overlay__links {
 }
 
 .philosophy__verb {
-  color: var(--orange);
+  color: var(--orange-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -986,6 +1037,10 @@ html[data-intro='arrive'] .intro-overlay__links {
 .site-footer__inner {
   display: grid;
   gap: 12px;
+}
+
+.site-footer__brand {
+  margin: 0 0 8px;
 }
 
 .site-footer__small {
@@ -1074,6 +1129,8 @@ html.panel-open {
 .tickets-panel__title {
   margin: 0;
   font-size: 1.5rem;
+  font-family: var(--font-title);
+  font-weight: 400;
 }
 
 .tickets-panel__title:focus {

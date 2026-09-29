@@ -5,6 +5,7 @@ import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
 import { t } from '../../../lib/landing/texts';
 import type { ResolvedBlock } from '../../../lib/landing/resolve';
 import { ArtistRotator } from './artist-rotator';
+import { BrandLogo } from './brand-logo';
 import { EventCard } from './event-card';
 
 /** Lista completa de artistas (v14 §18.1). */
@@ -316,6 +317,9 @@ export function BlockView({
       return (
         <footer className="site-footer" data-block={block.id}>
           <div className="section__inner site-footer__inner">
+            <p className="site-footer__brand">
+              <BrandLogo size="footer" label={t('site.title')} />
+            </p>
             {block.officialLinks.length > 0 && (
               <nav aria-label={t('footer.official')}>
                 <ul className="link-list link-list--inline">

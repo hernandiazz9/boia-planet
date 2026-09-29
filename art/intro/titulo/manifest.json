@@ -1,15 +1,16 @@
 {
   "id": "intro/titulo",
   "kind": "title-sheet",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "muestra",
   "license": "muestra interna",
   "text": "BOIA",
   "colors": {
-    "face": "#F26A1B",
-    "side": "#12233F",
-    "source": "docs/barcos/barcos.json › referencias.marca"
+    "face": "#EC4F24",
+    "side": "#36278A",
+    "source": "art/marca/boia-wordmark.jpg (cara) y art/marca/boia-mascota.jpg (cantos), medianas"
   },
+  "shape": "art/marca/boia-wordmark.svg",
   "images": {
     "png": "letras.png",
     "webp": "letras.webp"
@@ -39,40 +40,40 @@
   ],
   "pivot_doc": "centro de cada celda = centro de la letra en x y media mayúscula en y; ahí gira",
   "word": {
-    "width_px": 489.15,
-    "gap_px": 15.68
+    "width_px": 426.15
   },
   "letters": [
     {
       "char": "B",
       "row": 0,
-      "width_px": 103.23,
-      "center_px": 51.61
+      "width_px": 101.18,
+      "center_px": 50.59
     },
     {
       "char": "O",
       "row": 1,
-      "width_px": 146.86,
-      "center_px": 192.34
+      "width_px": 124.16,
+      "center_px": 173.73
     },
     {
       "char": "I",
       "row": 2,
-      "width_px": 42.37,
-      "center_px": 302.64
+      "width_px": 32.47,
+      "center_px": 267.22
     },
     {
       "char": "A",
       "row": 3,
-      "width_px": 149.65,
-      "center_px": 414.33
+      "width_px": 127.46,
+      "center_px": 362.42
     }
   ],
   "generator": {
     "scripts": [
-      "tools/blender/intro/titulo.py"
+      "tools/blender/intro/titulo.py",
+      "art/marca/boia-wordmark.svg"
     ],
-    "sources_sha256": "8f8681a48644e8679ba0a8d01556bdc1478a391e3392c9d9cea494efd41a150a",
+    "sources_sha256": "0f19cf987e6d814c671921aa6388a4e5458733ce86ada70263d04e24c96c8d19",
     "blender": "5.2.2 LTS",
     "engine": "CYCLES",
     "samples": 64,

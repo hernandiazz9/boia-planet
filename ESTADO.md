@@ -4,6 +4,31 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T50: marca de BOIA (letras del wordmark, logo, colores y tipografía)
+
+La identidad de Álvaro (inventario §6.8) aplicada a la entrada, la landing y el Admin. `/mar` no se toca (plan 003).
+
+Qué hay:
+- `tools/blender/intro/trazar_marca.py` (nuevo, Blender sólo para leer el JPG; numpy): calca `art/marca/boia-wordmark.jpg` y `boia-mascota.jpg` a SVG limpios (máscara por color, marching squares subpíxel, Douglas-Peucker, Bézier cúbicas con esquinas). Salida en `art/marca/`: `boia-wordmark.svg` (una `<path id>` por letra B, O, I, A; el que extruye Blender) y `boia-mascota.svg` (capas negro/naranja/azul/blanco), y en `art/marca/logo/` las variantes ligeras para la web (media escala, enteros, cúbicas relativas: 1,2 kB y 3,1 kB gzip). Determinista (dos corridas, mismos bytes).
+- Colores muestreados (mediana de cada color): naranja del wordmark `#EC4F24`, naranja de la mascota `#FF5219`, azul del gorro `#36278A`, trazo `#000000`. Tokens `--boia-orange`, `--boia-orange-bright`, `--boia-blue`, `--boia-black`, `--boia-white` en `apps/web/app/globals.css`; `--boia-navy` (#12233f) queda como color del mar/espacio de la escena, no de marca.
+- Título 3D de la entrada: `tools/blender/intro/titulo.py` v0.2.0 extruye las letras del SVG (antes, Inter de Blender) con la separación del wordmark; cara `#EC4F24`, cantos `#36278A`. Mismo pipeline, rejilla (17 guiñadas × 4 letras, celdas 184×176) y movimiento de T27; el manifiesto añade `shape` y el SVG entra en `generator.scripts` (su hash invalida la hoja si cambia). Sin cambios en `packages/engine` ni en `apps/web/lib/intro`.
+- Logo: `BrandLogo` (mascota + wordmark) en la cabecera (dentro del enlace «Ir al inicio», decorativo) y grande en el pie (nombrado «BOIA.PLANET»). Copias de `art/marca/logo/` en `apps/web/app/(landing)/_marca/`, pintadas por CSS; la prueba `brand-logo.test.ts` exige que sean idénticas a las de `art/marca/logo/`. Favicon `app/icon.svg` = mascota; `app/apple-icon.png` 180×180 (mascota sobre blanco, generada con sharp desde `art/marca/boia-mascota.svg`). Admin: la mascota delante de «BOIA · Admin», barra y enlaces en el azul del gorro, acento naranja, títulos en la display.
+- Tipografía de títulos: Titan One (SIL OFL, licencia en `apps/web/public/fonts/OFL-titan-one.txt`), subconjunto latino de Google Fonts (con tildes, ñ, ¿, ¡), 10,5 kB, en `apps/web/public/fonts/titan-one-latin.woff2`. La landing la carga con `next/font/local` en `(landing)/layout.tsx` (precarga; envoltura `display: contents` con la variable), el Admin con `@font-face` en `admin.css`. Hero, títulos de sección, panel de Tickets, «Explorar el universo» y el título plano de la entrada. Provisional hasta la fuente de Álvaro (P20).
+- Contraste: texto sobre naranja pasa a negro (5,7:1; el navy sobre el naranja nuevo daba 4,3:1) y el texto naranja sobre el mar usa el naranja de la mascota (4,8:1).
+- Capturas: `docs/informes/img/p004-t50-intro-letras.png` (wordmark original arriba, letras 3D abajo), `p004-t50-landing-logo.png` y variantes (`RECORD_MARCA=1 pnpm e2e record-marca.spec.ts --workers=1`; la composición de intro-letras se hizo con sharp: recorte 400×135 en (440, 20) de la captura de escritorio bajo el JPG del wordmark).
+
+Comandos:
+```
+Blender -b -P tools/blender/intro/trazar_marca.py      # art/marca/*.svg y art/marca/logo/*.svg
+Blender -b -P tools/blender/intro/titulo.py            # art/intro/titulo/ (~30 s)
+python3 tools/blender/intro/check_titulo.py --diff OTRA/RAIZ   # exit 0; byte a byte igual a una segunda corrida
+python3 tools/blender/check.py                         # exit 0; 55 manifiestos, 504 imágenes
+pnpm test && pnpm typecheck && pnpm lint && pnpm build # exit 0; 61 archivos, 588 pruebas; landing 185,2 kB (fuente incluida) + 4,3 kB de SVG del logo pedidos por CSS = 189,5 kB de 192 kB
+E2E_PORT=<libre> pnpm e2e --workers=2                  # exit 0; 93 pasan, 23 omitidas (grabaciones)
+```
+
+Nota: el script de presupuesto sólo suma lo que el HTML referencia; los SVG del logo los pide el CSS y se sumaron a mano. En una corrida con la máquina cargada fallaron por tiempo `despliegue.spec.ts` (analítica) y `mar-3d.spec.ts` en escritorio; solos y en la corrida final pasan.
+
 ## 2026-09-29 — plan 004 T38: decisión D-23, spec al día y los textos de todas las zonas
 
 Sólo documentos; no se toca código.

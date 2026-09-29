@@ -1,4 +1,5 @@
 import { t, type MessageKey } from '../../../lib/landing/texts';
+import { BrandLogo } from './brand-logo';
 
 const SECONDARY: ReadonlyArray<[MessageKey, string]> = [
   ['nav.artists', '#artistas'],
@@ -8,7 +9,7 @@ const SECONDARY: ReadonlyArray<[MessageKey, string]> = [
 ];
 
 /**
- * Cabecera fija: marca, Tickets siempre a mano y el resto de accesos. En
+ * Cabecera fija: el logo (mascota y wordmark, T50), Tickets siempre a mano y el resto de accesos. En
  * móvil lo secundario va en un menú plegable que funciona sin JavaScript
  * (REQ-ENT-029). Mi Carnet y sonido llegan con sus encargos (T07, T05).
  */
@@ -21,7 +22,7 @@ export function SiteHeader({ sections }: { sections: ReadonlySet<string> }) {
       </a>
       <div className="site-header__inner">
         <a className="site-header__brand" href="#inicio" aria-label={t('nav.home')}>
-          {t('site.title')}
+          <BrandLogo />
         </a>
         <nav className="site-header__nav" aria-label={t('nav.label')}>
           <ul className="site-header__links">

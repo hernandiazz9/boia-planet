@@ -1,6 +1,20 @@
+/*
+ * Marca BOIA (T50): colores muestreados de la marca de Álvaro (art/marca/,
+ * mediana de los píxeles de cada color; los mismos que tools/blender/intro/
+ * trazar_marca.py). Tipografía de títulos: Titan One (SIL OFL, public/fonts/),
+ * una display libre parecida al wordmark hasta que Álvaro mande la suya.
+ */
 :root {
-  --boia-orange: #f26a1b; /* muestra */
-  --boia-navy: #12233f; /* muestra */
+  --boia-orange: #ec4f24; /* naranja del wordmark: logo, botones, rellenos */
+  --boia-orange-bright: #ff5219; /* naranja del cuerpo de la mascota; texto naranja sobre el mar (4,8:1) */
+  --boia-blue: #36278a; /* azul del gorro de la mascota */
+  --boia-black: #000000; /* el trazo de la mascota; texto sobre naranja (5,7:1) */
+  --boia-white: #ffffff;
+  /* El mar y el espacio de la escena, no son de marca (la paleta de /mar la fija el plan 003). */
+  --boia-navy: #12233f;
+  /* Respaldo de la display mientras carga, o donde no se carga (las secciones definen --font-title:
+     la landing con next/font, el Admin en admin.css). */
+  --font-title-fallback: 'Arial Black', 'Arial Bold', system-ui, sans-serif;
   color-scheme: light;
 }
 

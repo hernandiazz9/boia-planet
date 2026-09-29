@@ -1,13 +1,15 @@
-"""Título «BOIA» de la entrada (acto 2, T27): letras 3D en una hoja de sprites.
+"""Título «BOIA» de la entrada (acto 2, T27; letras de la marca desde T50): letras 3D en una hoja de sprites.
 
     Blender -b -P tools/blender/intro/titulo.py                       # escribe art/intro/titulo/
     Blender -b -P tools/blender/intro/titulo.py -- --out OTRA/CARPETA  # p. ej. para comparar dos corridas
 
-Cada letra de «BOIA» es un texto de Blender extruido con bisel suave (fuente
-integrada de Blender, engrosada), en los colores de marca: cara naranja BOIA y
-cantos azul marino (docs/barcos/barcos.json, `muestra`). Se renderiza cada
-letra girada sobre su eje vertical (guiñada) de YAW_MIN a YAW_MAX en FRAMES
-pasos, con una luz fija: al girar, el bisel y la cara «atrapan» la luz.
+Cada letra de «BOIA» es la del wordmark de Álvaro, calcada a vectores en
+art/marca/boia-wordmark.svg (trazar_marca.py, una <path> por letra): la curva se
+extruye con bisel suave, cara naranja del wordmark y cantos del azul del gorro
+de la mascota (colores muestreados de art/marca/, T50). Se renderiza cada letra
+girada sobre su eje vertical (guiñada) de YAW_MIN a YAW_MAX en FRAMES pasos,
+con una luz fija: al girar, el bisel y la cara «atrapan» la luz. Las letras
+guardan el tamaño y la separación que tienen en el wordmark.
 
 Todo va en UN render: la cámara es ortográfica y la luz direccional, así que
 una copia de la letra desplazada en el plano de la imagen se ve igual que sola.
@@ -32,7 +34,9 @@ import math
 import os
 import struct
 import sys
+import re
 import time
+import xml.etree.ElementTree as ET
 import zlib
 
 import bmesh
@@ -45,21 +49,22 @@ REPO = os.path.dirname(os.path.dirname(BLENDER_DIR))
 sys.path.insert(0, BLENDER_DIR)
 
 ID = "intro/titulo"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 LICENSE = "muestra interna"
 TEXT = "BOIA"
 COMMAND = "Blender -b -P tools/blender/intro/titulo.py"
 
-# Colores de marca (muestra): los de docs/barcos/barcos.json › referencias.marca.
-ORANGE = "#F26A1B"
-NAVY = "#12233F"
+# Las letras: el wordmark vectorizado (trazar_marca.py), una <path id="B|O|I|A"> por letra.
+WORDMARK = os.path.join(REPO, "art", "marca", "boia-wordmark.svg")
+# Colores de marca muestreados de art/marca/ (T50): naranja del wordmark y azul del gorro de la mascota.
+ORANGE = "#EC4F24"
+BLUE = "#36278A"
+COLOR_SOURCE = "art/marca/boia-wordmark.jpg (cara) y art/marca/boia-mascota.jpg (cantos), medianas"
 
-# Geometría de la letra, en unidades de Blender (la altura de la mayúscula mide CAP).
-EXTRUDE = 0.16            # media profundidad del bloque
-BEVEL = 0.045             # bisel suave
+# Geometría de la letra, en unidades de Blender (1 unidad = alto de la «I» del wordmark).
+EXTRUDE = 0.15            # media profundidad del bloque
+BEVEL = 0.04              # bisel suave
 BEVEL_RES = 4
-OFFSET = 0.035            # engrosado del contorno de la fuente
-GAP = 0.14                # hueco entre letras en la palabra, fracción de CAP
 
 # Giro (guiñada) de cada columna de la hoja.
 FRAMES = 17
@@ -165,18 +170,50 @@ def canonical(bm):
     bm.normal_update()
 
 
-def letter_mesh(ch, scene, cap):
+def read_wordmark(path):
+    """{letra: [contorno]} del SVG; cada contorno es una lista de (punto, asa de entrada, asa de salida)
+    en px del SVG (y hacia abajo). El SVG sólo lleva M, C y Z absolutos (lo escribe trazar_marca.py)."""
+    ns = {"s": "http://www.w3.org/2000/svg"}
+    out = {}
+    for el in ET.parse(path).getroot().iterfind(".//s:path", ns):
+        loops = []
+        for sub in re.findall(r"M[^M]*", el.get("d")):
+            nums = [float(v) for v in re.findall(r"-?\d+(?:\.\d+)?", sub)]
+            start, segs = tuple(nums[:2]), [nums[i:i + 6] for i in range(2, len(nums), 6)]
+            pts = [start] + [tuple(c[4:6]) for c in segs]
+            if pts[-1] == pts[0]:
+                pts.pop()
+            n = len(pts)
+            # El segmento k va de pts[k] a pts[k+1]: su primera asa sale de pts[k] y la segunda entra en pts[k+1].
+            loops.append([(pts[k], tuple(segs[k - 1][2:4]), tuple(segs[k][0:2])) for k in range(n)])
+        out[el.get("id")] = loops
+    return out
+
+
+def letter_mesh(ch, scene, loops, cap, mid_y):
     """Malla de una letra, de pie (cara hacia -Y), con el origen en el centro de su caja en x y en
-    media mayúscula en z. Devuelve (mesh, ancho en unidades)."""
-    cu = bpy.data.curves.new("txt_" + ch, "FONT")
-    cu.body = ch
-    cu.size = 1.0
+    media «I» en z. Devuelve (mesh, x0, x1): la caja en x en unidades del wordmark (x del SVG / cap)."""
+    cu = bpy.data.curves.new("wm_" + ch, "CURVE")
+    cu.dimensions = "2D"
+    cu.fill_mode = "BOTH"
     cu.extrude = EXTRUDE
     cu.bevel_depth = BEVEL
     cu.bevel_resolution = BEVEL_RES
-    cu.offset = OFFSET
-    cu.resolution_u = 6
-    cu.align_x = "LEFT"
+    cu.offset = -BEVEL            # el bisel crece hacia fuera: así la silueta es la del wordmark
+    cu.resolution_u = 8
+
+    def co(p):
+        return (p[0] / cap, -(p[1] - mid_y) / cap, 0.0)
+
+    for loop in loops:
+        sp = cu.splines.new("BEZIER")
+        sp.bezier_points.add(len(loop) - 1)
+        for bp, (p, hin, hout) in zip(sp.bezier_points, loop):
+            bp.handle_left_type = bp.handle_right_type = "FREE"
+            bp.co = co(p)
+            bp.handle_left = co(hin)
+            bp.handle_right = co(hout)
+        sp.use_cyclic_u = True
     ob = bpy.data.objects.new("tmp_" + ch, cu)
     scene.collection.objects.link(ob)
     bpy.context.view_layer.update()
@@ -190,38 +227,28 @@ def letter_mesh(ch, scene, cap):
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5)
     xs = [v.co.x for v in bm.verts]
     x0, x1 = min(xs), max(xs)
-    s = 1.0 / cap
-    # De pie: el plano del texto (XY) pasa a XZ, con la cara (+Z del texto) mirando a -Y.
-    m = Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-(x0 + x1) / 2, -cap / 2, 0.0)))
-    m = Matrix.Rotation(math.radians(90.0), 4, "X") @ m
+    # De pie: el plano de la curva (XY) pasa a XZ, con la cara (+Z) mirando a -Y.
+    m = Matrix.Rotation(math.radians(90.0), 4, "X") @ Matrix.Translation(Vector((-(x0 + x1) / 2, 0.0, 0.0)))
     bm.transform(m)
     canonical(bm)
-    # Cara y bisel delantero en naranja; cantos y trasera en azul marino.
+    # Cara y bisel delantero en naranja; cantos y trasera en azul. También va en naranja lo que está en
+    # la mitad delantera del bisel: en las esquinas más cerradas que el bisel (las de la «I») el
+    # contorno encogido se pliega y deja caras vueltas que, por la normal, saldrían azules.
+    front = -(EXTRUDE + BEVEL / 2)
     for f in bm.faces:
-        f.material_index = 0 if -f.normal.y > 0.42 else 1
+        f.material_index = 0 if -f.normal.y > 0.42 or f.calc_center_median().y < front else 1
         f.smooth = True
     for e in bm.edges:
         e.smooth = not (len(e.link_faces) == 2 and e.calc_face_angle(0.0) > math.radians(50))
     bm.to_mesh(me)
     bm.free()
-    return me, (x1 - x0) * s
+    return me, x0, x1
 
 
-def cap_height(scene):
-    """Altura de la mayúscula de la fuente integrada (la de la «I»), sin bisel ni engrosado."""
-    cu = bpy.data.curves.new("cap", "FONT")
-    cu.body = "I"
-    ob = bpy.data.objects.new("cap", cu)
-    scene.collection.objects.link(ob)
-    bpy.context.view_layer.update()
-    dg = bpy.context.evaluated_depsgraph_get()
-    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
-    zs = [v.co.y for v in me.vertices]
-    h = max(zs) - min(zs)
-    bpy.data.objects.remove(ob)
-    bpy.data.curves.remove(cu)
-    bpy.data.meshes.remove(me)
-    return h
+def cap_of(loops):
+    """(alto, y del centro) de la «I» del wordmark, en px del SVG: la unidad de la letra."""
+    ys = [p[1] for loop in loops for p, _, _ in loop]
+    return max(ys) - min(ys), (max(ys) + min(ys)) / 2
 
 
 def rewrite_png(src, dst):
@@ -244,6 +271,15 @@ def rewrite_png(src, dst):
     with open(dst, "wb") as f:
         f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
                 + chunk(b"IDAT", raw) + chunk(b"IEND", b""))
+
+
+def sources_sha256(paths):
+    """Huella del script y del wordmark juntos (check_titulo.py la recalcula en el mismo orden)."""
+    h = hashlib.sha256()
+    for p in paths:
+        with open(p, "rb") as f:
+            h.update(f.read())
+    return h.hexdigest()
 
 
 def camera_basis():
@@ -280,7 +316,11 @@ def build(out_dir):
     rows, cols = len(TEXT), FRAMES
     W, H = cols * CELL_W, rows * CELL_H
     setup_render(scene, W, H)
-    cap = cap_height(scene)
+    shapes = read_wordmark(WORDMARK)
+    missing = [ch for ch in TEXT if ch not in shapes]
+    if missing:
+        raise SystemExit("%s: faltan las letras %s" % (rel(WORDMARK), missing))
+    cap, mid_y = cap_of(shapes["I"])
     ppu = float(CAP_PX)                     # px por unidad (1 unidad = una mayúscula)
     right, up, forward = camera_basis()
 
@@ -300,14 +340,14 @@ def build(out_dir):
     add_lights(scene)
 
     face = material("cara", ORANGE, 0.3, 0.6)
-    side = material("canto", NAVY, 0.42, 0.55)
+    side = material("canto", BLUE, 0.42, 0.55)
 
     letters = []
     for r, ch in enumerate(TEXT):
-        me, width = letter_mesh(ch, scene, cap)
+        me, x0, x1 = letter_mesh(ch, scene, shapes[ch], cap, mid_y)
         me.materials.append(face)
         me.materials.append(side)
-        letters.append({"char": ch, "row": r, "width_units": width})
+        letters.append({"char": ch, "row": r, "x0": x0, "x1": x1})
         for c in range(cols):
             yaw = YAW_MIN + (YAW_MAX - YAW_MIN) * c / (cols - 1)
             ob = bpy.data.objects.new("L%d_%02d" % (r, c), me)
@@ -339,14 +379,14 @@ def build(out_dir):
     img.save_render(webp, scene=scene)
     dt = time.perf_counter() - t0
 
-    # Posición de cada letra en la palabra (px de la hoja), con su ancho a guiñada 0 y un hueco fijo.
-    x = 0.0
+    # Posición de cada letra en la palabra (px de la hoja), la del wordmark: desde la primera tinta.
+    left = letters[0]["x0"]
     for L in letters:
-        w = L.pop("width_units") * ppu
-        L["width_px"] = round(w, 2)
-        L["center_px"] = round(x + w / 2, 2)
-        x += w + GAP * ppu
-    word_w = x - GAP * ppu
+        x0, x1 = L.pop("x0"), L.pop("x1")
+        L["width_px"] = round((x1 - x0) * ppu, 2)
+        L["center_px"] = round(((x0 + x1) / 2 - left) * ppu, 2)
+    last = letters[-1]
+    word_w = last["center_px"] + last["width_px"] / 2
 
     manifest = {
         "id": ID,
@@ -355,7 +395,8 @@ def build(out_dir):
         "status": "muestra",
         "license": LICENSE,
         "text": TEXT,
-        "colors": {"face": ORANGE, "side": NAVY, "source": "docs/barcos/barcos.json › referencias.marca"},
+        "colors": {"face": ORANGE, "side": BLUE, "source": COLOR_SOURCE},
+        "shape": rel(WORDMARK),
         "images": {"png": "letras.png", "webp": "letras.webp"},
         "sheet": {"width": W, "height": H, "rows": rows, "cols": cols, "cell": [CELL_W, CELL_H]},
         "frames": {"count": cols, "yaw_deg": [YAW_MIN, YAW_MAX],
@@ -364,11 +405,11 @@ def build(out_dir):
         "cap_px": CAP_PX,
         "pivot_px": [CELL_W / 2, CELL_H / 2],
         "pivot_doc": "centro de cada celda = centro de la letra en x y media mayúscula en y; ahí gira",
-        "word": {"width_px": round(word_w, 2), "gap_px": round(GAP * ppu, 2)},
+        "word": {"width_px": round(word_w, 2)},
         "letters": letters,
         "generator": {
-            "scripts": [rel(os.path.abspath(__file__))],
-            "sources_sha256": hashlib.sha256(open(os.path.abspath(__file__), "rb").read()).hexdigest(),
+            "scripts": [rel(os.path.abspath(__file__)), rel(WORDMARK)],
+            "sources_sha256": sources_sha256([os.path.abspath(__file__), WORDMARK]),
             "blender": bpy.app.version_string,
             "engine": ENGINE,
             "samples": SAMPLES,
