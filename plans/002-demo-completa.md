@@ -174,7 +174,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: intro plays the active world with the Admin's landing/spawn/port points (2400 u map square on the sphere); arrival ×1.3/×1.45 then EXPLORAR pulls back to ×1 revealing El Varadero with the ship; /juego and direct links start at the port; per-world intro data in apps/web/lib/intro/worlds.ts; handed-over sea fix → 242649a
 
 ## T29 — Essential polish: landing budget and a test suite that exits
-- Status: running (attempt 3)
+- Status: done
 - Depends on: T21, T23, T24, T25, T26, T28
 - Goal: Reduced by Hernán to the essentials after two stalled attempts: (1) bring the landing critical path back to ≤ 192 KB gzip (T26 left it at 201 kB, mostly from loading @boia/store on the landing); (2) make the Playwright suite exit by itself (it waits on an orphaned `next-server` from its webServer after every run); (3) if cheap, the two small known bugs: the minimap's negative-size SVG errors on resize and Pixi's hidden accessibility button being a tab stop. Keep whatever the previous attempts already finished if it is sound and tested; drop unfinished pieces rather than half-ship them.
 - Context: the two WIP branches of previous attempts (worktree-agent-aea36d2dd37067dc1 includes worktree-agent-aac637bda18065e4d); apps/web/** (landing, playwright config), packages/engine/** (minimap, Pixi setup).
@@ -183,10 +183,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
   - `pnpm build` → landing critical path ≤ 192 KB gzip (report the number)
   - `timeout 1500 pnpm e2e --workers=2` (free E2E_PORT) → exit 0 and the process ends by itself, with no next-server left on that port
-- Outcome:
+- Outcome: landing 173.7 kB gzip (server computes the home, store/zod load lazily), scripts/e2e-server.mjs + gracefulShutdown so the suite exits by itself (85 e2e passed in 6 min), 192 kB check in landing-budget.mjs, minimap clamp, Pixi hidden a11y button removed → 3ae9fa0
 
 ## T30 — Final demo pass and deploy preparation
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T15, T29
 - Goal: One last end-to-end pass of the whole test version and everything Hernán needs to deploy it himself on Vercel: build without any env var, `vercel.json` or project settings if needed, `/api/art` and art served correctly in production, analytics off without key, a README section «Desplegar la versión de prueba» with the exact commands (`vercel` / `vercel --prod`), and a demo guide in ESTADO.md: what to try, in order, on a phone. Fix small glue gaps found on the way.
 - Context: every Outcome of this plan; D-04 (Vercel), D-16 (art from the repo); apps/web/**.
@@ -230,6 +230,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T28: game runs at ×1 so the arrival is closer and EXPLORAR pulls back with no scale jump; ?mundo= carried from landing to /juego; reduced motion skips the pull-back; Acuarela uses the default intro data until it has its own (agent)
 - 2026-09-29 T24: restos/cofres/botellas/delfín keep common names in Acuarela; accent = B02 hull blue; menu icons 34 px to fit nine at 360 px; Acuarela intro entry = Arcilla's (shared map) (agent)
 - 2026-09-29 T29: after two stalled attempts Hernán reduced it to the essentials (landing ≤ 192 KB, Playwright exits by itself, small minimap/Pixi a11y bugs); real-phone perf, WebKit, iOS quirks, sound and music moved to Proposals (Hernán)
+- 2026-09-29 T29: attempt 3 cherry-picked only finished WIP pieces; dropped sound, WebKit, perf/a11y/ios specs; Pixi a11y fixed by replacing its private _createTouchHook and activateOnTab=false (agent)
 
 ## Proposals (new scope)
 - 2026-09-29 (from T29): real-phone perf budget with CPU ×4 + WebKit project, texture atlases/lazy loading per sector, iOS Safari quirks (audio unlock, context loss, safe areas, 100vh), Instagram in-app, sound SFX and one music loop per world, 2× title sheet for 3× DPR
@@ -288,3 +289,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 05:28 T29 launched · attempt 1 · agent aac637bda18065e4d
 - 2026-09-29 T29 agent stalled (no progress 600 s) · WIP 5e405aa on worktree-agent-aac637bda18065e4d · continuation (interrupted) agent aea36d2dd37067dc1
 - 2026-09-29 T29 continuation agent aea36d2dd37067dc1 also stalled (600 s, stream watchdog) · WIP on worktree-agent-aea36d2dd37067dc1 (worktree kept) · asked Hernán
+- 2026-09-29 T29 attempt 3 (essentials, Hernán) · agent a14bec70134a4f16f · starts from worktree-agent-aea36d2dd37067dc1
+- 2026-09-29 13:27 T29 done · branch worktree-agent-a14bec70134a4f16f (attempts 1–2 worktrees removed) → 3ae9fa0
