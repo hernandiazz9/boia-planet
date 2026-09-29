@@ -49,7 +49,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## T41 — World switch through a black hole
-- Status: running (attempt 1)
+- Status: done
 - Depends on: none
 - Goal: Inventory §1.4: switching world (menu «Mundos», Admin active world) plays a vortex: the sea and islands spiral into a black hole centred on the ship (~1 s), the screen goes dark, and the new world unfolds outwards from the same point (~1 s) with every place where it was; the ship keeps its position, progress, mission and open links. Only renders, names and dialogues change (the world is a skin). Works in /juego (Pixi: displacement/twirl filter or a shader on the stage) and /mar (three.js: post-process or camera+scene twist); reduced motion uses a 300 ms crossfade; input is locked during the transition and released after; no double world, no leaked textures (old world assets released).
 - Context: packages/engine/src/game.ts (setWorld), apps/web/app/juego/menu/sections/mundos.tsx, apps/web/app/juego/world-switch.test.ts, apps/web/app/mar/engine/mar3d.ts, apps/web/lib/admin (active world); D-20.7.
@@ -58,7 +58,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: after the transition the ship position and every place position are unchanged; switching twice quickly ends in the last chosen world with one scene
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; a spec switches world in /juego and /mar and checks the same place is at the same screen spot before and after
   - A short recording p004-t41-agujero-negro.webm (or a 6-frame strip .png) in docs/informes/img/
-- Outcome:
+- Outcome: vortex into a black hole centred on the ship in /juego (packages/engine/src/transition: timeline, switcher, GLSL vortex-view), waits for the new world sector art (T47 streamer), 300 ms crossfade with reduced motion, input locked, menu «Mundos» and Admin active world (other tab) trigger it; /mar pending → aea4663
 
 ## T42 — Events and photos: event page, «Fotos y eventos», island state, satellites
 - Status: done
@@ -98,7 +98,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: «⛵ Ir en barco…» from Tickets/Fotos/Tienda to /juego?ir=<island> (glide to a safe point, panel opens; HTML paths unchanged), placeHref/readPlaceRequest in lib/world-handoff.ts, header Mi Carnet + sound toggle + Instagram, footer invitations, Carnet invitations with pacing, ship position restored (browser storage, no store migration); 696 tests; landing 188.9 kB → 78671aa
 
 ## T45 — Local ranking, Carnet moderation, six boies, dolphin, island shortcut, Fiestera destination
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T39 (boia art), T38 (texts)
 - Goal: Ranking (inventory §1.8): the «Ranking» section works locally: points ranking (all-time and current world/season) of this browser's visitor among the `muestra` crew, own position highlighted, each row opens that Carnet, labelled «Ranking local de este navegador». Carnet moderation (O9): «Reportar» on public Carnets, Admin Moderación lists reported Carnets and can hide an answer or photo or reset the nickname, audited. Six boies (O12): five informative boies on the shared map along the first route, with per-world texts from textos-zonas.md, counted by the «X/6» achievement. Dolphin (O15): appears beside the ship every 2–4 min in open sea, guides a few seconds towards something undiscovered, then leaves. Island shortcut: on later visits the island panel offers «Explorar la isla» (REQ-AVE-013). Fiestera destination: an Admin screen to set the destination of new games per world, with a preview of how many started games it affects and an audited migration; publishing a mission without destination is refused (REQ-AVE-010/011). Secrets use T39's marker art.
 - Context: inventory §2 O9/O12/O15, §3; docs/spec/04-aventura.md, 05-identidad-y-comunidad.md, 07-admin.md; packages/world/src/worlds/** (map.ts, skins), packages/engine/src/world/** (encounters, runtime), packages/engine/src/mission/**, packages/store (crew sample, carnet, reports), apps/web/app/juego/menu/sections/ranking.tsx, apps/web/app/carnet/**, apps/web/app/admin/**; plan 002 T21 notes.
@@ -107,7 +107,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; `pnpm world:check` → exit 0; adds tests: ranking order and own position; a reported Carnet appears in moderation and hiding is audited; the six boies achievement is reachable on the map; a mission without destination is refused
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; specs: ranking shows the visitor; reporting a Carnet and hiding it from Admin
   - Screenshots p004-t45-ranking.png and p004-t45-boia-info.png
-- Outcome:
+- Outcome: local ranking (all-time/season, muestra crew), Carnet report + Admin moderation (hide answer/photo, reset nickname, audited), five info boies on the shared map with mascot art, secrets with T39 marker, dolphin guide beside the ship, «Explorar la isla» on later visits, per-world Fiestera destination with impact preview and audited migration; store v6; /mar pending → 89a974b
 
 ## T46 — Sound, wake and controls feel
 - Status: done
@@ -168,6 +168,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-30: T41 and T45 agents stalled (600 s watchdog) after committing their work clean; the machine had load ~57 (unit tests only failed by timeout). Integrated as orphans once load dropped: both merged green, then typecheck, lint and world:check pass (orchestrator)
 - 2026-09-29: main merged into plan-004 again (plan 003 T33, T34, its own «T50» compact /mar world); conflicts in ESTADO.md and engine ship/controller.test.ts (both sides added describe blocks) resolved by keeping both; tests, typecheck, lint green. Note: plan 003 also used the id T50, different from this plan's T50 (brand) (orchestrator)
 - 2026-09-29 T46: fps box stays in the DOM hidden (specs use it); sensitivity as module state (setControlSensitivity) since game.ts was off limits; wake infers turn/boost/impact from motion (agent)
 - 2026-09-29 T47: atlases generated (gitignored) at dev/build/e2e, fallback to per-PNG if generation fails; sharp borrowed from Next; long moves freeze ≤2.5 s until art loads; createGame takes start/preload; STREAM_TUNING muestra (agent)
@@ -195,6 +196,8 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-30 T41: /mar vortex as a three.js ShaderPass reusing SwitchTimeline.pose(); Admin in the same tab does not trigger the vortex; «Entre dos mundos» notice shows while dark
+- 2026-09-30 T45: /mar info boies, dolphin guide and «Explorar la isla»; ranking/report copy in constants until T49; boia talking frame unused
 - 2026-09-29 T46: /mar follow-up — installAudioLifecycle + setAmbientWorld in mar-client.tsx, whoosh on turbo, bump + splash in mar3d.ts/effects.ts; declared animations not played yet (object-view.ts); Game.setSensitivity and impact through game.ts; Admin-uploaded music still not played
 - 2026-09-29 T47: /mar lazy glTF by distance reusing @boia/engine/streaming (after plan 003); pack the ship's 8 views into a WebP atlas (~700 kB per world); Fiestera crew art as separate PNGs; memory not measured on a minimum device
 - 2026-09-29 T48: Carnet moderation (REQ-ADM-040) still missing (T45 has it); restore an earlier published revision (ADM-016); uploaded music does not play in /juego or /mar; achievement icons not drawn; «Textos» publishes hero.explore/hero.tickets outside the draft
@@ -233,3 +236,4 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 20:24 main merged into plan-004 (plan 003 T33, T34, T50) · tests/typecheck/lint pass
 - 2026-09-29 20:27 T41 launched · attempt 1 · agent aa35c1d521a60042d (/juego only)
 - 2026-09-29 22:17 PAUSED (usage limit). T45 (agent a0ef37ddb695c2396) and T41 (agent aa35c1d521a60042d) still finishing e2e reruns in their worktrees; on resume treat them as orphans (section 7): integrate with --status-file ESTADO.md and test 'pnpm test --testTimeout=30000'. Pending: T40 (after plan 003), T49 (last). Phone preview: next start :3450 + cloudflared tunnel
+- 2026-09-30 00:51 RESUMED · T41 orphan (stalled, committed clean) → aea4663 · T45 orphan (stalled, committed clean) → 89a974b
