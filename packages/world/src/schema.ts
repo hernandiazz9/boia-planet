@@ -28,6 +28,12 @@ export type Rect = z.infer<typeof Rect>;
 export const WorldBounds = Rect;
 export type WorldBounds = Rect;
 
+/**
+ * Porción del mapa que se carga bajo demanda (REQ-MUN-012, T47): cada objeto
+ * es del primer sector que contiene su posición (o del más cercano), y el
+ * motor pide el atlas de un sector cuando entra en la precarga
+ * (`packages/engine/src/world/sectors.ts`). Sin sectores, todo el mapa es uno.
+ */
 export const Sector = z.object({
   id: z.string().min(1),
   name: z.string().min(1),

@@ -1,7 +1,7 @@
 import { type CoastArt, type Rect, artFrames, worldToScreen } from '@boia/world';
 import { Container, Graphics, Sprite, type Texture, TilingSprite } from 'pixi.js';
 import { drawCoasts } from '../views';
-import { type LoadedArt, loadTextures } from './assets';
+import { type FrameLoader, type LoadedArt, loadFrames } from './assets';
 
 /** u de tierra que se pintan más allá de los límites. */
 const FAR = 4000;
@@ -21,6 +21,7 @@ export async function createCoastView(
   bounds: Rect,
   coast: LoadedArt | undefined,
   artScale: number,
+  load: FrameLoader = loadFrames,
 ): Promise<Container> {
   const variants = coast?.manifest.tile?.variants;
   const sides = variants ? Object.values(variants) : [];
@@ -35,7 +36,7 @@ export async function createCoastView(
 
   try {
     for (const v of sides) {
-      const [texture] = await loadTextures(coast.baseUrl, [v.file]);
+      const [texture] = await load(coast, [v.file]);
       if (!texture) continue;
       fill = hex(v.outer_fill);
       const edge = v.land_side === 'left' ? bounds.left : bounds.right;
@@ -84,9 +85,10 @@ export async function createWorldCoastView(
   coast: CoastArt | undefined,
   art: ReadonlyMap<string, LoadedArt>,
   artScale: number,
+  load: FrameLoader = loadFrames,
 ): Promise<Container> {
   if (!coast) return drawCoasts(bounds);
-  if (coast.asset) return createCoastView(bounds, art.get(coast.asset), artScale);
+  if (coast.asset) return createCoastView(bounds, art.get(coast.asset), artScale, load);
   const get = (id: string | undefined) => (id ? art.get(id) : undefined);
   const sides = {
     west: get(coast.west),
@@ -97,17 +99,17 @@ export async function createWorldCoastView(
   };
   if (!sides.west && !sides.east && !sides.south) return drawCoasts(bounds);
   try {
-    return await createStripCoastView(bounds, sides, artScale);
+    return await createStripCoastView(bounds, sides, artScale, load);
   } catch (err) {
     console.warn('[boia] costas sin arte; se dibujan por código', err);
     return drawCoasts(bounds);
   }
 }
 
-async function stillTexture(a: LoadedArt): Promise<Texture | null> {
+async function stillTexture(a: LoadedArt, load: FrameLoader): Promise<Texture | null> {
   const file = artFrames(a.manifest).files[0];
   if (!file) return null;
-  const [t] = await loadTextures(a.baseUrl, [file]);
+  const [t] = await load(a, [file]);
   return t ?? null;
 }
 
@@ -128,6 +130,7 @@ export async function createStripCoastView(
     cornerEast?: LoadedArt | undefined;
   },
   artScale: number,
+  load: FrameLoader = loadFrames,
 ): Promise<Container> {
   const view = new Container();
   const land = new Graphics();
@@ -144,7 +147,7 @@ export async function createStripCoastView(
   let southLine = bottom;
   let southFill = 0xb7aa97;
   const s = sides.south?.manifest.strip;
-  const sTex = sides.south && s ? await stillTexture(sides.south) : null;
+  const sTex = sides.south && s ? await stillTexture(sides.south, load) : null;
   if (s && sTex) {
     southFill = hex(s.outer_fill);
     const tileTop = bottom - s.collision_px * artScale;
@@ -169,7 +172,7 @@ export async function createStripCoastView(
   for (const side of ['west', 'east'] as const) {
     const a = sides[side];
     const strip = a?.manifest.strip;
-    const tex = a && strip ? await stillTexture(a) : null;
+    const tex = a && strip ? await stillTexture(a, load) : null;
     if (!strip || !tex) continue;
     const fill = hex(strip.outer_fill);
     const edge = side === 'west' ? bounds.left : bounds.right;
@@ -179,7 +182,7 @@ export async function createStripCoastView(
     // La esquina, con el pivote en el cruce de las dos líneas de costa.
     let end = southLine;
     const c = side === 'west' ? sides.cornerWest : sides.cornerEast;
-    const cTex = c ? await stillTexture(c) : null;
+    const cTex = c ? await stillTexture(c, load) : null;
     const pivot = c?.manifest.pivot_px;
     if (c && cTex && pivot) {
       const sprite = new Sprite(cTex);

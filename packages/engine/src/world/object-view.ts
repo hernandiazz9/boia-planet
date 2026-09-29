@@ -1,7 +1,7 @@
 import { type WorldObject, worldToScreen } from '@boia/world';
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { BOIA_NAVY, BOIA_ORANGE } from '../ship/provisional';
-import { type LoadedArt, loadTextures } from './assets';
+import { type FrameLoader, type LoadedArt, loadFrames } from './assets';
 import type { ObjectRuntimeState } from './runtime';
 import type { ObjectVisual } from './visual';
 
@@ -115,19 +115,20 @@ export class ObjectView {
     object: WorldObject,
     visual: ObjectVisual,
     art: ReadonlyMap<string, LoadedArt>,
+    load: FrameLoader = loadFrames,
   ): Promise<ObjectView> {
     let frames: Texture[] = [];
     let dive: Texture[] = [];
     if (visual.kind === 'sprite') {
       const a = art.get(visual.assetId);
       try {
-        if (a) frames = await loadTextures(a.baseUrl, visual.frames);
+        if (a) frames = await load(a, visual.frames);
       } catch (err) {
         console.warn(`[boia] imágenes de «${visual.assetId}» incompletas; marcador`, err);
         frames = [];
       }
       try {
-        if (a && visual.dive && frames.length > 0) dive = await loadTextures(a.baseUrl, visual.dive.frames);
+        if (a && visual.dive && frames.length > 0) dive = await load(a, visual.dive.frames);
       } catch (err) {
         console.warn(`[boia] «${visual.assetId}» sin fotogramas de sumergirse`, err);
         dive = [];

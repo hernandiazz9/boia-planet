@@ -30,6 +30,7 @@ import {
   saveMinimapZone,
   saveSettings,
 } from '@boia/engine/ui';
+import { voyagePreload } from '@boia/engine/streaming';
 import type { FoundDiscount } from '@boia/store';
 import { type ComposedWorld, chooseWorld as chooseWorldIn } from '@boia/world';
 import Link from 'next/link';
@@ -51,9 +52,11 @@ import { CarnetInvite } from './carnet/carnet-invite';
 import {
   SHIP_POSITION_SAVE_MS,
   documentNavigationType,
+  loadShipPosition,
   movedEnough,
   restoreShipPosition,
   saveShipPosition,
+  shouldRestorePosition,
 } from './ship-position';
 import { useCarnetInvitations } from './use-invitations';
 import {
@@ -87,6 +90,7 @@ import {
 } from './world-progress';
 import { SHIP_PREF, type ShipPref, isShipPref } from './carnet/use-carnet';
 import { worlds } from './demo-world';
+import { ATLAS_URL, VOYAGE_WAIT_MS, requestedQuality } from './streaming';
 import { Compass, MenuAnchor } from './hud-buttons';
 import './hud.css';
 import './juego.css';
@@ -182,6 +186,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const reactions = useRef(0);
   // «Ir a la isla» (T43): el barco navega solo hasta la isla de un código; se puede saltar.
   const voyageRef = useRef<Voyage | null>(null);
+  /** Viaje pedido que espera al arte del primer tramo de su ruta (T47). */
+  const pendingVoyage = useRef<Voyage | null>(null);
   const [voyage, setVoyage] = useState<{ placeId: string; name: string } | null>(null);
 
   // Preferencias guardadas (se leen al montar: el HUD no se pinta en servidor).
@@ -576,7 +582,41 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       const look = styled?.style && manifest ? { style: styled.style.id, skin: styled.skin } : null;
       if (look && want.style === look.style) rememberLook(look);
       handed = true;
+      // Dónde empieza el barco, antes de crear el juego: lo primero que se
+      // carga es el arte de ese sector (T47, REQ-ARQ-014), no el del puerto.
+      // `?cerca=<lugar>`: al sur de ese lugar, fuera de su radio (pruebas y enlaces).
+      const near = query.get(NEAR_PARAM);
+      const nearObject = near
+        ? initial.config.objects.find((o) => o.identity.id === near && o.identity.active)
+        : undefined;
+      // `?ir=<lugar>` (accesos de la landing, T44): entra navegando hasta el
+      // punto seguro del lugar y abre su panel, sin conducir (REQ-ENT-034).
+      const place = nearObject ? null : readPlaceRequest(window.location.search);
+      const plan = place
+        ? planArrival(initial.config.objects, place, (id) => !!findEvent(id))
+        : null;
+      const booted = bootedInDocument;
+      const restoreWhen = {
+        navigationType: documentNavigationType(),
+        bootedBefore: booted,
+        handedOver: !!surface,
+        placeRequested: !!place,
+      };
+      const positions = deviceStore();
+      const saved =
+        !nearObject && !plan && positions && shouldRestorePosition(restoreWhen)
+          ? loadShipPosition(positions)
+          : null;
+      const start = nearObject
+        ? { ...approachPoint(nearObject), heading: -Math.PI / 2 }
+        : plan
+          ? { ...plan.from, heading: plan.heading }
+          : saved;
       const created = await createGame(target, {
+        start,
+        ...(plan ? { preload: [plan.to] } : {}),
+        atlas: ATLAS_URL,
+        quality: requestedQuality(window.location.search),
         world: initial.config,
         sea: initial.theme.sea,
         manifest,
@@ -624,18 +664,6 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           },
         );
       }
-      // `?cerca=<lugar>`: empezar al sur de ese lugar, fuera de su radio (pruebas y enlaces).
-      const near = query.get(NEAR_PARAM);
-      const nearObject = near
-        ? initial.config.objects.find((o) => o.identity.id === near && o.identity.active)
-        : undefined;
-      // `?ir=<lugar>` (accesos de la landing, T44): entra navegando hasta el
-      // punto seguro del lugar y abre su panel, sin conducir (REQ-ENT-034).
-      const place = nearObject ? null : readPlaceRequest(window.location.search);
-      const plan = place
-        ? planArrival(initial.config.objects, place, (id) => !!findEvent(id))
-        : null;
-      const booted = bootedInDocument;
       bootedInDocument = true;
       if (nearObject) {
         const p = approachPoint(nearObject);
@@ -657,12 +685,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       } else {
         if (place) history.replaceState(history.state, '', withoutPlaceRequest(location.href));
         // REQ-IDE-004: al recargar, el barco sigue donde estaba y con su rumbo.
-        restoreShipPosition(created, deviceStore(), {
-          navigationType: documentNavigationType(),
-          bootedBefore: booted,
-          handedOver: !!surface,
-          placeRequested: !!place,
-        });
+        restoreShipPosition(created, positions, restoreWhen);
       }
       // Acceso para pruebas desde la consola; no existe en producción.
       if (process.env.NODE_ENV !== 'production') {
@@ -759,6 +782,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (!voyage) return;
     const cancel = () => {
       voyageRef.current = null;
+      pendingVoyage.current = null;
       setVoyage(null);
     };
     const onKey = (e: KeyboardEvent) => {
@@ -783,7 +807,10 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     voyageFromUrl.current = true;
     const q = new URLSearchParams(window.location.search);
     const eventId = q.get('evento');
-    if (q.get(VOYAGE_PARAM) === '1' && eventId) goToEventIsland(eventId);
+    const pilot = q.get(VOYAGE_PARAM);
+    if (pilot === '1' && eventId) goToEventIsland(eventId);
+    // `?piloto=<lugar>`: el mismo viaje hasta un lugar sin evento (T47: enlaces y pruebas).
+    else if (pilot && pilot !== '1') sailTo(pilot);
     // Una vez, con el motor y el mundo ya puestos.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, worldReady]);
@@ -962,20 +989,43 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     );
     setSelectedId(t.selected?.id ?? null);
     if (!island || !g) return steerToEvent(eventId);
-    const v = planVoyage(island, g.stats(), eventId);
-    if (prefersReducedMotion()) {
-      g.moveShip(v.arrival.x, v.arrival.y);
-      return true;
-    }
-    voyageRef.current = v;
-    setVoyage({ placeId: v.placeId, name: v.name });
+    startVoyage(g, planVoyage(island, g.stats(), eventId));
     return true;
   };
 
+  /** Viaje en turbo hasta un lugar del mapa (`?piloto=<lugar>`), sin evento. */
+  const sailTo = (placeId: string): boolean => {
+    const g = gameRef.current;
+    const o = world.config.objects.find((x) => x.identity.id === placeId && x.identity.active);
+    if (!g || !o) return false;
+    startVoyage(g, planVoyage(o, g.stats(), null));
+    return true;
+  };
+
+  function startVoyage(g: Game, v: Voyage) {
+    // T47: el arte del primer tramo y del destino se pide ya; el barco sale en
+    // turbo cuando el primer tramo está (como mucho VOYAGE_WAIT_MS), así no
+    // aparece nada de golpe en el arranque.
+    const ready = g.preload(voyagePreload(g.stats(), v.arrival, v.speed));
+    if (prefersReducedMotion()) {
+      g.moveShip(v.arrival.x, v.arrival.y);
+      return;
+    }
+    voyageRef.current = null;
+    pendingVoyage.current = v;
+    setVoyage({ placeId: v.placeId, name: v.name });
+    void Promise.race([ready, new Promise((r) => setTimeout(r, VOYAGE_WAIT_MS))]).then(() => {
+      if (pendingVoyage.current !== v) return;
+      pendingVoyage.current = null;
+      voyageRef.current = v;
+    });
+  }
+
   /** Termina el viaje: `skip` lleva el barco a la llegada de un salto. */
   function endVoyage(skip = false) {
-    const v = voyageRef.current;
+    const v = voyageRef.current ?? pendingVoyage.current;
     voyageRef.current = null;
+    pendingVoyage.current = null;
     setVoyage(null);
     if (skip && v) gameRef.current?.moveShip(v.arrival.x, v.arrival.y);
   }
@@ -1035,6 +1085,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       // Dónde está el barco (u, redondeado) y a qué lugar llegó con `?ir=` (T44).
       data-barco={ship ? `${Math.round(ship.x)},${Math.round(ship.y)}` : undefined}
       data-llegada={arrival ? (arrival.done ? arrival.placeId : 'navegando') : undefined}
+      // Carga por sectores (T47): sectores pedidos, vistas cargando, calidad y
+      // fotogramas con algún objeto a la vista sin su arte (debe ser 0).
+      data-sectores={stats?.sectors.join(' ')}
+      data-arte-cargando={stats?.artLoading}
+      data-arte-faltante={stats?.artMissingFrames}
+      data-calidad={stats?.quality}
       style={{
         ...({
           '--mundo-acento': world.theme.ui.accent,

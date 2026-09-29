@@ -2,7 +2,9 @@ import {
   type BottleMarker,
   type Direction,
   type SeaPalette,
+  type Vec2,
   type WorldConfig,
+  GROUND_Y_SCALE,
   artFrames,
   coastAssets,
   worldToScreen,
@@ -34,14 +36,23 @@ import { newApplication } from './pixi-app';
 import { JoystickOverlay, WakeView } from './views';
 import { WakeSystem } from './wake';
 import { Water } from './water';
-import { type ArtUrl, loadArt, loadTextures, manifestsOf } from './world/assets';
+import { artKey } from './world/art-plan';
+import { type AtlasIndex, parseAtlasIndex } from './world/atlas-index';
+import { type ArtUrl, type FrameLoader, loadArt, loadTextures } from './world/assets';
 import { BubbleView } from './world/bubble';
 import { createWorldCoastView } from './world/coast-view';
 import type { WorldEvent } from './world/events';
-import { ObjectView } from './world/object-view';
 import { MemoryRewardStore } from './world/rewards';
-import { type RuntimeOptions, WorldRuntime, solidObstaclesOf } from './world/runtime';
-import { bubbleAnchor, resolveObjectVisual, shipArtScale } from './world/visual';
+import {
+  type ObjectRuntimeState,
+  type RuntimeOptions,
+  WorldRuntime,
+  solidObstaclesOf,
+} from './world/runtime';
+import { type QualityTier, detectQuality, lookaheadPoints, viewExtent } from './world/sectors';
+import { SectorStreamer } from './world/streamer';
+import { TextureStore } from './world/texture-store';
+import { bubbleAnchor, shipArtScale } from './world/visual';
 
 export interface GameOptions {
   world: WorldConfig;
@@ -78,6 +89,20 @@ export interface GameOptions {
   surface?: GameSurface | null;
   /** Arte de las botellas (T22); sin valor, el marcador por código. */
   bottleAsset?: string;
+  /**
+   * Dónde empieza el barco (y lo primero que se carga, T47). Sin valor, el
+   * `spawn` del mundo. Siempre en agua navegable, como `moveShip`.
+   */
+  start?: { x: number; y: number; heading?: number } | null;
+  /** Puntos que se cargan también antes de jugar (el destino de una llegada). */
+  preload?: readonly Vec2[];
+  /**
+   * URL del índice de atlas por sector (`tools/atlas`). Sin valor o `null`,
+   * sin atlas: cada PNG de `/api/art`.
+   */
+  atlas?: string | null;
+  /** Calidad del arte; sin valor, según el dispositivo (`detectQuality`). */
+  quality?: QualityTier | null;
 }
 
 /** Aplicación Pixi viva (y su mar) que otra escena cede al juego. */
@@ -99,6 +124,12 @@ export interface GameStats {
   shipSource: 'manifest' | 'provisional';
   /** Multiplicador de velocidad por efectos (ralentizar, boost). */
   speedFactor: number;
+  /** Carga por sectores (T47): sectores pedidos, vistas cargando y calidad. */
+  sectors: string[];
+  artLoading: number;
+  quality: QualityTier;
+  /** Fotogramas pintados con algún objeto a la vista sin su arte (debe quedarse en 0). */
+  artMissingFrames: number;
 }
 
 export interface Game {
@@ -146,6 +177,11 @@ export interface Game {
    * ni su estado. No colisionan; leerlas lo decide la interfaz.
    */
   setBottles(bottles: readonly BottleMarker[]): Promise<void>;
+  /**
+   * Carga ya el arte alrededor de esos puntos (T47) y lo retiene hasta que el
+   * barco pase cerca o pasen 30 s: el destino de una llegada o de un viaje.
+   */
+  preload(points: readonly Vec2[]): Promise<void>;
   /** true si el juego adoptó una superficie existente en vez de crear la suya. */
   readonly adoptedSurface: boolean;
   destroy(): void;
@@ -156,6 +192,48 @@ const SEA_COLOR = 0x0f5f7d;
 
 /** px de tierra que la cámara deja ver bajo el borde inferior del mundo. muestra */
 const BOTTOM_LAND_PX = 56;
+
+/**
+ * u que se considera salto (no navegación) de un fotograma a otro: tras uno,
+ * la imagen se queda quieta hasta que el arte del destino está (T47). muestra
+ */
+const TELEPORT_DISTANCE = 1500;
+/** Como mucho, lo que se espera al arte tras un salto. muestra */
+const HOLD_MAX_MS = 2500;
+/** s que se retiene un punto de `preload` si el barco no pasa cerca. muestra */
+const PIN_SECONDS = 30;
+
+/** Índice de atlas, o `null` si no hay (sin aviso: los PNG sueltos bastan). */
+async function loadAtlasIndex(url: string): Promise<AtlasIndex | null> {
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return parseAtlasIndex(await res.json());
+  } catch {
+    return null;
+  }
+}
+
+/** Tamaño máximo de textura del contexto WebGL, si se puede leer. */
+function maxTextureSize(app: Application): number | undefined {
+  const gl = (app.renderer as unknown as { gl?: WebGLRenderingContext }).gl;
+  const v: unknown = gl?.getParameter(gl.MAX_TEXTURE_SIZE);
+  return typeof v === 'number' ? v : undefined;
+}
+
+function deviceQuality(app: Application | null): QualityTier {
+  const nav = navigator as Navigator & {
+    deviceMemory?: number;
+    connection?: { saveData?: boolean };
+  };
+  return detectQuality({
+    deviceMemory: nav.deviceMemory,
+    hardwareConcurrency: nav.hardwareConcurrency,
+    saveData: nav.connection?.saveData,
+    touch: nav.maxTouchPoints > 0,
+    maxTextureSize: app ? maxTextureSize(app) : undefined,
+  });
+}
 
 /** Obstáculos sólidos del mundo: objetos activos con una COLISIÓN sólida del catálogo. */
 export function obstaclesFromWorld(world: WorldConfig): CircleObstacle[] {
@@ -172,11 +250,21 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     rewards: opts.runtime?.rewards ?? new MemoryRewardStore(),
   };
   let runtime = new WorldRuntime(world, runtimeOpts);
-  const spawn = world.spawn ?? {
+  const worldSpawn = world.spawn ?? {
     x: (world.bounds.left + world.bounds.right) / 2,
     y: world.bounds.bottom - 200,
     heading: -Math.PI / 2,
   };
+  const startAt = opts.start
+    ? runtime.safePoint(opts.start.x, opts.start.y, cfg.radius)
+    : worldSpawn;
+  const spawn = {
+    x: startAt.x,
+    y: startAt.y,
+    heading: opts.start?.heading ?? worldSpawn.heading,
+  };
+  const atlasIndex = opts.atlas ? loadAtlasIndex(opts.atlas) : Promise.resolve(null);
+  let quality: QualityTier = opts.quality ?? deviceQuality(null);
 
   const surface = opts.surface ?? null;
   let app: Application;
@@ -196,10 +284,14 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
       resizeTo: canvas.parentElement ?? window,
       antialias: true,
       autoDensity: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      // Calidad baja: sin retina (un cuarto de píxeles que pintar).
+      resolution: quality === 'baja' ? 1 : Math.min(window.devicePixelRatio || 1, 2),
       background: SEA_COLOR,
     });
   }
+
+  // Con el contexto WebGL ya creado se sabe también su tamaño máximo de textura.
+  if (!opts.quality) quality = deviceQuality(app);
 
   const ship: ShipState = createShipState(spawn.x, spawn.y, spawn.heading);
   const prev: ShipState = { ...ship };
@@ -210,20 +302,46 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
 
   // Arte del mundo a la escala del barco (T01: misma densidad de píxeles).
   const artScale = opts.manifest?.displayScale ?? shipArtScale(opts.manifest?.manifest);
-  const buildWorld = async (w: WorldConfig) => {
-    const assetIds = [...w.objects.map((o) => o.appearance.asset), ...coastAssets(w.coast)];
-    const art = opts.artUrl === null ? new Map() : await loadArt(assetIds, opts.artUrl);
-    const manifests = manifestsOf(art);
-    const objectViews = await Promise.all(
-      w.objects
-        .filter((o) => o.identity.active)
-        .map((o) => ObjectView.create(o, resolveObjectVisual(o, manifests, artScale), art)),
-    );
-    const coasts = await createWorldCoastView(w.bounds, w.coast, art, artScale);
-    return { objectViews, coasts };
+  const index = await atlasIndex;
+  const extent = () => viewExtent(app.screen.width, app.screen.height);
+  /**
+   * Un mundo listo para pintar alrededor de `at` (T47): sus costas enteras y
+   * el arte de los sectores y objetos a la vista; lo demás llega por el camino.
+   */
+  const buildWorld = async (w: WorldConfig, rt: WorldRuntime, at: readonly Vec2[]) => {
+    const atlas = index?.worlds[w.id] ?? null;
+    const store = new TextureStore(atlas, opts.atlas ?? '');
+    const streamer = new SectorStreamer({
+      world: w,
+      artUrl: opts.artUrl,
+      artScale,
+      tier: quality,
+      store,
+      atlas,
+    });
+    const load: FrameLoader = async (a, files) =>
+      (
+        await store.frames(
+          files.map((f) => ({ key: artKey(a.base, f), url: new URL(f, a.baseUrl).href })),
+        )
+      ).textures;
+    const coastArt =
+      opts.artUrl === null ? new Map() : await loadArt(coastAssets(w.coast), opts.artUrl);
+    const [coasts] = await Promise.all([
+      createWorldCoastView(w.bounds, w.coast, coastArt, artScale, load),
+      streamer.settle(at, extent(), rt.objectStates()),
+    ]);
+    return {
+      streamer,
+      coasts,
+      destroy() {
+        streamer.destroy();
+        coasts.destroy({ children: true });
+        store.destroy();
+      },
+    };
   };
-  const built = await buildWorld(world);
-  const objectViews = built.objectViews;
+  let built = await buildWorld(world, runtime, [spawn, ...(opts.preload ?? [])]);
   let coasts = built.coasts;
 
   const water = surface?.water ?? new Water(opts.sea);
@@ -238,7 +356,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   const objects = new Container();
   objects.sortableChildren = true;
   worldLayer.addChild(coasts, wakeView.view, objects);
-  for (const v of objectViews) objects.addChild(v.view);
+  built.streamer.attach(objects);
   objects.addChild(sprite.view);
   const bottles = new BottleLayer(objects, {
     artScale,
@@ -270,7 +388,6 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   };
   window.addEventListener('keydown', onKey);
 
-  let views = new Map(objectViews.map((v) => [v.object.identity.id, v]));
   const loop = new FixedStepLoop(60);
   const camera = new Camera(ship.x, ship.y);
   const wake = new WakeSystem();
@@ -279,6 +396,16 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   let fpsWindow = 0;
   let fps = 0;
   let statsTimer = 0;
+  // Carga por sectores (T47): velocidad vista en pantalla (también la de los
+  // viajes y llegadas, que mueven el barco con `moveShip`), puntos retenidos,
+  // espera tras un salto y fotogramas con arte ausente.
+  const seen = { x: ship.x, y: ship.y, vx: 0, vy: 0 };
+  let pins: { at: Vec2; until: number }[] = (opts.preload ?? []).map((at) => ({
+    at,
+    until: performance.now() + PIN_SECONDS * 1000,
+  }));
+  let hold: { until: number; done: boolean } | null = null;
+  let artMissingFrames = 0;
 
   const stats = (): GameStats => ({
     fps,
@@ -290,6 +417,10 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     heading: ship.heading,
     shipSource: sprite.source,
     speedFactor: runtime.speedFactor(),
+    sectors: built.streamer.status().sectors,
+    artLoading: built.streamer.status().loading,
+    quality,
+    artMissingFrames,
   });
 
   const simulate = (dt: number) => {
@@ -309,7 +440,42 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     });
   };
 
+  /** Pide el arte de lo que se ve y de lo que viene; suelta lo lejano. */
+  const streamWorld = (rx: number, ry: number, dt: number, states: ObjectRuntimeState[]) => {
+    const dx = rx - seen.x;
+    const dy = ry - seen.y;
+    if (dt > 0 && Math.hypot(dx, dy) < TELEPORT_DISTANCE) {
+      const k = Math.min(1, dt * 4);
+      seen.vx += (dx / dt - seen.vx) * k;
+      seen.vy += (dy / dt - seen.vy) * k;
+    } else {
+      seen.vx = 0;
+      seen.vy = 0;
+    }
+    seen.x = rx;
+    seen.y = ry;
+    const view = extent();
+    const now = performance.now();
+    pins = pins.filter(
+      (p) => now < p.until && (Math.abs(p.at.x - rx) > view.hx || Math.abs(p.at.y - ry) > view.hy),
+    );
+    const points = [
+      ...lookaheadPoints(
+        { x: rx, y: ry },
+        { x: seen.vx, y: seen.vy },
+        built.streamer.tuning.lookahead,
+      ),
+      ...pins.map((p) => p.at),
+    ];
+    built.streamer.update(points, view, states);
+  };
+
   const frame = () => {
+    // Tras un salto, la imagen se queda quieta hasta que el arte del destino está.
+    if (hold) {
+      if (!hold.done && performance.now() < hold.until) return;
+      hold = null;
+    }
     const dt = app.ticker.deltaMS / 1000;
     time += dt;
     const alpha = loop.advance(dt, simulate);
@@ -334,12 +500,16 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     water.update(w, h, cam.x - w / 2, cam.y - h / 2, time);
 
     bottles.animate(time);
-    for (const s of runtime.objectStates()) {
-      const v = views.get(s.id);
+    const states = runtime.objectStates();
+    streamWorld(rx, ry, dt, states);
+    for (const s of states) {
+      const v = built.streamer.view(s.id);
       if (!v) continue;
       v.sync(s);
       v.animate(time);
     }
+    const center = { x: cam.x, y: cam.y / GROUND_Y_SCALE };
+    if (built.streamer.missingOnScreen(center, extent(), states) > 0) artMissingFrames++;
 
     const sp = worldToScreen({ x: rx, y: ry });
     sprite.view.position.set(sp.x, sp.y);
@@ -348,7 +518,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     wakeView.sync(wake);
 
     const d = runtime.dialogue();
-    const speaker = d ? views.get(d.objectId) : undefined;
+    const speaker = d ? built.streamer.view(d.objectId) : undefined;
     const st = d ? runtime.objectState(d.objectId) : undefined;
     if (d && speaker && st) {
       const a = bubbleAnchor(speaker.visual);
@@ -387,31 +557,35 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     },
     async setWorld(next, worldOpts = {}) {
       const request = ++worldRequest;
-      const nextBuilt = await buildWorld(next);
+      const nextRuntime = new WorldRuntime(next, runtimeOpts);
+      const nextBuilt = await buildWorld(next, nextRuntime, [{ x: ship.x, y: ship.y }]);
       if (destroyed || request !== worldRequest) {
-        for (const v of nextBuilt.objectViews) v.view.destroy({ children: true });
-        nextBuilt.coasts.destroy({ children: true });
+        nextBuilt.destroy();
         return false;
       }
       // Lo que el mundo de antes tenía pendiente sale antes del cambio.
       for (const e of runtime.drainEvents()) opts.onWorldEvent?.(e);
-      for (const v of views.values()) {
-        objects.removeChild(v.view);
-        v.view.destroy({ children: true });
-      }
       worldLayer.removeChild(coasts);
-      coasts.destroy({ children: true });
+      built.destroy();
+      built = nextBuilt;
       coasts = nextBuilt.coasts;
       worldLayer.addChildAt(coasts, 0);
-      for (const v of nextBuilt.objectViews) objects.addChild(v.view);
-      views = new Map(nextBuilt.objectViews.map((v) => [v.object.identity.id, v]));
+      nextBuilt.streamer.attach(objects);
       world = next;
-      runtime = new WorldRuntime(next, runtimeOpts);
+      runtime = nextRuntime;
       if (worldOpts.sea) water.setPalette(worldOpts.sea);
       return true;
     },
     moveShip(x, y, heading) {
       const p = runtime.safePoint(x, y, cfg.radius);
+      if (Math.hypot(p.x - ship.x, p.y - ship.y) >= TELEPORT_DISTANCE) {
+        // Un salto: la imagen espera al arte del destino (como mucho HOLD_MAX_MS).
+        const h = { until: performance.now() + HOLD_MAX_MS, done: false };
+        hold = h;
+        void built.streamer.settle([p], extent(), runtime.objectStates()).then(() => {
+          h.done = true;
+        });
+      }
       ship.x = p.x;
       ship.y = p.y;
       ship.vx = 0;
@@ -478,12 +652,18 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
       return true;
     },
     setBottles: (list) => (destroyed ? Promise.resolve() : bottles.set(list)),
+    preload(points) {
+      const until = performance.now() + PIN_SECONDS * 1000;
+      pins = [...pins, ...points.map((at) => ({ at, until }))];
+      return built.streamer.settle(points, extent(), runtime.objectStates());
+    },
     destroy() {
       if (destroyed) return;
       destroyed = true;
       unbind();
       window.removeEventListener('keydown', onKey);
       app.ticker.remove(frame);
+      built.destroy();
       app.destroy({ removeView: false }, { children: true });
     },
   };

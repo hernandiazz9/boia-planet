@@ -4,6 +4,31 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T47: el mundo se carga por sectores
+
+Qué existe:
+- **Carga por sectores en /juego** (REQ-MUN-012, `packages/engine/src/world/sectors.ts`, sin Pixi): cada objeto es del sector del mapa que contiene su posición (o del más cercano; sin sectores, todo el mapa es uno). Se pide el arte de un sector cuando su rectángulo, ampliado con media pantalla + `preload` (1400 u), toca el barco o dos puntos por delante según su velocidad vista en pantalla (1,5 s, también la de viajes y llegadas que mueven el barco con `moveShip`); se suelta más allá de `release` (3000 u) y como mucho quedan `maxSectors` (6; 3 en calidad baja), soltando antes lo más lejano. Las vistas de los objetos se crean y destruyen por su posición de ese momento (los restos y cofres que reaparecen en otro sitio se cargan donde estén). La simulación no depende de ello.
+- **Motor** (`world/streamer.ts`, `world/texture-store.ts`, `game.ts`): `SectorStreamer` pide primero las hojas de atlas de los sectores y luego las vistas; `TextureStore` cuenta usos de hojas y PNG y descarga (GPU y caché de Assets) lo que nadie usa. Antes de jugar se carga sólo lo de alrededor de donde empieza el barco: `createGame({ start, preload })` recibe el punto de `?cerca=`, `?ir=` (y su destino) o la posición guardada, así nunca se carga el puerto para nada. Tras un salto (`moveShip` ≥ 1500 u) la imagen se queda quieta hasta que el arte del destino está (como mucho 2,5 s). `Game.preload(points)` retiene puntos 30 s. Las costas siguen enteras (losas que se repiten) pero salen como WebP.
+- **Atlas por sector** (`tools/atlas/build.ts`, `pnpm atlas`): por mundo y sector, hojas WebP (≤ 2048 px, sprites recortados a lo opaco) en `alta` (q90) y `baja` (media resolución, `meta.scale` 0.5: Pixi los ve del tamaño original); costas como WebP sueltos. Escribe `apps/web/public/atlas/` (ignorado por git) con `index.json`; no rehace nada si la huella de las fuentes no cambió (~13 s en frío, 1 s al día). Corre solo antes de `pnpm dev`, `pnpm build`, `pnpm demo` y del servidor de la e2e (`scripts/atlas.mjs`; si falla deja un índice vacío y el motor usa los PNG de `/api/art`). Arcilla: 561 kB todas las hojas alta (6,8 MB de PNG), costas 116 kB; Acuarela 787 kB y 213 kB.
+- **Calidad baja** para dispositivos débiles (`detectQuality`: ahorro de datos, `deviceMemory` ≤ 2, táctil con ≤ 4 núcleos o textura máxima < 4096): hojas a media resolución, sin retina, menos sectores en memoria. `?calidad=baja|alta` la fuerza.
+- **Viajes sin arte de golpe**: el piloto automático (`?evento=&piloto=1` y el nuevo `?piloto=<lugar>`, a cualquier lugar) pide el primer tramo de la ruta y el destino (`voyagePreload`) y sale cuando está (como mucho 1 s; la barra «Rumbo a…» sale ya).
+- **Presupuesto** (REQ-ARQ-014, `apps/web/scripts/world-budget.mjs`, `pnpm world:budget`, también al final de `pnpm build`): bytes de arte antes de jugar por mundo con el barco en el puerto (hojas o PNG, costas, manifiestos y el barco del mundo), falla si pasa de 5 MB. Con atlas: Arcilla 1,2 MB, Acuarela 1,8 MB (el barco es ~70 %); sin atlas (`--png`): 3,5 y 4,2 MB.
+- `/juego` publica `data-sectores`, `data-arte-cargando`, `data-calidad` y `data-arte-faltante` (fotogramas con algún objeto a la vista sin su arte; tiene que quedarse en 0).
+- Pruebas: `sectors.test.ts` (sector del spawn, histéresis, límite de memoria, mirada por delante, objetos movidos, y del puerto a la última isla a 1440×900 y 360×640 sin ningún objeto a la vista sin arte: en 6 s con 0,4 s de carga por vista y a 220 u/s con 1,5 s), `atlas.test.ts` (empaquetado sin solapes, varias hojas, índice), `world-budget.test.ts` (≤ 5 MB sin atlas, con atlas pesa menos); e2e `sectores.spec.ts` (sólo el puerto antes de jugar, ≤ 5 MB transferidos contando HTML y JS, hojas y no PNG; del puerto a la última isla con el piloto: la última cargada, el puerto soltado, `data-arte-faltante` 0; calidad baja con hojas `baja`).
+
+Comandos:
+```
+pnpm atlas                                 # atlas por sector en apps/web/public/atlas
+pnpm world:budget                          # bytes antes de jugar por mundo; exit 1 si > 5 MB
+pnpm test && pnpm typecheck && pnpm lint   # exit 0
+E2E_PORT=<libre> pnpm e2e --workers=2      # ver el informe de la tarea
+```
+
+Pendiente / para otros encargos:
+- `/mar` sigue cargando todos sus glTF al entrar (fuera de alcance mientras trabaja el plan 003): ver OUT OF SCOPE del informe.
+- El barco (8 vistas × con y sin pasajera, PNG) es la mayor parte de lo que baja antes de jugar: pasarlo a atlas WebP ahorraría ~700 kB por mundo.
+- La memoria en el dispositivo mínimo (REQ-MUN-012) y los umbrales `muestra` de `STREAM_TUNING` se miden cuando haya dispositivos de referencia (P6).
+
 ## 2026-09-29 — plan 004 T48: Admin endurecido
 
 Qué existe:
