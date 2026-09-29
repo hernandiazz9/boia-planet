@@ -1,6 +1,8 @@
 'use client';
 
 import type { Rect } from '@boia/engine/ui';
+import { ClaimBadge, claimLabel } from '../../lib/logros/claim-badge';
+import { useReadyCount } from '../../lib/logros/use-logros';
 
 /**
  * Botones fijos del HUD: brújula y ancla del Menú de a bordo. Se colocan en
@@ -60,6 +62,10 @@ export function Compass({
   );
 }
 
+/**
+ * Ancla del Menú de a bordo. Con logros completados sin reclamar lleva su
+ * número (T37); se reclaman en la sección «Logros».
+ */
 export function MenuAnchor({
   rect,
   pulse,
@@ -71,6 +77,7 @@ export function MenuAnchor({
   open: boolean;
   onClick: () => void;
 }) {
+  const ready = useReadyCount();
   return (
     <button
       key={pulse}
@@ -79,10 +86,11 @@ export function MenuAnchor({
       data-hud="menu-ancla"
       className={`juego-hud-button juego-anchor${pulse ? ' juego-pulse-short' : ''}`}
       style={place(rect)}
-      aria-label="Menú de a bordo"
+      aria-label={claimLabel('Menú de a bordo', ready)}
       aria-expanded={open}
       aria-haspopup="dialog"
-      title="Menú de a bordo"
+      title={claimLabel('Menú de a bordo', ready)}
+      data-por-reclamar={ready}
       onClick={onClick}
     >
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
@@ -91,6 +99,7 @@ export function MenuAnchor({
           <path d="M12 7v14M7 11h10M4 14c0 4 4 7 8 7s8-3 8-7" />
         </g>
       </svg>
+      <ClaimBadge count={ready} testId="menu-ancla-contador" />
     </button>
   );
 }

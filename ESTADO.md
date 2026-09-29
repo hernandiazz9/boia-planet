@@ -275,6 +275,88 @@ python3 tools/spec/check.py        # exit 0; 294 requisitos, 0 duplicados, centi
 python3 tools/spec/test_check.py   # exit 0; 18 pruebas
 ```
 
+## 2026-09-30 — fuera de encargo: el barco vuela («Entradas» e «Ir en nave»)
+
+Experimento de Hernán en la rama `exp/entradas-vuelo`, que se queda y está unido a `main`. En `/mar`, «Entradas» ya no navega en turbo: el barco levita, le salen alas de nave, vuela sobre el planeta hasta la isla del evento, se posa y abre la compra. La ficha de cada isla ofrece «⛵ Navegar» o «🛸 Ir en nave». Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `apps/web/app/mar/engine/flight.ts`: el perfil del vuelo, puro y con pruebas en `flight.test.ts` (`FLIGHT`, `flightPlan`, `flightPose`). Levita en 1 s, las alas salen entre 0,85 y 2 s, arranca a los 2,3 s, avanza 2,4–4,4 s según la distancia (620 u/s) a 9 u de altura y se posa en 0,95 s; a la isla del evento desde el puerto, unos 6 s. Las piezas: `Wings` (alas delta crema con franja naranja, aletas moradas, luces en las puntas y dos propulsores), `Sparks` (estela de chispas), `Splash` (espuma y gotas al despegar y al posarse) y `FlightClouds` (nubecillas a la altura del vuelo).
+- `mar3d.ts`: `startFlight(placeId)`. Mientras vuela, el runtime ve un barco fantasma quieto donde despegó (sin choques ni disparadores por el camino), no se gobierna y `setCourse` no hace nada; `stopVoyage` («Saltar») lo posa ya en el destino. La cámara se queda cerca durante la transformación (`TRANSFORM_ZOOM` 0,15), se aleja al volar (`FLIGHT_ZOOM` 0,34), sube con el barco y gira hasta quedar detrás (`camYaw`); al posarse vuelve a mirar al norte. `Stats.flight` da la fase (`lift`/`cruise`/`land`).
+- `mar-client.tsx`: «Entradas» vuela (`?vuelo=0` vuelve al viaje en turbo, para comparar) y el botón dice «Volando a…». `flyTo` para «Ir en nave»: se posa sin abrir la compra. Con movimiento reducido, compra directa o navegar como siempre. `data-flight` en `<main>` y líneas de velocidad en CSS (`.mar-speedlines`) durante el crucero.
+- e2e en `mar-3d.spec.ts`: «Entradas» vuela y «Saltar» abre la compra; otro toque, y el vuelo llega y la abre; «Ir en nave» desde la ficha despega, vuela y se posa sin abrir la compra.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 69 archivos, 691 pruebas
+E2E_PORT=3475 pnpm e2e mar-3d.spec.ts --workers=2   # exit 0; 24 pasadas (2,9 min)
+```
+
+Desviaciones:
+- «Saltar» durante el vuelo deja el barco posado en la isla; antes se quedaba donde iba.
+
+Sin probar:
+- Móvil real: sólo Chromium a 390×844 y el túnel que probó Hernán.
+- Tocar una isla o el mar en la pantalla sigue navegando sin preguntar; la elección sólo sale en la ficha.
+
+## 2026-09-30 — plan 003 T37: panel de logros con contador y «Reclamar» en /mar y /juego
+
+Los logros ya se reclaman desde la web: un mismo panel en `/mar` (icono 🏆 del HUD) y en `/juego` (sección «Logros» del Menú de a bordo). Al completar uno sale «¡Logro completado! Reclama tu premio» y el icono lleva un número rojo mientras haya algo por reclamar; «Reclamar» da el premio una vez, con una animación corta. Arreglados los tres huecos de T36. Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `apps/web/lib/logros/` (nuevo, compartido): `model.ts` (sin React: filas del panel desde `progress.achievements()` y `achievementFacts`; «???» y «Logro oculto. Sigue explorando…» para los ocultos sin completar, barra 0…1, cuenta «3/7», «te queda…» por disparador —«Te quedan 4 islas», «Te quedan 3 minutos a bordo», «Te queda: termina una vuelta al circuito», en la vuelta rápida «Tu mejor vuelta: 50,2 s · te quedan 6,6 s»—, premio en corto «+30 ★ · +10 🪙 · Barco Pixel art», orden: por reclamar, en curso —lo más avanzado arriba, ocultos al final—, reclamados; `readyCount`, `obtainedCount`), `panel.tsx` (`AchievementsPanel`: saldos que suben contando, rango, «X de Y logros» —X = completados + reclamados—, lista y «Reclamar»), `reward.tsx` (`ClaimReward`: chispas, puntos y monedas contando desde 0, la insignia volando al 🪪 Carnet, el candado que se abre y deja ver el barco, o «Nuevo para tu barco: …»; se va a los 2,6 s o al tocarla; sin movimiento con movimiento reducido), `claim-badge.tsx` (el numerito, «9+» a partir de 10), `use-logros.ts` (`useLogros`, `useReadyCount`, `useShipLocks`, `lockedShipText`, `useCountUp`) y `logros.css`.
+- `/mar`: icono 🏆 al final de la barra de arriba (a la derecha de los saldos): el minimapa empieza debajo de la barra y «Entradas» está abajo, así que no pisa ninguno a 360 ni a 390 px (e2e). Con algo por reclamar, aro naranja y número. Abre `MarLogros` (`app/mar/logros.tsx`): hoja crema desde abajo en el móvil, tarjeta centrada en escritorio, con «🪪 Mi Carnet», × , Escape o tocar fuera; con el panel abierto el barco no se mueve y una vuelta en curso se anula (como cualquier panel, REQ-AVE-032). Tocar un aviso de logro abre el panel. En el menú, «🏆 Logros · N por reclamar» y los barcos que se ganan con logro con candado (no se eligen) y el logro que los da.
+- `/mar` escucha `onAchievementNotices` (minijuegos, botellas, Carnet… ya avisan) y apunta «navegar en este mundo» al arrancar, con su aviso, como `/juego` (antes sólo se apuntaba, sin aviso, dentro de `discoverPlace`).
+- El atajo en `/mar`: `app/mar/race.ts` (`raceCheckpoint`) pasa el id del arco a `race.checkpoint` y la vuelta llega a `finishLap` con `e.route`.
+- Récord de la vuelta: `circuitRecordId` (`packages/engine/src/circuit/race.ts`) da `circuito:el-freu:v1` (clave estable; antes `circuito:el-freu@v1`, que el repositorio rechazaba y el récord nunca se guardaba). `legacyCircuitRecordId` + `readRecord`: la clave vieja se sigue leyendo (si un navegador la tuviera) y cuenta en `submitRecord`; el aviso de salida de `/juego` usa `readRecord`.
+- `/juego`: la sección «Logros» es el panel compartido (debajo, lo descubierto en esta visita); su icono de la barra del menú y el ancla del HUD (`hud-buttons.tsx`) llevan el número (`data-por-reclamar`, nombre accesible «…: 1 premio por reclamar»). Selector «Barco» (`sections/barco.tsx`): los barcos de `progress.ships()` que no se tienen salen con 🔒, gris y «Se gana con el logro «Vigía del faro»» (o «un logro oculto» si el logro es oculto); no se pueden elegir.
+- Mi Carnet (`carnet-card.tsx`): sección «Insignias» con las de los logros reclamados (`carnet.badges`).
+- Pruebas: `lib/logros/model.test.ts` (sobre el repositorio de verdad: ocultos, barra y «te queda», orden, contador, reclamar una sola vez, textos), `app/mar/race.test.ts` (el atajo en el mundo compacto completa su logro; el récord se guarda), `circuit-hud.test.ts` (récord con clave estable, sólo mejora), `race.test.ts` del motor (clave nueva, la vieja se lee). e2e nuevo `logros.spec.ts`: en `/mar` y en `/juego`, llegar a la boia del tutorial completa «Primera boia», aviso, número en el icono, «Reclamar» sube los puntos exactamente una vez, animación, y tras recargar sigue reclamado; el icono de `/mar` no pisa minimapa ni «Entradas» (360×640 y 390×844); el selector de `/juego` enseña el barco bloqueado con su logro. `demo.spec.ts`: «otro estilo» es ahora el último estilo libre (el último del arte, Pixel art, se gana con un logro).
+- Capturas 390×844 (`LOGROS_SHOTS=1 E2E_PORT=… pnpm e2e e2e/logros.spec.ts --project=mobile`): `docs/informes/img/p003-t37-aviso-mar.png` (aviso y número), `p003-t37-logros-mar.png` (panel en `/mar`), `p003-t37-reclamar.png` (animación del premio), `p003-t37-logros-juego.png` (sección de `/juego`).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 68 archivos, 687 pruebas
+E2E_PORT=3417 pnpm e2e --workers=2            # exit 0; 119 pasadas, 23 omitidas (9,3 min)
+```
+
+Desviaciones:
+- El número de `/juego` va en el ancla del Menú de a bordo (no hay otro icono de logros en su HUD) y en el icono «Logros» del menú: toca `hud-buttons.tsx`, fuera de la lista de archivos del encargo.
+- Los barcos bloqueados también en el menú de `/mar` (el encargo pedía el selector de `/juego`). Sólo el selector: `?estilo=` o una elección guardada de antes siguen poniendo un barco bloqueado.
+- «X de Y logros» cuenta los completados sin reclamar como conseguidos.
+
+Sin probar:
+- Móvil real. La animación de la insignia volando al Carnet (sólo «Con entrada» y «Fiel a BOIA» dan una) y la del candado del barco no se han visto en pantalla: las e2e reclaman «Primera boia» (puntos y monedas). La sección «Insignias» de Mi Carnet tampoco tiene e2e.
+- En la e2e de `/mar` a veces el aviso se va (tiempo de lectura) justo al tocarlo; la prueba entra entonces por el icono. Tocar el aviso para abrir el panel no queda probado en todas las pasadas.
+
+## 2026-09-29 — plan 003 T34: minimapa redondo del planeta girando (y cámara del móvil)
+
+En `/mar` el botón «Mapa» ya no está: en la esquina de arriba a la derecha hay un minimapa redondo y semitransparente con el planeta entero girando despacio, el barco, las islas (la del evento en naranja), el rumbo y la ruta de boyas. Tocarlo abre el mapa grande; tocarlo otra vez o «Cerrar» vuelve a cubierta; la M sigue igual. Además, a petición de Hernán tras probarlo en el móvil: en un móvil en vertical el barco va en el centro de lo que se ve y se sale con algo más de zoom. `/juego` no cambia. Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `apps/web/app/mar/engine/globe.ts` (sin three.js): el periodo del planeta ocupa el disco entero una sola vez (cuadrado → disco con el mapeo elíptico, abombado hacia el centro como una esfera, `GLOBE_BULGE`), así que el barco y cada isla salen siempre y nunca repetidos. El giro (`Mar3D.planetSpin`, el mismo del cielo de T33: una vuelta cada ~17 min) desplaza el mar hacia el este dando la vuelta; los meridianos giran con él. `drawGlobe` pinta en un lienzo 2D: mar con degradado, rejilla, ruta de boyas a trazos (cortada en la costura), islas, aro del rumbo y el barco con halo y su rumbo (`globeHeading`).
+- `apps/web/app/mar/minimap.tsx` (`MarMinimap`): un `<button>` redondo (84 px en el móvil, 112 en escritorio; 64/84 en el mapa grande, para no tapar los rótulos) con el lienzo a la resolución de la pantalla y repintado 5 veces por segundo (`MINIMAP_FPS`), no con cada fotograma del 3D; no pinta con el mar en pausa ni con la pestaña oculta. Gesto con `MinimapGesture` de `packages/engine/src/ui/minimap.ts`: un roce que se mueve no lo abre; con teclado, Intro/espacio. Etiqueta «Mapa» / «Barco» y `aria-pressed`. El lienzo lleva `data-frames`, `data-pins` y `data-accent` para las pruebas.
+- Mapa grande: la vista de mapa de siempre (todo el planeta a la vista, rótulos que abren la ficha con «Navegar aquí», tocar el mar fija rumbo, la ruta de boyas). La barra de abajo lleva ahora «✕ Cerrar». En el mapa, el rótulo de la isla del evento pasa por encima del minimapa.
+- `mar3d.ts`: `courseTarget` y `mapMode` para el minimapa; `data-ship-screen` en el lienzo (dónde queda el barco en pantalla, para las pruebas).
+- Cámara del móvil (`apps/web/app/mar/engine/framing.ts`): por la proporción de la pantalla (no por el navegador), de apaisado a móvil en vertical (ancho ≤ la mitad del alto) el zoom de salida pasa de 0,2 a 0,26 (`START_ZOOM`: el barco se lee y se ven las boyas de la bocana, las siguientes de la ruta y el castillo y la Explanada) y la mirada por delante baja de 0,2 a 0,03 × la distancia (`LOOK_AHEAD`) y de 0,28 a 0,05 s con la velocidad (`SPEED_LEAD`); además, en vertical se compensa el retraso con que el foco sigue al barco (`catchUp` = 1/`FOCUS_RATE` s), que en el viaje en turbo de «Entradas» lo sacaba del centro. A 390×844 el barco queda a ~2 % del centro de lo que se ve (entre la barra de arriba y «Entradas»); antes, a ~19 % por debajo (medido en la captura). En escritorio, igual que antes.
+- En el móvil (< 760 px) los chips (rumbo, crono, misión) y la ayuda de la primera vez bajan a 170 px para no chocar con el minimapa.
+- Pruebas: `globe.test.ts` (todo dentro del disco y bordes al borde, cada sitio una sola vez, abombado, giro de 2π y hacia el este, rumbo del barco también en la costura, la ruta se corta sólo al cruzar un borde, lo que pinta) y `framing.test.ts`. e2e en `mar-3d.spec.ts`: el mapa se abre por el minimapa en todas las pruebas que lo usaban (también la de la isla `allday` → rumbo); nuevas: minimapa visible, redondo, sin pisar «Entradas» y repintándose con la isla del evento destacada; abrir (con el dedo en el móvil), «Cerrar», la M y tocarlo otra vez (con 60 s de margen, como la de «Entradas» por el mapa: la vista de mapa es lenta en el Chromium sin GPU); nueva a 390×844: el barco a menos del 10 % del centro de lo que se ve, parado y navegando, y el zoom de salida del móvil.
+- Capturas 390×844: `docs/informes/img/p003-t34-minimapa.png` (cubierta con el minimapa), `p003-t34-mapa-grande.png`, `p003-t34-camara-antes.png` y `p003-t34-camara-despues.png`.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 66 archivos, 675 pruebas
+E2E_PORT=3347 pnpm e2e --workers=2            # exit 0; 111 pasadas, 19 omitidas (9,5 min, con la máquina cargada)
+```
+
+Desviaciones:
+- `minimapProjection` de `packages/engine/src/ui/minimap.ts` no se usa: es la proyección isométrica del 2D y `/mar` se ve desde arriba. Sí se usa su gesto (`MinimapGesture`); sin arrastrar el minimapa (una pulsación larga quieta también lo abre).
+- «Cerrar» va en la barra de abajo del mapa (a mano del pulgar), no junto al minimapa: arriba tapaba rótulos.
+- Cámara y zoom del móvil (pedido de Hernán durante la tarea, fuera del alcance inicial).
+
+Sin probar:
+- Móvil real (iOS Safari): el toque, el giro y el coste del minimapa sólo se han visto en Chromium con emulación táctil.
+- A 360×640 el mapa grande ya no cabía entero entre las barras (antes de T34); el rótulo de la isla del evento queda por encima del minimapa, pero los de más arriba pasan bajo la barra de arriba.
+
 ## 2026-09-29 — plan 003 T50: un /mar compacto con ruta de boyas
 
 `/mar` es ahora un mundo compacto: las islas a la mitad de distancia que en T33, casi sin mar vacío al dar la vuelta, y una ruta de boyas con farolillo que une las islas en el orden de la historia y vuelve al puerto. Sólo `/mar`: las posiciones del mapa compartido (`packages/world`) y `/juego` no cambian. Todo `muestra`, pendiente de Álvaro.

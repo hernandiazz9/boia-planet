@@ -1,6 +1,6 @@
 # Plan 003 — /mar as a water planet: always-on tickets, readable dialogues, round minimap, game-like achievements
 
-Status: active
+Status: done
 Created: 2026-09-29
 Base branch: main
 Goal: Hernán's improvements to the 3D view `/mar` (commit 23890e5): a «Entradas» button that is always on screen and sails the ship in turbo to the event island before opening the checkout; dialogues that stay readable (min 3 s, longer for long text) with a close button; the world redesigned as a small water planet with no grass or sand edges, where you sail around forever between islands, the sphere turns a little, and sky and stars show at the horizon; a round, transparent minimap that shows that planet turning and opens the big map on tap; and achievements that work like a game (counter, progress, «te queda…», «Reclamar» with a reward that depends on the achievement), the same in `/mar` and `/juego`. Everything stays browser-only (D-20) and `muestra` until Álvaro approves.
@@ -62,7 +62,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - Outcome: compact.ts feeds /mar (islands at half spacing, PLANET_MARGIN 150 u, planet 2600×4400 u); buoy route port → Cala → Fiestera → allday → Fotos → Tienda → Cañón → Faro → Última, loop over the north edge; port→event 8.4–8.9 s; 665 tests, e2e 105 passed → 4b99bfe
 
 ## T34 — Round, transparent minimap of the turning planet
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T50
 - Goal: Replace the «Mapa» button in `/mar` with a round, semi-transparent minimap in a corner: a small render of the whole planet turning (same slow drift as T33), with the ship and the island pins (event island highlighted), readable at 360 px wide and not covering the «Entradas» button. Tapping it opens the big map (today's map mode, adapted to the planet: the whole globe in view, pins tappable, set course from there); tapping it again or «Cerrar» returns to the deck. The M key keeps working. Also (Hernán, after trying production on his phone): in portrait phones the ship sits in the centre of the visible play area (between the top HUD and the bottom controls), also while sailing, and the start zoom is adapted to the screen (by aspect/width) so the ship reads clearly and the next buoys or nearest island are in view; desktop keeps today's start. Reuse the shared projection/gesture helpers (packages/engine/src/ui/minimap.ts) where they fit; the minimap must cost little (low-res render target or a 2D canvas, updated at a reduced rate).
 - Context: apps/web/app/mar/engine/mar3d.ts (toggleMap, MAP_ZOOM 0.55, mapMode ~127, ~372–383, ~1562; `Mar3D.planetSpin`/`planetBounds` from T33), apps/web/app/mar/engine/compact.ts (T50 compact layout and buoy route: show the route on the minimap and the big map), apps/web/app/mar/mar-client.tsx, mar.css; apps/web/app/juego/minimap.tsx (Minimap, ExpandedMap) and packages/engine/src/ui/minimap.ts as reference; T33 Outcome.
@@ -71,7 +71,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; mar-3d.spec.ts: the minimap is visible and round, tapping it opens the big map, tapping the `allday` pin sets a course (the existing test, now through the minimap)
   - Screenshot p003-t34-minimapa.png (deck with minimap) and p003-t34-mapa-grande.png
-- Outcome:
+- Outcome: 2D-canvas globe minimap top-right (84 px phone / 112 desktop, 5 fps) with ship, islands, course and buoy route; tap opens map mode, «✕ Cerrar»; phone framing (engine/framing.ts): ship ~2 % from play-area centre (was ~19 %), start zoom 0.2 → 0.26; 675 tests, e2e 111 passed → d3bd868
 
 ## T36 — Achievements you claim: store, catalog and signals
 - Status: done
@@ -85,7 +85,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - Outcome: claim flow in @boia/store (claimable → claimed, ledger only on claim), 25 achievements, reward types coins/points, badge (badgeKey), ship (cosmetic slot `ship`, 3 locked), cosmetic; store v1→v2 migration; Rayo del Freu 43.6 s; 635 tests, e2e 101 passed → a689cf9
 
 ## T37 — Achievements panel with counters and «Reclamar» in /mar and /juego
-- Status: pending
+- Status: done
 - Depends on: T36, T34
 - Goal: One achievements panel shared by `/mar` and `/juego`: header «X de Y logros», a list with progress bar and «te queda…» per achievement, hidden ones as «???» until found, and a «Reclamar» button on completed ones that plays a short reward animation (coins/points counting up, the badge flying to the Carnet, the ship unlocking) and updates balances. On completion a notice says «¡Logro completado! Reclama tu premio» (T36 copy) and the HUD achievements icon shows a count badge while something is waiting to be claimed. In `/mar` the panel opens from a HUD icon; in `/juego` it replaces the current «Logros» menu section; Mi Carnet shows claimed badges; the ship picker shows locked reward ships with the achievement that unlocks them. Also fix three gaps T36 found: /mar does not listen to `onAchievementNotices` (world and minigame completions show no notice there); in /mar the circuit shortcut is not detected (`mar-client.tsx` passes no gate id to `race.checkpoint` and no route to `finishLap`); the lap record is never saved because `circuitRecordId` produces `circuito:el-freu@v1`, which the store rejects as a key (fix the id, keep old records readable if any).
 - Context: T36 Outcome; apps/web/app/juego/menu/sections/logros.tsx, carnet/carnet-card.tsx, the /juego ship picker; apps/web/app/mar/mar-client.tsx (HUD, T34 and T35 layout); packages/engine/src/ui/notifications.ts (readable durations from T35).
@@ -94,7 +94,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; adds specs in both /mar and /juego: complete an achievement, the badge count appears, «Reclamar» raises the balance once, reload keeps it claimed
   - Screenshots p003-t37-logros-mar.png, p003-t37-logros-juego.png and p003-t37-reclamar.png
-- Outcome:
+- Outcome: shared panel (apps/web/lib/logros) in /mar (HUD icon) and /juego (Menú de a bordo): «X de Y», progress, «te queda», «???», «Reclamar» with animation, count badge; /mar achievement notices, shortcut detection, record id circuito:el-freu:v1 (old @v1 still read); 687 tests, e2e 119 passed → 0780f6c
 
 ## Decisions
 - 2026-09-29: «Entradas» always on screen in /mar: the ship sails in turbo to the event island and the checkout opens on arrival, skippable (Hernán)
@@ -115,8 +115,12 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29: after trying /mar, Hernán wants it smaller and with a path: halve the distances (/mar only), a buoy route in story order; new task T50 before T34, and T34 builds on the compact world (Hernán)
 - 2026-09-29 T50: route order kept (Fiestera boards at stop 3, delivered at the last); Cañón before Faro; mar vivo within 240 u of the route; castle and Explanada either side of the port; map camera lifted 48 px; fixed T33 respawn positions not scaled (agent)
 - 2026-09-29: mobile camera centred on the ship and a phone-adapted start zoom, added to the running T34 (same files) (Hernán)
+- 2026-09-29 T34: minimap is a 2D canvas (not minimapProjection, which is the isometric 2D view); port sits on the disc's lower edge; chips/help move down on phones; look-ahead cut to 0.03 × distance; slow map-mode e2e tests allow 60 s (agent)
+- 2026-09-30 T37: /juego count badge on the Menú de a bordo anchor (hud-buttons.tsx touched); locked ships also listed in the /mar menu; «X de Y» counts completed-but-unclaimed as obtained (agent)
 
 ## Proposals (new scope)
+- 2026-09-30 T37: apps/web/lib/barco/catalog.test.ts (Python palette check) times out at 5 s under load; untested: real phone, badge-to-Carnet and ship-unlock animations, Mi Carnet «Insignias»
+- 2026-09-29 T34: at 360×640 the big map is taller than the space between the bars (pre-existing), top labels go under the top bar
 - 2026-09-29 T50: El Freu circuit not moved (would overlap the shop), its gates 370–630 u off the route; the /mar circuit is half as long, so «Rayo del Freu» (43.6 s, measured in /juego) is easier in /mar
 - 2026-09-29 T33: packages/engine/src/mission/rescue.ts measures straight-line distances (fine while its zones are far from the edges)
 - 2026-09-29 T36: Supabase migration for the new trigger values, completed-but-unclaimed state and badge_key; the náufrago needs a mission for «Náufrago a la fiesta»; ticketing copy «Logro conseguido» unchanged
@@ -140,3 +144,13 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29 18:40 pushed main to origin (Hernán: deploy by push) · 23890e5..2293bc1
 - 2026-09-29 18:40 T34 launched · attempt 1 · agent ab0186aa256ff8696
 - 2026-09-29 18:55 T34 scope extended by message: mobile camera centring and start zoom (Hernán)
+- 2026-09-29 20:32 T34 done · branch worktree-agent-ab0186aa256ff8696 → d3bd868
+- 2026-09-29 20:33 pushed main to origin (deploy)
+- 2026-09-29 20:33 T37 launched · attempt 1 · agent ae639aabbe5a430e0
+- 2026-09-29 21:09 T37 agent stalled (no progress 600 s, stream watchdog) before writing anything; worktree gone · relaunched from scratch · attempt 1 · agent abc3067c48d6e5b95
+- 2026-09-29 23:05 T37 stalled again (600 s) near the end; leftovers committed as T37: WIP; resumed by message · machine load 135 (other sessions' e2e servers)
+- 2026-09-29 23:37 resumed T37 agent stalled a third time with no new work · continuation (interrupted) · attempt 2 · agent a31b6f568f32f62f6 · merges worktree-agent-abc3067c48d6e5b95
+- 2026-09-30 00:06 T37 attempt 2 stalled before writing anything (4th stall in a row, stream watchdog, machine load 60–135) · failed · WIP kept on worktree-agent-abc3067c48d6e5b95 (worktree .claude/worktrees/agent-abc3067c48d6e5b95) · asked Hernán
+- 2026-09-30 Hernán: «continúa» → retry now · continuation attempt 3 · agent a04e066e7516666cc
+- 2026-09-30 01:05 T37 done · branch worktree-agent-a04e066e7516666cc (attempts' worktrees removed) → 0780f6c
+- 2026-09-30 01:06 plan 003 done · pushed main (deploy)

@@ -6,6 +6,8 @@ import {
   circuitFromWorld,
   circuitRecordId,
   formatRaceTime,
+  legacyCircuitRecordId,
+  readRecord,
   submitRecord,
 } from './race';
 
@@ -30,7 +32,10 @@ describe('El Freu en los datos del mundo', () => {
     const orders = spec.gates.map((g) => g.order).sort();
     expect(orders).toEqual([0, 1, 2, 2, 3, 4]);
     expect(spec.finishOrder).toBe(4);
-    expect(circuitRecordId(spec)).toBe(`circuito:${CIRCUIT_ID}@v${CIRCUIT_VERSION}`);
+    expect(circuitRecordId(spec)).toBe(`circuito:${CIRCUIT_ID}:v${CIRCUIT_VERSION}`);
+    // Clave estable del repositorio: minúsculas, cifras y `-_:./` (sin la @ de antes).
+    expect(circuitRecordId(spec)).toMatch(/^[a-z0-9]+([-_:./][a-z0-9]+)*$/);
+    expect(legacyCircuitRecordId(spec)).toBe(`circuito:${CIRCUIT_ID}@v${CIRCUIT_VERSION}`);
   });
 });
 
@@ -145,5 +150,42 @@ describe('récord local', () => {
       best: true,
       bestMs: 70_000,
     });
+  });
+});
+
+describe('récord guardado con la clave de antes (T37)', () => {
+  const sinkWith = (records: Map<string, number>): RecordSink => ({
+    record: async (id) => (records.has(id) ? { bestMs: records.get(id)! } : null),
+    submitTime: async (id, ms) => {
+      const prev = records.get(id);
+      const best = prev === undefined || ms < prev;
+      if (best) records.set(id, ms);
+      return { best, record: { bestMs: records.get(id)! } };
+    },
+  });
+
+  it('se sigue leyendo y cuenta para el récord', async () => {
+    const records = new Map([[legacyCircuitRecordId(spec), 50_000]]);
+    const sink = sinkWith(records);
+    expect(await readRecord(sink, spec)).toEqual({ bestMs: 50_000 });
+    expect(await submitRecord(sink, spec, 55_000)).toEqual({ best: false, bestMs: 50_000 });
+    expect(await readRecord(sink, spec)).toEqual({ bestMs: 50_000 });
+    expect(await submitRecord(sink, spec, 45_000)).toEqual({ best: true, bestMs: 45_000 });
+    expect(records.get(circuitRecordId(spec))).toBe(45_000);
+    expect(await readRecord(sink, spec)).toEqual({ bestMs: 45_000 });
+  });
+
+  it('si leer la clave vieja falla, vale la nueva', async () => {
+    const records = new Map<string, number>();
+    const sink = sinkWith(records);
+    const strict: RecordSink = {
+      submitTime: sink.submitTime,
+      record: async (id) => {
+        if (id.includes('@')) throw new Error('clave no válida');
+        return sink.record(id);
+      },
+    };
+    expect(await submitRecord(strict, spec, 60_000)).toEqual({ best: true, bestMs: 60_000 });
+    expect(await readRecord(strict, spec)).toEqual({ bestMs: 60_000 });
   });
 });
