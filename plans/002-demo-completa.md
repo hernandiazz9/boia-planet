@@ -198,7 +198,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome:
 
 ## T31 — The intro plays on every full page load
-- Status: pending
+- Status: done
 - Depends on: T27
 - Goal: Hernán wants the intro (mini-world, 3D «BOIA» letters, «Zarpar», landing) every time `/` is fully loaded or reloaded, not only on the first visit. Drop the «seen» gate (boia.intro.v2) for full loads of `/`; keep what still makes sense: deep links (/#tickets, event, gallery, ?menu=…) and routes other than `/` skip the intro (REQ-ENT-011), client-side navigation back to `/` inside the app does not replay it, «Saltar animación» and «Solo quiero ver las entradas» still work from the first moment, reduced motion keeps its still variant, the lightweight landing fallback stays. Record it as D-21 in docs/DECISIONES.md (author Hernán, amends REQ-ENT-009 and D-19's seen flag, Álvaro's approval pending) and update REQ-ENT-009 in docs/spec/02-entrada-y-landing.md; `/?intro=1` stays as an explicit replay.
 - Context: T14/T27 intro (packages/engine/src/intro/**, apps/web/lib/intro/**, intro config v3, seen flag boia.intro.v2); docs/spec/02-entrada-y-landing.md (REQ-ENT-009, 011); docs/DECISIONES.md (D-19, D-20 format); apps/web/e2e/** intro and landing specs (several assume return visits skip the intro).
@@ -207,7 +207,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `python3 tools/spec/check.py` → exit 0; `grep -n "D-21" docs/DECISIONES.md` shows the decision
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: a second full load of `/` plays the intro; a deep link skips it; in-app navigation back to `/` does not replay it
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0 with the landing/intro/demo specs updated to the new rule
-- Outcome:
+- Outcome: decideEntry({pathname,search,hash,reducedMotion}) in packages/engine/src/intro/entry.ts: plain `/` always plays, any hash/query/other route goes direct (utm_*, fbclid, gclid… ignored), ?intro=1 forces, ?intro=0 skips; seen flag removed; mountMode for in-app navigation; D-21 + REQ-ENT-001/008/009 → 3f9bd7b
 
 ## Decisions
 - 2026-09-28: Hernán chose for the test version: persistence in the browser, worlds Arcilla (B05) + Acuarela (B02), the exploracion-mundos branch as base (integrated as 7614d51), 3D «BOIA» letters rendered in Blender, minigames brought forward, tickets granting the stamp directly, Admin behind a «Probar admin» button, EXPLORAR revealing a port, Supabase keys later (Hernán)
@@ -222,6 +222,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T18: canonical meshes and no SSS for world art so renders are byte-identical; puerto sprite is the central paseo, costa_sur tiles fill the bottom edge; orchestrator authorized the one-line skip of art/mundos in packages/engine swap.test.ts to keep main green (agent / orchestrator)
 - 2026-09-29 T27: only the light is pre-rendered (17 angles per letter) and motion is computed in the browser, so the loop is seamless and tunable without re-rendering; letters use Blender's Inter font, orange faces and navy sides; swap.test.ts now skips art/ folders without their own manifest.json (agent)
 - 2026-09-29: the intro plays on every full load of `/` (not only the first visit); deep links and in-app navigation still skip it (Hernán) → T31
+- 2026-09-29 T31: campaign params (utm_*, fbclid, gclid, igsh…) still show the intro; browser Back to `/` without bfcache counts as a full load; also edited docs/spec/09-requisitos.md rows so check.py passes (agent)
 
 ## Proposals (new scope)
 - 2026-09-29 T27: the title sheet is upscaled ~1.6× on 3× DPR phones; consider a 2× sheet; letters use Inter until BOIA's real wordmark font is provided
@@ -254,3 +255,8 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 01:27 T27 launched · attempt 1 · agent a919e19d514682d6b
 - 2026-09-29 01:53 T27 done · branch worktree-agent-a919e19d514682d6b → f0d9a26
 - 2026-09-29 02:00 PAUSED by Hernán (usage limit). T20 agent stopped, WIP 63a4fdd on worktree-agent-a105e608c994e8161 (worktree .claude/worktrees/agent-a105e608c994e8161 kept). T19 agent stopped, WIP df06477 on worktree-agent-ac12551dbf19cf19b (worktree .claude/worktrees/agent-ac12551dbf19cf19b kept). On resume: section 7 (orphans) → continuation agents (interrupted) for T20 and T19; everything else pending is blocked on them.
+- 2026-09-29 RESUMED by Hernán · T20 continuation (interrupted) · attempt 1 · agent a9a8600bd7f3cc391 · merges worktree-agent-a105e608c994e8161
+- 2026-09-29 RESUMED · T19 continuation (interrupted) · attempt 1 · agent abbf91d7fdb9babc9 · merges worktree-agent-ac12551dbf19cf19b
+- 2026-09-29 T31 launched · attempt 1 · agent a1a0db578c292eb82
+- 2026-09-29 PAUSED T20 and T19 again so T31 runs alone (Hernán: intro first). T20 WIP on worktree-agent-a9a8600bd7f3cc391, T19 WIP on worktree-agent-abbf91d7fdb9babc9; resume both with continuation agents after T31
+- 2026-09-29 02:56 T31 done · branch worktree-agent-a1a0db578c292eb82 → 3f9bd7b (Hernán checked it works)
