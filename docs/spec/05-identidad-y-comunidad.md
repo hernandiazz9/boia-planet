@@ -55,8 +55,8 @@ Sello de compra no es asistencia: la asistencia confirmada sólo la da el check-
 
 ## Mi Barco
 
-- **REQ-IDE-030** `L1` — Permitir en Mi Barco cambiar el color desde el principio y equipar skins y cosméticos básicos [pendiente Álvaro]. *Fuente: §15, D-02*
-- **REQ-IDE-031** `L1` — Desbloquear con monedas banderas, accesorios, aspectos y estelas, y permitir que los logros concedan cosméticos y barcos de estilo directamente al reclamarlos (REQ-IDE-052). *Fuente: §6.2, §15, D-22*
+- **REQ-IDE-030** `L1` — Permitir en Mi Barco cambiar el color desde el principio y equipar los barcos, skins y cosméticos que se tienen; al empezar sólo están desbloqueados los barcos de los dos mundos iniciales, B05 Arcilla y B02 Acuarela, y los demás muestran su precio o su condición con «te faltan N monedas» o «te faltan N puntos» [pendiente Álvaro]. *Fuente: §15, D-02, D-23*
+- **REQ-IDE-031** `L1` — Desbloquear con monedas barcos de estilo, skins de barco, banderas, accesorios, aspectos y estelas; desbloquear un barco concreto al superar un umbral de puntos, que no se gastan; y permitir que los logros concedan cosméticos y barcos de estilo directamente al reclamarlos (REQ-IDE-052); precios, umbral y reparto de barcos son `muestra` (D-23, O5). *Fuente: §6.2, §15, D-22, D-23*
 - **REQ-IDE-032** `L1` — Garantizar que skins y cosméticos no modifican velocidad, drift, colisiones, hitbox ni tiempos competitivos. *Fuente: §15, §49.17*
 - **REQ-IDE-033** `L1` — Guardar la configuración visual del barco en la cuenta, o en el dispositivo si es invitado. *Fuente: §15, §49.10*
 
@@ -101,3 +101,4 @@ Las botellas son la única mecánica social abierta: mensajes breves para quien 
 Hasta que exista Supabase todo se guarda en el navegador (REQ-ARQ-025). Los requisitos de cuenta, fusión, validación en servidor y sello por webhook de este archivo siguen valiendo para la versión final; lo que sigue sólo vale para la versión de prueba y se retira cuando llegan.
 
 - **REQ-IDE-051** `L1` — En la versión de prueba, identificar a cada visitante como invitado con apodo, sin correo, que crea su Carnet, gana logros y sellos y escribe su botella con las reglas de REQ-IDE-040 a REQ-IDE-043; decir en pantalla que todo se guarda en este navegador y que su botella sólo la ve él, sembrar unas botellas `muestra` de otros miembros ficticios para poder leer, y no presentar nada de esto como compartido. *Fuente: D-20*
+- **REQ-IDE-053** `L1` — En la versión de prueba, activar el ranking de puntos sólo en local: el visitante de este navegador junto a los miembros `muestra`, con vista histórica y del mundo o temporada actual, su posición destacada y cada fila abriendo su Carnet, rotulado como «ranking local de este navegador» y sin presentarlo como compartido ni validado. *Fuente: D-20, D-23*

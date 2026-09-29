@@ -27,7 +27,7 @@ Evento e isla son entidades separadas (§49.4). Una isla vive muchas temporadas;
 - **REQ-COM-007** `L1` — Mostrar un evento agotado como agotado, con su información vigente y sin ninguna compra inválida. *Fuente: §49.4, §49.15*
 - **REQ-COM-008** `L1` — Definir por evento el mensaje y la política de pospuesto y cancelado, y si su isla muestra recuerdo o aviso [pendiente Álvaro]. *Fuente: §49.4*
 - **REQ-COM-009** `L1` — Dejar que el Admin cambie el evento prioritario sin reconstruir el mundo, exigiendo que esté vigente: una campaña terminada no sigue como oferta activa. *Fuente: §2.1, §4.4, §5, §24*
-- **REQ-COM-010** `L1` — Dar a los eventos sin isla propia una localización comercial común configurada en el Admin. *Fuente: §39.2, §49.6*
+- **REQ-COM-010** `L1` — Dar a los eventos sin isla propia una localización comercial común configurada en el Admin, que por defecto es la isla All Day vigente: el satélite sale en el panel de Tickets y en «Próximos eventos» de esa isla con la línea «Calienta para el próximo All Day» y un enlace al All Day. *Fuente: §39.2, §39.3, §49.6, D-23*
 - **REQ-COM-011** `L1` — Calcular los próximos eventos de la home con reglas de estado y publicación, con exclusión manual que no borra el evento. *Fuente: §49.3, P1, P2*
 - **REQ-COM-012** `L1` — Ofrecer una sección «Elige tu evento» con los próximos eventos, compra directa, una ficha compartible por evento y la invitación «También puedes encontrar sorpresas navegando hasta su isla» enlazada al universo. *Fuente: §5, P3, D-02*
 - **REQ-COM-013** `L1` — No filtrar la dirección de una secret location en HTML, datos públicos ni assets. *Fuente: P3*
@@ -49,6 +49,7 @@ La ticketera la elige y la contrata Álvaro (D-06, D-08). Hasta entonces el cód
 - **REQ-COM-020** `L1` — Configurar descuentos compartibles por evento con fechas, porcentaje o importe, condiciones, destino y prioridad [pendiente Álvaro]. *Fuente: §12, §49.12*
 - **REQ-COM-021** `L1` — Premiar el descubrimiento de un código una sola vez aunque se vuelva a copiar, mantener disponibles los códigos encontrados y ocultar o marcar los caducados. *Fuente: §49.12, P3*
 - **REQ-COM-022** `L1` — Permitir copiar un descuento encontrado con un toque y mostrar su evento, fecha, condiciones y enlace al evento o producto. *Fuente: §2.1, §12, P3*
+- **REQ-COM-036** `L1` — Dar a cada tarjeta de descuento de entradas un botón «Ir a la isla» que lleva el barco en piloto automático hasta la isla de su evento (se puede saltar; desde la landing abre el juego en esa isla), y al comprar en esa isla o en la página de su evento mostrar «Tienes un código de descuento para este evento» con el código y el ahorro, aplicado en el checkout; un descuento de tienda se copia y lleva «Ir a la tienda» (externa), que lo valida. *Fuente: §2.1, §12, D-23*
 - **REQ-COM-023** `L2` — Configurar el pack de primera compra y la pegatina gratis con compra por WhatsApp (productos, stock, límite por cliente, compatibilidad y verificación real); sin verificación, presentarla como código promocional y no como suscripción comprobada. *Fuente: §49.12, D-02*
 - **REQ-COM-024** `L2` — Ofrecer cosméticos exclusivos por compra con ventana ligada al evento (quien ya los tiene los conserva) y códigos especiales de desbloqueo con artículo, caducidad, usos máximos y auditoría. *Fuente: §49.12, D-02*
 - **REQ-COM-025** `L2` — Acreditar la asistencia sólo con check-in verificable (referencia y control de repetición), asignar cada titular de una compra múltiple por vínculo verificable y no aceptar QR promocionales como asistencia. *Fuente: §49.12, D-02*
@@ -57,7 +58,7 @@ Los códigos especiales son promociones controladas, nunca contraseñas universa
 
 ## Artistas: Personas detrás del sonido
 
-Lista provisional de §18.1, textual, con avatar neutro hasta tener fotos aprobadas:
+Lista de §18.1, textual, confirmada por Álvaro el 2026-09-29 (D-23), con avatar neutro hasta tener fotos aprobadas:
 
 | Artista | Géneros |
 |---|---|
@@ -96,7 +97,7 @@ Lista provisional de §18.1, textual, con avatar neutro hasta tener fotos aproba
 ## Filosofía, fotos y tienda
 
 - **REQ-COM-030** `L1` — Publicar la página Filosofía con un manifiesto completo y una versión breve redactados a partir de [10-filosofia](10-filosofia.md) [pendiente Álvaro]. *Fuente: §22, §31, §36*
-- **REQ-COM-031** `L1` — Integrar una galería de fotos general y por evento, en la home y en su localización del mundo, con texto alternativo en todas las imágenes. *Fuente: §22, §49.6, P3*
+- **REQ-COM-031** `L1` — Integrar una galería de fotos general y por evento, en la home y en su localización del mundo, con texto alternativo en todas las imágenes; la home enseña sólo las fotos marcadas como «selección» con «Ver todas» hacia la página «Fotos y eventos», y cada isla ofrece «Ver fotos de la isla», que abre esa página en la galería de su isla o evento. *Fuente: §22, §49.6, P3, D-23*
 - **REQ-COM-032** `L1` — Incluir vídeos en galerías, islas y bloques sin que bloqueen la carga [provisional]. *Fuente: §4.4, §49.6, P3*
 - **REQ-COM-033** `L1` — Resolver la Tienda de L1 como una Isla Tienda con un panel que presenta camisetas, tote bags y packs de pegatinas y enlaza a la tienda externa de BOIA [provisional] [pendiente Álvaro]. *Fuente: §4.3, §22, §49.6, D-02*
 - **REQ-COM-034** `L2` — Construir la tienda con catálogo administrable (camisetas, tote bags, pegatinas y pack inicial), variantes, disponibilidad, envío y recogida en evento, y checkout o adaptador propio sin guardar datos de tarjeta. *Fuente: §22, P3, D-02*

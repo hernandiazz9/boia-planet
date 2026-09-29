@@ -466,20 +466,122 @@ la economía de premios y el catálogo (punto 5) tocan identidad y negocio y
 falta el visto bueno de Álvaro (P14). Hasta que conteste se avanza con esta
 decisión.
 
+## D-23 · Economía de barcos, cambio de mundo por agujero negro, descuentos que llevan a su isla, ranking local y lo que decide el orquestador · 2026-09-29 · Hernán · O1–O15 del orquestador por delegación · Álvaro sólo da el visto bueno
+
+Segunda tanda de decisiones de Hernán del 2026-09-29, tomada sobre el
+inventario v14 → código (`docs/informes/2026-09-29-inventario-v14.md`, §1),
+más las decisiones que Hernán delega en el orquestador (§2, O1–O15) y las
+respuestas de Álvaro a la lista del inventario (§6). Todo sigue siendo la
+versión de prueba de D-20: en el navegador y `muestra`, salvo el primer
+evento real (punto 3 de las respuestas de Álvaro).
+
+**Hernán decide:**
+
+1. **Economía de barcos.** Las monedas compran barcos y skins. Al empezar
+   todo está bloqueado menos los dos barcos de los mundos iniciales: B05
+   Arcilla y B02 Acuarela. Con puntos se desbloquea un barco concreto.
+   Precios y reparto en O5.
+2. **`/mar` en 3D se queda** aunque rompa D-05; ya lo recoge D-22 (punto 1).
+3. **Lo pendiente de Álvaro que pueda decidir el orquestador, lo decide**
+   (O1–O15, abajo). Álvaro sólo da el visto bueno; si cambia algo, se anota
+   aquí con fecha.
+4. **Cambio de mundo con animación de agujero negro.** El mundo se hunde en
+   un vórtice y sale el nuevo con todo en el mismo sitio: mismas islas,
+   posiciones, enlaces y funciones. Sólo cambian los renders y los
+   diálogos. Cambiar de mundo es cambiar la skin del mundo (D-20, punto 7).
+5. **Las tarjetas de descuento llevan un botón «Ir a la isla»** que navega
+   automáticamente hasta la isla del evento.
+6. **Al comprar en la isla del evento se ve el descuento**: «Tienes un
+   código de descuento para este evento», aplicado en el checkout.
+7. **La isla ofrece «Ver fotos de la isla»**, que abre la página «Fotos y
+   eventos» en la galería de esa isla o evento.
+8. **Ranking activo, sólo local** en esta versión: el visitante se compara
+   con los miembros `muestra` de su navegador. Es una excepción de la
+   versión de prueba a REQ-IDE-038, que sigue valiendo para la final.
+9. **Los textos de todas las zonas los escribe el equipo**
+   (`docs/propuestas/textos-zonas.md`), `muestra` hasta que Álvaro los lea.
+10. **Preguntas del Carnet: las decide el equipo.** Se mantienen las cinco
+    de §44.1, que ya eligió Álvaro y ya están en el código tal cual.
+11. **El móvil físico funciona bien** (probado por Hernán). P6 queda cerrada.
+
+**El orquestador decide por delegación de Hernán (pendiente de Álvaro sólo
+como visto bueno):**
+
+| # | Tema | Decisión |
+|---|---|---|
+| O1 | P4 · alcance e idioma | Se aprueba el corte L1/L2 de D-02 con los cambios de D-20 y D-22, y español solo en L1 (D-03). |
+| O2 | P8 · estilos | Arcilla (B05) y Acuarela (B02) son los mundos y barcos iniciales. Los otros seis estilos de `art/barco/estilos/` pasan a ser barcos que se ganan: en la tienda o como premio. |
+| O3 | P9 · botón de entrada | «Zarpar». La entrada se ve en cada carga de `/` (D-21). |
+| O4 | P10–P12 | Se sigue con D-20: minijuegos, dos mundos, letras 3D y arranque en el puerto. |
+| O5 | Precios de barcos (`muestra`) | Monedas: B03 Low-poly 300 y B06 Cartoon años 30 400. Puntos: B04 Semi-realista «El Veterano» al llegar a 1500 puntos; los puntos no se gastan, son umbral. Skins noche y fiesta de cada barco: 150 monedas cada una. Premio de logro (catálogo aprobado por Hernán el 2026-09-29, plan 003 T36): B07 Cel-shaded cómic por `guardacostas`, B01 Boceto a lápiz por `secretos` y B08 Pixel art por `minutos-60`. El inventario proponía vender también B08 (400) y B01 (500) y dejar sólo B07 como premio; como preveía el propio O5, se intercambia con el reparto del catálogo. |
+| O6 | Salida por temporada | Un solo punto de salida y un solo puerto en el mapa compartido (`mapa:salida`, `mapa:puerto`). Las temporadas no recolocan islas: gana el mapa compartido (D-20, punto 7). Se cierra la contradicción entre REQ-MUN-035 y REQ-ADM-032. |
+| O7 | Satélites (§39.3) | Un evento satélite sin isla aparece en el panel de Tickets y en «Próximos eventos» de la isla All Day, con la línea «Calienta para el próximo All Day» y enlace a él. La localización común (REQ-COM-010) es la isla All Day vigente. |
+| O8 | Descuento de tienda (§12) | Se muestra y se copia el código, con «Ir a la tienda» (externa). Lo valida la tienda de BOIA. |
+| O9 | Moderación de Carnets | Botón «Reportar» en el Carnet público. En el Admin, Moderación lista los Carnets reportados y permite ocultar una respuesta o la foto, o restablecer el apodo, todo auditado. |
+| O10 | Música de ambiente | Un loop por mundo generado (`muestra`) hasta que haya música con licencia. Arranca con el primer toque en `/juego` y en `/mar`, al 30 %, si la música está activa. La landing no suena. |
+| O11 | HUD | Se quedan Inicio, saldos y brújula (decisiones de Hernán) junto al minimapa, el menú y, en `/mar`, «Entradas» (D-22). La caja de fps sólo sale con `?debug`. REQ-PRO-009 se ajusta. |
+| O12 | Seis boies | Se añaden cinco boies informativas a la ruta del mapa compartido, con textos por mundo. Con la primera boia son seis: el logro «X/6 boies» de la v14 pasa a ser alcanzable (y `boies-3` del catálogo, también). |
+| O13 | Instagram | Enlace en el pie, en la cabecera y en el panel de la boia de WhatsApp (URL `muestra`). |
+| O14 | Legales | Aviso legal, privacidad y cookies con datos del titular inventados (respuesta 9 de Álvaro, abajo), marcados `muestra` y con aviso de que no son un titular real. Corrige la propuesta del inventario, que los dejaba vacíos. |
+| O15 | Delfín | Aparece junto al barco cada 2–4 min en mar abierto, guía unos segundos hacia algo sin descubrir y se va. |
+
+**Respuestas de Álvaro (vía Hernán, 2026-09-29):**
+
+| # | Tema | Respuesta | Qué hacemos |
+|---|---|---|---|
+| 1 | Ticketera | Por decidir | P2 sigue abierta; sigue el sandbox (D-20, punto 3). |
+| 2 | Primer evento real | Halloween en el Kiki García Bar, sin cartel todavía | Evento real `halloween-2026`, **BOIA Club · Halloween**, 31-10-2026, en el Kiki García Bar, cartel «próximamente» y precio `muestra`. No es un All Day: es una activación satélite (§39.2) de la serie «BOIA Club», sin isla propia, en el panel de Tickets y en «Próximos eventos» de la isla `allday` (O7), con enlace al próximo All Day cuando exista. Es el único contenido no `muestra` de la versión de prueba. |
+| 3 | Enlaces | Sin respuesta | Siguen `muestra` (P15). |
+| 4 | Códigos de descuento | Llegarán cuando funcionen con la ticketera | Inventados y marcados `muestra` (P16). |
+| 5 | Artistas | Se mantiene la lista de 26; fotos y sus Carnets, más adelante | La lista deja de ser provisional; sin fotos ni Carnets de artistas por ahora (P17). |
+| 6 | Fotos de eventos | Sí, con una selección personal en la página inicial | Las fotos llevan la marca «selección»: la home enseña sólo esas y «Ver todas» lleva a `/fotos` («Fotos y eventos»). |
+| 7 | Música | Dejar las de ambiente; las opciones llegarán más adelante | Se mantiene O10 (P18). |
+| 8 | Logo y tipografía | `art/marca/boia-mascota.jpg` (boia naranja con gorro azul marino, ojos grandes y sonrisa) y `art/marca/boia-wordmark.jpg` («BOIA» en naranja, palo grueso con cantos blandos) | La mascota es la base de todas las boies 3D del juego, con forma de boya: la primera, las informativas, la de WhatsApp y la Boia Fiestera (con sus detalles de fiesta). Las letras 3D de la entrada se rehacen con la forma del wordmark en lugar de Inter, y el wordmark es el logo. Falta el archivo de la tipografía (P20); si no existe, se calca del wordmark. |
+| 9 | Datos legales | Inventados, con nombres graciosos | Ver abajo (O14). |
+| 10–11 | Dominio, cuentas y enseñar la demo | Permiso total para Hernán | P13 cerrada: Hernán crea las cuentas y decide a quién enseñarla. |
+
+Datos legales `muestra` (se sustituyen antes de publicar de verdad, P21):
+titular **Bollería Fina del Mediterráneo, S.L.**, NIF B00000069 (no válido a
+propósito), domicilio **C/ Rosa Melano, 69, 03001 Alicante**, administrador
+**Benito Camelas**, delegada de protección de datos **Débora Melo**, atención
+al público **Paco Merlo**, correo `privacidad@boia.example`. Los textos están
+en `docs/propuestas/textos-zonas.md`.
+
+Modifica REQ-PRO-009 (HUD, O11), REQ-ENT-003 (letras con la forma del
+wordmark), REQ-ENT-032 (Instagram, O13), REQ-MUN-035 y REQ-ADM-032 (una sola
+salida y un solo puerto, O6), REQ-AVE-018 (delfín, O15), REQ-IDE-030 y
+REQ-IDE-031 (economía de barcos, punto 1 y O5), REQ-COM-010 (satélites, O7)
+y REQ-COM-031 (fotos, punto 7 y respuesta 6), y añade REQ-MUN-039 (cambio de
+mundo por agujero negro), REQ-AVE-040 (cinco boies informativas y la
+mascota), REQ-COM-036 (el descuento lleva a su isla y se ve al comprar),
+REQ-ADM-040 (moderación de Carnets) y, sólo para la versión de prueba,
+REQ-IDE-053 (ranking local): todos citan ahora D-23. REQ-IDE-038 no cambia:
+es el ranking de la versión final. Siguen abiertas con Álvaro P2 (ticketera)
+y P14 (D-22), y las nuevas P15 a P22 (lo que aún falta). Hasta que conteste
+se avanza con esta decisión.
+
 ## Preguntas abiertas
 
 | # | Pregunta | Para | Traba |
 |---|---|---|---|
 | P2 | ¿Ticketera: Fourvenues u otra? ¿Ya hay cuenta? | Álvaro | adaptador real (fase 2) |
-| P3 | ¿Qué evento es el objetivo de L1 y en qué fecha? | Álvaro | el calendario entero |
-| P4 | ¿Aprueba el corte L1/L2 de D-02 y español solo (D-03)? | Álvaro | nada hasta fase 3; conviene cerrarlo en el hito 1 |
+| P3 | ¿Qué evento es el objetivo de L1 y en qué fecha? Respondida en parte 2026-09-29 (D-23): el primer evento real es BOIA Club · Halloween, 31-10-2026, en el Kiki García Bar, un satélite; falta la fecha del próximo All Day. | Álvaro | el calendario del All Day |
+| P4 | ~~¿Aprueba el corte L1/L2 de D-02 y español solo (D-03)?~~ Cerrada 2026-09-29 por el orquestador, por delegación de Hernán (D-23, O1): se aprueba con los cambios de D-20 y D-22; Álvaro sólo da el visto bueno. | — | — |
 | P5 | ~~Referencia del barco~~ Cerrada 2026-09-28 por Hernán: no hay; el 01 va con propuesta procedural y Álvaro opina sobre el visor. | — | — |
-| P6 | ¿Quién tiene el iPhone y el Android de prueba? | Hernán | fase 1, entrada cinemática |
+| P6 | ~~¿Quién tiene el iPhone y el Android de prueba?~~ Cerrada 2026-09-29 por Hernán (D-23, punto 11): el móvil físico funciona bien. | — | — |
 | P7 | Crear el proyecto Supabase `boia-planet-dev` y pasar sus claves con `pedir-token` | Hernán | tarea de auth (T07 del plan 001) en adelante |
-| P8 | ¿Qué estilos de la exploración del 01 (`docs/informes/img/01-estilo-*.png`) pasan a Álvaro? | Hernán | el estilo definitivo; los assets se re-renderizan barato |
-| P9 | ¿Aprueba la entrada nueva de D-19 (mini-mundo, «BOIA», botón para entrar, aterrizaje en el mar) y qué texto lleva el botón? | Álvaro | cerrar ENT 06 y el copy del botón; se avanza con D-19 mientras tanto |
-| P10 | ¿Aprueba adelantar los minijuegos Faro y Cañón y un segundo mundo (D-20, punto 1), que D-02 dejaba en L2? | Álvaro | que entren en el L1 definitivo; la versión de prueba avanza con D-20 |
-| P11 | ¿Aprueba los dos mundos, Arcilla (B05) y Acuarela (B02), con sus historias y los nombres de sus lugares (`mundos/arcilla/diseno.md` y el de Acuarela cuando exista)? | Álvaro | historias y nombres definitivos; todo es `muestra` |
-| P12 | ¿Aprueba el título «BOIA» en letras 3D y que tras EXPLORAR se empiece en el puerto El Varadero (D-20, puntos 5 y 6)? | Álvaro | cerrar ENT 06 junto con P9 |
-| P13 | ¿Se puede enseñar fuera del equipo la versión de prueba, con sello de prueba y «Probar admin» abierto, y con qué enlaces reales (tickets, tienda, WhatsApp, redes, contacto)? | Álvaro | compartir la URL de Vercel más allá de Hernán y Álvaro |
+| P8 | ~~¿Qué estilos de la exploración del 01 pasan a Álvaro?~~ Cerrada 2026-09-29 (D-23, O2 y O5): Arcilla y Acuarela son los mundos y barcos iniciales; los otros seis se ganan con monedas, puntos o logros. | — | — |
+| P9 | ~~¿Aprueba la entrada nueva de D-19 y qué texto lleva el botón?~~ Cerrada 2026-09-29 por el orquestador, por delegación (D-23, O3): «Zarpar», con la entrada en cada carga de `/` (D-21). | — | — |
+| P10 | ~~¿Aprueba adelantar los minijuegos Faro y Cañón y un segundo mundo?~~ Cerrada 2026-09-29 por el orquestador, por delegación (D-23, O4): se sigue con D-20. | — | — |
+| P11 | ~~¿Aprueba los dos mundos, Arcilla y Acuarela, con sus historias y nombres?~~ Cerrada 2026-09-29 por el orquestador, por delegación (D-23, O4): se sigue con D-20; historias, nombres y textos siguen `muestra` hasta su lectura (P22). | — | — |
+| P12 | ~~¿Aprueba el título «BOIA» en letras 3D y el arranque en El Varadero?~~ Cerrada 2026-09-29 por el orquestador, por delegación (D-23, O4); las letras toman la forma del wordmark de Álvaro (D-23, respuesta 8). | — | — |
+| P13 | ~~¿Se puede enseñar fuera del equipo la versión de prueba?~~ Cerrada 2026-09-29 por Álvaro (D-23, respuestas 10–11): permiso total para Hernán, que crea las cuentas y decide a quién enseñarla. Los enlaces reales pasan a P15. | — | — |
 | P14 | ¿Aprueba `/mar` como planeta de agua sin costas (D-22, punto 2) y los logros que se reclaman con premios por tipo, incluidos barcos de estilo bloqueados hasta reclamarlos (D-22, punto 5, y `docs/propuestas/logros-catalogo.md`)? | Álvaro | catálogo y economía definitivos; todo es `muestra` |
+| P15 | Enlaces reales: entradas, tienda, WhatsApp, Instagram y correo de contacto (D-23, respuesta 3) | Álvaro | quitar `muestra` de pie, cabecera, boia de WhatsApp y tienda |
+| P16 | Códigos de descuento reales, creados en la ticketera o la tienda, con el % de cada uno (D-23, respuesta 4) | Álvaro | llegan con la ticketera (P2); hasta entonces, inventados |
+| P17 | Fotos de los 26 artistas y sus Carnets con las preguntas (D-23, respuesta 5) | Álvaro | avatares y Carnets de artista; hoy avatar neutro |
+| P18 | Música con licencia, una por mundo (D-23, respuesta 7) | Álvaro | sustituir los loops generados de O10 |
+| P19 | Cartel de BOIA Club · Halloween (D-23, respuesta 2) | Álvaro | el evento sale con «cartel próximamente» |
+| P20 | Archivo de la tipografía de BOIA (.otf o .ttf), si existe (D-23, respuesta 8) | Álvaro | si no llega, se calca del wordmark |
+| P21 | Datos legales reales (titular, NIF/CIF, domicilio, correo de privacidad) y revisión profesional de los textos legales | Álvaro | publicar de verdad (REQ-PRO-020); hoy son inventados (D-23, O14) |
+| P22 | Lectura rápida de los textos del equipo (`docs/propuestas/textos-zonas.md`) y de O1–O15 de D-23 | Álvaro | quitar `muestra` de los textos |

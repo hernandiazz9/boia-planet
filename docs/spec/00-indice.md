@@ -1,6 +1,6 @@
 # 00 · Índice de la especificación v15
 
-**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-22 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
+**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-23 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
 
 ## Cómo se usa
 
@@ -12,7 +12,7 @@ Una sesión de trabajo lee este índice y los archivos que nombre su encargo, no
 |---|---|---|
 | [01-producto-y-flujos](01-producto-y-flujos.md) | Visión, dos caminos, flujos, tipos de evento, reglas UX, cobertura del piloto, contenido de BOIA y publicación | §1–3, §25–28, §30, §33, §39, §45–47, §49.18 |
 | [02-entrada-y-landing](02-entrada-y-landing.md) | Cinemática del mini-mundo (D-19) con «BOIA» en letras 3D (D-20), landing en el mundo, home por bloques, accesos con la isla visible, ENT 01–06 | §4, §47-B, §49.3, §49.6 |
-| [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, mundos sobre un mapa compartido (D-20), la vista 3D `/mar` como planeta de agua (D-22), MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
+| [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, mundos sobre un mapa compartido (D-20) y el cambio de mundo por agujero negro (D-23), la vista 3D `/mar` como planeta de agua (D-22), MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
 | [04-aventura](04-aventura.md) | Tutorial, Boia Fiestera, islas, mar vivo, náufrago, circuito y minijuegos (adelantados por D-20) | §7–9, §11–13, §47-A, §49.11 |
 | [05-identidad-y-comunidad](05-identidad-y-comunidad.md) | Invitado y cuenta, Carnet, sellos, logros, economía, Mi Barco, menú, ranking, botellas, encuestas y mensajes | §14–17, §19–21, §40, §42–44, §46, §49.8–49.10 |
 | [06-comercial](06-comercial.md) | Eventos y sus 7 estados, ticketera, descuentos y promociones, artistas, filosofía, fotos y tienda | §5, §18, §22, §49.4, §49.12 |
@@ -59,7 +59,7 @@ El alcance se asignó así:
 2. Lo que D-02 no nombra y la propia v14 aparta o pospone va a `diferido` sin marca, como D-02 hace con lo que «ya lo decía la v14».
 3. Lo que D-02 no nombra y la v14 mete en el lanzamiento lleva `[provisional]`, con el alcance que mejor encaja, y queda como pregunta para el orquestador.
 4. Lo que D-20 adelanta de L2 (los minijuegos, REQ-AVE-035 a REQ-AVE-039) lleva `L1` y D-20 en la fuente, con «Adelantado de L2 (D-20)» en las notas de 09; `check.py` sólo admite L1, L2 y diferido, así que no hay un alcance propio para la versión de prueba.
-5. Lo que sólo vale para la versión de prueba de D-20 (REQ-ARQ-025, REQ-IDE-051, REQ-COM-035 y REQ-ADM-039) lleva `L1`, D-20 como fuente, empieza por «En la versión de prueba» y dice en las notas de 09 qué requisito de la versión final lo retira. Esos requisitos de la versión final no cambian.
+5. Lo que sólo vale para la versión de prueba de D-20 (REQ-ARQ-025, REQ-IDE-051, REQ-COM-035 y REQ-ADM-039, más REQ-IDE-053 de D-23) lleva `L1`, D-20 como fuente, empieza por «En la versión de prueba» y dice en las notas de 09 qué requisito de la versión final lo retira. Esos requisitos de la versión final no cambian.
 
 Requisitos `[provisional]` por motivo:
 
@@ -133,6 +133,12 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | §4.3, §7: Explorar lleva al spawn con la primera boia | El spawn está en el puerto de salida; Explorar muestra el puerto de salida de cada mundo, con la primera boia y la salida hacia la Boia Fiestera | D-20 | REQ-ENT-012, REQ-AVE-001 |
 | §23.4, §24: una temporada es una configuración del mundo | Un mapa compartido de lugares y un mundo por temporada, cada uno con sus skins, nombres, historia y barco | D-20 | REQ-MUN-035 a REQ-MUN-037, REQ-ADM-032 |
 | §1, §6.1: mundo 2D/2.5D sin runtime 3D | Sigue así en la landing, la entrada y `/juego`; `/mar` es una vista 3D del mismo mapa con three.js, sólo en esa ruta, y allí el mundo es un planeta de agua sin costas | D-05, D-22 | REQ-MUN-001, REQ-MUN-011, REQ-MUN-038 |
+| §14, §25, §47-A: en conducción, sólo minimapa, menú y avisos | También Inicio, saldos, brújula y, en `/mar`, «Entradas»; la caja de fps sólo con `?debug` | D-22, D-23 | REQ-PRO-009 |
+| §23.4, §49.7: cada temporada con su spawn | Un solo spawn y un solo puerto en el mapa compartido; las temporadas no recolocan lugares | D-20, D-23 | REQ-MUN-035, REQ-ADM-032 |
+| §39.2, §39.3: localización común de los satélites sin concretar | La isla All Day vigente, con «Calienta para el próximo All Day» en Tickets y en sus «Próximos eventos» | D-23 | REQ-COM-010 |
+| §15: al principio sólo se cambia el color; monedas para cosméticos | También los barcos se ganan: al empezar sólo B05 Arcilla y B02 Acuarela; monedas para barcos y skins, un barco por umbral de puntos y tres por logro | D-22, D-23 | REQ-IDE-030, REQ-IDE-031 |
+| §11.3: el delfín aparece «ocasionalmente» | Cada 2–4 min en mar abierto, guía unos segundos hacia algo sin descubrir y se va | D-23 | REQ-AVE-018 |
+| §14: «X/6 boies» con una sola boia en el mapa | Cinco boies informativas más, todas a partir de la mascota de BOIA | D-23 | REQ-AVE-040 |
 | §14: los logros se conceden al cumplirse | Se completan y quedan listos para reclamar; el premio llega al pulsar «Reclamar» y depende del logro (monedas y puntos, insignia, barco o cosmético) | D-22 | REQ-IDE-024, REQ-IDE-031, REQ-IDE-052 |
 | §44.2, §46 frente a §8.1: «tripulación» y «tripulante» | «Tripulación» nunca para usuarios; «tripulante» para la Fiestera | D-08 | REQ-IDE-020, REQ-AVE-006 |
 | P1: la IA selecciona la ticketera | La elige Álvaro con un ADR comparativo | D-06, D-08 | REQ-COM-015 |
@@ -176,3 +182,4 @@ Excepciones temporales de la versión de prueba, sin servicios externos. No se p
 | Sello sólo por el webhook de la ticketera | Sello al confirmar un checkout sandbox rotulado como prueba | La ticketera real (P2) | REQ-COM-035 |
 | Admin con contraseña, TOTP y roles | «Probar admin» sin login, con aviso de demo | REQ-ADM-002 a REQ-ADM-004 | REQ-ADM-039 |
 | Recompensas de minijuegos validadas en servidor | Validadas en el navegador | Supabase | REQ-AVE-038 |
+| Ranking de puntos validado y compartido | Ranking local de este navegador, con los miembros `muestra` (D-23) | Supabase y REQ-IDE-038 | REQ-IDE-053 |

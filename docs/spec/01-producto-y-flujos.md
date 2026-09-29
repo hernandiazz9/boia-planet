@@ -35,7 +35,7 @@ ALL DAY BOIA es el producto cultural principal; las activaciones satélite son h
 ## Reglas de experiencia no negociables
 
 - **REQ-PRO-008** `L1` — Diseñar y probar cada pantalla primero en móvil táctil y después en escritorio. *Fuente: §1, §25*
-- **REQ-PRO-009** `L1` — Dar más mundo y menos HUD: ninguna tarjeta de progreso permanente ni overlay grande durante la conducción, salvo una acción puntual imprescindible. *Fuente: §14, §25, §47-A*
+- **REQ-PRO-009** `L1` — Dar más mundo y menos HUD: ninguna tarjeta de progreso permanente ni overlay grande durante la conducción, salvo una acción puntual imprescindible; durante la conducción sólo quedan en pantalla el minimapa, el botón del menú, Inicio, los saldos de puntos y monedas, la brújula, «Entradas» en `/mar` (REQ-ENT-040) y los avisos temporales, y la caja de fps sale sólo con `?debug`. *Fuente: §14, §25, §47-A, D-23*
 - **REQ-PRO-010** `L1` — Evitar modales que detengan la navegación salvo necesidad real, y usar la proximidad cuando la interacción lo permita. *Fuente: §25*
 - **REQ-PRO-011** `L1` — Dar feedback inmediato con animación y sonido corto a cada interacción del mundo. *Fuente: §25*
 - **REQ-PRO-012** `L1` — Hacer que las mecánicas importantes se entiendan visualmente, sin manuales largos, y no añadir sistemas que exijan demasiada explicación. *Fuente: §25*

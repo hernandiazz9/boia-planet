@@ -32,10 +32,11 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 ## Eventos y comercio
 
 - **All Day BOIA.** Formato principal de BOIA: evento de día y noche con música diversa, actividades, cultura y gastronomía. En el mundo son las grandes islas (§39.1; REQ-PRO-006).
-- **Activación satélite.** Evento pequeño entre All Days, normalmente gratuito o de bajo coste, para comunidad y promoción. Puede no tener isla (§39.2; REQ-PRO-007).
+- **Activación satélite.** Evento pequeño entre All Days, normalmente gratuito o de bajo coste, para comunidad y promoción. Puede no tener isla (§39.2; REQ-PRO-007). La serie «BOIA Club» es de este tipo; su primer evento real es BOIA Club · Halloween (D-23).
 - **Evento prioritario.** El evento que BOIA quiere vender en cada momento. Configurable, siempre vigente (§2.1; REQ-COM-009).
 - **Estado de evento.** Borrador, próximamente, a la venta, agotado, pospuesto, cancelado o finalizado (§49.4; REQ-COM-003).
-- **Localización comercial común.** Lugar del mundo que usan los eventos sin isla propia (§49.6; REQ-COM-010).
+- **Localización comercial común.** Lugar del mundo que usan los eventos sin isla propia; por defecto, la isla All Day vigente (§49.6, D-23; REQ-COM-010).
+- **Fotos y eventos.** Página de la galería (`/fotos`), por isla o evento; la home sólo enseña las fotos marcadas como **selección** y cada isla la abre con «Ver fotos de la isla» (D-23; REQ-COM-031).
 - **Adaptador de ticketera.** Capa que aísla al código del proveedor de entradas; funciona con sandbox hasta que Álvaro contrate (D-06; REQ-COM-015).
 - **Descuento.** Código ligado a un evento o producto, con fechas y condiciones; descubrirlo se premia una vez (§12, §49.12; REQ-COM-020).
 - **Secret location.** Dirección de un evento que no se revela en datos públicos (P3; REQ-COM-013).
@@ -50,7 +51,8 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 - **INICIAR_MINIJUEGO.** Comportamiento de extensión para minijuegos. Arranca `faro` y `canon` por su ID (D-08, D-20; REQ-MUN-026).
 - **Temporada.** Configuración versionada del mundo (islas, spawn, destino de misión, eventos, diálogos, logros). Cada mundo hace de temporada; duplicarla es L2 (§23.4, D-20; REQ-ARQ-008, REQ-ADM-032).
 - **Mapa compartido, lugar.** Lista única de lugares (islas, boies, encuentros, puerto) con ID estable, posición y comportamientos, común a todos los mundos. Mover un lugar lo mueve en todos (D-20; REQ-MUN-035).
-- **Mundo.** Forma que toma el mapa compartido en una temporada: una skin por lugar (arte, nombre y textos), una historia y un estilo de barco. Arcilla (B05) y Acuarela (B02) (D-20; REQ-MUN-037).
+- **Mundo.** Forma que toma el mapa compartido en una temporada: una skin por lugar (arte, nombre y textos), una historia y un estilo de barco. Arcilla (B05) y Acuarela (B02) (D-20; REQ-MUN-037). Se cambia con la transición del **agujero negro**: el mundo se hunde en un vórtice y sale el otro con todo en el mismo sitio (D-23; REQ-MUN-039).
+- **Mascota de BOIA.** Boia naranja con gorro azul marino (`art/marca/boia-mascota.jpg`); es la base de todas las boies del juego (D-23; REQ-AVE-040).
 - **`/mar`, planeta de agua.** Vista 3D del mapa compartido, al lado de `/juego`: un pequeño planeta de agua sin costas donde la navegación da la vuelta, con cielo y estrellas en el horizonte y el botón «Entradas» siempre a mano (D-22; REQ-MUN-038, REQ-ENT-040).
 - **Skin de lugar, nombre propio.** Lo que un mundo aporta a un lugar; el nombre propio sustituye al común sólo en ese mundo (D-20; REQ-MUN-036).
 - **Puerto de salida.** Lugar donde empieza el barco al explorar, con la primera boia: El Varadero en Arcilla (D-20; REQ-ENT-012).

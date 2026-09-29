@@ -54,13 +54,14 @@ Publicar un logro nuevo para todos desde su publicación es L1; evaluar hechos a
 
 - **REQ-ADM-027** `L1` — Moderar botellas: revisar reportes, retirar y propagar la retirada. *Fuente: §17, §23.2, D-02*
 - **REQ-ADM-028** `L1` — Retirar a mano, con auditoría, recompensas o récords implausibles. *Fuente: D-09*
+- **REQ-ADM-040** `L1` — Moderar Carnets: un botón «Reportar» en cada Carnet público y, en Moderación, la lista de Carnets reportados con el motivo, desde la que se oculta una respuesta o la foto, o se restablece el apodo, con auditoría y sin borrar el Carnet. *Fuente: §23.2, §49.2, D-23*
 - **REQ-ADM-029** `L1` — Avisar del impacto en mapa, eventos, misiones, logros y mensajes antes de editar o borrar un objeto referenciado; antes de borrar, mostrar el elemento y sus relaciones y exigir una segunda confirmación inequívoca como escribir el nombre; en operaciones masivas, mostrar número, campos que cambian y una muestra. *Fuente: §49.13, P2*
 - **REQ-ADM-030** `L1` — Usar archivo o papelera recuperable como acción habitual, con plazo configurable [pendiente Álvaro] y auditoría, y exigir reautenticación para una purga irreversible. *Fuente: §49.13, P2*
 - **REQ-ADM-031** `L1` — Atender a mano, con un procedimiento documentado, las peticiones de descarga o eliminación de cuenta y de retirada de contenido público [provisional]. *Fuente: §49.13, D-02*
 
 ## Temporadas
 
-- **REQ-ADM-032** `L1` — Tratar cada mundo como una temporada (D-20) y mantener un único mundo activo, con ID y versión, que agrupa las skins publicadas sobre el mapa compartido, el spawn y el puerto, el destino de la misión y el ranking de temporada; el mundo activo es el que ve por defecto quien llega, el visitante puede cambiar de mundo desde el menú (REQ-MUN-037) y crear otra temporada es duplicarla (REQ-ADM-033). *Fuente: §21, §23.4, §49.7, P1, D-02, D-20*
+- **REQ-ADM-032** `L1` — Tratar cada mundo como una temporada (D-20) y mantener un único mundo activo, con ID y versión, que agrupa las skins publicadas sobre el mapa compartido, el destino de la misión y el ranking de temporada, sin recolocar lugares: el spawn y el puerto son los únicos del mapa compartido (`mapa:salida`, `mapa:puerto`, REQ-MUN-035); el mundo activo es el que ve por defecto quien llega, el visitante puede cambiar de mundo desde el menú (REQ-MUN-037) y crear otra temporada es duplicarla (REQ-ADM-033). *Fuente: §21, §23.4, §49.7, P1, D-02, D-20, D-23*
 - **REQ-ADM-033** `L2` — Duplicar una temporada como borrador sin cuentas, ventas, mensajes ni recompensas; cambiar spawn, evento prioritario, destinos, eventos, diálogos y logros; probarla, publicarla y restaurarla. *Fuente: §23.4, P2, D-02*
 
 Qué se conserva entre temporadas está en REQ-ARQ-008.

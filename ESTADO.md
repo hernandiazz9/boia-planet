@@ -4,6 +4,22 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T38: decisión D-23, spec al día y los textos de todas las zonas
+
+Sólo documentos; no se toca código.
+
+Qué hay:
+- `docs/DECISIONES.md`: D-23 con los 11 puntos de Hernán del inventario (§1), O1–O15 del orquestador por delegación (Álvaro sólo da el visto bueno) y las respuestas de Álvaro (§6): mascota como base de todas las boies, wordmark para las letras 3D y el logo, BOIA Club · Halloween (31-10-2026, Kiki García Bar) como satélite real, selección de fotos en la home, datos legales inventados. O5 se ajusta al reparto de barcos que Hernán aprobó con el catálogo de logros (plan 003 T36): monedas B03 y B06, puntos B04 a 1500, logros B07, B01 y B08. Preguntas: P4, P6, P8–P13 cerradas, P3 respondida en parte, P2 y P14 siguen, nuevas P15–P22 (enlaces, códigos, fotos de artistas, música, cartel, tipografía, datos legales reales, lectura de los textos).
+- `docs/spec/`: modificados REQ-PRO-009, REQ-ENT-003, REQ-ENT-032, REQ-MUN-035, REQ-ADM-032, REQ-AVE-018, REQ-IDE-030, REQ-IDE-031, REQ-COM-010 y REQ-COM-031; nuevos REQ-MUN-039 (agujero negro), REQ-AVE-040 (cinco boies y la mascota), REQ-COM-036 (descuento → isla y aviso al comprar), REQ-ADM-040 (moderación de Carnets) y REQ-IDE-053 (ranking local, sólo versión de prueba). 00-indice cita D-01 a D-23 con sus desviaciones; conteos de 09 al día; glosario; la lista de artistas deja de ser provisional.
+- `docs/PLAN.md` (Faro y Cañón descongelados, P6 cerrada) y `mundos/arcilla/diseno.md` (Faro y Cañón en L1, no solar L2).
+- `docs/propuestas/textos-zonas.md`: 618 cadenas en 32 zonas (las 18 de §31.2 y las de D-23), una clave por cadena, por pantalla y por mundo donde cambia; tabla de zonas con el conteo arriba; las 5 preguntas del Carnet textuales; legales (aviso legal, privacidad, cookies) con los datos inventados y su aviso `muestra`, para que T49 los conecte.
+
+Comandos:
+```
+python3 tools/spec/check.py        # exit 0; 294 requisitos, 0 duplicados, centinelas 10/10
+python3 tools/spec/test_check.py   # exit 0; 18 pruebas
+```
+
 ## 2026-09-29 — plan 002 T30: última pasada de la demo y preparación del despliegue
 
 La versión de prueba entera, repasada de punta a punta en móvil, y lo que Hernán necesita para desplegarla él mismo en Vercel. No se ha desplegado nada.

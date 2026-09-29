@@ -18,7 +18,7 @@ Definidos en [01-producto-y-flujos](01-producto-y-flujos.md). 21 requisitos: 21 
 | REQ-PRO-006 | Formato All Day BOIA o satélite | §39, P2 | L1 | El esquema de evento exige formato con 2 valores; cada All Day publicado tiene isla grande | — |
 | REQ-PRO-007 | Satélites sin isla principal | §39.2 | L1 | Un satélite sin isla se publica y su acceso usa la localización común | — |
 | REQ-PRO-008 | Móvil táctil primero | §1, §25 | L1 | Cada entrega con front registra la prueba en móviles físicos antes que la de escritorio | — |
-| REQ-PRO-009 | Más mundo, menos HUD | §14, §25, §47-A | L1 | Captura en conducción en 360×640: sólo minimapa, botón del menú y avisos temporales | — |
+| REQ-PRO-009 | Más mundo, menos HUD | §14, §25, §47-A, D-23 | L1 | Captura en conducción en 360×640: sólo minimapa, menú, Inicio, saldos, brújula («Entradas» en `/mar`) y avisos temporales; sin `?debug` no hay caja de fps | HUD ampliado por D-23 (O11) |
 | REQ-PRO-010 | Sin modales que detengan la navegación | §25 | L1 | Inventario de pantallas: diálogos, islas, recogidas y avisos sin modales bloqueantes | — |
 | REQ-PRO-011 | Feedback con animación y sonido | §25 | L1 | Cada comportamiento con efecto visible admite animación y sonido asignables; revisión de hito | — |
 | REQ-PRO-012 | Mecánicas que se entienden solas | §25 | L1 | En el hito, personas ajenas al proyecto completan tutorial y rescate sin ayuda; dudas registradas | — |
@@ -34,13 +34,13 @@ Definidos en [01-producto-y-flujos](01-producto-y-flujos.md). 21 requisitos: 21 
 
 ## ENT · Entrada y landing
 
-Definidos en [02-entrada-y-landing](02-entrada-y-landing.md). 39 requisitos: 37 L1, 2 L2, 0 diferidos.
+Definidos en [02-entrada-y-landing](02-entrada-y-landing.md). 40 requisitos: 38 L1, 2 L2, 0 diferidos.
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
 | REQ-ENT-001 | Entrada en tres actos: mini-mundo, botón y aterrizaje en el mar | §4.1, §4.4, §47-B, D-19, D-21 · alias ENT 01 | L1 | e2e al abrir `/` en móvil: aparece el mini-mundo, luego «BOIA» y el botón, y pulsarlo termina en la landing sobre el mar; grabación sin flashes, fotogramas vacíos ni saltos | D-19 sustituye la entrada sin clic de §47-B |
 | REQ-ENT-002 | Sólo el botón de entrar antes de la landing; entradas siempre a mano | §4.1, §4.4, §47-B, D-19 | L1 | e2e al abrir `/`: el botón de entrar es la única acción obligatoria y el enlace a entradas lleva a Tickets sin pulsarlo | — |
-| REQ-ENT-003 | Título «BOIA» en letras 3D y botón de entrar | §4.1, §47-B, D-05, D-08, D-19, D-20 | L1 | La configuración de entrada trae la secuencia renderizada de «BOIA» y un texto de botón marcado `muestra`; con movimiento reducido, un fotograma quieto; ninguna librería 3D en el bundle; ninguna ruta muestra pantalla de bienvenida | [pendiente Álvaro] Texto definitivo del botón (P9) y letras 3D (P12) |
+| REQ-ENT-003 | Título «BOIA» en letras 3D y botón de entrar | §4.1, §47-B, D-05, D-08, D-19, D-20, D-23 | L1 | La configuración de entrada trae la secuencia renderizada de «BOIA» con la forma del wordmark y un texto de botón marcado `muestra`; con movimiento reducido, un fotograma quieto; ninguna librería 3D en el bundle; ninguna ruta muestra pantalla de bienvenida | [pendiente Álvaro] Texto definitivo del botón (P9) y letras 3D (P12) |
 | REQ-ENT-004 | Dirección artística de la entrada | §4.4 | L1 | Revisión visual de ENT 06 aprobada por Álvaro | — |
 | REQ-ENT-005 | Planeta 2D/2.5D reconocible | §4.4, D-05 | L1 | Revisión de ENT 06; ninguna librería 3D en el bundle | — |
 | REQ-ENT-006 | Aparición, pausa, acercamiento con aplanado y llegada | §4.4, D-19 | L1 | Storyboard de los 4 tiempos aprobado y grabación que los muestra; test: la curvatura va de 1 a 0 sin retroceder durante el aterrizaje | — |
@@ -69,7 +69,7 @@ Definidos en [02-entrada-y-landing](02-entrada-y-landing.md). 39 requisitos: 37 
 | REQ-ENT-029 | Navegación de la landing | §4.2, §4.4, D-03 | L1 | Capturas en móvil y escritorio con los 5 accesos, Mi Carnet y sonido | — |
 | REQ-ENT-030 | Bloques por scroll | §4.2, §4.4 | L1 | Un bloque sin contenido publicado no se renderiza | — |
 | REQ-ENT-031 | Bloques de actividades y comunidad | §4.4, P3 | L2 | Bloques disponibles en el editor de la home | [provisional] Alcance: D-02 no los nombra |
-| REQ-ENT-032 | Cierre de página | §4.4, §31.2 | L1 | Pie con enlaces oficiales, contacto y legales; ningún formulario de suscripción sin uso y tratamiento definidos | [pendiente Álvaro] Legales con revisión profesional |
+| REQ-ENT-032 | Cierre de página | §4.4, §31.2, D-23 | L1 | Pie con enlaces oficiales (Instagram incluido, también en cabecera y boia de WhatsApp), contacto y legales; ningún formulario de suscripción sin uso y tratamiento definidos | [pendiente Álvaro] Legales con revisión profesional |
 | REQ-ENT-033 | Home por bloques administrables | §49.3, P1, P2 | L1 | Reordenar y ocultar un bloque y publicar cambia la home sin despliegue | — |
 | REQ-ENT-034 | Tickets, Fotos y Tienda con isla visible | §4.3, §22, §49.6 | L1 | Cada acceso muestra su localización y abre el panel sin conducir; cerrar deja el barco allí | — |
 | REQ-ENT-035 | Checkout sólo con acción explícita | §4.3, §49.6 | L1 | e2e: abrir el panel no navega fuera del sitio | — |
@@ -81,7 +81,7 @@ Definidos en [02-entrada-y-landing](02-entrada-y-landing.md). 39 requisitos: 37 
 
 ## MUN · Mundo y motor
 
-Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 37 requisitos: 36 L1, 1 L2, 0 diferidos.
+Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 39 requisitos: 38 L1, 1 L2, 0 diferidos.
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
@@ -119,14 +119,15 @@ Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 37 requisitos: 36 L1, 1 L2
 | REQ-MUN-032 | Sprites reproducibles desde Blender | §34, D-05, D-13 | L1 | El comando de Blender sin interfaz regenera los sprites desde el repositorio | — |
 | REQ-MUN-033 | Revisión de skins y sustitución | §49.17 · alias ART 01 | L1 | Revisión por skin, prueba de sustitución y restauración, guía entregada | alias ART 01 |
 | REQ-MUN-034 | Formatos de assets | §34, §48.8 | L1 | El validador rechaza formatos fuera del contrato | — |
-| REQ-MUN-035 | Un mapa compartido, una skin por mundo | §24, §48.9, D-20 | L1 | Test: mover un lugar cambia su posición en todos los mundos; `pnpm world:check` sale con 1 ante una skin que falta o un ID de lugar desconocido | — |
+| REQ-MUN-035 | Un mapa compartido, una skin por mundo | §24, §48.9, D-20, D-23 | L1 | Test: mover un lugar cambia su posición en todos los mundos; spawn y puerto son los mismos en todos; `pnpm world:check` sale con 1 ante una skin que falta o un ID de lugar desconocido | — |
 | REQ-MUN-036 | Nombres comunes y propios por mundo | D-20 | L1 | Test: renombrar «solo en este mundo» no toca los demás; «en todos los mundos» cambia el común y quita los propios; las islas de evento tienen el mismo nombre en todos | — |
 | REQ-MUN-037 | Arcilla y Acuarela, con cambio de mundo | D-20 | L1 | Cambiar de mundo desde el menú deja el barco en el mismo punto y conserva descubrimientos y recompensas; cada mundo usa su barco por defecto | [pendiente Álvaro] Mundos, historias y nombres (P11) |
 | REQ-MUN-038 | `/mar`: planeta de agua con cielo y estrellas | D-20, D-22 | L1 | Test: con la vuelta activada, salir por cada lado vuelve por el opuesto y el piloto automático toma el camino corto; sin ella (`/juego`) el límite no cambia; capturas del horizonte de día y de noche | [pendiente Álvaro] Planeta de agua (P14) |
+| REQ-MUN-039 | Cambio de mundo por agujero negro | D-20, D-23 | L1 | e2e: al cambiar de mundo se ve el vórtice, el barco reaparece en el mismo punto con el mismo progreso y sólo cambian arte, nombres y diálogos; con movimiento reducido, fundido; un toque la salta | — |
 
 ## AVE · Aventura
 
-Definidos en [04-aventura](04-aventura.md). 39 requisitos: 36 L1, 2 L2, 1 diferidos.
+Definidos en [04-aventura](04-aventura.md). 40 requisitos: 37 L1, 2 L2, 1 diferidos.
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
@@ -147,7 +148,7 @@ Definidos en [04-aventura](04-aventura.md). 39 requisitos: 36 L1, 2 L2, 1 diferi
 | REQ-AVE-015 | Secretos insinuados | §9, §25, P1 | L1 | Un secreto configurado sin código y sin tapar el acceso comercial | — |
 | REQ-AVE-016 | Restos regenerables | §11.1, D-09 | L1 | Test: recoger, recargar y ver restos en posiciones nuevas | Con los límites de D-09 |
 | REQ-AVE-017 | Cofres fugaces | §11.2 | L1 | Test: el cofre desaparece a su tiempo y premia si se alcanza antes | — |
-| REQ-AVE-018 | Delfín guía | §11.3 | L1 | Test: seguirlo lleva a su recompensa | — |
+| REQ-AVE-018 | Delfín guía | §11.3, D-23 | L1 | Test: aparece junto al barco en mar abierto con un intervalo entre 2 y 4 min, apunta a algo sin descubrir y seguirlo lleva a su recompensa | — |
 | REQ-AVE-019 | Remolino | §11.4 | L1 | Test: más tiempo dentro da más recompensa | — |
 | REQ-AVE-020 | Náufrago con descuento | §12 | L1 | Test: acercarlo entrega el código configurado | [pendiente Álvaro] Valor y código reales de Álvaro |
 | REQ-AVE-021 | Descuentos de tienda en restos | §12 | L1 | Test: un resto configurado entrega un código de tienda | [pendiente Álvaro] |
@@ -169,10 +170,11 @@ Definidos en [04-aventura](04-aventura.md). 39 requisitos: 36 L1, 2 L2, 1 diferi
 | REQ-AVE-037 | Cañón contra tiburones | §49.11, P3, D-20 | L1 | Partidas con acierto, fallo, objetivo que se sumerge, 3 impactos, munición agotada, pausa y control táctil | Adelantado de L2 (D-20) |
 | REQ-AVE-038 | Sesiones de minijuego validadas | P3, D-09, D-20 | L1 | Petición repetida, resultado falseado y sesión caducada sin premio; única, por temporada y límites diarios sin duplicados, con invitado y con cuenta | Sin repetición de decisiones (D-09); en la versión de prueba, validación local y servidor en la versión final (D-20) |
 | REQ-AVE-039 | Accesibilidad de los minijuegos | P3, D-20 | L1 | Revisión con movimiento reducido, sin audio y con teclado; equilibrio, claridad y accesibilidad documentados | Adelantado de L2 (D-20) |
+| REQ-AVE-040 | Cinco boies informativas y la mascota | §7, §14, D-23 | L1 | Test: el mapa compartido tiene 6 boies que hablan, cada mundo trae el texto de las 5 nuevas y hablar con las 6 completa el logro; revisión de arte: las boies parten de la mascota | — |
 
 ## IDE · Identidad y comunidad
 
-Definidos en [05-identidad-y-comunidad](05-identidad-y-comunidad.md). 51 requisitos: 42 L1, 8 L2, 1 diferidos.
+Definidos en [05-identidad-y-comunidad](05-identidad-y-comunidad.md). 53 requisitos: 44 L1, 8 L2, 1 diferidos.
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
@@ -205,15 +207,15 @@ Definidos en [05-identidad-y-comunidad](05-identidad-y-comunidad.md). 51 requisi
 | REQ-IDE-027 | Puntos y monedas separados | §14, §21, P1 | L1 | Gastar monedas no cambia rango ni ranking | — |
 | REQ-IDE-028 | Rangos lúdicos | §14, P3 | L1 | Cambiar un umbral desde el Admin recalcula el rango mostrado | [pendiente Álvaro] |
 | REQ-IDE-029 | Economía ajustable desde el Admin | §28, §33, §36, P1 | L1 | Cambiar un premio, un precio o un umbral desde el Admin, sin despliegue | [pendiente Álvaro] |
-| REQ-IDE-030 | Color y cosméticos básicos | §15, D-02 | L1 | Cambiar color y skin desde Mi Barco | [pendiente Álvaro] Catálogo inicial de Álvaro |
-| REQ-IDE-031 | Cosméticos por monedas o logros | §6.2, §15, D-22 | L1 | Test: comprar con monedas y recibir un cosmético y un barco al reclamar un logro | — |
+| REQ-IDE-030 | Color, barcos y cosméticos | §15, D-02, D-23 | L1 | Cambiar color y skin desde Mi Barco; con el progreso vacío sólo B05 y B02 están desbloqueados y el resto enseña precio o condición | [pendiente Álvaro] Catálogo inicial de Álvaro |
+| REQ-IDE-031 | Barcos y cosméticos por monedas, puntos o logros | §6.2, §15, D-22, D-23 | L1 | Test: comprar un barco y una skin con monedas (un solo cargo por compra), desbloquear el barco de puntos al llegar al umbral sin perder puntos, y recibir un cosmético y un barco al reclamar un logro | — |
 | REQ-IDE-032 | Cosméticos sin efecto en la física | §15, §49.17 | L1 | Test: tiempos y colisiones iguales con distintas skins | — |
 | REQ-IDE-033 | Barco guardado | §15, §49.10 | L1 | Recargar conserva el barco con cuenta y como invitado | — |
 | REQ-IDE-034 | Menú de a bordo | §19, §46 | L1 | Captura del menú con los 7 accesos | [provisional] Contradicción: «Inicio» en §19 y en §4.4 |
 | REQ-IDE-035 | Welcome Aboard consultable | §19, §46 | L1 | El tutorial termina sin abrirlo; el menú lo abre | — |
 | REQ-IDE-036 | Controles | §19 | L1 | La sección explica navegación, drift y minimapa | — |
 | REQ-IDE-037 | Música y efectos por separado | §20 | L1 | Test: silenciar la música mantiene los efectos; las preferencias persisten | — |
-| REQ-IDE-038 | Ranking de puntos | §21, P3 | L1 | Ordenado por puntos, histórico y de temporada, con posición propia | — |
+| REQ-IDE-038 | Ranking de puntos | §21, P3 | L1 | Ordenado por puntos, histórico y de temporada, con posición propia | En la versión de prueba, ranking local (REQ-IDE-053) |
 | REQ-IDE-039 | Nada competitivo desde el cliente | §21, P3, D-09 | L1 | Test: un saldo enviado por el cliente es rechazado | — |
 | REQ-IDE-040 | Una botella de 140 caracteres | §17, P1, P3, D-02 | L1 | El servidor rechaza 141 caracteres y una segunda botella activa | — |
 | REQ-IDE-041 | Leer una botella y ver su Carnet | §17, §46, P3 | L1 | Test: leerla no la borra y abre el Carnet del autor | — |
@@ -228,10 +230,11 @@ Definidos en [05-identidad-y-comunidad](05-identidad-y-comunidad.md). 51 requisi
 | REQ-IDE-050 | Exportar y borrar desde la web | §49.13, D-02 | L2 | Solicitud desde la web gestionada de principio a fin | — |
 | REQ-IDE-051 | Versión de prueba: invitado con apodo y botella propia | D-20 | L1 | e2e sin correo: crear apodo, Carnet y botella; un segundo navegador no ve esa botella; la pantalla dice que todo se guarda en este navegador | Sólo versión de prueba; se retira con REQ-IDE-002 |
 | REQ-IDE-052 | Premio según el logro | §14, §15, §28, D-22 | L1 | Test: cada tipo de premio (monedas y puntos, insignia, barco, cosmético) llega a su sitio al reclamar y sólo una vez | [pendiente Álvaro] Economía y catálogo (P14) |
+| REQ-IDE-053 | Versión de prueba: ranking local | D-20, D-23 | L1 | e2e: el ranking ordena por puntos al visitante y a los miembros `muestra`, destaca su posición, abre el Carnet de una fila y lleva el rótulo de ranking local | Sólo versión de prueba; se retira con REQ-IDE-038 validado en servidor |
 
 ## COM · Comercial
 
-Definidos en [06-comercial](06-comercial.md). 35 requisitos: 31 L1, 4 L2, 0 diferidos.
+Definidos en [06-comercial](06-comercial.md). 36 requisitos: 32 L1, 4 L2, 0 diferidos.
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
@@ -244,7 +247,7 @@ Definidos en [06-comercial](06-comercial.md). 35 requisitos: 31 L1, 4 L2, 0 dife
 | REQ-COM-007 | Agotado sin compra inválida | §49.4, §49.15 | L1 | Paso 2 del ciclo de REQ-COM-014 | — |
 | REQ-COM-008 | Pospuesto y cancelado | §49.4 | L1 | Paso 5 del ciclo de REQ-COM-014 | [pendiente Álvaro] Política de Álvaro |
 | REQ-COM-009 | Evento prioritario vigente | §2.1, §4.4, §5, §24 | L1 | Cambiar el prioritario no requiere despliegue; uno finalizado deja de ofrecerse | — |
-| REQ-COM-010 | Localización comercial común | §39.2, §49.6 | L1 | Un evento sin isla abre su panel en la localización común | — |
+| REQ-COM-010 | Localización comercial común | §39.2, §39.3, §49.6, D-23 | L1 | Un evento sin isla abre su panel en la localización común (la isla All Day vigente) y sale en Tickets con «Calienta para el próximo All Day» y enlace al All Day | — |
 | REQ-COM-011 | Próximos eventos por reglas | §49.3, P1, P2 | L1 | Excluir un evento lo quita de la home sin borrarlo | — |
 | REQ-COM-012 | «Elige tu evento» y fichas | §5, P3, D-02 | L1 | Cada evento con ficha HTML compartible; invitación a su isla visible | — |
 | REQ-COM-013 | Secret location protegida | P3 | L1 | Búsqueda de la dirección en respuestas públicas: 0 resultados | — |
@@ -265,15 +268,16 @@ Definidos en [06-comercial](06-comercial.md). 35 requisitos: 31 L1, 4 L2, 0 dife
 | REQ-COM-028 | 26 artistas textuales | §18.1, P1, P3 | L1 | Datos con 26 nombres y géneros iguales a la tabla de 06 | — |
 | REQ-COM-029 | Validación de artistas | §33, P1 | L1 | Aprobación de Álvaro registrada antes de publicar | [pendiente Álvaro] |
 | REQ-COM-030 | Página Filosofía | §22, §31, §36 | L1 | Textos aprobados publicados | [pendiente Álvaro] |
-| REQ-COM-031 | Galería de fotos | §22, §49.6, P3 | L1 | Todas las imágenes con texto alternativo | — |
+| REQ-COM-031 | Galería de fotos | §22, §49.6, P3, D-23 | L1 | Todas las imágenes con texto alternativo; la home sólo trae fotos «selección»; «Ver fotos de la isla» abre «Fotos y eventos» en la galería de esa isla | — |
 | REQ-COM-032 | Vídeos sin bloquear la carga | §4.4, §49.6, P3 | L1 | La home carga sin descargar vídeos completos | [provisional] Alcance: D-02 dice «fotos» |
 | REQ-COM-033 | Tienda L1 con enlace externo | §4.3, §22, §49.6, D-02 | L1 | Tienda desde la landing muestra la isla y el enlace externo | [pendiente Álvaro] [provisional] Alcance: §49.6 frente a «enlace externo» de D-02 |
 | REQ-COM-034 | Tienda con checkout propio | §22, P3, D-02 | L2 | Compra en sandbox sin datos de tarjeta guardados | — |
 | REQ-COM-035 | Versión de prueba: sello por checkout sandbox | D-06, D-20, D-22 | L1 | e2e: confirmar la compra de prueba añade 1 sello y 1 logro; repetir con el mismo ID de compra no añade nada; el checkout se rotula como prueba | Sólo versión de prueba; se retira con la ticketera real (P2) |
+| REQ-COM-036 | El descuento lleva a su isla y se ve al comprar | §2.1, §12, D-23 | L1 | e2e: «Ir a la isla» de una tarjeta lleva el barco a la isla de su evento; comprar allí muestra el aviso con el código y el ahorro aplicado en el checkout sandbox; el de tienda enseña «Ir a la tienda» | — |
 
 ## ADM · Admin
 
-Definidos en [07-admin](07-admin.md). 39 requisitos: 29 L1, 10 L2, 0 diferidos.
+Definidos en [07-admin](07-admin.md). 40 requisitos: 30 L1, 10 L2, 0 diferidos.
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
@@ -308,7 +312,7 @@ Definidos en [07-admin](07-admin.md). 39 requisitos: 29 L1, 10 L2, 0 diferidos.
 | REQ-ADM-029 | Aviso de impacto y confirmación de borrado | §49.13, P2 | L1 | Editar un objeto referenciado muestra su impacto; borrar sin escribir el nombre falla | — |
 | REQ-ADM-030 | Papelera y purga | §49.13, P2 | L1 | Recuperar un archivado; purgar pide reautenticación | [pendiente Álvaro] |
 | REQ-ADM-031 | Peticiones de datos a mano | §49.13, D-02 | L1 | Procedimiento documentado y probado una vez | [provisional] Alcance: D-02 sólo nombra el autoservicio web |
-| REQ-ADM-032 | Mundo activo como temporada | §21, §23.4, §49.7, P1, D-02, D-20 | L1 | Mundo, spawn, puerto, destino y ranking de temporada comparten el ID del mundo activo; cambiarlo en el Admin cambia el mundo por defecto de quien llega | — |
+| REQ-ADM-032 | Mundo activo como temporada | §21, §23.4, §49.7, P1, D-02, D-20, D-23 | L1 | Mundo, destino y ranking de temporada comparten el ID del mundo activo; spawn y puerto son los del mapa compartido en todos los mundos; cambiarlo en el Admin cambia el mundo por defecto de quien llega | — |
 | REQ-ADM-033 | Duplicar temporada | §23.4, P2, D-02 | L2 | Duplicar no copia cuentas ni ventas; restaurar funciona | — |
 | REQ-ADM-034 | Admin de encuestas | §49.8 | L2 | Resultados agregados sin datos de contacto | — |
 | REQ-ADM-035 | Admin de Mensajes de BOIA | §49.9 | L2 | Un mensaje programado aparece y caduca a su hora | — |
@@ -316,6 +320,7 @@ Definidos en [07-admin](07-admin.md). 39 requisitos: 29 L1, 10 L2, 0 diferidos.
 | REQ-ADM-037 | Valores del registro contextual | §49.10 | L2 | Cambiar un valor en el Admin cambia el ritmo | [provisional] Alcance: D-02 no lo nombra |
 | REQ-ADM-038 | Prueba de usabilidad de 10 minutos | P3 | L1 | Registro de la prueba con tiempo y dudas | — |
 | REQ-ADM-039 | Versión de prueba: «Probar admin» | D-20 | L1 | e2e: «Probar admin» abre el Admin sin login con el aviso de demo; un cambio queda en la auditoría local y se puede volver a los datos de muestra | Sólo versión de prueba; se retira con REQ-ADM-002 |
+| REQ-ADM-040 | Moderación de Carnets | §23.2, §49.2, D-23 | L1 | e2e: reportar un Carnet lo pone en Moderación; ocultar una respuesta, la foto o restablecer el apodo cambia el Carnet público y deja una entrada de auditoría | — |
 
 ## ARQ · Arquitectura y datos
 

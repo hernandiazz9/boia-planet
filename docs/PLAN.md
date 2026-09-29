@@ -21,8 +21,10 @@ evento objetivo dependen de Álvaro (P2, P3).
 
 ## Congelado hasta <condición>
 
-- Faro y Cañón (§49.11): hasta que L1 esté publicado. Sólo queda el punto de
-  extensión `INICIAR_MINIJUEGO` vacío.
+- ~~Faro y Cañón (§49.11): hasta que L1 esté publicado.~~ Descongelados el
+  2026-09-28 por D-20: Vigilancia del faro y Cañón contra tiburones están en
+  L1, detrás de `INICIAR_MINIJUEGO`, con sus islas en el mapa compartido
+  (plan 002, T23).
 - Admin (fase 2): hasta que cierren 01, 05 y 07 y Álvaro haya visto el hito 1
   en su móvil.
 - Cualquier contenido real (fechas, tickets, fotos, textos): hasta que Álvaro
@@ -32,7 +34,7 @@ evento objetivo dependen de Álvaro (P2, P3).
 
 ## Decisiones del orquestador
 
-Las de fondo están en `docs/DECISIONES.md` (D-01 a D-17), con fecha. Aquí sólo
+Las de fondo están en `docs/DECISIONES.md` (D-01 a D-23), con fecha. Aquí sólo
 las de mecánica del método:
 
 - 2026-09-28 · **A partir de la ronda 2 el proyecto pasa a la skill
@@ -132,9 +134,12 @@ L1, en tres fases con un hito de revisión con Álvaro al cerrar cada una.
 
 ## Preguntas para Hernán
 
-- P6: ¿qué iPhone y Android hay para probar? Traba la entrada cinemática (fase 1).
-- Para Álvaro, vía Hernán: P2 ticketera, P3 evento y fecha, P4 alcance e
-  idioma. (P1 y P5 cerradas el 2026-09-28: desde cero aquí; barco procedural.)
+- ~~P6: ¿qué iPhone y Android hay para probar?~~ Cerrada el 2026-09-29 (D-23):
+  el móvil físico funciona bien.
+- Para Álvaro, vía Hernán: P2 ticketera y P3 (en parte: falta la fecha del
+  próximo All Day). P4 cerrada el 2026-09-29 por delegación (D-23, O1). Lo que
+  falta está en P14 a P22 de `docs/DECISIONES.md`. (P1 y P5 cerradas el
+  2026-09-28: desde cero aquí; barco procedural.)
 
 ## Aparcado
 

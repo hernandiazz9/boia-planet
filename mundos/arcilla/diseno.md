@@ -53,7 +53,7 @@ este, un circuito para quien tiene prisa: El Freu, un paso estrecho entre las ro
   Boia Fiestera → tienda → Puerto de Fotos → escenario del All Day → última isla. Zigzaguea de un lado
   a otro para que las actividades queden repartidas y no en una esquina (REQ-MUN-015).
 - **Desvíos opcionales** (azul discontinuo): remolino y delfín, cueva del acantilado, ánfora de Agost,
-  solar L2 y boies dormidas. Todos se pueden rodear.
+  islas de Faro y Cañón y boies dormidas. Todos se pueden rodear.
 - **Circuito lateral** (amarillo y rojo) por la costa este, desde la Cala hasta al lado de la última
   isla (REQ-AVE-026): es un atajo de la misión. Se bifurca en una **ruta segura** ancha que rodea el
   islote Els Dents por agua abierta y un **atajo** estrecho por El Freu, pegado a la costa, con el
@@ -61,7 +61,11 @@ este, un circuito para quien tiene prisa: El Freu, un paso estrecho entre las ro
   roca y medusa en el atajo, cocodrilo móvil en la ruta segura (REQ-AVE-030).
 - **Secretos** (estrellas): cueva del acantilado, ánfora de Agost, campana hundida y círculo de las
   boies dormidas. Cada uno se insinúa cerca de una isla sin bloquear nada (REQ-AVE-015).
-- **Faro y Cañón** son L2 (D-02, D-08): sólo hay un solar vacío con un cartel «L2».
+- **Faro y Cañón** están en L1 desde D-20 (corrige D-02 y D-08): la Isla del Faro (Vigilancia del faro)
+  y la Isla del Cañón (Cañón contra tiburones) están en el mapa compartido, en la banda oeste, al norte
+  del Puerto de Fotos (`faro` y `canon` en `packages/world/src/worlds/arcilla/map.ts`), y arrancan sus
+  minijuegos con INICIAR_MINIJUEGO. En `mapa.json` ocupan el antiguo solar L2 (`minijuegos`, con
+  `solares_l2` vacío); sólo el desvío `d_solar` conserva el nombre antiguo.
 
 ## Zonas
 
@@ -351,8 +355,8 @@ Velocidad del motor: 220 u/s (8.846 u_maq/s), aceleración 240 u/s². 1 u_maq = 
 Lectura: con ×15, la ruta directa al All Day da un minuto y la exploración completa, 9,7 minutos, muy
 cerca de los dos objetivos de REQ-MUN-017. La exploración recorre en orden todas las sorpresas
 principales: boies, náufrago, restos, Cala, ánfora, las dos ramas del circuito, Fiestera, delfín,
-cueva, remolino (dos vueltas), botellas, cofres, tienda, Fotos, campana, escenario, solar L2, círculo
-de boies y última isla.
+cueva, remolino (dos vueltas), botellas, cofres, tienda, Fotos, campana, escenario, islas de Faro y
+Cañón (sin jugar los minijuegos), círculo de boies y última isla.
 
 Lo que esto implica para el juego, y hay que decidirlo antes de construir el mapa real: a ×15 el mapa
 mide unas 11.200 u de ancho y 23.500 de alto, unas 28 pantallas de móvil de ancho. Es mucho mar. Hay

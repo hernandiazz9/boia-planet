@@ -36,12 +36,13 @@ El mundo enseña a jugar sin modales: una boia habla, el jugador puede saltarla 
 
 - **REQ-AVE-016** `L1` — Repartir muchos grupos de restos flotantes que se recogen pasando por encima (ping, desaparecen, monedas o puntos) y se regeneran en posiciones aleatorias o semialeatorias al volver a entrar, como progresión repetible sin antitrampas complejas. *Fuente: §11.1, D-09*
 - **REQ-AVE-017** `L1` — Hacer aparecer cofres fugaces en posiciones temporales que, alcanzados antes de desaparecer, dan monedas o recompensa y raramente un cosmético, sin tutorial. *Fuente: §11.2*
-- **REQ-AVE-018** `L1` — Hacer aparecer de vez en cuando un delfín junto al barco que avanza, se sumerge y reaparece; seguirlo es opcional y lleva a una recompensa, cofre, botella, monedas o secreto. *Fuente: §11.3*
+- **REQ-AVE-018** `L1` — Hacer aparecer un delfín junto al barco cada 2 a 4 minutos en mar abierto, que avanza, se sumerge y reaparece durante unos segundos hacia algo que el visitante todavía no ha descubierto y luego se va; seguirlo es opcional y lleva a una recompensa, cofre, botella, monedas o secreto. *Fuente: §11.3, D-23*
 - **REQ-AVE-019** `L1` — Convertir la entrada voluntaria en un remolino en un reto de control con navegación y drift, con más recompensa cuanto más tiempo se controle el barco dentro. *Fuente: §11.4*
 - **REQ-AVE-020** `L1` — Situar antes de una primera isla un náufrago que pide que lo acerquen a una fiesta BOIA y, al ayudarlo, entrega un código de descuento para entradas (ejemplo de la v14: 10 %) [pendiente Álvaro]. *Fuente: §12*
 - **REQ-AVE-021** `L1` — Permitir que restos o tesoros entreguen descuentos para la tienda (ejemplo de la v14: 20 %), configurables y no fijados a ese valor [pendiente Álvaro]. *Fuente: §12*
 - **REQ-AVE-022** `L1` — Situar en el mundo un puerto de Fotos como localización de la galería. *Fuente: §4.3, P1, P3*
 - **REQ-AVE-023** `L1` — Colocar una boia de WhatsApp que, por proximidad, abre el acceso voluntario al WhatsApp de BOIA [provisional] [pendiente Álvaro]. *Fuente: §4.4, P1, P3*
+- **REQ-AVE-040** `L1` — Colocar cinco boies informativas a lo largo de la primera ruta del mapa compartido, con textos propios de cada mundo, que hablan por proximidad como la primera boia; con ella son seis y cuentan para el logro de las boies; todas las boies del juego (la primera, las informativas, la de WhatsApp y la Boia Fiestera con sus detalles de fiesta) parten de la mascota de BOIA (`art/marca/boia-mascota.jpg`) con forma de boya. *Fuente: §7, §14, D-23*
 - **REQ-AVE-024** `L2` — Colocar una boia musical con 4 canciones autorizadas o de prueba [provisional]. *Fuente: P1, P3*
 - **REQ-AVE-025** `diferido` — Guardar en reserva las corrientes o estelas musicales y la ruta de boies musicales que construye un beat por capas. *Fuente: §11.5, D-02*
 
