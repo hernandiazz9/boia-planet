@@ -98,7 +98,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: «⛵ Ir en barco…» from Tickets/Fotos/Tienda to /juego?ir=<island> (glide to a safe point, panel opens; HTML paths unchanged), placeHref/readPlaceRequest in lib/world-handoff.ts, header Mi Carnet + sound toggle + Instagram, footer invitations, Carnet invitations with pacing, ship position restored (browser storage, no store migration); 696 tests; landing 188.9 kB → 78671aa
 
 ## T45 — Local ranking, Carnet moderation, six boies, dolphin, island shortcut, Fiestera destination
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T39 (boia art), T38 (texts)
 - Goal: Ranking (inventory §1.8): the «Ranking» section works locally: points ranking (all-time and current world/season) of this browser's visitor among the `muestra` crew, own position highlighted, each row opens that Carnet, labelled «Ranking local de este navegador». Carnet moderation (O9): «Reportar» on public Carnets, Admin Moderación lists reported Carnets and can hide an answer or photo or reset the nickname, audited. Six boies (O12): five informative boies on the shared map along the first route, with per-world texts from textos-zonas.md, counted by the «X/6» achievement. Dolphin (O15): appears beside the ship every 2–4 min in open sea, guides a few seconds towards something undiscovered, then leaves. Island shortcut: on later visits the island panel offers «Explorar la isla» (REQ-AVE-013). Fiestera destination: an Admin screen to set the destination of new games per world, with a preview of how many started games it affects and an audited migration; publishing a mission without destination is refused (REQ-AVE-010/011). Secrets use T39's marker art.
 - Context: inventory §2 O9/O12/O15, §3; docs/spec/04-aventura.md, 05-identidad-y-comunidad.md, 07-admin.md; packages/world/src/worlds/** (map.ts, skins), packages/engine/src/world/** (encounters, runtime), packages/engine/src/mission/**, packages/store (crew sample, carnet, reports), apps/web/app/juego/menu/sections/ranking.tsx, apps/web/app/carnet/**, apps/web/app/admin/**; plan 002 T21 notes.
@@ -110,7 +110,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## T46 — Sound, wake and controls feel
-- Status: running (attempt 1)
+- Status: done
 - Depends on: none
 - Goal: One ambient loop per world generated in the browser (WebAudio, `muestra`, O10) starting on the first interaction in /juego and /mar at 30 % when music is on; pickup «ping», boost WHOOSH, bump on collision; behaviours can declare a sound and an animation id in their params (REQ-PRO-011) with a small built-in set. The wake reacts to turning, boost and collision (REQ-MUN-004; `collideShip` already returns contact). Keyboard and touch sensitivity in Ajustes/Controles (REQ-MUN-008). HUD: the fps/speed box only with `?debug` (O11). iOS audio unlock and pause on hidden tab.
 - Context: apps/web/app/juego/sound.ts, sections/ajustes.tsx, controles.tsx; packages/engine/src/wake.ts, ship/controller.ts, input/**, ui/hud-layout.ts; packages/world/src/behaviors.ts; apps/web/app/mar/engine/effects.ts; docs/spec/01 (PRO-009, PRO-011), 03 (MUN-004, MUN-008).
@@ -118,7 +118,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Done when:
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: wake intensity differs for turn/boost/collision; sensitivity scales turn rate; no audio before the first interaction
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; the HUD spec checks no fps box without `?debug`
-- Outcome:
+- Outcome: WebAudio ambient loop per world (30 % of music, after first tap), ping/whoosh/bump, behaviour sound+animation params (feedbackFor), wake reacts to turn/boost/impact, keyboard/touch sensitivity 50–150 %, fps box hidden without ?debug, iOS unlock and pause on hidden tab; /juego only; 766 tests → f211f41
 
 ## T47 — Load the world by sectors
 - Status: done
@@ -168,6 +168,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-29 T46: fps box stays in the DOM hidden (specs use it); sensitivity as module state (setControlSensitivity) since game.ts was off limits; wake infers turn/boost/impact from motion (agent)
 - 2026-09-29 T47: atlases generated (gitignored) at dev/build/e2e, fallback to per-PNG if generation fails; sharp borrowed from Next; long moves freeze ≤2.5 s until art loads; createGame takes start/preload; STREAM_TUNING muestra (agent)
 - 2026-09-29 T48: draft is store state (v5); events keep «Guardar y publicar» (testid evento-guardar) plus «Guardar borrador»; purge asks the name again instead of re-auth (no login in the demo); achievement icons are keys without artwork; music ≤ ~1 MB muestra (agent)
 - 2026-09-29: integration test command for plan 004 is now `pnpm test --testTimeout=30000` because lib/barco/catalog.test.ts palette test times out at 5 s under load (reverted pair dropped, re-integrated green) (orchestrator)
@@ -193,6 +194,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 T46: /mar follow-up — installAudioLifecycle + setAmbientWorld in mar-client.tsx, whoosh on turbo, bump + splash in mar3d.ts/effects.ts; declared animations not played yet (object-view.ts); Game.setSensitivity and impact through game.ts; Admin-uploaded music still not played
 - 2026-09-29 T47: /mar lazy glTF by distance reusing @boia/engine/streaming (after plan 003); pack the ship's 8 views into a WebP atlas (~700 kB per world); Fiestera crew art as separate PNGs; memory not measured on a minimum device
 - 2026-09-29 T48: Carnet moderation (REQ-ADM-040) still missing (T45 has it); restore an earlier published revision (ADM-016); uploaded music does not play in /juego or /mar; achievement icons not drawn; «Textos» publishes hero.explore/hero.tickets outside the draft
 - 2026-09-29 T44: Instagram in the WhatsApp boia panel (place-panels.tsx); invitation inside the checkout before buying; /mar position restore and invitations (after plan 003); prettier drift in circuit-hud.tsx and world-progress.ts
@@ -225,3 +227,5 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 19:47 T48 done · branch worktree-agent-afe990571df86d31f → f839789 (e2e 11 fails: 2 known Barco, 2 fixed, 7 load timeouts pass alone)
 - 2026-09-29 19:50 T46 launched · attempt 1 · agent a34f3a8db29063fc6 (/juego only)
 - 2026-09-29 20:01 T47 done · branch worktree-agent-acdbcc0aadea9d92e → 0425d7a (e2e: known Barco ×2, 3 load timeouts pass alone)
+- 2026-09-29 20:04 T45 launched · attempt 1 · agent a0ef37ddb695c2396 (no /mar)
+- 2026-09-29 20:23 T46 done · branch worktree-agent-a34f3a8db29063fc6 → f211f41
