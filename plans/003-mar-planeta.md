@@ -49,9 +49,21 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
   - Screenshots p003-t33-horizonte-dia.png and p003-t33-horizonte-noche.png (curved horizon, sky, stars) and a frame-time number measured on a 4× CPU-throttled Chromium in the final message
 - Outcome: coasts removed (coast.ts gone), castle/Explanada/cave islet as /mar-only decor islands; toroidal wrap (PLANET_MARGIN 300 u, 600 u south) with curved-world bend, sky dome, stars, slow spin; wrap option in the shared controller off by default; 60 fps with 4× CPU throttle; 653 tests, e2e 103 passed → c8473cb
 
+## T50 — A compact /mar world with a buoy route
+- Status: running (attempt 1)
+- Depends on: T33
+- Goal: Hernán tried the water planet (T33) and likes it, but things are too far apart and hard to find or reach. In `/mar` only: (1) halve the distances: islands at about half their current distance from each other and much less empty sea at the wrap margins (PLANET_MARGIN), so sailing from one island to the next takes a few seconds at normal speed; the shared map data (packages/world positions) and `/juego` stay unchanged: derive the compact layout at load time for `/mar` (apps/web/app/mar/engine/compress.ts already exists; check what it does and extend it) and run the /mar runtime on the compact positions consistently (triggers, pins, autopilot, «Entradas» voyage, rewards by place id), keeping island footprints and trigger radii readable and never overlapping; decor islands (castle, Explanada, cave islet) move with it. (2) A path to follow: a route of buoys or small lights on the water linking the islands in story order: port (El Varadero) → Cala del Alfar → Boia Fiestera spot (crocodiles) → event island (`allday`) → Puerto de Fotos → shop island → Faro and Cañón → Isla del Amanecer (última isla); adjust the order to the Fiestera mission if it contradicts it and say so. The route reads from the deck and in map view, follows the shortest way around the planet, loops back to the port, and is decor only (no collisions, no rewards). Places not on the route (mar vivo: náufrago, debris, chests, dolphin, whirlpool, circuit gates) stay near it so they are met on the way.
+- Context: T33 Outcome and ESTADO.md T33 section; apps/web/app/mar/engine/** (wrap.ts PLANET_MARGIN, compress.ts, mar3d.ts, decor.ts, islands.ts), apps/web/app/mar/mar-client.tsx; packages/world/src/worlds/arcilla/map.ts (place ids, read only); packages/engine/src/mission/** (Fiestera mission order, read only); apps/web/e2e/mar-3d.spec.ts.
+- Scope: may touch ESTADO.md (own top section), apps/web/app/mar/**, apps/web/e2e/mar-3d.spec.ts / must not touch packages/world/**, packages/store/**, apps/web/app/juego/**, art/**; packages/engine/** only if the /mar runtime cannot take the compact positions otherwise (behind an option, default off).
+- Done when:
+  - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds unit tests: the compact layout halves the median distance between neighbouring islands, keeps every place id, and no two footprints overlap; the route visits the places in the order above and closes the loop
+  - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0 (mar-3d.spec.ts updated, /juego specs unchanged)
+  - Screenshots p003-t50-ruta-cubierta.png (deck, buoys visible ahead) and p003-t50-ruta-mapa.png (map view with the whole route), and the sailing time from the port to the event island at normal speed, measured, in the final message
+- Outcome:
+
 ## T34 — Round, transparent minimap of the turning planet
 - Status: pending
-- Depends on: T33
+- Depends on: T50
 - Goal: Replace the «Mapa» button in `/mar` with a round, semi-transparent minimap in a corner: a small render of the whole planet turning (same slow drift as T33), with the ship and the island pins (event island highlighted), readable at 360 px wide and not covering the «Entradas» button. Tapping it opens the big map (today's map mode, adapted to the planet: the whole globe in view, pins tappable, set course from there); tapping it again or «Cerrar» returns to the deck. The M key keeps working. Reuse the shared projection/gesture helpers (packages/engine/src/ui/minimap.ts) where they fit; the minimap must cost little (low-res render target or a 2D canvas, updated at a reduced rate).
 - Context: apps/web/app/mar/engine/mar3d.ts (toggleMap, MAP_ZOOM 0.55, mapMode ~127, ~372–383, ~1562), apps/web/app/mar/mar-client.tsx, mar.css; apps/web/app/juego/minimap.tsx (Minimap, ExpandedMap) and packages/engine/src/ui/minimap.ts as reference; T33 Outcome.
 - Scope: may touch ESTADO.md (own top section), apps/web/app/mar/**, apps/web/e2e/mar-3d.spec.ts / must not touch apps/web/app/juego/**, packages/engine/src/ui/minimap.ts (use as is), packages/store/**.
@@ -100,6 +112,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29: T37 also fixes the three T36 gaps (/mar achievement notices, /mar shortcut detection, circuit record id) (orchestrator)
 - 2026-09-29 T33: shortest way around makes the autopilot and «Entradas» voyage leave the port south with a U-turn; camera north-up looking ahead; map view is a fixed chart; tapping the sky sets a course to the horizon; Mar3D.planetSpin/planetBounds exposed for T34 (agent)
 - 2026-09-29: Hernán liked the T33 screenshots and is trying /mar before T34 (Hernán)
+- 2026-09-29: after trying /mar, Hernán wants it smaller and with a path: halve the distances (/mar only), a buoy route in story order; new task T50 before T34, and T34 builds on the compact world (Hernán)
 
 ## Proposals (new scope)
 - 2026-09-29 T33: packages/engine/src/mission/rescue.ts measures straight-line distances (fine while its zones are far from the edges)
@@ -119,3 +132,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29 16:54 T36 done · branch worktree-agent-a6f8af0b570ae4e6f (1 conflict round) → a689cf9
 - 2026-09-29 17:45 T33 done · branch worktree-agent-ab0436509d1f02be6 (1 conflict round) → c8473cb
 - 2026-09-29 17:46 paused for Hernán to try /mar before T34 · watchdog timers stopped by Hernán
+- 2026-09-29 17:55 T50 added (Hernán) and launched · attempt 1 · agent {AGENT}
