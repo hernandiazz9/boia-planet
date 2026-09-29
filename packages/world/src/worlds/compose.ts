@@ -195,3 +195,20 @@ export function renamePlace(
     ),
   };
 }
+
+/**
+ * Mueve un lugar del mapa compartido sin mutar nada: devuelve el mapa nuevo.
+ * La posición es del mapa, no de la skin, así que el lugar se mueve en todos
+ * los mundos a la vez (D-20). Es lo que aplica un cambio compartido de
+ * posición del Admin (`PlacePatch` de `@boia/store`).
+ */
+export function movePlace(map: SharedMap, placeId: string, x: number, y: number): SharedMap {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('posición no válida');
+  if (!map.places.some((p) => p.id === placeId)) throw new Error(`lugar desconocido: ${placeId}`);
+  return {
+    ...map,
+    places: map.places.map((p) =>
+      p.id === placeId ? { ...p, position: { ...p.position, x, y } } : p,
+    ),
+  };
+}

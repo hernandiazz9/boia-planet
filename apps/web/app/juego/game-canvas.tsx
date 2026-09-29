@@ -79,7 +79,7 @@ import { gameRepository, useRepoData } from './repo';
 import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
 import { applyAudioSettings, chime, fanfare, plop } from './sound';
 import { useViewport } from './use-viewport';
-import { currentWorld, syncWorldParam, visitorWorldChoice } from './world-choice';
+import { adminWorldId, currentWorld, syncWorldParam, visitorWorldChoice } from './world-choice';
 import { EventPanel } from './world-ui';
 
 const MANIFEST_URL = '/api/art/barco/manifest.json?optional=1';
@@ -447,7 +447,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     setZonePref(loadMinimapZone(store));
 
     const query = new URLSearchParams(window.location.search);
-    // `?mundo=<id>`, el elegido en este navegador o el activo del Admin (T17).
+    // `?mundo=<id>` o el elegido en este navegador (T17); el activo del Admin
+    // vive en el repositorio y se lee antes de arrancar el motor (abajo).
     const base = currentWorld(window.location.search);
     adoptWorld(base);
     // `?evento=<id>`: al entrar desde un evento, la brújula señala su isla.
@@ -475,8 +476,10 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       .catch((err: unknown) => console.warn('[boia] no se pudo leer lo descubierto', err));
 
     (async () => {
-      // Con los cambios del Admin de la demo (T26): lugares, nombres, textos y eventos.
-      const initial = await liveWorld(gameRepository(), worlds, base);
+      // Sin URL ni elección propia, el mundo activo que fijó el Admin (T24), con
+      // los cambios del Admin de la demo (T26): lugares, nombres, textos y eventos.
+      const chosen = currentWorld(window.location.search, await adminWorldId());
+      const initial = await liveWorld(gameRepository(), worlds, chosen);
       if (cancelled) return;
       adoptWorld(initial);
       if (fromEvent && trackerRef.current?.selectEvent(fromEvent)) {

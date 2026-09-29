@@ -7,7 +7,7 @@ import {
   SAMPLE_EVENTS,
   createLocalRepository,
 } from '@boia/store';
-import { ACTIVE_WORLD_STORAGE_KEY, WORLD_REGISTRY, type WorldObject } from '@boia/world';
+import { WORLD_REGISTRY, type WorldObject } from '@boia/world';
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_CONTENT } from '../landing/sample-content';
 import { AdminError, createAdminActions } from './actions';
@@ -52,15 +52,9 @@ const collectible = map.places.find(
 
 function setup() {
   const storage = new MemoryStorage();
-  const choice = new MemoryStorage();
   const repo = createLocalRepository({ storage, now: () => new Date(NOW), watch: false });
-  const actions = createAdminActions({
-    repo,
-    registry,
-    choiceStorage: choice,
-    now: () => new Date(NOW),
-  });
-  return { repo, actions, choice };
+  const actions = createAdminActions({ repo, registry, now: () => new Date(NOW) });
+  return { repo, actions };
 }
 
 const objectIn = (worldId: string, content: Parameters<typeof composeLiveWorld>[2], id: string) =>
@@ -228,7 +222,7 @@ describe('volver a la muestra y auditoría', () => {
   });
 
   it('volver a la muestra deja home, mundo, temporada y textos como la muestra', async () => {
-    const { repo, actions, choice } = setup();
+    const { repo, actions } = setup();
     await actions.saveEvent({
       ...SAMPLE_EVENTS[1]!,
       id: undefined,
@@ -243,7 +237,7 @@ describe('volver a la muestra y auditoría', () => {
     await actions.setActiveWorld(registry.ids().at(-1)!);
     await repo.admin.setText('hero.explore', 'Zarpa');
     await repo.admin.upsert('artists', { id: 'nuevo', name: 'Nuevo', genres: ['House'] });
-    expect(choice.getItem(ACTIVE_WORLD_STORAGE_KEY)).toBe(registry.ids().at(-1));
+    expect(await repo.content.activeWorldId()).toBe(registry.ids().at(-1));
     expect(Object.keys(await repo.content.places())).toContain(MAP_POINTS.port);
 
     await actions.reset('all');
@@ -252,7 +246,6 @@ describe('volver a la muestra y auditoría', () => {
     expect(await repo.content.skins()).toEqual({});
     expect(await repo.content.texts()).toEqual(DEFAULT_SAMPLE_INPUT.texts);
     expect(await repo.content.activeWorldId()).toBe(DEFAULT_SAMPLE_INPUT.activeWorldId);
-    expect(choice.getItem(ACTIVE_WORLD_STORAGE_KEY)).toBeNull();
     for (const area of CONTENT_AREAS) expect(await repo.admin.overridden(area), area).toEqual([]);
     // El mundo vuelve a ser el del mapa.
     const o = objectIn(

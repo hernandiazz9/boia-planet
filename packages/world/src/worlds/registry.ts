@@ -4,6 +4,7 @@ import {
   SkinError,
   type SkinIssue,
   composeWorld,
+  movePlace,
   renamePlace,
   skinIssues,
 } from './compose';
@@ -87,6 +88,15 @@ export class WorldRegistry {
   renamePlace(placeId: string, name: string, scope: RenameScope): WorldRegistry {
     const next = renamePlace(this.map, [...this.skins.values()], placeId, name, scope);
     return new WorldRegistry(next.map, next.skins, this.defaultId);
+  }
+
+  /** Un registro nuevo con el lugar en otro sitio: en el mapa compartido, así en todos los mundos. */
+  movePlace(placeId: string, x: number, y: number): WorldRegistry {
+    return new WorldRegistry(
+      movePlace(this.map, placeId, x, y),
+      [...this.skins.values()],
+      this.defaultId,
+    );
   }
 
   /** Para el selector de mundos del menú y del Admin, en orden de registro. */

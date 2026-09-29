@@ -4,6 +4,37 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T24: el mundo Acuarela en el juego y el cambio de mundo
+
+`/juego` tiene dos mundos terminados sobre el mismo mapa: Arcilla (B05, el por defecto) y Acuarela (B02). Se cambia desde el Menú («Mundos») o como mundo activo del Admin. Nombres, textos, colores e historia son `muestra` [pendiente Álvaro, preguntas en `mundos/acuarela/diseno.md`].
+
+Qué existe:
+- Piel `acuarela` (`packages/world/src/worlds/acuarela/skin.ts`): arte de T19 (`art/mundos/acuarela/<lugar>/`) para cada lugar del mapa compartido, las mismas piezas que Arcilla en la carpeta de Acuarela; nombres de `mundos/acuarela/lugares.json` (sitios reales: La Explanada, Cala Cantalar, L'Albufereta, La Vila Joiosa, Altea, Tabarca, La Nao, Cap de la Nau, El Penyal, Cap de l'Horta, Torre de l'Illeta); bocadillos y textos de `diseno.md` (la noche de Sant Joan); mar turquesa de `lugares.json`, acento azul del casco B02, barco `acuarela`. La isla de evento `allday` conserva el nombre compartido. Los secretos van con marcador, como en Arcilla. Ningún lugar se mueve: posiciones, geometría y comportamientos son los del mapa (Faro y Cañón abren los mismos minijuegos; el minijuego toma la piel `wash` por el id del mundo).
+- `place-art.ts`: la correspondencia lugar del mapa → pieza de arte, una sola para todos los mundos (`sharedPlaceAsset`, `sharedCoastArt`); Arcilla la usa también. El mundo `prueba` de T20 desaparece: `WORLD_REGISTRY` = Arcilla + Acuarela.
+- Misión de la Fiestera: la de T21 (`rescueMissionOf`), que sale de los datos del mapa compartido (`params.mission`, cocodrilos de su zona, `params.missionDestination`), vale igual en Acuarela sin tocarla: mismo personaje, cocodrilos, radios y destino (Tabarca, el lugar `ultima`); la tripulante a bordo es la pieza `mundos/acuarela/fiestera#tripulante`, que `/juego` pone con `setCrewArt` al arrancar y al cambiar de mundo. Los bocadillos de la Fiestera en Acuarela son los de su skin (farolillos, Tabarca).
+- Mover un lugar: `WorldRegistry.movePlace(id, x, y)` / `movePlace(map, …)` devuelve un registro nuevo con el lugar movido en el mapa, así en todos los mundos (lo que aplicará un `PlacePatch` del Admin).
+- Entrada (T28): `apps/web/lib/intro/worlds.ts` tiene la entrada de `acuarela` (la misma que Arcilla: mismo mapa, mismo aterrizaje en la bocana y mismo encuadre del puerto), y `lib/intro/active.ts` mira también el mundo activo del Admin (`adminWorldId`), como `/juego`.
+- Web: sección «Mundos» del Menú (`menu/sections/mundos.tsx`, 🌍, entre Descuentos y Barco): cada mundo con su nombre, su línea de historia y su barco (miniatura y nombre del catálogo de «Barco»); elegir cambia el mundo sin recargar (`game.setWorld`, el barco sigue donde está), lo guarda en `boia:mundo` y, si no se eligió barco en «Barco», pone el del mundo. «Barco» sigue cambiándolo (y entonces vale en todos los mundos). La barra del menú admite nueve iconos en 360 px (mínimo 34 px).
+- Mundo activo del Admin, una sola fuente: el repositorio local (`repo.content.activeWorldId`). `world-choice.ts` exporta `adminWorldId()` y `setActiveWorld(id | null)` (que es la acción `setActiveWorld` del Admin de T26); `/juego` lo lee antes de arrancar el motor y aplica encima los cambios del Admin (`liveWorld` de T26, también al cambiar de mundo). Orden: `?mundo=`, elección del visitante, mundo activo, por defecto. El Admin de T26 ya no copia el mundo activo a `boia:mundo-activo` (`choiceStorage` fuera de `createAdminActions`): nadie la lee; la que quede en navegadores viejos se ignora.
+- Pruebas: `packages/world/src/worlds/acuarela/acuarela.test.ts` (cada lugar tiene piel de Acuarela con arte existente, misma pieza que Arcilla, todo el catálogo usado, mismos sitios y comportamientos, mover un lugar lo mueve en los dos, nombres de lugares.json y nombre compartido de la isla de evento, Faro y Cañón), `packages/engine/src/mission/worlds.test.ts` (la misión de T21 es la misma en cada mundo salvo la tripulante, que existe en art/), `apps/web/app/juego/world-switch.test.ts` (lo descubierto, un premio «una vez» y un descuento en Arcilla siguen al pasar a Acuarela y al volver, sin volver a darse). e2e `apps/web/e2e/mundo-acuarela.spec.ts`: Menú → Mundos → Acuarela (cambia mundo y barco), a la isla de evento, recarga (sigue en Acuarela) y al náufrago con su código; móvil y escritorio.
+
+Comandos (tras integrar T26, T21 y T28):
+```
+pnpm test && pnpm typecheck && pnpm lint                              # exit 0; 59 archivos, 578 pruebas
+pnpm world:check                                                      # exit 0; arcilla y acuarela: 94 lugares, 0 sin skin
+E2E_PORT=3245 pnpm e2e --workers=2 e2e/admin.spec.ts e2e/mundo-acuarela.spec.ts e2e/mundo-arcilla.spec.ts e2e/intro.spec.ts   # exit 0; 46 pasadas
+E2E_PORT=3243 pnpm e2e --workers=2                                    # antes de integrar: exit 0; 80 pasadas, 14 omitidas
+```
+
+Desviaciones:
+- `apps/web/e2e/mundo-acuarela.spec.ts` está fuera del alcance escrito: es la spec que pide el encargo.
+- Fuera del alcance escrito, por la integración con T26 y T28 (orden del orquestador): `apps/web/lib/admin/actions.ts`, `apps/web/lib/admin/admin.test.ts` y `apps/web/app/admin/use-admin.ts` pierden la copia del mundo activo en `boia:mundo-activo`; `apps/web/lib/intro/worlds.ts` y `active.ts` (entrada de Acuarela y mundo activo del repositorio).
+- Como en T20, Playwright se quedó esperando al `next-server` huérfano de su `webServer` tras terminar las pruebas; se paró a mano ese proceso (el del puerto de la prueba, de este worktree).
+
+Sin probar:
+- La misión entera de la Fiestera en Acuarela en e2e (la spec de T21 corre en el mundo por defecto); en Acuarela sólo con pruebas unitarias.
+- Móviles reales: rendimiento del arte de Acuarela y el cambio de mundo en caliente.
+
 ## 2026-09-29 — plan 002 T28: EXPLORAR descubre el puerto y la aventura empieza allí
 
 La entrada ya no es el mundo de muestra de plan 001: es el mundo activo (Arcilla por defecto) y aterriza en su punto de aterrizaje, la bocana de El Varadero. Al pulsar EXPLORAR la landing se aparta, la cámara se aleja un poco (de ×1,3 en móvil y ×1,45 en escritorio a la escala del juego, ×1) hasta el encuadre con el que empieza el juego —el barco en el anillo de salida, la primera boia delante y el mar abierto hacia el norte, camino de la Fiestera— y entonces la escena pasa a `/juego` (T12). Zoom, anclas, tamaño del mini-mundo y duración son `muestra` [pendiente Hernán/Álvaro en móvil real].

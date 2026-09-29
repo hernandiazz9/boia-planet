@@ -35,7 +35,7 @@ export interface MenuContext {
   setMinimapZone: (z: MinimapZone) => void;
   /** Sección «Barco»: estilos y skins, lo aplicado y cómo cambiarlo. */
   ship: ShipMenu;
-  /** Mundos (T17): cuáles hay, cuál se juega y cómo cambiar. La sección es de T24. */
+  /** Mundos (T17): cuáles hay, cuál se juega y cómo cambiar (sección «Mundos», T24). */
   world: WorldMenu;
   /** Abre la hoja de la botella propia: escribirla, editarla o retirarla (T22). */
   openBottles: () => void;
@@ -44,7 +44,7 @@ export interface MenuContext {
   close: () => void;
 }
 
-/** Cambio de mundo (T17), para la sección «Mundos» de T24. */
+/** Cambio de mundo (T17), para la sección «Mundos» (T24). */
 export interface WorldMenu {
   /** Mundos registrados, en orden, con su línea de historia y su barco. */
   worlds: readonly WorldSummary[];

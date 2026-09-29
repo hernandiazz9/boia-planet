@@ -5,6 +5,7 @@ import { carnetSection } from './carnet';
 import { controlesSection } from './controles';
 import { descuentosSection } from './descuentos';
 import { logrosSection } from './logros';
+import { mundosSection } from './mundos';
 import { rankingSection } from './ranking';
 import { welcomeSection } from './welcome';
 
@@ -18,6 +19,7 @@ export const MENU_SECTIONS: readonly MenuSection[] = [
   carnetSection,
   logrosSection,
   descuentosSection,
+  mundosSection,
   barcoSection,
   rankingSection,
   controlesSection,

@@ -9,8 +9,9 @@ import type { WorldRegistry } from './registry';
  * desconocido se ignora y se pasa al siguiente; al final, el por defecto
  * del registro.
  *
- * Hoy las dos viven en el almacenamiento del navegador; T16/T26 las
- * respaldan con el repositorio local sin cambiar esta interfaz.
+ * La del visitante vive en el almacenamiento del navegador; en la web, el
+ * mundo activo vive en el repositorio local (`repo.content.activeWorldId`,
+ * T24) y llega aquí ya leído, con esta misma interfaz.
  */
 export interface WorldChoice {
   get(): string | null;
@@ -20,7 +21,7 @@ export interface WorldChoice {
 export const WORLD_PARAM = 'mundo';
 /** Mundo elegido por el visitante en este navegador. */
 export const WORLD_STORAGE_KEY = 'boia:mundo';
-/** Mundo activo fijado desde el Admin de la demo. */
+/** Mundo activo fijado desde el Admin (sin repositorio; la web usa el repositorio local). */
 export const ACTIVE_WORLD_STORAGE_KEY = 'boia:mundo-activo';
 
 /** Lo mínimo de `Storage` que hace falta (las pruebas pasan un mapa). */

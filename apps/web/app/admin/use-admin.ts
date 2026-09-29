@@ -18,14 +18,6 @@ export interface AdminContext {
   revision: number;
 }
 
-function choiceStorage() {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
 const noop = () => () => {};
 
 export function useAdminContext(): AdminContext | null {
@@ -35,11 +27,7 @@ export function useAdminContext(): AdminContext | null {
     setBase({
       repo,
       registry: WORLD_REGISTRY,
-      actions: createAdminActions({
-        repo,
-        registry: WORLD_REGISTRY,
-        choiceStorage: choiceStorage(),
-      }),
+      actions: createAdminActions({ repo, registry: WORLD_REGISTRY }),
     });
   }, []);
   const revision = useSyncExternalStore(

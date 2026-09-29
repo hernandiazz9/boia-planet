@@ -1,5 +1,4 @@
 import {
-  ACTIVE_WORLD_STORAGE_KEY,
   type ComposedWorld,
   WORLD_PARAM,
   WORLD_STORAGE_KEY,
@@ -7,13 +6,17 @@ import {
   activeWorld,
   storedWorldChoice,
 } from '@boia/world';
+import { createAdminActions } from '../../lib/admin/actions';
+import { gameRepository } from '../../lib/repo';
 import { worlds } from './demo-world';
 
 /**
- * Qué mundo se juega en /juego (T17): `?mundo=<id>`, si no el elegido en este
- * navegador (menú «Mundos», T24), si no el activo que fije el Admin (T26), si
- * no el por defecto. Las dos elecciones viven hoy en `localStorage`; T16/T26
- * las pasan al repositorio local sin cambiar la interfaz `WorldChoice`.
+ * Qué mundo se juega en /juego (T17, T24): `?mundo=<id>`, si no el elegido
+ * en este navegador (menú «Mundos»), si no el activo que fije el Admin
+ * (T26), si no el por defecto. La elección del visitante vive en
+ * `localStorage` (`boia:mundo`); el mundo activo, en el repositorio local
+ * (`repo.content.activeWorldId`, que el Admin cambia con `setActiveWorld`),
+ * que es lo que Supabase sustituirá.
  */
 
 function storage(): Storage | null {
@@ -29,17 +32,39 @@ export function visitorWorldChoice(): WorldChoice {
   return storedWorldChoice(storage(), WORLD_STORAGE_KEY);
 }
 
-/** Mundo activo para quien no ha elegido, fijado desde el Admin de la demo. */
-export function adminWorldChoice(): WorldChoice {
-  return storedWorldChoice(storage(), ACTIVE_WORLD_STORAGE_KEY);
+/** El mundo activo que fijó el Admin; null si no fijó ninguno o no se puede leer. */
+export async function adminWorldId(): Promise<string | null> {
+  try {
+    return await gameRepository().content.activeWorldId();
+  } catch (err) {
+    console.warn('[boia] no se pudo leer el mundo activo', err);
+    return null;
+  }
 }
 
-/** El mundo de esta carga. */
-export function currentWorld(search: string): ComposedWorld {
+/**
+ * Fija el mundo activo para quien no ha elegido; null vuelve al por defecto
+ * del registro. Es la acción del Admin (T26, `createAdminActions`): rechaza
+ * un id que no está registrado y queda en la auditoría del repositorio local.
+ */
+export async function setActiveWorld(id: string | null): Promise<void> {
+  await createAdminActions({ repo: gameRepository(), registry: worlds }).setActiveWorld(id);
+}
+
+/** La elección del Admin ya leída (`adminWorldId`), con la forma de `WorldChoice`. */
+export function adminWorldChoice(id: string | null): WorldChoice {
+  return {
+    get: () => id,
+    set: (next) => void setActiveWorld(next),
+  };
+}
+
+/** El mundo de esta carga; `adminId` es el mundo activo del Admin ya leído. */
+export function currentWorld(search: string, adminId: string | null = null): ComposedWorld {
   return activeWorld(worlds, {
     search,
     visitor: visitorWorldChoice(),
-    admin: adminWorldChoice(),
+    admin: adminWorldChoice(adminId),
   });
 }
 

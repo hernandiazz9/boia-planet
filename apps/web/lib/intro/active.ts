@@ -4,7 +4,7 @@ import { requestedShipStyle } from '@boia/engine/ui';
 import type { SeaPalette } from '@boia/world';
 import { worlds } from '../../app/juego/demo-world';
 import { gameRepository } from '../../app/juego/repo';
-import { currentWorld } from '../../app/juego/world-choice';
+import { adminWorldId, currentWorld } from '../../app/juego/world-choice';
 import { liveWorld } from '../admin/live-world';
 import { introForWorld } from './worlds';
 
@@ -36,7 +36,7 @@ export async function activeIntro(
   artScale: number,
 ): Promise<ActiveIntro | null> {
   const repo = gameRepository();
-  const chosen = currentWorld(search);
+  const chosen = currentWorld(search, await adminWorldId());
   const [live, places] = await Promise.all([
     liveWorld(repo, worlds, chosen),
     repo.content.places().catch(() => ({})),

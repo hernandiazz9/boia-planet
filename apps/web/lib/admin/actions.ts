@@ -13,12 +13,7 @@ import {
   type SkinPatch,
   mergePlacePatch,
 } from '@boia/store';
-import {
-  ACTIVE_WORLD_STORAGE_KEY,
-  type ChoiceStorage,
-  type RenameScope,
-  type WorldRegistry,
-} from '@boia/world';
+import type { RenameScope, WorldRegistry } from '@boia/world';
 import { worldProblem } from './validate';
 import { MAP_POINTS, type MapPointKey, eventIslands } from './world';
 
@@ -42,11 +37,6 @@ export interface AdminDeps {
   repo: BoiaRepository;
   /** Mundos sobre el mapa compartido (`WORLD_REGISTRY`). */
   registry: WorldRegistry;
-  /**
-   * Donde /juego lee el mundo activo del Admin (`boia:mundo-activo`,
-   * `adminWorldChoice`). null: sólo el repositorio.
-   */
-  choiceStorage?: (ChoiceStorage & { removeItem(key: string): void }) | null;
   now?: () => Date;
 }
 
@@ -293,13 +283,15 @@ export function createAdminActions(deps: AdminDeps) {
 
     // --- Temporadas ---------------------------------------------------------
 
-    /** Mundo activo (la temporada, D-20); null: el por defecto del registro. */
+    /**
+     * Mundo activo (la temporada, D-20); null: el por defecto del registro.
+     * Vive sólo en el repositorio: /juego lo lee de ahí (`adminWorldId`, T24).
+     */
     async setActiveWorld(worldId: string | null) {
       if (worldId !== null && !registry.has(worldId)) {
         throw new AdminError(`no existe el mundo «${worldId}»`);
       }
       await repo.admin.setActiveWorld(worldId, opts('temporada activa'));
-      mirrorActiveWorld(deps.choiceStorage, worldId);
     },
 
     // --- Muestra ------------------------------------------------------------
@@ -307,7 +299,6 @@ export function createAdminActions(deps: AdminDeps) {
     /** Vuelve un área (o todo) a los datos de muestra. Queda en la auditoría. */
     async reset(area: ContentArea | 'all') {
       await repo.admin.reset(area, opts('volver a la muestra'));
-      if (area === 'all' || area === 'activeWorld') mirrorActiveWorld(deps.choiceStorage, null);
     },
 
     // --- Moderación ---------------------------------------------------------
@@ -321,14 +312,3 @@ export function createAdminActions(deps: AdminDeps) {
 }
 
 export type AdminActions = ReturnType<typeof createAdminActions>;
-
-/** /juego lee el mundo activo del Admin de `boia:mundo-activo` (T17): se le deja al día. */
-function mirrorActiveWorld(storage: AdminDeps['choiceStorage'], worldId: string | null): void {
-  if (!storage) return;
-  try {
-    if (worldId) storage.setItem(ACTIVE_WORLD_STORAGE_KEY, worldId);
-    else storage.removeItem(ACTIVE_WORLD_STORAGE_KEY);
-  } catch {
-    // Almacenamiento bloqueado: el repositorio ya lo guardó en memoria.
-  }
-}

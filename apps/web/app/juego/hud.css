@@ -234,9 +234,9 @@
   overflow-x: auto;
 }
 .juego-menu-icon {
-  /* Siete iconos y la separación caben en 320 px: encogen hasta 36 px. */
+  /* Nueve iconos y la separación caben en 360 px: encogen hasta 34 px (en 320, la barra se desliza). */
   flex: 1 1 44px;
-  min-width: 36px;
+  min-width: 34px;
   max-width: 56px;
   height: 44px;
   padding: 0;
@@ -525,4 +525,74 @@
 }
 .barco-descripcion {
   font-size: 14px;
+}
+
+/* Sección «Mundos» (T24): cada mundo con su historia y su barco. */
+.juego-menu-body ul.mundos-lista {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.mundo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 2px solid rgba(18, 35, 63, 0.15);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+.mundo img,
+.mundo-sin-barco {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+.mundo-sin-barco {
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+}
+.mundo-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mundo-nombre {
+  font-weight: 700;
+  font-size: 16px;
+}
+.mundo-actual {
+  font-weight: 400;
+  opacity: 0.7;
+}
+.mundo-historia {
+  font-size: 13px;
+}
+.mundo-barco {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.mundo:hover,
+.mundo:focus-visible {
+  border-color: rgba(242, 106, 27, 0.6);
+}
+.mundo.is-active {
+  border-color: #f26a1b;
+  background: #fff1e6;
+}
+.mundos[aria-busy='true'] .mundo {
+  cursor: progress;
 }

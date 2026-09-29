@@ -31,6 +31,9 @@ export const DEFAULT_WORLD_INTRO: WorldIntro = {
 export const WORLD_INTROS: Readonly<Record<string, WorldIntro>> = {
   // El Varadero: el aterrizaje cae en la bocana, entre las balizas.
   arcilla: DEFAULT_WORLD_INTRO,
+  // La Explanada (T24): el mismo mapa, así que el mismo aterrizaje en la
+  // bocana y el mismo encuadre del puerto; sólo cambian el arte y el mar.
+  acuarela: DEFAULT_WORLD_INTRO,
 };
 
 export function worldIntroFor(worldId: string): WorldIntro {

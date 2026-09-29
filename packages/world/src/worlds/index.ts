@@ -6,3 +6,5 @@ export * from './selection';
 export * from './catalog';
 export * from './check';
 export * from './arcilla';
+export * from './acuarela';
+export * from './place-art';
