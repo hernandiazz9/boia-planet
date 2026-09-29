@@ -13,7 +13,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 ## Tasks
 
 ## T38 — Decision D-23, spec updates and the texts of every zone
-- Status: pending
+- Status: done
 - Depends on: none (plan 003 T32 is done, D-22 is on main)
 - Goal: Record inventory §1 as D-23 in docs/DECISIONES.md (author Hernán) with the orchestrator's delegated decisions O1–O15 inside it (author orquestador by Hernán's delegation, Álvaro only to review), close P4, P6, P8–P12 in «Preguntas abiertas» as decided, record Álvaro's answers of inventory §6 (P13 closed: full permission for Hernán; P2 stays open; new P14… for what is still missing: real links, real codes, artist photos, music options, Halloween poster, font file). Update the affected REQ lines (PRO-009 HUD, MUN-035/ADM-032 single spawn, COM-010 satellites, IDE-038 ranking local-only as a test-version exception, IDE-030/031 economy, new REQs for world-switch transition, carnet moderation and discount-to-island if check.py needs them). Fix stale docs: docs/PLAN.md Faro/Cañón frozen, mundos/arcilla/diseno.md Faro/Cañón as L2, docs/spec/00-indice.md decision range. Write docs/propuestas/textos-zonas.md: final-feeling Spanish copy (`muestra`, BOIA voice from docs/spec/10-filosofia.md) for the 18 zones of v14 §31.2 plus Welcome Aboard, Faro, Cañón, boia de WhatsApp, the 5 new informative boies (per world: Arcilla and Acuarela), Carnet invitations, empty and error states, ranking, ship shop, world switch; one key per string, grouped by screen. The 5 Carnet questions stay verbatim from v14 §44.1. Legal pages (aviso legal, privacidad, cookies) rewritten with the invented data of inventory §6 (Bollería Fina del Mediterráneo, S.L., Benito Camelas, Débora Melo, C/ Rosa Melano 69…), clearly marked `muestra`, in docs/propuestas/textos-zonas.md for T49 to wire.
 - Context: docs/informes/2026-09-29-inventario-v14.md; docs/DECISIONES.md (D-20…D-22 format); docs/spec/**; tools/spec/check.py; docs/fuente/v14-maestro.md §31, §37, §44.1; mundos/*/diseno.md; apps/web/lib/i18n/es.ts (existing keys).
@@ -22,10 +22,10 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
   - `python3 tools/spec/check.py` → exit 0 and `python3 tools/spec/test_check.py` → exit 0
   - `grep -n "D-23" docs/DECISIONES.md` → the decision with Hernán's 11 points and O1–O15
   - docs/propuestas/textos-zonas.md covers every zone listed above (a table of zones at the top with the number of strings each)
-- Outcome:
+- Outcome: D-23 (Hernán's 11 points, O1–O15, Álvaro's answers; P15–P22 new), 294 REQ, docs/propuestas/textos-zonas.md (32 zones, 618 strings, legal pages with the jokey data), stale docs fixed; O5 aligned with plan 003's catalog: coins buy B03 300/B06 400, B04 at 1500 points, achievements give B07/B01/B08, skins 150 → 69172c6
 
 ## T39 — Art: the BOIA mascot as every boia, ship skins to sell, secrets
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: none
 - Goal: Render with the Blender pipeline what the economy and the map need: `noche` and `fiesta` skins for every style ship that lacks them (at least B05 Arcilla and B02 Acuarela, ideally all 8 styles), 8 directions + passenger frames like the base; the BOIA mascot (art/marca/boia-mascota.jpg: orange round body, navy-blue pointed cap with a hole, big eyes, wide grin, black outline) modelled in Blender as a floating buoy (the body is the buoy, a waterline and a small float ring or ballast so it reads as a boya) and rendered for every boia of the game in each world style (Arcilla clay, Acuarela wash): the first boia, the 5 new informative boies, the WhatsApp boia and the Boia Fiestera (the same mascot with her party details, replacing the current Fiestera art, TRIPULANTE frames included), with an idle bob and a talking frame; a glTF of the mascot boia for `/mar`; a secret marker per world (small, readable at game scale); and the matching glTF where `/mar` needs it (tools/blender/export_barcos_glb.py). Manifests valid and reproducible.
 - Context: tools/blender/** (render.py, check.py, styles/, export_barcos_glb.py), art/barco/** (estilos, base/noche/fiesta, 3d/manifest.json), art/mundos/{arcilla,acuarela}/**, docs/barcos/barcos.json, plan 002 T18/T19 Outcomes.
@@ -156,9 +156,9 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 ## T50 — Brand: wordmark letters, logo, colours and type
 - Status: pending
 - Depends on: none
-- Goal: Apply Álvaro's identity (inventory §6.8). Trace the wordmark (art/marca/boia-wordmark.jpg) to clean vectors (SVG in art/marca/), rebuild the intro's 3D «BOIA» letters from that shape in Blender (same pipeline and motion as plan 002 T27, replacing Inter), use the SVG wordmark and the mascot as logo in the landing header, footer, favicon/app icons and the Admin, and set the brand colours sampled from the two images (orange, navy-blue, black outline) as design tokens in apps/web and the /mar palette. UI type: a free display font that matches the wordmark for titles (chosen by the agent, self-hosted, subset, within the 192 KB landing budget) until Álvaro sends the real font file.
+- Goal: Apply Álvaro's identity (inventory §6.8). Trace the wordmark (art/marca/boia-wordmark.jpg) to clean vectors (SVG in art/marca/), rebuild the intro's 3D «BOIA» letters from that shape in Blender (same pipeline and motion as plan 002 T27, replacing Inter), use the SVG wordmark and the mascot as logo in the landing header, footer, favicon/app icons and the Admin, and set the brand colours sampled from the two images (orange, navy-blue, black outline) as design tokens in apps/web (the /mar palette waits for plan 003). UI type: a free display font that matches the wordmark for titles (chosen by the agent, self-hosted, subset, within the 192 KB landing budget) until Álvaro sends the real font file.
 - Context: art/marca/**; tools/blender/intro/titulo.py, art/intro/**, packages/engine/src/intro/**, apps/web/lib/intro/**; apps/web/app/(landing)/**, apps/web/app/globals.css, apps/web/app/icon.svg, apps/web/app/admin/admin.css, apps/web/app/mar/engine/palette.ts; plan 002 T27 Outcome.
-- Scope: may touch ESTADO.md (own top section), art/marca/**, art/intro/**, tools/blender/intro/**, packages/engine/src/intro/** (title only), apps/web/lib/intro/**, apps/web/app/(landing)/** (logo, tokens), apps/web/app/globals.css, apps/web/app/icon.svg and app icons, apps/web/app/admin/admin.css, apps/web/app/mar/engine/palette.ts, apps/web/public/fonts/** (new), apps/web/e2e/** / must not touch packages/world/**, packages/store/**, art/mundos/**.
+- Scope: may touch ESTADO.md (own top section), art/marca/**, art/intro/**, tools/blender/intro/**, packages/engine/src/intro/** (title only), apps/web/lib/intro/**, apps/web/app/(landing)/** (logo, tokens), apps/web/app/globals.css, apps/web/app/icon.svg and app icons, apps/web/app/admin/admin.css, apps/web/public/fonts/** (new) (NOT apps/web/app/mar/**: plan 003 is working there; put the /mar brand colours under OUT OF SCOPE), apps/web/e2e/** / must not touch packages/world/**, packages/store/**, art/mundos/**.
 - Done when:
   - Blender render of the letters → exit 0 twice byte-identical; `python3 tools/blender/check.py` → exit 0
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; `pnpm build` → landing ≤ 192 KB gzip (report it)
@@ -167,6 +167,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## Decisions
+- 2026-09-29 T38: new Álvaro questions start at P15 (P14 exists from D-22); O5 follows plan 003's approved catalog (B03/B06 by coins, B04 by 1500 points, B07/B01/B08 by achievements, skins 150); five new boies ids boia-espacio/descubrir/pertenecer/allday/secretos, placed by T45; «Condiciones» becomes aviso legal; also updated REQ-ENT-003, ENT-032, AVE-018, COM-031 (agent)
 - 2026-09-29: plan 004 runs in parallel with plan 003 on branch `plan-004` (integration worktree .claude/worktrees/orq-004); main is merged into plan-004 after each plan 003 task lands. Until plan 003 is done only tasks that do not touch its files run: T38 (docs; D-22 already on main) and T39 (art), then T50 without apps/web/app/mar/engine/palette.ts; T40–T48 wait for plan 003 to finish (they touch apps/web/app/mar, juego, engine or store) (orchestrator)
 - 2026-09-29: coins buy ships and skins; only B05 and B02 unlocked at start; points unlock one ship (Hernán) → B04 at 1500 points, prices in inventory O5 (orchestrator)
 - 2026-09-29: world switch = a black-hole vortex; same places, links and features, only renders and dialogues change (Hernán)
@@ -177,7 +178,11 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 T38: es.ts still says «Lista provisional» for artists, legal slug `condiciones` → aviso legal, menu tab «Descuentos» vs «Mis códigos», ranking stub (covered by T40–T45/T49); O10 ambient music has no REQ; mapa.json still has a detour named `d_solar`
 
 ## Log
 - 2026-09-29 draft written from the v14 inventory
 - 2026-09-29 plan approved (Hernán: «Comitea», open the orchestrator in a worktree) · integration worktree .claude/worktrees/orq-004 on branch plan-004
+- 2026-09-29 16:22 T38 launched · attempt 1 · agent a6c9b003993ca3178
+- 2026-09-29 16:22 T39 launched · attempt 1 · agent aa756794320ace22d
+- 2026-09-29 16:40 T38 done · branch worktree-agent-a6c9b003993ca3178 → 69172c6
