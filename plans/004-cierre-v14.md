@@ -25,7 +25,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: D-23 (Hernán's 11 points, O1–O15, Álvaro's answers; P15–P22 new), 294 REQ, docs/propuestas/textos-zonas.md (32 zones, 618 strings, legal pages with the jokey data), stale docs fixed; O5 aligned with plan 003's catalog: coins buy B03 300/B06 400, B04 at 1500 points, achievements give B07/B01/B08, skins 150 → 69172c6
 
 ## T39 — Art: the BOIA mascot as every boia, ship skins to sell, secrets
-- Status: running (attempt 1)
+- Status: done
 - Depends on: none
 - Goal: Render with the Blender pipeline what the economy and the map need: `noche` and `fiesta` skins for every style ship that lacks them (at least B05 Arcilla and B02 Acuarela, ideally all 8 styles), 8 directions + passenger frames like the base; the BOIA mascot (art/marca/boia-mascota.jpg: orange round body, navy-blue pointed cap with a hole, big eyes, wide grin, black outline) modelled in Blender as a floating buoy (the body is the buoy, a waterline and a small float ring or ballast so it reads as a boya) and rendered for every boia of the game in each world style (Arcilla clay, Acuarela wash): the first boia, the 5 new informative boies, the WhatsApp boia and the Boia Fiestera (the same mascot with her party details, replacing the current Fiestera art, TRIPULANTE frames included), with an idle bob and a talking frame; a glTF of the mascot boia for `/mar`; a secret marker per world (small, readable at game scale); and the matching glTF where `/mar` needs it (tools/blender/export_barcos_glb.py). Manifests valid and reproducible.
 - Context: tools/blender/** (render.py, check.py, styles/, export_barcos_glb.py), art/barco/** (estilos, base/noche/fiesta, 3d/manifest.json), art/mundos/{arcilla,acuarela}/**, docs/barcos/barcos.json, plan 002 T18/T19 Outcomes.
@@ -33,7 +33,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Done when:
   - Blender render of the new assets → exit 0 twice, byte-identical; `python3 tools/blender/check.py` → exit 0 listing them
   - A contact sheet p004-t39-skins.png (every ship × base/noche/fiesta) and p004-t39-boias-mascota.png (every boia in both worlds next to the logo) in docs/informes/img/
-- Outcome:
+- Outcome: mascot boia in tools/blender/mascota.py (primera, info, WhatsApp, Fiestera with balloons; idle + talking) for Arcilla and Acuarela under `extras` in lugares.json, secret marker, noche/fiesta skins for 7 of 8 styles (B01 held base-only), mascot passenger on every ship, glTFs in art/barco/3d; 848 images, check.py green → e38c31a
 
 ## T40 — Ship economy: locked ships and skins, coins shop, points unlock
 - Status: pending
@@ -167,6 +167,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-29 T39: new boias/secret under `extras` in tools/blender/lugares.json until T45 wires them; B01 pencil stays base-only (registry note), its skins written but held; the ships' passenger is the small mascot (agent)
 - 2026-09-29 T50: text on orange is black (navy on the new orange is 4.3:1); header logo decorative inside «Ir al inicio», footer logo named «BOIA.PLANET»; display font Titan One until Álvaro's font file (agent)
 - 2026-09-29 T38: new Álvaro questions start at P15 (P14 exists from D-22); O5 follows plan 003's approved catalog (B03/B06 by coins, B04 by 1500 points, B07/B01/B08 by achievements, skins 150); five new boies ids boia-espacio/descubrir/pertenecer/allday/secretos, placed by T45; «Condiciones» becomes aviso legal; also updated REQ-ENT-003, ENT-032, AVE-018, COM-031 (agent)
 - 2026-09-29: plan 004 runs in parallel with plan 003 on branch `plan-004` (integration worktree .claude/worktrees/orq-004); main is merged into plan-004 after each plan 003 task lands. Until plan 003 is done only tasks that do not touch its files run: T38 (docs; D-22 already on main) and T39 (art), then T50 without apps/web/app/mar/engine/palette.ts; T40–T48 wait for plan 003 to finish (they touch apps/web/app/mar, juego, engine or store) (orchestrator)
@@ -179,6 +180,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 T39: T45 must point place-art.ts at boias#… and secreto#secreto and move them out of `extras`; T40 must unhide B01/B05/B06 skins hidden by catalog.ts notes; stale sources_sha256 in untouched place manifests; arcilla*.glb export not byte-stable (Blender decimate)
 - 2026-09-29 T50: /mar brand colours (after plan 003); Admin title wordmark needs admin-app.tsx; themeColor in app/layout.tsx still #12233f; Act 0 boia in intro-stage.tsx is not the mascot yet; landing-budget.mjs ignores CSS-loaded assets
 - 2026-09-29 T38: es.ts still says «Lista provisional» for artists, legal slug `condiciones` → aviso legal, menu tab «Descuentos» vs «Mis códigos», ranking stub (covered by T40–T45/T49); O10 ambient music has no REQ; mapa.json still has a detour named `d_solar`
 
@@ -192,3 +194,4 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 17:24 T39 conflict in ESTADO.md · sent back to agent aa756794320ace22d
 - 2026-09-29 17:26 T50 done · branch worktree-agent-af4598a59fa0e694c → 8850a24
 - 2026-09-29 17:28 T39 second ESTADO.md conflict (T50 landed) · sent back to agent aa756794320ace22d
+- 2026-09-29 17:29 T39 done · branch worktree-agent-aa756794320ace22d (2 conflict rounds, ESTADO.md) → e38c31a
