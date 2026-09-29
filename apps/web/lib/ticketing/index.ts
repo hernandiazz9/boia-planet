@@ -4,7 +4,14 @@ import { createSandboxTicketing } from './sandbox';
 
 export type * from './adapter';
 export { createSandboxTicketing, TICKET_TRIGGER } from './sandbox';
-export { applicableDiscount, formatEuros, quoteFor, samplePriceCents } from './pricing';
+export {
+  applicableDiscount,
+  discountBannerFor,
+  formatEuros,
+  quoteFor,
+  samplePriceCents,
+} from './pricing';
+export type { DiscountBannerInfo, OwnedDiscount } from './pricing';
 
 let adapter: TicketingAdapter | null = null;
 

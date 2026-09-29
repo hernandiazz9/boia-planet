@@ -301,4 +301,17 @@ export const SAMPLE_DISCOUNTS: AreaInput<'discounts'>[] = [
     conditions: 'Caducado: se muestra como tal (REQ-COM-021).',
     sample: true,
   },
+  {
+    // Descuento de tienda (O8): se copia y lleva a la tienda externa, que lo valida.
+    id: 'dto-tienda',
+    code: 'TIENDA15',
+    label: '-15 % en la tienda de BOIA',
+    scope: 'store',
+    kind: 'percent',
+    value: 15,
+    endsAt: '2027-06-30T23:59:00+02:00',
+    conditions: 'Lo valida la tienda de BOIA. Muestra: no es un código real.',
+    hiddenAt: 'restos-2',
+    sample: true,
+  },
 ];

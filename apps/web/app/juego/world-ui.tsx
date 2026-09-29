@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { EVENTOS_COPY } from '../../lib/landing/eventos-copy';
 import { eventHref } from '../../lib/landing/eventos';
 import { CHECKOUT_COPY } from '../../lib/ticketing/copy';
+import { EventDiscountBanner } from '../../lib/ticketing/discount-banner';
 import { IslandMemories, IslandPhotosLink, IslandUpcoming } from './place-panels';
 
 /**
@@ -16,6 +17,8 @@ import { IslandMemories, IslandPhotosLink, IslandUpcoming } from './place-panels
  * pospuesto o cancelado con su aviso y, si ya pasó, su recuerdo con el
  * cartel; debajo, los recuerdos de la isla, «Ver fotos de la isla» y sus
  * «Próximos eventos», con los satélites sin isla si es la del All Day (O7).
+ * Con un código de descuento de este evento, «Tienes un código de descuento
+ * para este evento» junto a la compra (T43, REQ-COM-036).
  */
 
 function formatDate(e: BoiaEvent): string {
@@ -124,6 +127,7 @@ export function EventPanel({
         </Link>
         {event.islandId ? <IslandPhotosLink islandId={event.islandId} /> : null}
       </p>
+      {buy ? <EventDiscountBanner event={event} /> : null}
       {buy ? (
         <button
           type="button"

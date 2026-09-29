@@ -33,4 +33,10 @@ export const CHECKOUT_COPY = {
     already_stamped: 'Ya tenías el sello de este evento: cada evento deja uno.',
   } satisfies Record<PurchaseOutcome['stamp'], string>,
   achievement: (title: string) => `Logro conseguido: ${title}`,
+  /** Aviso de descuento al comprar en la isla o la ficha del evento (D-23, REQ-COM-036). */
+  banner: {
+    title: 'Tienes un código de descuento para este evento',
+    saving: (euros: string) => `Ahorras ${euros}`,
+    applied: 'Se aplica solo al comprar.',
+  },
 } as const;

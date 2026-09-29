@@ -170,9 +170,35 @@ function v2ToV3(doc: Record<string, unknown>): Record<string, unknown> {
   return { ...doc, content: { ...doc.content, items: { ...items, events } } };
 }
 
+/**
+ * v3 → v4 (T43): el descuento gana destino (`scope`: entradas o tienda),
+ * prioridad y el lugar donde se esconde. Los que guardó el Admin antes eran
+ * todos de entradas y sin prioridad: se escriben así, explícitos, para que
+ * nada cambie al migrar. El lugar se queda sin poner (lo entregan los
+ * lugares del mapa que ya lo nombran).
+ */
+function v3ToV4(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isObject(doc.content) || !isObject(doc.content.items)) return doc;
+  const items = doc.content.items;
+  if (!isObject(items.discounts)) return doc;
+  const discounts: Record<string, unknown> = {};
+  for (const [id, o] of Object.entries(items.discounts)) {
+    if (!isObject(o) || !isObject(o.value)) {
+      discounts[id] = o;
+      continue;
+    }
+    const value: Record<string, unknown> = { ...o.value };
+    if (value.scope !== 'event' && value.scope !== 'store') value.scope = 'event';
+    if (typeof value.priority !== 'number') value.priority = 0;
+    discounts[id] = { ...o, value };
+  }
+  return { ...doc, content: { ...doc.content, items: { ...items, discounts } } };
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, name: 'logros que se reclaman (T36)', up: v1ToV2 },
   { from: 2, to: 3, name: 'eventos con formato, precio y estado por fechas (T42)', up: v2ToV3 },
+  { from: 3, to: 4, name: 'descuentos con destino, prioridad y escondite (T43)', up: v3ToV4 },
 ];
 
 export type MigrationOutcome =

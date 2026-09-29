@@ -5,6 +5,7 @@ import { type ComponentType, useEffect, useState } from 'react';
 import { ADMIN_COPY } from '../../lib/admin/copy';
 import { AchievementsSection } from './sections/achievements';
 import { ArtistsSection } from './sections/artists';
+import { DiscountsSection } from './sections/discounts';
 import { EventsSection } from './sections/events';
 import { HomeSection } from './sections/home';
 import { AuditSection, IntegrationsSection, SeasonsSection, UsersSection } from './sections/misc';
@@ -18,6 +19,7 @@ import { type AdminContext, useAdminContext } from './use-admin';
 const SECTIONS: { id: string; label: string; Component: ComponentType<{ ctx: AdminContext }> }[] = [
   { id: 'inicio', label: 'Página principal', Component: HomeSection },
   { id: 'eventos', label: 'Eventos', Component: EventsSection },
+  { id: 'descuentos', label: 'Descuentos', Component: DiscountsSection },
   { id: 'mundo', label: 'Mundo', Component: WorldSection },
   { id: 'artistas', label: 'Artistas', Component: ArtistsSection },
   { id: 'fotos', label: 'Fotos y vídeos', Component: PhotosSection },

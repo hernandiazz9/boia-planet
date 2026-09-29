@@ -177,3 +177,42 @@
   outline: 3px solid #6b4dff;
   outline-offset: 2px;
 }
+
+/*
+ * «Tienes un código de descuento para este evento» (T43, REQ-COM-036): el
+ * mismo aviso en la isla del evento y en el checkout. Naranja de la marca con
+ * texto negro (5,7:1, T50).
+ */
+.discount-banner {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border: 2px solid #000;
+  border-radius: 12px;
+  background: var(--boia-orange, #ec4f24);
+  color: #000;
+  text-align: left;
+}
+
+.discount-banner p {
+  margin: 0 0 4px;
+}
+
+.discount-banner p:last-child {
+  margin-bottom: 0;
+}
+
+.discount-banner__title {
+  font-weight: 800;
+}
+
+.discount-banner__code code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #fffaf0;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.discount-banner__note {
+  font-size: 13px;
+}

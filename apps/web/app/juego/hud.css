@@ -643,3 +643,38 @@
   color: #fff;
   outline: 2px solid #f26a1b;
 }
+
+/* «Ir a la isla» (T43): el barco navega solo; «Saltar» llega de un salto. */
+.juego-rumbo {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
+  background: rgba(18, 35, 63, 0.88);
+  color: #fffaf0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.juego-rumbo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.juego-rumbo-saltar {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--boia-orange, #ec4f24);
+  color: #000;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}

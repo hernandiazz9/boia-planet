@@ -5,6 +5,7 @@ import { formatEventDate } from '../i18n';
 import type { CheckoutEvent, CheckoutSession, PurchaseOutcome, TicketingAdapter } from './adapter';
 import './checkout.css';
 import { CHECKOUT_COPY as C } from './copy';
+import { DiscountBanner } from './discount-banner';
 import { ticketing } from './index';
 import { formatEuros } from './pricing';
 
@@ -154,6 +155,17 @@ export function SandboxCheckout({
           <p className="checkout__message" role="alert">
             {state.message}
           </p>
+        ) : null}
+
+        {state.kind === 'ready' && state.session.quote.discount ? (
+          <DiscountBanner
+            info={{
+              discountId: state.session.quote.discount.id,
+              code: state.session.quote.discount.code,
+              label: state.session.quote.discount.label,
+              savingCents: state.session.quote.discount.cents,
+            }}
+          />
         ) : null}
 
         {state.kind === 'ready' ? <QuoteTable session={state.session} /> : null}

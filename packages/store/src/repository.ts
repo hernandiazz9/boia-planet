@@ -268,9 +268,17 @@ export interface Discovery {
 
 export interface FoundDiscount {
   discount: Discount;
+  /** Vigencia ahora (`discountStatus`). */
   status: DiscountStatus;
   foundAt: string;
   worldId: string | null;
+  /**
+   * Cuándo se aplicó en una compra confirmada de este visitante, o null. Un
+   * código usado ya no se aplica otra vez (T43; «usado» en «Mis códigos»).
+   */
+  usedAt: string | null;
+  /** La compra que lo usó, o null. */
+  usedIn: string | null;
 }
 
 export interface MissionInput {
@@ -341,7 +349,10 @@ export interface SandboxPurchaseInput {
   purchaseId: string;
   eventId: string;
   quantity?: number | undefined;
-  /** Descuento encontrado y vigente, si se aplica. */
+  /**
+   * Descuento encontrado, vigente, de entradas (no de tienda), de ese evento
+   * y sin usar en otra compra, si se aplica.
+   */
   discountId?: string | null | undefined;
   amountCents?: number | null | undefined;
 }

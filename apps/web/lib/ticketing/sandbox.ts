@@ -1,6 +1,7 @@
 import { EVENT_STATE_BEHAVIOR, eventKicker, eventState } from '@boia/contracts';
 import type { BoiaRepository } from '@boia/store';
 import { completeBySignal } from '../../app/juego/achievements';
+import { trackSandboxPurchase } from '../analytics';
 import type {
   CheckoutEvent,
   CheckoutSession,
@@ -81,6 +82,15 @@ export function createSandboxTicketing(
         discountId: session.quote.discount?.id ?? null,
         amountCents: session.quote.totalCents,
       });
+      // En la versión de prueba el sandbox hace de webhook (REQ-ARQ-019).
+      if (first) {
+        trackSandboxPurchase({
+          eventId: purchase.eventId,
+          provider: 'sandbox',
+          orderRef: purchase.id,
+          ...(purchase.discountId ? { discountId: purchase.discountId } : {}),
+        });
+      }
       // El repositorio no completa los logros de entradas: se piden aquí (con
       // los sellos ya en el libro), y son idempotentes por id de logro.
       const done = await completeBySignal(repo, {

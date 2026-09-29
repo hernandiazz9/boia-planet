@@ -780,12 +780,20 @@ class LocalRepository implements BoiaRepository {
       rec: { at: string; worldId: string | null },
     ) => {
       const discount = this.resolved('discounts', d).find((x) => x.id === id);
+      const me = d.identity?.id;
+      const used = me
+        ? d.purchases.find(
+            (p) => p.userId === me && p.discountId === id && p.status === 'confirmed',
+          )
+        : undefined;
       return discount
         ? {
             discount,
             status: discountStatus(discount, this.now()),
             foundAt: rec.at,
             worldId: rec.worldId,
+            usedAt: used ? (used.confirmedAt ?? used.createdAt) : null,
+            usedIn: used?.id ?? null,
           }
         : null;
     };
@@ -1156,10 +1164,18 @@ class LocalRepository implements BoiaRepository {
               const rec = d.players[me.id]?.discounts[discountId];
               const disc = this.resolved('discounts', d).find((x) => x.id === discountId);
               if (!rec || !disc) invalid('compra: descuento no encontrado');
+              if (disc.scope === 'store') invalid('compra: descuento de la tienda');
               if (disc.eventId && disc.eventId !== event.id)
                 invalid('compra: descuento de otro evento');
               if (discountStatus(disc, this.now()) !== 'active')
                 invalid('compra: descuento no vigente');
+              if (
+                d.purchases.some(
+                  (p) =>
+                    p.userId === me.id && p.discountId === discountId && p.status === 'confirmed',
+                )
+              )
+                invalid('compra: descuento ya usado');
             }
             const at = this.iso();
             purchase = {

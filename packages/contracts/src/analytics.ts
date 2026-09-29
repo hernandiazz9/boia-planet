@@ -21,9 +21,16 @@ export interface FunnelEventProps {
   tickets_panel_open: { source: 'hero' | 'header' | 'deep_link' | 'event' };
   ticket_click_out: {
     eventId: string;
-    source: 'priority_event' | 'upcoming_events' | 'tickets_panel' | 'event_page';
+    /** `island`: «Comprar entrada» en la isla del evento, en el mar (T43). */
+    source: 'priority_event' | 'upcoming_events' | 'tickets_panel' | 'event_page' | 'island';
   };
-  purchase_confirmed: { eventId: string; provider: string; orderRef: string };
+  purchase_confirmed: {
+    eventId: string;
+    provider: string;
+    orderRef: string;
+    /** Descuento aplicado, si lo hubo (T43). */
+    discountId?: string;
+  };
 }
 
 /**

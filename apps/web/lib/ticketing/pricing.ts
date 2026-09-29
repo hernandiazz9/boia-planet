@@ -27,32 +27,70 @@ export function discountCents(discount: Discount, priceCents: number): number {
   return Math.max(0, Math.min(priceCents, off));
 }
 
+/** Un código encontrado, tal como lo da `repo.progress.discounts()`. */
+export interface OwnedDiscount {
+  discount: Discount;
+  /** Ya se aplicó en una compra: no vale otra vez (T43). */
+  usedAt?: string | null | undefined;
+}
+
 /**
  * El descuento que se aplica a la compra de un evento, o null. Sólo vale un
  * código que el visitante haya encontrado (la lista es la de sus hallazgos),
- * vigente ahora y de ese evento (o sin evento). Si hay varios, el que más
- * descuenta.
+ * de entradas (no de la tienda, O8), vigente ahora, sin usar y de ese evento
+ * (o sin evento). Si hay varios, el de más prioridad y, a igual prioridad, el
+ * que más descuenta (REQ-COM-020).
  */
 export function applicableDiscount(
   eventId: string,
-  found: readonly { discount: Discount }[],
+  found: readonly OwnedDiscount[],
   priceCents: number,
   now: Date,
 ): AppliedDiscount | null {
   let best: AppliedDiscount | null = null;
-  for (const { discount } of found) {
+  let bestPriority = -1;
+  for (const { discount, usedAt } of found) {
+    if (discount.scope === 'store' || usedAt) continue;
     if (discount.eventId !== undefined && discount.eventId !== eventId) continue;
     if (discountStatus(discount, now) !== 'active') continue;
     const cents = discountCents(discount, priceCents);
-    if (cents <= 0 || (best && best.cents >= cents)) continue;
+    if (cents <= 0) continue;
+    const priority = discount.priority ?? 0;
+    if (best && (bestPriority > priority || (bestPriority === priority && best.cents >= cents)))
+      continue;
     best = { id: discount.id, code: discount.code, label: discount.label, cents };
+    bestPriority = priority;
   }
   return best;
 }
 
+/** Lo que enseña el aviso «Tienes un código de descuento para este evento» (REQ-COM-036). */
+export interface DiscountBannerInfo {
+  discountId: string;
+  code: string;
+  label: string;
+  /** Lo que se ahorra en una entrada, en céntimos. */
+  savingCents: number;
+}
+
+/**
+ * El aviso de descuento al comprar en la isla o la ficha de un evento
+ * (D-23, puntos 5 y 6): sólo si el visitante tiene un código que la compra
+ * aplicaría (el mismo criterio que `applicableDiscount`); si no, null.
+ */
+export function discountBannerFor(
+  event: Priced | string,
+  found: readonly OwnedDiscount[],
+  now: Date,
+): DiscountBannerInfo | null {
+  const eventId = typeof event === 'string' ? event : event.id;
+  const d = applicableDiscount(eventId, found, samplePriceCents(event), now);
+  return d ? { discountId: d.id, code: d.code, label: d.label, savingCents: d.cents } : null;
+}
+
 export function quoteFor(
   event: Priced | string,
-  found: readonly { discount: Discount }[],
+  found: readonly OwnedDiscount[],
   now: Date,
   quantity = 1,
 ): Quote {

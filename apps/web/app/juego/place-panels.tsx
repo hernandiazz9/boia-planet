@@ -2,7 +2,9 @@
 
 import {
   type BoiaEvent,
+  type FoundDiscountState,
   eventKicker,
+  foundDiscountState,
   isIslandlessSatellite,
   islandUpcomingEvents,
   nextAllDay,
@@ -16,6 +18,7 @@ import { islandMemories } from '../../lib/admin/world';
 import { EVENTOS_COPY } from '../../lib/landing/eventos-copy';
 import { eventHref, galleryAnchor, photosHref } from '../../lib/landing/eventos';
 import { liveContent } from '../../lib/landing/live-content';
+import { voyageHref } from './autopilot';
 import './place-panels.css';
 
 /**
@@ -306,8 +309,10 @@ export function PlacePanel({
   );
 }
 
-const STATUS: Record<FoundDiscount['status'], string> = {
-  active: 'Vigente',
+/** Estado de un código en «Mis códigos» (T43): activo, usado o caducado. */
+export const DISCOUNT_STATE_LABEL: Record<FoundDiscountState, string> = {
+  active: 'Activo',
+  used: 'Usado',
   upcoming: 'Todavía no vale',
   expired: 'Caducado',
 };
@@ -322,8 +327,29 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** Una tarjeta de descuento: código, evento, fecha, condiciones y copiar (REQ-COM-022). */
-export function DiscountCard({ found, testId }: { found: FoundDiscount; testId?: string }) {
+/** URL de la tienda externa (bloque «Tienda» de la home, con los cambios del Admin). */
+function storeUrl(): string | undefined {
+  const b = block('store');
+  return b?.type === 'store' ? b.url : undefined;
+}
+
+/**
+ * Una tarjeta de descuento (REQ-COM-022, REQ-COM-036): código con su estado,
+ * evento, fecha, condiciones, copiar con un toque y a dónde lleva. Uno de
+ * entradas con isla lleva «Ir a la isla» (el barco navega solo si
+ * `onGoToIsland`; si no, abre /juego en esa isla); sin isla, a la ficha del
+ * evento; uno de tienda (O8), «Ir a la tienda» (externa, la valida ella).
+ */
+export function DiscountCard({
+  found,
+  testId,
+  onGoToIsland,
+}: {
+  found: FoundDiscount;
+  testId?: string;
+  /** El barco pone rumbo solo a la isla del evento del código (T43). */
+  onGoToIsland?: ((eventId: string) => void) | undefined;
+}) {
   const d = found.discount;
   const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
   useEffect(() => {
@@ -331,51 +357,114 @@ export function DiscountCard({ found, testId }: { found: FoundDiscount; testId?:
     const t = setTimeout(() => setCopied(null), 2000);
     return () => clearTimeout(t);
   }, [copied]);
-  const event = d.eventId ? liveContent().events.find((e) => e.id === d.eventId) : undefined;
-  const expired = found.status === 'expired';
+  const state = foundDiscountState(found);
+  const event =
+    d.scope === 'event' && d.eventId
+      ? liveContent().events.find((e) => e.id === d.eventId)
+      : undefined;
+  const expired = state === 'expired';
+  const shop = d.scope === 'store' ? (d.url ?? storeUrl()) : undefined;
   return (
-    <div className="juego-descuento" data-testid={testId} data-status={found.status}>
+    <div
+      className="juego-descuento"
+      data-testid={testId}
+      data-status={found.status}
+      data-estado={state}
+    >
       <p className="juego-descuento-label">{d.label}</p>
       <p className="juego-descuento-code">
         <code data-testid="descuento-codigo">{d.code}</code>{' '}
-        <span
-          className={`juego-descuento-status is-${found.status}`}
-          data-testid="descuento-estado"
-        >
-          {STATUS[found.status]}
+        <span className={`juego-descuento-status is-${state}`} data-testid="descuento-estado">
+          {DISCOUNT_STATE_LABEL[state]}
         </span>
       </p>
       {event ? (
         <p className="juego-panel-meta">
           {event.name} · {formatDate(event.startsAt, event.timeZone)}
         </p>
+      ) : d.scope === 'store' ? (
+        <p className="juego-panel-meta">Tienda de BOIA</p>
       ) : null}
       {d.endsAt ? (
         <p className="juego-panel-pending">
           {expired ? 'Caducó' : 'Vale hasta'} el {formatDate(d.endsAt, 'Europe/Madrid')}
         </p>
       ) : null}
+      {found.usedAt ? (
+        <p className="juego-panel-pending">
+          Usado en tu compra del {formatDate(found.usedAt, 'Europe/Madrid')}
+        </p>
+      ) : null}
       {d.conditions ? <p className="juego-panel-pending">{d.conditions}</p> : null}
-      <button
-        type="button"
-        className="juego-panel-cta"
-        data-testid="descuento-copiar"
-        disabled={expired}
-        onClick={() => void copyText(d.code).then((ok) => setCopied(ok ? 'ok' : 'fail'))}
-      >
-        {expired
-          ? 'Caducado: ya no vale'
-          : copied === 'ok'
-            ? 'Copiado ✓'
-            : copied === 'fail'
-              ? `Cópialo a mano: ${d.code}`
-              : 'Copiar código'}
-      </button>
+      <div className="juego-descuento-acciones">
+        <button
+          type="button"
+          className="juego-panel-cta"
+          data-testid="descuento-copiar"
+          disabled={expired}
+          onClick={() => void copyText(d.code).then((ok) => setCopied(ok ? 'ok' : 'fail'))}
+        >
+          {expired
+            ? 'Caducado: ya no vale'
+            : copied === 'ok'
+              ? 'Copiado ✓'
+              : copied === 'fail'
+                ? `Cópialo a mano: ${d.code}`
+                : 'Copiar código'}
+        </button>
+        {expired || state === 'used' ? null : shop ? (
+          <a
+            className="juego-panel-cta is-secundario"
+            href={shop}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="descuento-ir-tienda"
+          >
+            Ir a la tienda ↗
+          </a>
+        ) : event?.islandId ? (
+          onGoToIsland ? (
+            <button
+              type="button"
+              className="juego-panel-cta is-secundario"
+              data-testid="descuento-ir-isla"
+              onClick={() => onGoToIsland(event.id)}
+            >
+              Ir a la isla
+            </button>
+          ) : (
+            <a
+              className="juego-panel-cta is-secundario"
+              href={voyageHref(event.id)}
+              data-testid="descuento-ir-isla"
+            >
+              Ir a la isla
+            </a>
+          )
+        ) : event ? (
+          <Link
+            className="juego-panel-cta is-secundario"
+            href={eventHref(event.slug)}
+            prefetch={false}
+            data-testid="descuento-ver-evento"
+          >
+            Ver el evento
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-export function DiscountPanel({ found, onClose }: { found: FoundDiscount; onClose: () => void }) {
+export function DiscountPanel({
+  found,
+  onClose,
+  onGoToIsland,
+}: {
+  found: FoundDiscount;
+  onClose: () => void;
+  onGoToIsland?: ((eventId: string) => void) | undefined;
+}) {
   return (
     <section
       className="juego-panel"
@@ -384,9 +473,9 @@ export function DiscountPanel({ found, onClose }: { found: FoundDiscount; onClos
     >
       <Close onClose={onClose} />
       <p className="juego-panel-kicker">Descuento encontrado · muestra</p>
-      <DiscountCard found={found} />
+      <DiscountCard found={found} onGoToIsland={onGoToIsland} />
       <p className="juego-panel-pending">
-        Lo tienes guardado en el Menú de a bordo, en Descuentos.
+        Lo tienes guardado en el Menú de a bordo, en Mis códigos.
       </p>
     </section>
   );

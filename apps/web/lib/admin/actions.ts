@@ -1,8 +1,11 @@
 import {
   EVENT_STATES,
   type BoiaEvent,
+  type Discount,
+  type DiscountInput,
   type EventState,
   type HomeBlock,
+  discountSchema,
   eventSchema,
 } from '@boia/contracts';
 import {
@@ -15,7 +18,7 @@ import {
 } from '@boia/store';
 import type { RenameScope, WorldRegistry } from '@boia/world';
 import { worldProblem } from './validate';
-import { MAP_POINTS, type MapPointKey, eventIslands } from './world';
+import { MAP_POINTS, type MapPointKey, discountHidingPlaces, eventIslands } from './world';
 
 /**
  * Lo que hace el Admin de la demo (T26, REQ-ADM-008, REQ-ADM-039) sobre el
@@ -51,6 +54,15 @@ export function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 }
+
+/** Un código nuevo o editado desde el Admin (sin id: se saca del código). */
+export type DiscountFormInput = Omit<DiscountInput, 'id' | 'sample'> & {
+  id?: string;
+  sample?: boolean;
+};
+
+/** Códigos: letras y cifras (y guiones), en mayúsculas, como los copia la gente. */
+const DISCOUNT_CODE = /^[A-Z0-9][A-Z0-9-]{2,23}$/;
 
 export type EventInput = Omit<BoiaEvent, 'id' | 'slug' | 'sample'> & {
   id?: string;
@@ -160,6 +172,81 @@ export function createAdminActions(deps: AdminDeps) {
       };
       delete copy.islandId;
       return repo.admin.upsert('events', copy, opts(`duplicado de ${id}`));
+    },
+
+    // --- Descuentos (T43, REQ-COM-020) --------------------------------------
+
+    /**
+     * Crea o edita un código: destino (un evento o la tienda), vigencia,
+     * porcentaje o importe, prioridad y dónde se esconde en el mar. Queda en
+     * la auditoría como cualquier cambio del Admin.
+     */
+    async saveDiscount(input: DiscountFormInput, reason?: string | null): Promise<Discount> {
+      const code = input.code.trim().toUpperCase();
+      if (!DISCOUNT_CODE.test(code)) {
+        throw new AdminError('el código va en mayúsculas, con letras y cifras (3 a 24)');
+      }
+      const id = input.id ?? `dto-${slugify(code)}`;
+      const all = await repo.content.list('discounts');
+      if (!input.id && all.some((d) => d.id === id)) {
+        throw new AdminError(`ya hay un descuento con el id «${id}»`);
+      }
+      if (all.some((d) => d.id !== id && d.code.toUpperCase() === code)) {
+        throw new AdminError(`ya hay otro descuento con el código «${code}»`);
+      }
+      const scope = input.scope ?? 'event';
+      const candidate: DiscountInput = {
+        ...input,
+        id,
+        code,
+        label: input.label.trim(),
+        scope,
+        sample: input.sample ?? false,
+      };
+      if (scope === 'store' || !candidate.eventId) delete candidate.eventId;
+      if (!candidate.hiddenAt) delete candidate.hiddenAt;
+      if (!candidate.conditions) delete candidate.conditions;
+      if (!candidate.url) delete candidate.url;
+      if (!candidate.startsAt) delete candidate.startsAt;
+      if (!candidate.endsAt) delete candidate.endsAt;
+      if (candidate.eventId && !(await repo.content.get('events', candidate.eventId))) {
+        throw new AdminError(`no existe el evento «${candidate.eventId}»`);
+      }
+      if (
+        candidate.hiddenAt &&
+        !discountHidingPlaces(registry.map).some((p) => p.id === candidate.hiddenAt)
+      ) {
+        throw new AdminError(`«${candidate.hiddenAt}» no es un escondite de códigos`);
+      }
+      if (candidate.kind === 'percent' && (candidate.value ?? 0) > 100) {
+        throw new AdminError('un porcentaje no pasa de 100');
+      }
+      if (
+        candidate.startsAt &&
+        candidate.endsAt &&
+        new Date(candidate.startsAt) >= new Date(candidate.endsAt)
+      ) {
+        throw new AdminError('el descuento caduca antes de empezar');
+      }
+      const parsed = discountSchema.safeParse(candidate);
+      if (!parsed.success) {
+        const i = parsed.error.issues[0];
+        throw new AdminError(`descuento: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válido'}`);
+      }
+      return repo.admin.upsert('discounts', parsed.data, opts(reason ?? 'descuento'));
+    },
+
+    /**
+     * Caduca un código ya (su fin pasa a ahora): quien lo tenga lo ve
+     * caducado y ya no se aplica. Se puede reactivar editando su fecha.
+     */
+    async expireDiscount(id: string) {
+      const d = await repo.content.get('discounts', id);
+      if (!d) throw new AdminError(`no existe el descuento «${id}»`);
+      const at = now();
+      const next: Discount = { ...d, endsAt: at.toISOString() };
+      if (next.startsAt && new Date(next.startsAt) >= at) delete next.startsAt;
+      return repo.admin.upsert('discounts', next, opts('caducar'));
     },
 
     // --- Página principal --------------------------------------------------

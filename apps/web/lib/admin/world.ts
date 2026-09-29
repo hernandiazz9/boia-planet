@@ -1,4 +1,4 @@
-import { EVENT_STATE_BEHAVIOR, type BoiaEvent } from '@boia/contracts';
+import { EVENT_STATE_BEHAVIOR, type BoiaEvent, type Discount } from '@boia/contracts';
 import type { PlacePatch, SkinPatch } from '@boia/store';
 import {
   type Behavior,
@@ -59,6 +59,11 @@ export interface WorldContent {
   skins: Readonly<Record<string, Readonly<Record<string, SkinPatch>>>>;
   /** Eventos para ligar a sus islas; null deja las islas como en el mapa. */
   events: readonly BoiaEvent[] | null;
+  /**
+   * Descuentos con su escondite (`hiddenAt`, T43): el lugar pasa a entregar
+   * ese código. Sin ellos, los lugares entregan lo que nombra el mapa.
+   */
+  discounts?: readonly Discount[] | undefined;
   now?: Date;
 }
 
@@ -253,9 +258,59 @@ export function linkIslandEvents(
   };
 }
 
+/**
+ * Lugares donde el Admin puede esconder un código (T43, REQ-COM-020): los que
+ * ya dan premios (náufrago, restos, secretos…) y no abren un panel (una isla
+ * perdería el suyo al enseñar el código).
+ */
+export function discountHidingPlaces(map: SharedMap): Place[] {
+  return map.places.filter(
+    (p) =>
+      p.behaviors.some((b) => b.type === 'reward' || b.type === 'collectible') &&
+      !p.behaviors.some((b) => b.type === 'content'),
+  );
+}
+
+/**
+ * Cada descuento con escondite (`hiddenAt`) pasa a darlo su lugar: el premio
+ * de descuento del lugar cambia de código o, si no tenía, se añade uno (una
+ * vez por visitante). Si dos se esconden en el mismo lugar, gana el de más
+ * prioridad (REQ-COM-020).
+ */
+export function hideDiscounts(map: SharedMap, discounts: readonly Discount[]): SharedMap {
+  const byPlace = new Map<string, Discount>();
+  for (const d of discounts) {
+    if (!d.hiddenAt) continue;
+    const had = byPlace.get(d.hiddenAt);
+    if (!had || d.priority > had.priority) byPlace.set(d.hiddenAt, d);
+  }
+  if (byPlace.size === 0) return map;
+  return {
+    ...map,
+    places: map.places.map((p) => {
+      const d = byPlace.get(p.id);
+      if (!d) return p;
+      let replaced = false;
+      const behaviors: Behavior[] = p.behaviors.map((b) => {
+        if (b.type !== 'reward' || b.params.kind !== 'discount' || replaced) return b;
+        replaced = true;
+        return { ...b, params: { ...b.params, ref: d.id } };
+      });
+      if (!replaced) {
+        behaviors.push({
+          type: 'reward',
+          params: { kind: 'discount', amount: 1, ref: d.id, frequency: 'once' },
+        });
+      }
+      return { ...p, behaviors };
+    }),
+  };
+}
+
 /** El mapa compartido con todos los cambios que no son de un mundo. */
 export function liveMap(registry: WorldRegistry, content: WorldContent): SharedMap {
-  const map = applyPlacePatches(registry.map, content.places);
+  let map = applyPlacePatches(registry.map, content.places);
+  if (content.discounts) map = hideDiscounts(map, content.discounts);
   return content.events ? linkIslandEvents(map, content.events, content.now ?? new Date()) : map;
 }
 

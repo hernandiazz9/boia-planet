@@ -62,12 +62,46 @@ export const discountSchema = z.object({
   startsAt: z.iso.datetime({ offset: true }).optional(),
   endsAt: z.iso.datetime({ offset: true }).optional(),
   conditions: z.string().optional(),
+  /** Enlace del producto o de la tienda (un descuento de tienda lo valida la tienda, O8). */
   url: z.url().optional(),
+  /**
+   * Para qué vale (REQ-COM-020, O8): `event` descuenta entradas (de `eventId`
+   * o, sin él, de cualquier evento) y lleva «Ir a la isla»; `store` es de la
+   * tienda externa: se copia y lleva «Ir a la tienda», nunca se aplica a una
+   * entrada.
+   */
+  scope: z.enum(['event', 'store']).default('event'),
+  /**
+   * Prioridad (REQ-COM-020): si varios valen para la misma compra, se aplica
+   * el de prioridad más alta y, a igual prioridad, el que más descuenta.
+   */
+  priority: z.number().int().min(0).max(100).default(0),
+  /**
+   * Lugar del mapa compartido donde se esconde (id estable, D-20): el Admin lo
+   * elige y el lugar pasa a entregar este código (REQ-COM-020). Sin él, sólo
+   * lo entregan los lugares que ya lo nombran en el mapa.
+   */
+  hiddenAt: z.string().min(1).optional(),
   sample: z.boolean().default(false),
 });
 export type Discount = z.infer<typeof discountSchema>;
+export type DiscountInput = z.input<typeof discountSchema>;
 
 export type DiscountStatus = 'upcoming' | 'active' | 'expired';
+
+/**
+ * Estado de un código encontrado en «Mis códigos» (REQ-COM-021, D-23):
+ * `used` si ya se aplicó en una compra (uno por visitante en la versión de
+ * prueba); si no, su vigencia.
+ */
+export type FoundDiscountState = DiscountStatus | 'used';
+
+export function foundDiscountState(found: {
+  status: DiscountStatus;
+  usedAt: string | null;
+}): FoundDiscountState {
+  return found.usedAt ? 'used' : found.status;
+}
 
 /** Vigencia de un descuento en `now` (REQ-COM-021: los caducados se marcan). */
 export function discountStatus(discount: Discount, now: Date): DiscountStatus {

@@ -108,7 +108,7 @@ test('náufrago: pide que lo lleven y deja su código de descuento', async ({ pa
   const found = page.getByTestId('panel-descuento');
   await sailNorthUntil(page, () => expect(found).toBeVisible({ timeout: 20_000 }));
   await expect(found.getByTestId('descuento-codigo')).toHaveText(d.code);
-  await expect(found.getByTestId('descuento-estado')).toHaveText('Vigente');
+  await expect(found.getByTestId('descuento-estado')).toHaveText('Activo');
 });
 
 test('descuento escondido: se copia con un toque y sólo se concede una vez', async ({ page }) => {
@@ -122,13 +122,13 @@ test('descuento escondido: se copia con un toque y sólo se concede una vez', as
   await found.getByRole('button', { name: 'Cerrar' }).click();
   await expect(found).toBeHidden();
 
-  // Otra visita, mismo sitio: ya no se concede; sigue en el Menú, en Descuentos.
+  // Otra visita, mismo sitio: ya no se concede; sigue en el Menú, en Mis códigos.
   await sailFrom(page, treasure.identity.id);
   await sailNorthUntil(page, () => page.waitForTimeout(3_000));
   await expect(found).toBeHidden();
   await page.getByTestId('menu-ancla').click();
   const menu = page.getByTestId('menu');
-  await menu.getByRole('tab', { name: 'Descuentos', exact: true }).click();
+  await menu.getByRole('tab', { name: 'Mis códigos', exact: true }).click();
   await expect(menu.getByTestId(`descuento-${d.id}`)).toContainText(d.code);
   await expect(menu.getByTestId('descuentos').locator('li')).toHaveCount(1);
 });

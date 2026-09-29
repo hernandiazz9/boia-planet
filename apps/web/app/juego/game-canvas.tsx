@@ -36,6 +36,7 @@ import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SKIN_LABELS, type ShipCatalog } from '../../lib/barco/catalog';
 import { liveWorld } from '../../lib/admin/live-world';
+import { track } from '../../lib/analytics';
 import { liveContent } from '../../lib/landing/live-content';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
@@ -46,6 +47,7 @@ import {
   recordSignal,
   signalFromWorldEvent,
 } from './achievements';
+import { VOYAGE_PARAM, type Voyage, isSteeringKey, planVoyage, stepVoyage } from './autopilot';
 import { BalancesChip } from './balances';
 import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
 import { Celebration } from './celebration';
@@ -120,6 +122,14 @@ function approachPoint(o: WorldObject): { x: number; y: number } {
 /** Una visita = una carga de página: las recompensas «por sesión» vuelven en otra. */
 const newSessionId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
 export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const vp = useViewport();
@@ -155,6 +165,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const rescueNotices = useRef<Promise<Notice[]> | null>(null);
   const [celebration, setCelebration] = useState(0);
   const reactions = useRef(0);
+  // «Ir a la isla» (T43): el barco navega solo hasta la isla de un código; se puede saltar.
+  const voyageRef = useRef<Voyage | null>(null);
+  const [voyage, setVoyage] = useState<{ placeId: string; name: string } | null>(null);
 
   // Preferencias guardadas (se leen al montar: el HUD no se pinta en servidor).
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
@@ -219,6 +232,11 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       if (o.kind === 'discount') {
         setPlacePanel(null);
         setDiscountPanel(o.found);
+        // Embudo (REQ-ARQ-019): sólo la primera vez que se encuentra.
+        track('discount_found', {
+          discountId: o.found.discount.id,
+          ...(o.found.discount.eventId ? { eventId: o.found.discount.eventId } : {}),
+        });
       }
     }
   };
@@ -398,6 +416,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
 
   /** Cada paso fijo del motor: la misión mueve cocodrilos, Fiestera y tripulante. */
   const onStep = (ship: { x: number; y: number }, dt: number) => {
+    const v = voyageRef.current;
+    if (v) {
+      const r = stepVoyage(v, ship, dt);
+      gameRef.current?.moveShip(r.x, r.y, r.heading);
+      if (r.kind === 'arrive') endVoyage();
+    }
     const m = missionRef.current;
     const g = gameRef.current;
     if (!m || !g) return;
@@ -628,6 +652,40 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     [],
   );
 
+  // Tomar el timón (teclas de rumbo o tocar el mar) cancela el viaje a la isla (T43).
+  useEffect(() => {
+    if (!voyage) return;
+    const cancel = () => {
+      voyageRef.current = null;
+      setVoyage(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (isSteeringKey(e.code)) cancel();
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (e.target instanceof HTMLCanvasElement) cancel();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onPointer);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onPointer);
+    };
+  }, [voyage]);
+
+  // `?evento=<id>&piloto=1` (tarjetas de descuento fuera del mar): al arrancar,
+  // el barco navega solo hasta la isla de ese evento (T43).
+  const voyageFromUrl = useRef(false);
+  useEffect(() => {
+    if (!game || !worldReady || voyageFromUrl.current) return;
+    voyageFromUrl.current = true;
+    const q = new URLSearchParams(window.location.search);
+    const eventId = q.get('evento');
+    if (q.get(VOYAGE_PARAM) === '1' && eventId) goToEventIsland(eventId);
+    // Una vez, con el motor y el mundo ya puestos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game, worldReady]);
+
   // Sección «Barco»: aplica estilo y skin al barco en el agua, sin recargar.
   // `remember: false` (el barco por defecto de un mundo) no lo guarda como elección.
   const shipRequest = useRef(0);
@@ -760,6 +818,46 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     setSelectedId(t.selected?.id ?? null);
     return ok;
   };
+
+  /**
+   * «Ir a la isla» de un código (T43, REQ-COM-036): cierra lo abierto, pone
+   * la brújula en la isla del evento y el barco navega solo hasta ella, en
+   * turbo. Con movimiento reducido llega de un salto. Sin isla en este mundo,
+   * sólo la brújula. `false` si no hay isla a la que ir.
+   */
+  const goToEventIsland = (eventId: string): boolean => {
+    const event = findEvent(eventId);
+    const g = gameRef.current;
+    const island = event?.islandId
+      ? world.config.objects.find((o) => o.identity.id === event.islandId && o.identity.active)
+      : undefined;
+    setMenuOpen(false);
+    setDiscountPanel(null);
+    setPlacePanel(null);
+    setPanel(null);
+    const t = trackerRef.current!;
+    t.select(
+      island && t.targets.some((x) => x.id === island.identity.id) ? island.identity.id : null,
+    );
+    setSelectedId(t.selected?.id ?? null);
+    if (!island || !g) return steerToEvent(eventId);
+    const v = planVoyage(island, g.stats(), eventId);
+    if (prefersReducedMotion()) {
+      g.moveShip(v.arrival.x, v.arrival.y);
+      return true;
+    }
+    voyageRef.current = v;
+    setVoyage({ placeId: v.placeId, name: v.name });
+    return true;
+  };
+
+  /** Termina el viaje: `skip` lleva el barco a la llegada de un salto. */
+  function endVoyage(skip = false) {
+    const v = voyageRef.current;
+    voyageRef.current = null;
+    setVoyage(null);
+    if (skip && v) gameRef.current?.moveShip(v.arrival.x, v.arrival.y);
+  }
   const layout = vp ? hudLayout(vp, zonePref) : null;
   const ship = stats ? { x: stats.x, y: stats.y, heading: stats.heading } : null;
   const target = ship ? tracker.nextTarget(ship) : null;
@@ -798,6 +896,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           setMenuOpen(false);
           setBottleSheet({ kind: 'mine' });
         },
+        goToIsland: (eventId) => void goToEventIsland(eventId),
         game,
         close: () => setMenuOpen(false),
       }
@@ -910,13 +1009,36 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             state={circuit.state}
             rect={{ x: layout.home.x, y: layout.home.y + layout.home.h + 6 }}
           />
+          {voyage ? (
+            <div
+              className="juego-rumbo"
+              role="status"
+              data-testid="rumbo"
+              data-lugar={voyage.placeId}
+            >
+              <span>
+                Rumbo a <strong>{voyage.name}</strong>…
+              </span>
+              <button
+                type="button"
+                className="juego-rumbo-saltar"
+                data-testid="rumbo-saltar"
+                onClick={() => endVoyage(true)}
+              >
+                Saltar
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
       {panelEvent && (
         <EventPanel
           event={panelEvent}
           showTicket={ticketFor === panelEvent.id}
-          onBuy={() => setCheckoutFor(panelEvent.id)}
+          onBuy={() => {
+            track('ticket_click_out', { eventId: panelEvent.id, source: 'island' });
+            setCheckoutFor(panelEvent.id);
+          }}
           onClose={() => setPanel(null)}
         />
       )}
@@ -929,7 +1051,11 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         />
       ) : null}
       {!panelEvent && !placePanel && discountPanel ? (
-        <DiscountPanel found={discountPanel} onClose={() => setDiscountPanel(null)} />
+        <DiscountPanel
+          found={discountPanel}
+          onClose={() => setDiscountPanel(null)}
+          onGoToIsland={(id) => void goToEventIsland(id)}
+        />
       ) : null}
       <MinigameLayer
         offer={panelEvent || checkoutFor || placePanel || discountPanel ? null : minigameOffer}

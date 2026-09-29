@@ -1,4 +1,4 @@
-import type { ClientFunnelEvent, FunnelEventProps } from '@boia/contracts/analytics';
+import type { ClientFunnelEvent, FunnelEvent, FunnelEventProps } from '@boia/contracts/analytics';
 
 /**
  * Embudo en PostHog, nube UE (D-04, REQ-ARQ-019), sin SDK: cada evento es un
@@ -8,12 +8,14 @@ import type { ClientFunnelEvent, FunnelEventProps } from '@boia/contracts/analyt
  * Sin `NEXT_PUBLIC_POSTHOG_KEY` no sale nada de la página; los eventos sólo
  * quedan en `window.__boiaAnalytics` para depurar y para las pruebas e2e.
  *
- * `purchase_confirmed` no se puede emitir desde aquí: lo manda el servidor
- * desde el webhook verificado de la ticketera (REQ-COM-017).
+ * `purchase_confirmed` no se puede emitir con `track`: lo manda el servidor
+ * desde el webhook verificado de la ticketera (REQ-COM-017). La única
+ * excepción es la compra de prueba (`trackSandboxPurchase`), que en la
+ * versión sin servidor hace de ticketera (D-20).
  */
 
 export interface CapturedEvent {
-  event: ClientFunnelEvent;
+  event: FunnelEvent;
   properties: Record<string, unknown>;
   timestamp: string;
 }
@@ -38,6 +40,22 @@ function anonymousId(): string {
 }
 
 export function track<E extends ClientFunnelEvent>(event: E, props: FunnelEventProps[E]): void {
+  capture(event, props);
+}
+
+/**
+ * `purchase_confirmed` de la compra de prueba (T43, REQ-ARQ-019): en la
+ * versión de prueba no hay webhook ni servidor (D-20), así que lo emite el
+ * sandbox al confirmar, con `provider: 'sandbox'`. Con la ticketera real
+ * vuelve a salir sólo del servidor y esto se retira con el sandbox.
+ */
+export function trackSandboxPurchase(
+  props: FunnelEventProps['purchase_confirmed'] & { provider: 'sandbox' },
+): void {
+  capture('purchase_confirmed', props);
+}
+
+function capture<E extends FunnelEvent>(event: E, props: FunnelEventProps[E]): void {
   if (typeof window === 'undefined') return;
   const record: CapturedEvent = {
     event,

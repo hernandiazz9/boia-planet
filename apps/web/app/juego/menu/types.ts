@@ -39,6 +39,11 @@ export interface MenuContext {
   world: WorldMenu;
   /** Abre la hoja de la botella propia: escribirla, editarla o retirarla (T22). */
   openBottles: () => void;
+  /**
+   * «Ir a la isla» de un código (T43): cierra el menú y el barco navega solo
+   * hasta la isla del evento.
+   */
+  goToIsland: (eventId: string) => void;
   /** El motor, si ya arrancó (p. ej. para aplicar un cambio al barco). */
   game: Game | null;
   close: () => void;

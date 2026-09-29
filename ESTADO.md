@@ -4,6 +4,27 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T43: descuentos que llevan a su isla y se ven al comprar
+
+Qué existe:
+- **Contrato de descuento** (`packages/contracts/src/content.ts`): `scope: event | store` (O8: el de tienda nunca descuenta una entrada), `priority` 0–100 (si valen varios gana la más alta y, a igual, el que más ahorra) y `hiddenAt` (lugar del mapa compartido donde se esconde). `foundDiscountState` da activo / usado / caducado / todavía no vale. Analítica: `ticket_click_out` gana `source: 'island'` y `purchase_confirmed` un `discountId` opcional.
+- **Repositorio**: `FoundDiscount` lleva `usedAt` y `usedIn` (derivados de las compras confirmadas); `confirmSandbox` rechaza un código de tienda o ya usado (uno por visitante en la versión de prueba). Muestra nueva `dto-tienda` (TIENDA15, escondido en `restos-2`). **Migración v3 → v4** (`SCHEMA_VERSION = 4`): los descuentos guardados por el Admin se quedan `scope: event`, `priority: 0`.
+- **Compra** (`lib/ticketing`): `applicableDiscount` con prioridad, tienda y usados; `discountBannerFor` y `DiscountBanner`/`EventDiscountBanner` («Tienes un código de descuento para este evento», código y ahorro). Sale en el panel de la isla del evento junto a «Comprar entrada» y dentro del checkout de prueba (así también desde la ficha `/eventos/<slug>` y en /mar, que usan el mismo checkout). El sandbox emite `purchase_confirmed` con `provider: 'sandbox'` (`trackSandboxPurchase`): en la versión sin servidor hace de webhook.
+- **/juego**: la tarjeta de descuento (aviso de hallazgo y «Mis códigos») lleva «Ir a la isla» (evento con isla), «Ver el evento» (satélite sin isla) o «Ir a la tienda ↗» (tienda). «Ir a la isla» cierra lo abierto y el barco navega solo (`app/juego/autopilot.ts`: turbo 2,6×, como mucho ~8–12 s, llega de un salto si se atasca), con la barra «Rumbo a … · Saltar»; flechas/WASD o tocar el mar lo cancelan; con movimiento reducido llega de un salto. `/juego?evento=<id>&piloto=1` hace lo mismo al arrancar (para tarjetas fuera del mar, `voyageHref`). El menú «Descuentos» pasa a **«Mis códigos»** (id `descuentos`), ordenado activos → usados → caducados. `discount_found` y `ticket_click_out` (isla) se emiten.
+- **Admin › Descuentos** (`app/admin/sections/discounts.tsx`, `/admin#descuentos`): crear, editar, caducar ya, papelera y volver a la muestra; destino evento o tienda, % o €, fechas, prioridad y «Escondido en» (lugares con premio y sin panel, `discountHidingPlaces`). Todo por `repo.admin.upsert` (auditado). `liveWorld` pasa los descuentos al mapa (`hideDiscounts`): el lugar entrega ese código.
+- Pruebas: `lib/ticketing/discount-banner.test.ts` (aviso sólo con código válido de ese evento; caducado se ve y no se aplica; usado no vuelve a valer; tienda nunca), `lib/admin/discounts.test.ts` (creado en el Admin: escondido, encontrado, aplicable y auditado; caducar), `app/juego/autopilot.test.ts`, `packages/store/src/discounts-migration.test.ts`; e2e `descuentos.spec.ts` (náufrago → «Ir a la isla» → aviso → compra con descuento → «Usado»; «Saltar» y timón; Admin). Capturas `docs/informes/img/p004-t43-{ir-a-la-isla,banner-descuento}.png` (`RECORD_T43=1 … descuentos.spec.ts --project=mobile`).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 69 archivos, 685 pruebas
+E2E_PORT=<libre> pnpm e2e --workers=2      # ver el informe de la tarea
+```
+
+Pendiente / para otros encargos:
+- **/mar** (cuando lo deje el plan 003): en `app/mar/sheet.tsx`, sustituir su `DiscountCard` propia por la de `app/juego/place-panels.tsx` (o copiar sus estados y botones) y darle `onGoToIsland={(id) => { const e = liveContent().events.find(x => x.id === id); if (e?.islandId) engineRef.current?.startVoyage(e.islandId) }}` desde `mar-client.tsx` (el mismo `startVoyage`/`stopVoyage`/`onVoyageEnd` de «Entradas», pero al llegar abrir la hoja de la isla y no el checkout), y poner `<EventDiscountBanner event={…} />` (de `lib/ticketing/discount-banner.tsx`) sobre el botón de compra de la hoja de isla; el checkout ya enseña el aviso. Luego, un e2e en /mar igual al de `descuentos.spec.ts`.
+- Landing: no hay tarjeta de descuento en la landing; si se añade, su «Ir a la isla» es `voyageHref(eventId)`.
+- La ficha `/eventos/<slug>` enseña el aviso sólo dentro del checkout; ponerlo también sobre su botón de compra toca `app/(landing)` (fuera de T43).
+
 ## 2026-09-29 — plan 004 T42: eventos y fotos: ficha de evento, «Fotos y eventos», estado de la isla, satélites
 
 Qué existe:
