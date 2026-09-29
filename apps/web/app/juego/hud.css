@@ -682,3 +682,20 @@
   font-weight: 800;
   cursor: pointer;
 }
+
+/* Cambio de mundo (T41): mientras el mundo cae al agujero negro y vuelve, una
+   capa transparente encima de todo que no deja tocar nada. */
+.juego-cambio-mundo {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  touch-action: none;
+}
+.juego-cambio-mundo .juego-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -33,6 +33,9 @@ import {
 } from './ship/controller';
 import { type CrewArt, ShipSprite } from './ship/view';
 import { newApplication } from './pixi-app';
+import { WorldSwitcher } from './transition/switcher';
+import type { SwitchMode } from './transition/timeline';
+import { VortexView } from './transition/vortex-view';
 import { JoystickOverlay, WakeView } from './views';
 import { WakeSystem } from './wake';
 import { Water } from './water';
@@ -103,6 +106,11 @@ export interface GameOptions {
   atlas?: string | null;
   /** Calidad del arte; sin valor, según el dispositivo (`detectQuality`). */
   quality?: QualityTier | null;
+  /**
+   * Empieza (`mode`) o termina (`null`) un cambio de mundo (T41): mientras
+   * dura, la entrada del motor está bloqueada y el barco quieto.
+   */
+  onSwitch?: (mode: SwitchMode | null) => void;
 }
 
 /** Aplicación Pixi viva (y su mar) que otra escena cede al juego. */
@@ -130,6 +138,12 @@ export interface GameStats {
   quality: QualityTier;
   /** Fotogramas pintados con algún objeto a la vista sin su arte (debe quedarse en 0). */
   artMissingFrames: number;
+  /**
+   * Dónde queda en pantalla el origen del mundo (px): un punto del mundo se
+   * ve en `worldToScreen(p) + view`. Para comprobar que un cambio de mundo
+   * deja cada lugar en su sitio (T41).
+   */
+  view: { x: number; y: number };
 }
 
 export interface Game {
@@ -141,8 +155,19 @@ export interface Game {
    * recompensas ya concedidas siguen concedidas (van por id de lugar, con el
    * mismo almacén). `sea` pone los colores del mar del mundo nuevo. Resuelve
    * `true` si quedó el pedido y `false` si otra petición lo adelantó.
+   *
+   * Con transición (T41): el mundo cae a un agujero negro centrado en el
+   * barco, se cambia a oscuras con el arte de alrededor ya cargado y el nuevo
+   * se despliega desde el mismo punto (`vortex`, por defecto); con movimiento
+   * reducido, un fundido de 300 ms (`fade`). Resuelve al cambiar (a oscuras);
+   * `switching` dice si la transición sigue.
    */
-  setWorld(world: WorldConfig, opts?: { sea?: SeaPalette }): Promise<boolean>;
+  setWorld(
+    world: WorldConfig,
+    opts?: { sea?: SeaPalette; transition?: SwitchMode },
+  ): Promise<boolean>;
+  /** Hay un cambio de mundo en curso: entrada bloqueada (T41). */
+  readonly switching: boolean;
   /**
    * Pone el barco en (x, y), parado, en el agua navegable más cercana (nunca
    * en tierra, como TELETRANSPORTE). Para empezar junto a un lugar
@@ -368,10 +393,42 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   const keys = new KeyboardControls(opts.keyboardMode);
   const joystick = new JoystickOverlay(touch.cfg.radius);
   const bubble = new BubbleView();
-  app.stage.addChild(water.view, worldLayer, bubble.view, joystick.view);
+  // Lo que cae al agujero negro al cambiar de mundo (T41): el mar y el mundo.
+  const scene = new Container();
+  scene.addChild(water.view, worldLayer);
+  app.stage.addChild(scene, bubble.view, joystick.view);
   canvas.style.touchAction = 'none';
 
+  /** Un mundo en escena: su configuración, su runtime y lo que pinta. */
+  interface WorldScene {
+    world: WorldConfig;
+    runtime: WorldRuntime;
+    built: Awaited<ReturnType<typeof buildWorld>>;
+    sea: SeaPalette | undefined;
+    destroy(): void;
+  }
+  const vortex = new VortexView(app, scene);
+  const switcher = new WorldSwitcher<WorldScene>({
+    swap(next) {
+      // Con fundido, la foto del mundo de antes se queda encima y se desvanece.
+      if (switcher.timeline.mode === 'fade') vortex.takeSnapshot();
+      // Lo que el mundo de antes tenía pendiente sale antes del cambio.
+      for (const e of runtime.drainEvents()) opts.onWorldEvent?.(e);
+      worldLayer.removeChild(coasts);
+      built.destroy();
+      built = next.built;
+      coasts = next.built.coasts;
+      worldLayer.addChildAt(coasts, 0);
+      next.built.streamer.attach(objects);
+      world = next.world;
+      runtime = next.runtime;
+      if (next.sea) water.setPalette(next.sea);
+    },
+  });
+  let switchingMode: SwitchMode | null = null;
+
   const onBubble = (x: number, y: number) => {
+    if (switcher.locked) return false;
     const h = bubble.hit(x, y);
     if (h === 'advance') runtime.advanceDialogue();
     else if (h === 'skip') runtime.skipDialogue();
@@ -380,7 +437,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   const unbind = bindInput(canvas, touch, keys, onBubble);
   // Teclado: Espacio o Intro avanzan el bocadillo; Escape lo salta.
   const onKey = (e: KeyboardEvent) => {
-    if (!runtime.dialogue()) return;
+    if (switcher.locked || !runtime.dialogue()) return;
     if (e.code === 'Space' || e.code === 'Enter') runtime.advanceDialogue();
     else if (e.code === 'Escape') runtime.skipDialogue();
     else return;
@@ -421,6 +478,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     artLoading: built.streamer.status().loading,
     quality,
     artMissingFrames,
+    view: { x: worldLayer.position.x, y: worldLayer.position.y },
   });
 
   const simulate = (dt: number) => {
@@ -478,7 +536,14 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     }
     const dt = app.ticker.deltaMS / 1000;
     time += dt;
-    const alpha = loop.advance(dt, simulate);
+    // Cambio de mundo (T41): el barco se queda quieto y la entrada no cuenta.
+    const free = switcher.advance(app.ticker.deltaMS);
+    const alpha = free ? loop.advance(dt, simulate) : 1;
+    const mode = switcher.locked ? switcher.timeline.mode : null;
+    if (mode !== switchingMode) {
+      switchingMode = mode;
+      opts.onSwitch?.(mode);
+    }
     for (const e of runtime.drainEvents()) opts.onWorldEvent?.(e);
 
     const rx = lerp(prev.x, ship.x, alpha);
@@ -520,14 +585,16 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     const d = runtime.dialogue();
     const speaker = d ? built.streamer.view(d.objectId) : undefined;
     const st = d ? runtime.objectState(d.objectId) : undefined;
-    if (d && speaker && st) {
+    if (d && speaker && st && free) {
       const a = bubbleAnchor(speaker.visual);
       const p = worldToScreen(st);
       bubble.show(d, ox + p.x + a.x, oy + p.y + a.y, w);
     } else {
       bubble.show(null, 0, 0, w);
     }
-    joystick.draw(touch.view(), ship.drifting);
+    joystick.draw(free ? touch.view() : null, ship.drifting);
+    // El agujero, centrado en el barco (en su sitio de pantalla).
+    vortex.apply(switcher.timeline.pose(), { x: ox + sp.x, y: oy + sp.y });
 
     frames++;
     fpsWindow += dt;
@@ -548,33 +615,24 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
 
   let destroyed = false;
   let shipRequest = 0;
-  let worldRequest = 0;
   let crewRequest = 0;
   return {
     stats,
     get runtime() {
       return runtime;
     },
-    async setWorld(next, worldOpts = {}) {
-      const request = ++worldRequest;
-      const nextRuntime = new WorldRuntime(next, runtimeOpts);
-      const nextBuilt = await buildWorld(next, nextRuntime, [{ x: ship.x, y: ship.y }]);
-      if (destroyed || request !== worldRequest) {
-        nextBuilt.destroy();
-        return false;
-      }
-      // Lo que el mundo de antes tenía pendiente sale antes del cambio.
-      for (const e of runtime.drainEvents()) opts.onWorldEvent?.(e);
-      worldLayer.removeChild(coasts);
-      built.destroy();
-      built = nextBuilt;
-      coasts = nextBuilt.coasts;
-      worldLayer.addChildAt(coasts, 0);
-      nextBuilt.streamer.attach(objects);
-      world = next;
-      runtime = nextRuntime;
-      if (worldOpts.sea) water.setPalette(worldOpts.sea);
-      return true;
+    setWorld(next, worldOpts = {}) {
+      if (destroyed) return Promise.resolve(false);
+      // El mundo nuevo se carga mientras el de antes cae: el arte del sector
+      // del barco está antes de que el vórtice se abra (T47).
+      return switcher.switchTo(async () => {
+        const rt = new WorldRuntime(next, runtimeOpts);
+        const b = await buildWorld(next, rt, [{ x: ship.x, y: ship.y }]);
+        return { world: next, runtime: rt, built: b, sea: worldOpts.sea, destroy: b.destroy };
+      }, worldOpts.transition ?? 'vortex');
+    },
+    get switching() {
+      return switcher.locked;
     },
     moveShip(x, y, heading) {
       const p = runtime.safePoint(x, y, cfg.radius);
@@ -663,6 +721,8 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
       unbind();
       window.removeEventListener('keydown', onKey);
       app.ticker.remove(frame);
+      switcher.destroy();
+      vortex.destroy();
       built.destroy();
       app.destroy({ removeView: false }, { children: true });
     },

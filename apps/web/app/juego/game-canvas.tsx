@@ -220,6 +220,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   // sale de sus datos.
   const [world, setWorld] = useState<ComposedWorld>(() => worlds.get(worlds.defaultId));
   const [worldPending, setWorldPending] = useState(false);
+  // Cambio de mundo en curso (T41): el vórtice o, con movimiento reducido, el fundido.
+  const [switching, setSwitching] = useState<'vortex' | 'fade' | null>(null);
   // El motor ya arrancó: se puede cambiar de mundo.
   const [worldReady, setWorldReady] = useState(false);
   const targets = useMemo(() => discoveryTargets(world.config), [world]);
@@ -655,6 +657,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         surface,
         keyboardMode: settingsRef.current.keyboardMode,
         onStats: (s) => handlers.current.onStats(s),
+        onSwitch: (mode) => setSwitching(mode),
         onWorldEvent: (e) => handlers.current.onWorldEvent(e),
         onStep: (ship, dt) => handlers.current.onStep(ship, dt),
         runtime: {
@@ -909,19 +912,25 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   }, [repo, shipLook, shipCatalog]);
 
   // Cambio de mundo (T17): mismo mapa, otra piel. El barco sigue donde está.
+  // Con un agujero negro centrado en el barco (T41): el mundo cae, se cambia a
+  // oscuras y el nuevo se despliega; con movimiento reducido, un fundido.
   const worldRequest = useRef(0);
-  const chooseWorld = (id: string) => {
+  /** El último mundo pedido (el que acabará en pantalla). */
+  const wantedWorld = useRef<string | null>(null);
+  const switchWorld = (chosen: ComposedWorld) => {
     const g = gameRef.current;
-    if (!g || id === world.id) return;
-    const chosen = chooseWorldIn(worlds, visitorWorldChoice(), id);
-    if (!chosen) return;
+    if (!g || chosen.id === (wantedWorld.current ?? world.id)) return;
+    wantedWorld.current = chosen.id;
     const request = ++worldRequest.current;
     setWorldPending(true);
     let next = chosen;
     liveWorld(gameRepository(), worlds, chosen)
       .then((live) => {
         next = live;
-        return g.setWorld(next.config, { sea: next.theme.sea });
+        return g.setWorld(next.config, {
+          sea: next.theme.sea,
+          transition: prefersReducedMotion() ? 'fade' : 'vortex',
+        });
       })
       .then((ok) => {
         if (!ok || request !== worldRequest.current || gameRef.current !== g) return;
@@ -939,11 +948,39 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           );
         }
       })
-      .catch((err: unknown) => console.warn('[boia] no se pudo cambiar de mundo', err))
+      .catch((err: unknown) => {
+        console.warn('[boia] no se pudo cambiar de mundo', err);
+        if (request === worldRequest.current) wantedWorld.current = null;
+      })
       .finally(() => {
         if (request === worldRequest.current) setWorldPending(false);
       });
   };
+  /** El visitante elige un mundo (menú «Mundos»): se recuerda en este navegador. */
+  const chooseWorld = (id: string) => {
+    if (!gameRef.current || id === (wantedWorld.current ?? world.id)) return;
+    const chosen = chooseWorldIn(worlds, visitorWorldChoice(), id);
+    if (chosen) switchWorld(chosen);
+  };
+
+  // El Admin cambia el mundo activo (T26) con /juego abierto (otra pestaña):
+  // quien no eligió mundo ni lo trae en la URL pasa a él por el agujero negro.
+  const switchWorldRef = useRef(switchWorld);
+  switchWorldRef.current = switchWorld;
+  useEffect(() => {
+    if (!worldReady) return;
+    let alive = true;
+    const off = gameRepository().subscribe((change) => {
+      if (!change.areas.includes('content')) return;
+      void adminWorldId().then((adminId) => {
+        if (alive) switchWorldRef.current(currentWorld(window.location.search, adminId));
+      });
+    });
+    return () => {
+      alive = false;
+      off();
+    };
+  }, [worldReady]);
 
   // Cambio de mundo para pruebas desde la consola; no existe en producción.
   useEffect(() => {
@@ -1138,6 +1175,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       data-arte-cargando={stats?.artLoading}
       data-arte-faltante={stats?.artMissingFrames}
       data-calidad={stats?.quality}
+      // Cambio de mundo (T41): `vortice` o `fundido` mientras dura; y dónde
+      // queda en pantalla el origen del mundo (px), para ver cada lugar en su sitio.
+      data-cambio-mundo={
+        switching === 'vortex' ? 'vortice' : switching === 'fade' ? 'fundido' : undefined
+      }
+      data-vista={stats ? `${stats.view.x},${stats.view.y}` : undefined}
       style={{
         ...({
           '--mundo-acento': world.theme.ui.accent,
@@ -1362,6 +1405,17 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       ) : null}
       {carnetOf ? <CarnetSheet userId={carnetOf} onClose={() => setCarnetOf(null)} /> : null}
       {celebration ? <Celebration key={celebration} onDone={() => setCelebration(0)} /> : null}
+      {switching ? (
+        // Mientras el mundo cambia, nada responde (T41); el lector de pantalla lo anuncia.
+        <div
+          className="juego-cambio-mundo"
+          data-testid="cambio-mundo"
+          role="status"
+          onPointerDownCapture={(e) => e.preventDefault()}
+        >
+          <span className="juego-sr-only">Cambiando de mundo…</span>
+        </div>
+      ) : null}
       {error && (
         <p style={{ position: 'absolute', bottom: 16, left: 16, right: 16, textAlign: 'center' }}>
           {error}

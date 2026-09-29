@@ -7,7 +7,9 @@ import type { MenuSection } from '../types';
  * línea de historia y su barco. Elegir uno cambia el mundo al momento, sin
  * recargar: el barco sigue donde está, y lo descubierto, los premios y los
  * descuentos se quedan (van por id de lugar). Si no has elegido barco en
- * «Barco», llevas el del mundo. Se recuerda en este navegador.
+ * «Barco», llevas el del mundo. Se recuerda en este navegador. Al elegir, el
+ * menú se cierra y el cambio se ve: el mundo cae a un agujero negro centrado
+ * en el barco y el nuevo se despliega desde él (T41).
  */
 
 export function MundosPicker({
@@ -86,7 +88,11 @@ export const mundosSection: MenuSection = {
         current={ctx.world.current}
         pending={ctx.world.pending}
         catalog={ctx.ship.catalog}
-        onChoose={ctx.world.choose}
+        onChoose={(id) => {
+          // El menú se cierra para ver el mundo caer al agujero negro (T41).
+          ctx.world.choose(id);
+          ctx.close();
+        }}
       />
     );
   },

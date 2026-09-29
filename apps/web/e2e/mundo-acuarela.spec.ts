@@ -78,13 +78,18 @@ test('«Mundos» cambia a Acuarela y se navega a su isla de evento y a su náufr
   }
   await expect(list.getByTestId(`mundo-${arcilla.id}`)).toHaveAttribute('aria-checked', 'true');
 
-  // Elegir Acuarela: cambia el mundo y, sin barco elegido, el barco pasa a ser el suyo.
+  // Elegir Acuarela: el menú se cierra, el mundo cambia por el agujero negro
+  // (T41) y, sin barco elegido, el barco pasa a ser el suyo.
   await list.getByTestId(`mundo-${acuarela.id}`).click();
+  await expect(menu).toBeHidden();
   await expect(juego).toHaveAttribute('data-mundo', acuarela.id, { timeout: 20_000 });
-  await expect(list.getByTestId(`mundo-${acuarela.id}`)).toHaveAttribute('aria-checked', 'true');
+  await expect(juego).not.toHaveAttribute('data-cambio-mundo', /.+/, { timeout: 20_000 });
   await expect(juego).toHaveAttribute('data-ship-style', acuarela.theme.ship.style, {
     timeout: 20_000,
   });
+  await page.getByTestId('menu-ancla').click();
+  await menu.getByRole('tab', { name: 'Mundos', exact: true }).click();
+  await expect(list.getByTestId(`mundo-${acuarela.id}`)).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
 

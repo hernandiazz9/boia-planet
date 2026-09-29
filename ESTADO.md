@@ -4,6 +4,27 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T41: cambio de mundo por agujero negro
+
+Qué existe:
+- **Vórtice en /juego** (D-23 punto 4, inventario §1.4): al cambiar de mundo, el mar y las islas se enroscan y caen hacia un agujero negro centrado en el barco (1 s), la pantalla queda a oscuras (mínimo 150 ms, y hasta que el mundo nuevo tiene cargado el arte del sector del barco: reutiliza `buildWorld` → `SectorStreamer.settle` de T47) y el mundo nuevo se despliega desde el mismo punto (1 s), siguiendo el giro. Cada lugar queda donde estaba (mapa compartido, D-20.7); el barco, su rumbo, su pasajera, la misión y el progreso siguen. Sólo cambian renders, nombres y diálogos.
+- **Movimiento reducido**: sin vórtice; el mundo de antes sigue en pantalla mientras carga el nuevo y luego una foto suya se funde sobre él en 300 ms (la foto se destruye al acabar).
+- **Motor** (`packages/engine/src/transition/`, módulo nuevo): `timeline.ts` (`SwitchTimeline`: fases `in`/`dark`/`out`, pose del vórtice, sin Pixi), `switcher.ts` (`WorldSwitcher`: pide el mundo nuevo mientras cae, lo pone a oscuras, destruye el que llega tarde; un solo mundo en escena), `vortex-view.ts` (filtro GLSL sobre un contenedor `scene` = mar + mundo, sin tocar bocadillo ni joystick; sin WebGL, la escena gira y se encoge). En `game.ts`, `setWorld(world, { sea, transition: 'vortex' | 'fade' })` va por el `WorldSwitcher`; `Game.switching`, `GameOptions.onSwitch(mode | null)` y `GameStats.view` (dónde queda en pantalla el origen del mundo).
+- **Entrada bloqueada** mientras dura: la simulación no avanza (el barco no se mueve aunque se acelere), el bocadillo y el joystick se esconden y el teclado del diálogo no cuenta; en /juego, una capa transparente (`data-testid="cambio-mundo"`, `role="status"` «Cambiando de mundo…») no deja tocar el HUD. `#juego` lleva `data-cambio-mundo="vortice|fundido"` y `data-vista`.
+- **Disparadores**: menú «Mundos» (se cierra al elegir, para ver el vórtice) y el **mundo activo del Admin**: /juego se suscribe al repositorio y, si cambia el contenido (el Admin en otra pestaña), pasa al mundo que toque por el agujero negro (sólo si el visitante no eligió mundo ni lo trae en `?mundo=`). Dos cambios seguidos (también A→B→A) acaban en el último pedido.
+- Pruebas: `transition/switcher.test.ts` (reloj del vórtice y fundido; dos cambios seguidos → último mundo y una sola escena; cambio durante el despliegue; fallo de carga reabre el de antes; el barco y cada lugar siguen donde estaban y la entrada vuelve al terminar). e2e `agujero-negro.spec.ts` (Mundos, Admin en otra pestaña y movimiento reducido: mismo barco, mismo lugar en el mismo píxel, arte sin faltar); `mundo-acuarela.spec.ts` al día (el menú se cierra al elegir). Grabación: `RECORD_AGUJERO=1 pnpm e2e record-agujero.spec.ts --project=mobile --workers=1` → `docs/informes/img/p004-t41-agujero-negro.{webm,png}`.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 84 archivos, 826 pruebas
+E2E_PORT=<libre> pnpm e2e --workers=2      # ver el informe de la tarea
+```
+
+Pendiente / para otros encargos:
+- **/mar** (fuera por plan 003): el mismo cambio en three.js. Propuesta: un `ShaderPass` de post-proceso (EffectComposer) con el mismo remolino (`angle`, `pull`, `hole`, `dark` de `SwitchTimeline.pose()`, importable sin Pixi desde `packages/engine/src/transition/timeline.ts`) centrado en la proyección del barco; o, sin post-proceso, girar y hundir la escena alrededor del barco. Cambiar de mundo allí debe bloquear la entrada y cargar las texturas del mundo nuevo antes de abrir, soltando las viejas (`dispose`). Hará falta exportar `timeline` en `package.json` de engine (p. ej. `./transition`).
+- El Admin de la misma pestaña no dispara el vórtice (al volver a /juego se monta con el mundo nuevo, sin transición); sólo con /juego abierto en otra pestaña.
+- Con el vórtice, el aviso «Entre dos mundos» (logro de visitar otro mundo) sale a oscuras; si se prefiere, retrasarlo al final de la transición.
+
 ## 2026-09-29 — plan 004 T46: sonido, estela y tacto de los controles
 
 Qué existe:
