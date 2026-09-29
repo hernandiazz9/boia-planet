@@ -49,6 +49,7 @@ import { marWorld } from './engine/compact';
 import type { CourseInfo, Mar3D, PinSpec, Stats, VoyageEnd } from './engine/mar3d';
 import { MOOD_IDS, MOOD_LABEL, type MoodId } from './engine/palette';
 import { type ShipModelEntry, loadShipManifest, loadShipModel } from './engine/ship-model';
+import { MarMinimap } from './minimap';
 import {
   type EventTrip,
   Sheet,
@@ -669,6 +670,8 @@ export function MarClient() {
   };
 
   const world = worldRef.current;
+  // Los rótulos también van al minimapa (la isla del evento, destacada).
+  const pins = useMemo(() => (world ? pinsOf(world, phase) : []), [world, phase]);
   const sheetObject = useMemo(() => {
     if (!sheet || sheet.kind === 'discount' || !world) return undefined;
     return world.objects.find((o) => o.identity.id === sheet.placeId);
@@ -883,16 +886,19 @@ export function MarClient() {
         >
           −
         </button>
-        <button
-          type="button"
-          className={`mar-map${stats?.mapMode ? ' is-on' : ''}`}
-          data-testid="mar-mapa"
-          onClick={() => engineRef.current?.toggleMap()}
-        >
-          {stats?.mapMode ? '⛵' : '🗺️'}
-          <span>{stats?.mapMode ? 'Barco' : 'Mapa'}</span>
-        </button>
       </div>
+
+      {/* Minimapa: el planeta girando; tocarlo abre (o cierra) el mapa grande (T34). */}
+      {status === 'ready' ? (
+        <div className={`mar-globe${stats?.mapMode ? ' is-map' : ''}`}>
+          <MarMinimap
+            engineRef={engineRef}
+            pins={pins}
+            mapMode={!!stats?.mapMode}
+            onToggle={() => engineRef.current?.toggleMap()}
+          />
+        </div>
+      ) : null}
 
       <button
         type="button"
@@ -914,7 +920,17 @@ export function MarClient() {
       </div>
 
       {stats?.mapMode && !sheet ? (
-        <p className="mar-maphint">Toca una isla para ver qué hay · arrastra para mover el mapa</p>
+        <div className="mar-maphint">
+          <p>Toca una isla para ver qué hay · arrastra para mover el mapa</p>
+          <button
+            type="button"
+            className="mar-maphint__close"
+            data-testid="mar-mapa-cerrar"
+            onClick={() => engineRef.current?.backToBoat()}
+          >
+            ✕ Cerrar
+          </button>
+        </div>
       ) : null}
 
       {help && status === 'ready' ? (

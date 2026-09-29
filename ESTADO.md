@@ -4,6 +4,35 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 003 T34: minimapa redondo del planeta girando (y cámara del móvil)
+
+En `/mar` el botón «Mapa» ya no está: en la esquina de arriba a la derecha hay un minimapa redondo y semitransparente con el planeta entero girando despacio, el barco, las islas (la del evento en naranja), el rumbo y la ruta de boyas. Tocarlo abre el mapa grande; tocarlo otra vez o «Cerrar» vuelve a cubierta; la M sigue igual. Además, a petición de Hernán tras probarlo en el móvil: en un móvil en vertical el barco va en el centro de lo que se ve y se sale con algo más de zoom. `/juego` no cambia. Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `apps/web/app/mar/engine/globe.ts` (sin three.js): el periodo del planeta ocupa el disco entero una sola vez (cuadrado → disco con el mapeo elíptico, abombado hacia el centro como una esfera, `GLOBE_BULGE`), así que el barco y cada isla salen siempre y nunca repetidos. El giro (`Mar3D.planetSpin`, el mismo del cielo de T33: una vuelta cada ~17 min) desplaza el mar hacia el este dando la vuelta; los meridianos giran con él. `drawGlobe` pinta en un lienzo 2D: mar con degradado, rejilla, ruta de boyas a trazos (cortada en la costura), islas, aro del rumbo y el barco con halo y su rumbo (`globeHeading`).
+- `apps/web/app/mar/minimap.tsx` (`MarMinimap`): un `<button>` redondo (84 px en el móvil, 112 en escritorio; 64/84 en el mapa grande, para no tapar los rótulos) con el lienzo a la resolución de la pantalla y repintado 5 veces por segundo (`MINIMAP_FPS`), no con cada fotograma del 3D; no pinta con el mar en pausa ni con la pestaña oculta. Gesto con `MinimapGesture` de `packages/engine/src/ui/minimap.ts`: un roce que se mueve no lo abre; con teclado, Intro/espacio. Etiqueta «Mapa» / «Barco» y `aria-pressed`. El lienzo lleva `data-frames`, `data-pins` y `data-accent` para las pruebas.
+- Mapa grande: la vista de mapa de siempre (todo el planeta a la vista, rótulos que abren la ficha con «Navegar aquí», tocar el mar fija rumbo, la ruta de boyas). La barra de abajo lleva ahora «✕ Cerrar». En el mapa, el rótulo de la isla del evento pasa por encima del minimapa.
+- `mar3d.ts`: `courseTarget` y `mapMode` para el minimapa; `data-ship-screen` en el lienzo (dónde queda el barco en pantalla, para las pruebas).
+- Cámara del móvil (`apps/web/app/mar/engine/framing.ts`): por la proporción de la pantalla (no por el navegador), de apaisado a móvil en vertical (ancho ≤ la mitad del alto) el zoom de salida pasa de 0,2 a 0,26 (`START_ZOOM`: el barco se lee y se ven las boyas de la bocana, las siguientes de la ruta y el castillo y la Explanada) y la mirada por delante baja de 0,2 a 0,03 × la distancia (`LOOK_AHEAD`) y de 0,28 a 0,05 s con la velocidad (`SPEED_LEAD`); además, en vertical se compensa el retraso con que el foco sigue al barco (`catchUp` = 1/`FOCUS_RATE` s), que en el viaje en turbo de «Entradas» lo sacaba del centro. A 390×844 el barco queda a ~2 % del centro de lo que se ve (entre la barra de arriba y «Entradas»); antes, a ~19 % por debajo (medido en la captura). En escritorio, igual que antes.
+- En el móvil (< 760 px) los chips (rumbo, crono, misión) y la ayuda de la primera vez bajan a 170 px para no chocar con el minimapa.
+- Pruebas: `globe.test.ts` (todo dentro del disco y bordes al borde, cada sitio una sola vez, abombado, giro de 2π y hacia el este, rumbo del barco también en la costura, la ruta se corta sólo al cruzar un borde, lo que pinta) y `framing.test.ts`. e2e en `mar-3d.spec.ts`: el mapa se abre por el minimapa en todas las pruebas que lo usaban (también la de la isla `allday` → rumbo); nuevas: minimapa visible, redondo, sin pisar «Entradas» y repintándose con la isla del evento destacada; abrir (con el dedo en el móvil), «Cerrar», la M y tocarlo otra vez (con 60 s de margen, como la de «Entradas» por el mapa: la vista de mapa es lenta en el Chromium sin GPU); nueva a 390×844: el barco a menos del 10 % del centro de lo que se ve, parado y navegando, y el zoom de salida del móvil.
+- Capturas 390×844: `docs/informes/img/p003-t34-minimapa.png` (cubierta con el minimapa), `p003-t34-mapa-grande.png`, `p003-t34-camara-antes.png` y `p003-t34-camara-despues.png`.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 66 archivos, 675 pruebas
+E2E_PORT=3347 pnpm e2e --workers=2            # exit 0; 111 pasadas, 19 omitidas (9,5 min, con la máquina cargada)
+```
+
+Desviaciones:
+- `minimapProjection` de `packages/engine/src/ui/minimap.ts` no se usa: es la proyección isométrica del 2D y `/mar` se ve desde arriba. Sí se usa su gesto (`MinimapGesture`); sin arrastrar el minimapa (una pulsación larga quieta también lo abre).
+- «Cerrar» va en la barra de abajo del mapa (a mano del pulgar), no junto al minimapa: arriba tapaba rótulos.
+- Cámara y zoom del móvil (pedido de Hernán durante la tarea, fuera del alcance inicial).
+
+Sin probar:
+- Móvil real (iOS Safari): el toque, el giro y el coste del minimapa sólo se han visto en Chromium con emulación táctil.
+- A 360×640 el mapa grande ya no cabía entero entre las barras (antes de T34); el rótulo de la isla del evento queda por encima del minimapa, pero los de más arriba pasan bajo la barra de arriba.
+
 ## 2026-09-29 — plan 003 T50: un /mar compacto con ruta de boyas
 
 `/mar` es ahora un mundo compacto: las islas a la mitad de distancia que en T33, casi sin mar vacío al dar la vuelta, y una ruta de boyas con farolillo que une las islas en el orden de la historia y vuelve al puerto. Sólo `/mar`: las posiciones del mapa compartido (`packages/world`) y `/juego` no cambian. Todo `muestra`, pendiente de Álvaro.

@@ -55,6 +55,7 @@ import {
   litMaterial,
 } from './characters';
 import { fromScene, toScene } from './compress';
+import { FOCUS_RATE, lookAhead, startZoom } from './framing';
 import { buildDecor } from './decor';
 import { Clouds, Confetti, CourseMarker, RouteLine, Wake, glowPoints, whirlpool } from './effects';
 import {
@@ -435,6 +436,8 @@ export class Mar3D {
     this.bindInput();
     this.resize();
     window.addEventListener('resize', this.resize);
+    // Zoom de salida según la forma de la pantalla (en un móvil en vertical, algo más lejos).
+    this.zoom = this.zoomGoal = this.lastBoatZoom = startZoom(this.camera.aspect);
     this.applyMood();
     this.updateCamera(0, true);
     this.last = performance.now();
@@ -551,6 +554,16 @@ export class Mar3D {
   /** Cuánto ha girado el planeta por su cuenta (rad). Para el minimapa redondo. */
   get planetSpin(): number {
     return this.sky.spin;
+  }
+
+  /** Adónde va el rumbo marcado (u de motor), o null. Para el minimapa. */
+  get courseTarget(): { x: number; y: number } | null {
+    return this.course ? { x: this.course.x, y: this.course.y } : null;
+  }
+
+  /** En la vista de mapa (o yendo hacia ella). */
+  get mapMode(): boolean {
+    return this.zoomGoal >= MAP_ZOOM;
   }
 
   /**
@@ -1665,8 +1678,10 @@ export class Mar3D {
       this.placeShip(1);
     }
     const ship = this.boat.group.position;
-    const lead = 0.28 * (1 - smooth(0, 0.4, z));
+    // En un móvil en vertical el barco va en el centro, mirando apenas por delante (T34).
+    const framing = lookAhead(this.camera.aspect);
     const w = smooth(0.4, 0.95, z);
+    const lead = framing.lead * (1 - smooth(0, 0.4, z)) + framing.catchUp * (1 - w);
     // Se ve más mar hacia donde va el barco (al principio, al norte: el barco en
     // el tercio de abajo). En el planeta se puede ir hacia el sur y dar la vuelta.
     const sp = shipSpeed(this.ship);
@@ -1674,7 +1689,7 @@ export class Mar3D {
       const kk = snap ? 1 : 1 - Math.exp(-dt * 1.2);
       this.aheadDir.lerp(tmpV2.set(this.ship.vx / sp, this.ship.vy / sp), kk);
     }
-    const ahead = dist * 0.2 * (1 - w);
+    const ahead = dist * framing.ahead * (1 - w);
     const bx = ship.x + toScene(this.ship.vx) * lead + this.aheadDir.x * ahead;
     const bz = ship.z + toScene(this.ship.vy) * lead + this.aheadDir.y * ahead;
     // El centro del mapa, en la copia de alrededor del barco; al alejarse se queda fijo
@@ -1699,7 +1714,7 @@ export class Mar3D {
     const fx = lerp(bx, this.mapC.x, w) + this.pan.x;
     const fz = lerp(bz, this.mapC.y, w) + this.pan.y + lift;
     if (snap) this.focus.set(fx, 0, fz);
-    else this.focus.lerp(tmpV.set(fx, 0, fz), 1 - Math.exp(-dt * 8));
+    else this.focus.lerp(tmpV.set(fx, 0, fz), 1 - Math.exp(-dt * FOCUS_RATE));
     this.look.copy(this.focus);
     this.look.z += mapLift;
     let ox = 0;
@@ -1986,6 +2001,10 @@ export class Mar3D {
         this.resize();
       }
     }
+    // Para las pruebas: dónde queda el barco en la pantalla (px del lienzo).
+    const bp = this.boat.group.position;
+    this.project(bp.x, 0.6, bp.z, this.scr);
+    this.opts.canvas.dataset.shipScreen = `${Math.round(this.scr.x)},${Math.round(this.scr.y)}`;
     const c = this.course;
     this.opts.onStats?.({
       fps: Math.round(this.fps),
