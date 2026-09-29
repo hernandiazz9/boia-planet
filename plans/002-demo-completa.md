@@ -173,16 +173,16 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm e2e` → exit 0; the demo spec now checks the port is visible after EXPLORAR on mobile and desktop
 - Outcome: intro plays the active world with the Admin's landing/spawn/port points (2400 u map square on the sphere); arrival ×1.3/×1.45 then EXPLORAR pulls back to ×1 revealing El Varadero with the ship; /juego and direct links start at the port; per-world intro data in apps/web/lib/intro/worlds.ts; handed-over sea fix → 242649a
 
-## T29 — Real-phone polish, sound and music
-- Status: running (attempt 1)
+## T29 — Essential polish: landing budget and a test suite that exits
+- Status: running (attempt 3)
 - Depends on: T21, T23, T24, T25, T26, T28
-- Goal: Make it feel final on phones: frame-time budget and memory on mid-range Android and iPhone profiles (Chromium mobile emulation with CPU ×4 plus WebKit in Playwright), texture atlases and lazy loading per world sector, iOS Safari quirks (audio unlock, WebGL context loss and restore, safe areas, 100vh), Instagram in-app browser, the Pixi hidden accessibility button tab stop, keyboard and screen-reader paths for panels, reduced motion everywhere; sound: SFX set and one music loop per world (`muestra`, royalty-free or generated), with the separate music and SFX controls of T05 and no audio before the first interaction.
-- Context: ESTADO.md sections of plans 001 and 002 (open issues); docs/spec/03-mundo-y-motor.md, 02-entrada-y-landing.md (performance and accessibility REQs); apps/web/**, packages/engine/**.
-- Scope: may touch ESTADO.md (own top section), apps/web/**, packages/engine/**, art/audio/** (new) / must not touch packages/store/**, packages/world/** (data), docs/spec/**.
+- Goal: Reduced by Hernán to the essentials after two stalled attempts: (1) bring the landing critical path back to ≤ 192 KB gzip (T26 left it at 201 kB, mostly from loading @boia/store on the landing); (2) make the Playwright suite exit by itself (it waits on an orphaned `next-server` from its webServer after every run); (3) if cheap, the two small known bugs: the minimap's negative-size SVG errors on resize and Pixi's hidden accessibility button being a tab stop. Keep whatever the previous attempts already finished if it is sound and tested; drop unfinished pieces rather than half-ship them.
+- Context: the two WIP branches of previous attempts (worktree-agent-aea36d2dd37067dc1 includes worktree-agent-aac637bda18065e4d); apps/web/** (landing, playwright config), packages/engine/** (minimap, Pixi setup).
+- Scope: may touch ESTADO.md (own top section), apps/web/**, packages/engine/** / must not touch packages/store/**, packages/world/**, docs/spec/**, art/**.
 - Done when:
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
-  - `pnpm e2e` → exit 0 including a WebKit project; a perf spec reports p95 frame time on throttled mobile for the intro, sailing and a minigame (numbers in ESTADO.md), and axe shows 0 serious or critical violations on landing, carnet and admin
-  - `pnpm build` → landing ≤ 192 KB gzip, /juego first world sector ≤ 5 MB gzip (report both) — T26 left the landing at 201 kB: bring it back under 192
+  - `pnpm build` → landing critical path ≤ 192 KB gzip (report the number)
+  - `timeout 1500 pnpm e2e --workers=2` (free E2E_PORT) → exit 0 and the process ends by itself, with no next-server left on that port
 - Outcome:
 
 ## T30 — Final demo pass and deploy preparation
@@ -229,8 +229,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T21: Fiestera asks for help at the crocodile radius (4.0) and boards at 2.6; she waits in the última isla niche (missionDrop); map trigger find_boia = catalogue find_buoy; time played logged every 15 s while visible; mission built from the Admin-edited world (agent)
 - 2026-09-29 T28: game runs at ×1 so the arrival is closer and EXPLORAR pulls back with no scale jump; ?mundo= carried from landing to /juego; reduced motion skips the pull-back; Acuarela uses the default intro data until it has its own (agent)
 - 2026-09-29 T24: restos/cofres/botellas/delfín keep common names in Acuarela; accent = B02 hull blue; menu icons 34 px to fit nine at 360 px; Acuarela intro entry = Arcilla's (shared map) (agent)
+- 2026-09-29 T29: after two stalled attempts Hernán reduced it to the essentials (landing ≤ 192 KB, Playwright exits by itself, small minimap/Pixi a11y bugs); real-phone perf, WebKit, iOS quirks, sound and music moved to Proposals (Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 (from T29): real-phone perf budget with CPU ×4 + WebKit project, texture atlases/lazy loading per sector, iOS Safari quirks (audio unlock, context loss, safe areas, 100vh), Instagram in-app, sound SFX and one music loop per world, 2× title sheet for 3× DPR
 - 2026-09-29 T28: a saved themed ship skin shows as base during the intro then switches; give Acuarela its own intro framing
 - 2026-09-29 T21: «Seis boies» achievement unreachable (map has one boia trigger) — add 5 more boies to the shared map; Admin screen for the Fiestera destination of new games + audited migration (REQ-AVE-011) not built
 - 2026-09-29 T26: landing critical path is now 201 kB, over the 192 kB intro budget — T29 must bring it back under
@@ -283,3 +285,6 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 04:28 T21 done · branch worktree-agent-a8a239e3b0fba4d0a (1 conflict round) → 58bb656
 - 2026-09-29 05:21 T28 done · branch worktree-agent-a24eaf6fb4212430d (1 conflict round) → 242649a
 - 2026-09-29 05:27 T24 done · branch worktree-agent-a7f0ae4fa2a6b1c74 (3 merge rounds) → dd06fc3
+- 2026-09-29 05:28 T29 launched · attempt 1 · agent aac637bda18065e4d
+- 2026-09-29 T29 agent stalled (no progress 600 s) · WIP 5e405aa on worktree-agent-aac637bda18065e4d · continuation (interrupted) agent aea36d2dd37067dc1
+- 2026-09-29 T29 continuation agent aea36d2dd37067dc1 also stalled (600 s, stream watchdog) · WIP on worktree-agent-aea36d2dd37067dc1 (worktree kept) · asked Hernán
