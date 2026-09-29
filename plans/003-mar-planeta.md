@@ -85,7 +85,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - Outcome: claim flow in @boia/store (claimable → claimed, ledger only on claim), 25 achievements, reward types coins/points, badge (badgeKey), ship (cosmetic slot `ship`, 3 locked), cosmetic; store v1→v2 migration; Rayo del Freu 43.6 s; 635 tests, e2e 101 passed → a689cf9
 
 ## T37 — Achievements panel with counters and «Reclamar» in /mar and /juego
-- Status: running (attempt 1)
+- Status: failed
 - Depends on: T36, T34
 - Goal: One achievements panel shared by `/mar` and `/juego`: header «X de Y logros», a list with progress bar and «te queda…» per achievement, hidden ones as «???» until found, and a «Reclamar» button on completed ones that plays a short reward animation (coins/points counting up, the badge flying to the Carnet, the ship unlocking) and updates balances. On completion a notice says «¡Logro completado! Reclama tu premio» (T36 copy) and the HUD achievements icon shows a count badge while something is waiting to be claimed. In `/mar` the panel opens from a HUD icon; in `/juego` it replaces the current «Logros» menu section; Mi Carnet shows claimed badges; the ship picker shows locked reward ships with the achievement that unlocks them. Also fix three gaps T36 found: /mar does not listen to `onAchievementNotices` (world and minigame completions show no notice there); in /mar the circuit shortcut is not detected (`mar-client.tsx` passes no gate id to `race.checkpoint` and no route to `finishLap`); the lap record is never saved because `circuitRecordId` produces `circuito:el-freu@v1`, which the store rejects as a key (fix the id, keep old records readable if any).
 - Context: T36 Outcome; apps/web/app/juego/menu/sections/logros.tsx, carnet/carnet-card.tsx, the /juego ship picker; apps/web/app/mar/mar-client.tsx (HUD, T34 and T35 layout); packages/engine/src/ui/notifications.ts (readable durations from T35).
@@ -144,4 +144,8 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29 18:55 T34 scope extended by message: mobile camera centring and start zoom (Hernán)
 - 2026-09-29 20:32 T34 done · branch worktree-agent-ab0186aa256ff8696 → d3bd868
 - 2026-09-29 20:33 pushed main to origin (deploy)
-- 2026-09-29 20:33 T37 launched · attempt 1 · agent {AGENT}
+- 2026-09-29 20:33 T37 launched · attempt 1 · agent ae639aabbe5a430e0
+- 2026-09-29 21:09 T37 agent stalled (no progress 600 s, stream watchdog) before writing anything; worktree gone · relaunched from scratch · attempt 1 · agent abc3067c48d6e5b95
+- 2026-09-29 23:05 T37 stalled again (600 s) near the end; leftovers committed as T37: WIP; resumed by message · machine load 135 (other sessions' e2e servers)
+- 2026-09-29 23:37 resumed T37 agent stalled a third time with no new work · continuation (interrupted) · attempt 2 · agent a31b6f568f32f62f6 · merges worktree-agent-abc3067c48d6e5b95
+- 2026-09-30 00:06 T37 attempt 2 stalled before writing anything (4th stall in a row, stream watchdog, machine load 60–135) · failed · WIP kept on worktree-agent-abc3067c48d6e5b95 (worktree .claude/worktrees/agent-abc3067c48d6e5b95) · asked Hernán
