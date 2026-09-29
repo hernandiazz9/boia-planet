@@ -29,6 +29,11 @@ export type ObjectVisual =
       scale: number;
       /** Anclajes en px de pantalla relativos al pivote, ya escalados. */
       anchors: Record<string, Vec2>;
+      /**
+       * Fotogramas de `sumergirse` si el arte los trae (los cocodrilos de la
+       * Fiestera, T18): se ven al desaparecer y, al revés, al volver.
+       */
+      dive?: { frames: string[]; fps: number };
     }
   | {
       kind: 'placeholder';
@@ -59,6 +64,9 @@ export function shipArtScale(ship: ShipManifest | null | undefined): number {
   }
   return SHIP_LENGTH / REFERENCE_SHIP_PX;
 }
+
+/** Animación del arte que se ve al sumergirse un objeto (y al revés, al emerger). */
+export const DIVE_ANIMATION = 'sumergirse';
 
 function placeholderRadius(o: WorldObject): number {
   return o.geometry.collision?.radius ?? o.geometry.activation?.radius ?? 20;
@@ -99,6 +107,7 @@ export function resolveObjectVisual(
   for (const [k, p] of Object.entries(m.anchors)) {
     anchors[k] = { x: (p.x - pivot.x) * scale, y: (p.y - pivot.y) * scale };
   }
+  const dive = m.animations[DIVE_ANIMATION] ? artFrames(m, DIVE_ANIMATION) : null;
   return {
     kind: 'sprite',
     assetId: asset,
@@ -109,6 +118,9 @@ export function resolveObjectVisual(
     pivot,
     scale,
     anchors,
+    ...(dive && dive.files.length > 1 && dive.fps > 0
+      ? { dive: { frames: dive.files, fps: dive.fps } }
+      : {}),
   };
 }
 

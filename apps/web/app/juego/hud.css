@@ -39,6 +39,65 @@
 .juego-compass.is-selected {
   border-color: #f26a1b;
 }
+/* Saldos (T21): puntos y monedas por separado, junto a Inicio. */
+.juego-hud .juego-balances {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3px 7px;
+  border-radius: 10px;
+  border-left: 3px solid #f26a1b;
+  background: rgba(18, 35, 63, 0.72);
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Celebración de la entrega de la Fiestera (T21): confeti que cae, sin recoger toques. */
+.juego-fiesta {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+.juego-fiesta-pieza {
+  position: absolute;
+  top: -16px;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation-name: juego-fiesta-cae;
+  animation-timing-function: cubic-bezier(0.3, 0.6, 0.5, 1);
+  animation-fill-mode: forwards;
+}
+@keyframes juego-fiesta-cae {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(85vh) rotate(540deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .juego-fiesta-pieza {
+    animation: none;
+    opacity: 0.9;
+    top: 12%;
+  }
+}
+
 .juego-hud .juego-stats {
   pointer-events: none;
   padding: 5px 7px;
@@ -252,6 +311,31 @@
 .juego-muted {
   font-size: 13px;
   opacity: 0.65;
+}
+/* Logros (T21): saldos separados arriba y la lista con lo que falta. */
+.juego-logros-saldos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-weight: 700;
+}
+.juego-logros {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.juego-logros li {
+  opacity: 0.8;
+}
+.juego-logros li.is-obtained {
+  opacity: 1;
+}
+.juego-logro-progreso {
+  color: #f26a1b;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .juego-button {
   min-height: 44px;

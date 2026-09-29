@@ -66,3 +66,10 @@ export function chime(): void {
   tone(660, 700, 0, 0.12, 0.14);
   tone(990, 1040, 0.09, 0.18, 0.14);
 }
+
+/** Celebración de la entrega de la Fiestera: arpegio corto hacia arriba (REQ-AVE-008). */
+export function fanfare(): void {
+  const notes = [523, 659, 784, 1047, 1319];
+  notes.forEach((f, i) => tone(f, f * 1.01, i * 0.11, 0.22, 0.16));
+  tone(1047, 1568, notes.length * 0.11, 0.5, 0.12);
+}

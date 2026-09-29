@@ -3,6 +3,7 @@ import {
   type Direction,
   type SeaPalette,
   type WorldConfig,
+  artFrames,
   coastAssets,
   worldToScreen,
 } from '@boia/world';
@@ -27,11 +28,11 @@ import {
   shipSpeed,
   stepShip,
 } from './ship/controller';
-import { ShipSprite } from './ship/view';
+import { type CrewArt, ShipSprite } from './ship/view';
 import { JoystickOverlay, WakeView } from './views';
 import { WakeSystem } from './wake';
 import { Water } from './water';
-import { type ArtUrl, loadArt, manifestsOf } from './world/assets';
+import { type ArtUrl, loadArt, loadTextures, manifestsOf } from './world/assets';
 import { BubbleView } from './world/bubble';
 import { createWorldCoastView } from './world/coast-view';
 import type { WorldEvent } from './world/events';
@@ -58,6 +59,12 @@ export interface GameOptions {
   onWorldEvent?: (e: WorldEvent) => void;
   /** Se llama ~4 veces por segundo con los datos del HUD. */
   onStats?: (s: GameStats) => void;
+  /**
+   * Cada paso fijo de la simulación (60 por segundo), después de mover el
+   * barco y el mundo: para encuentros guionizados desde fuera (la misión de
+   * la Fiestera, T21). No debe hacer trabajo pesado.
+   */
+  onStep?: (ship: Readonly<ShipState>, dt: number) => void;
   /** Modo del teclado (D-14); por defecto, dirección de pantalla. */
   keyboardMode?: KeyboardMode;
   /**
@@ -115,6 +122,15 @@ export interface Game {
   skipDialogue(): void;
   /** Slot TRIPULANTE del barco (Boia Fiestera a bordo). */
   setPassenger(on: boolean): void;
+  /** Si el slot TRIPULANTE está ocupado. */
+  readonly hasPassenger: boolean;
+  /**
+   * Arte de la tripulante: la pieza `tripulante` del mundo
+   * (`mundos/<mundo>/<lugar>#tripulante`, T18), animada sobre el slot del
+   * barco que se lleve. `null` vuelve a la figura del barco. Resuelve `true`
+   * si quedó puesto.
+   */
+  setCrewArt(assetId: string | null): Promise<boolean>;
   /** Cambia el modo del teclado en caliente (D-14). */
   setKeyboardMode(mode: KeyboardMode): void;
   /**
@@ -279,6 +295,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     const input = readShipInput(touch, keys, ship.heading);
     stepShip(ship, input, runtime.shipConfig(cfg), dt);
     runtime.step(ship, cfg, dt);
+    opts.onStep?.(ship, dt);
     const o = sprite.wakeOriginOffset();
     wake.update(dt, {
       x: ship.x + o.x,
@@ -360,6 +377,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   let destroyed = false;
   let shipRequest = 0;
   let worldRequest = 0;
+  let crewRequest = 0;
   return {
     stats,
     get runtime() {
@@ -405,6 +423,31 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     advanceDialogue: () => void runtime.advanceDialogue(),
     skipDialogue: () => void runtime.skipDialogue(),
     setPassenger: (on) => sprite.setPassenger(on),
+    get hasPassenger() {
+      return sprite.hasPassenger;
+    },
+    async setCrewArt(assetId) {
+      const request = ++crewRequest;
+      let art: CrewArt | null = null;
+      if (assetId && opts.artUrl !== null) {
+        try {
+          const loaded = (await loadArt([assetId], opts.artUrl)).get(assetId);
+          const m = loaded?.manifest;
+          const pivot = m?.pivot_px ?? m?.anchors.pivot;
+          if (loaded && m && pivot) {
+            const anim = Object.keys(m.animations)[0];
+            const f = artFrames(m, anim);
+            const frames = await loadTextures(loaded.baseUrl, f.files);
+            if (frames.length > 0) art = { frames, fps: f.fps || 8, pivot, scale: artScale };
+          }
+        } catch (err) {
+          console.warn(`[boia] arte de la tripulante «${assetId}» no disponible`, err);
+        }
+      }
+      if (destroyed || request !== crewRequest) return false;
+      sprite.setCrewArt(art);
+      return art !== null || assetId === null;
+    },
     setKeyboardMode: (mode) => {
       keys.mode = mode;
     },
@@ -420,6 +463,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
         return false;
       }
       next.setPassenger(sprite.hasPassenger);
+      next.setCrewArt(sprite.crewArtInUse);
       next.update(ship.heading, time, shipSpeed(ship));
       next.view.position.copyFrom(sprite.view.position);
       next.view.zIndex = sprite.view.zIndex;

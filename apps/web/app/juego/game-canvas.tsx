@@ -1,8 +1,15 @@
 'use client';
 
 import { EVENT_STATE_BEHAVIOR } from '@boia/contracts';
-import type { Game, GameStats, WorldEvent } from '@boia/engine';
+import type { Game, GameStats, WorldEvent, WorldRuntime } from '@boia/engine';
 import { nearbyBottles } from '@boia/engine/bottles';
+import {
+  type MissionEvent,
+  type MissionHost,
+  RescueMission,
+  type RescuePhase,
+  rescueMissionOf,
+} from '@boia/engine/mission';
 import { MINIGAME_REGISTRY } from '@boia/engine/minigames';
 import {
   DEFAULT_SETTINGS,
@@ -33,7 +40,17 @@ import { liveContent } from '../../lib/landing/live-content';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
 import { claimWorld } from '../../lib/world-handoff';
+import { TIME_PLAYED_TICK_S, recordSignal, signalFromWorldEvent } from './achievements';
+import { BalancesChip } from './balances';
 import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
+import { Celebration } from './celebration';
+import {
+  boardedNotice,
+  crewReaction,
+  deliveredNotice,
+  loadMission,
+  persistMissionEvent,
+} from './mission';
 import { BottleSheet, type BottleSheetMode } from './bottles/bottle-sheet';
 import { CarnetSheet } from './carnet/carnet-sheet';
 import { CircuitTimer, useCircuit } from './circuit-hud';
@@ -56,11 +73,11 @@ import { OnboardMenu } from './menu/onboard-menu';
 import type { MenuContext, ShipMenu, WorldMenu } from './menu/types';
 import { type MinigameOffer, MinigameLayer } from './minigame-layer';
 import { ExpandedMap, Minimap } from './minimap';
-import { discoveryNotice, noticeFromWorldEvent } from './notice-copy';
+import { discoveryNotice } from './notice-copy';
 import { NoticeToast, useNoticeQueue } from './notices';
 import { gameRepository, useRepoData } from './repo';
 import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
-import { applyAudioSettings, chime, plop } from './sound';
+import { applyAudioSettings, chime, fanfare, plop } from './sound';
 import { useViewport } from './use-viewport';
 import { currentWorld, syncWorldParam, visitorWorldChoice } from './world-choice';
 import { EventPanel } from './world-ui';
@@ -125,6 +142,14 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   // Encuentros guionizados por la web (T20): el delfín y el remolino.
   const dolphinRef = useRef<DolphinTrail | null>(null);
   const whirlpoolRef = useRef(new WhirlpoolTimer());
+  // La misión de la Boia Fiestera (T21): la juega el motor en cada paso; aquí se guarda.
+  const missionRef = useRef<RescueMission | null>(null);
+  const missionHost = useRef<{ runtime: WorldRuntime; host: MissionHost } | null>(null);
+  const [missionPhase, setMissionPhase] = useState<RescuePhase | null>(null);
+  const missionPhaseRef = useRef<RescuePhase | null>(null);
+  const rescueNotices = useRef<Promise<Notice[]> | null>(null);
+  const [celebration, setCelebration] = useState(0);
+  const reactions = useRef(0);
 
   // Preferencias guardadas (se leen al montar: el HUD no se pinta en servidor).
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
@@ -193,6 +218,14 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     void work.then(showOutcomes, (err: unknown) =>
       console.warn('[boia] no se pudo guardar el progreso', err),
     );
+  /** Avisos que sólo existen si el repositorio concedió algo (logros, premios de la misión). */
+  const notifyGranted = (work: Promise<Notice[]>) =>
+    void work.then(
+      (ns) => {
+        for (const n of ns) notify(n);
+      },
+      (err: unknown) => console.warn('[boia] no se pudo guardar el progreso', err),
+    );
 
   const onStats = (s: GameStats) => {
     setStats(s);
@@ -201,7 +234,17 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (fresh.length) {
       for (const f of fresh) foundRef.current.add(f.id);
       setDiscovered(t.discovered());
-      for (const f of fresh) if (f.kind === 'island') notify(discoveryNotice(f));
+      for (const f of fresh) {
+        if (f.kind !== 'island') continue;
+        const n = discoveryNotice(f);
+        // Con la Fiestera a bordo, reacciona a lo descubierto (REQ-AVE-007).
+        if (missionRef.current?.aboard) {
+          const r = crewReaction(reactions.current++);
+          notify({ ...n, body: n.body ? `${n.body} · ${r}` : r });
+        } else {
+          notify(n);
+        }
+      }
       // Primera llegada, guardada por id de lugar (REQ-AVE-013).
       for (const f of fresh) {
         void discoverPlace(progressApi(), f.id, { sessionId, worldId: world.id }).catch(
@@ -235,9 +278,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     world.config.objects.find((o) => o.identity.id === id)?.identity.category === 'remolino';
 
   const onWorldEvent = (e: WorldEvent) => {
-    // Los premios avisan cuando el repositorio los concede (world-progress.ts).
-    const n = e.type === 'reward' ? null : noticeFromWorldEvent(e);
-    if (n) notify(n);
+    // Premios y logros avisan cuando el repositorio los concede (world-progress.ts,
+    // achievements.ts): un logro ya obtenido no vuelve a avisar.
+    if (e.type === 'achievement') {
+      const signal = signalFromWorldEvent(e, world.config);
+      if (signal) notifyGranted(recordSignal(gameRepository(), signal));
+    }
     circuit.onWorldEvent(e);
     const ctx = { sessionId, worldId: world.id };
     switch (e.type) {
@@ -299,9 +345,70 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     }
   };
 
+  const onMissionEvent = (e: MissionEvent) => {
+    const ctx = { worldId: world.id };
+    switch (e.type) {
+      case 'croc_dive':
+      case 'croc_emerge':
+        plop();
+        break;
+      case 'rescued':
+        // Se guarda ya; sus avisos (el logro) salen tras el de «a bordo».
+        rescueNotices.current = persistMissionEvent(gameRepository(), e, ctx).catch(
+          (err: unknown) => {
+            console.warn('[boia] no se pudo guardar la misión', err);
+            return [];
+          },
+        );
+        break;
+      case 'boarded': {
+        chime();
+        notify(boardedNotice(e.missionId));
+        const granted = rescueNotices.current;
+        rescueNotices.current = null;
+        if (granted) notifyGranted(granted);
+        break;
+      }
+      case 'delivered':
+        setCelebration(Date.now());
+        fanfare();
+        notify(deliveredNotice(e.missionId));
+        notifyGranted(persistMissionEvent(gameRepository(), e, ctx));
+        break;
+      default:
+        break;
+    }
+  };
+
+  /** Cada paso fijo del motor: la misión mueve cocodrilos, Fiestera y tripulante. */
+  const onStep = (ship: { x: number; y: number }, dt: number) => {
+    const m = missionRef.current;
+    const g = gameRef.current;
+    if (!m || !g) return;
+    const rt = g.runtime;
+    // Runtime nuevo (cambio de mundo): otro anfitrión, y la misión se vuelve a poner.
+    if (missionHost.current?.runtime !== rt) {
+      missionHost.current = {
+        runtime: rt,
+        host: {
+          moveObject: (id, x, y, z) => rt.moveObject(id, x, y, z),
+          setObjectPresent: (id, on) => rt.setObjectPresent(id, on),
+          setObjectInteractive: (id, on) => rt.setObjectInteractive(id, on),
+          setPassenger: (on) => g.setPassenger(on),
+        },
+      };
+    }
+    const events = m.step(missionHost.current.host, ship, dt);
+    if (m.phase !== missionPhaseRef.current) {
+      missionPhaseRef.current = m.phase;
+      setMissionPhase(m.phase);
+    }
+    for (const e of events) onMissionEvent(e);
+  };
+
   // El motor arranca una vez; sus callbacks leen siempre la última versión.
-  const handlers = useRef({ onStats, onWorldEvent });
-  handlers.current = { onStats, onWorldEvent };
+  const handlers = useRef({ onStats, onWorldEvent, onStep });
+  handlers.current = { onStats, onWorldEvent, onStep };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -391,6 +498,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         keyboardMode: settingsRef.current.keyboardMode,
         onStats: (s) => handlers.current.onStats(s),
         onWorldEvent: (e) => handlers.current.onWorldEvent(e),
+        onStep: (ship, dt) => handlers.current.onStep(ship, dt),
         runtime: {
           ticketAvailable,
           minigames: MINIGAME_REGISTRY,
@@ -412,8 +520,23 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       setAdopted(created.adoptedSurface);
       // Por si los ajustes cambiaron mientras cargaba.
       created.setKeyboardMode(settingsRef.current.keyboardMode);
-      // `?pasajera=1` muestra el slot TRIPULANTE (oculto hasta la misión Fiestera).
-      if (query.get('pasajera') === '1') created.setPassenger(true);
+      // La misión de la Fiestera (T21): lo guardado decide si está en el remanso,
+      // a bordo o ya en su isla. `?pasajera=1` sólo enseña el slot TRIPULANTE, sin misión.
+      const spec = rescueMissionOf(initial.config);
+      if (spec) void created.setCrewArt(spec.crewAsset);
+      if (query.get('pasajera') === '1') {
+        created.setPassenger(true);
+      } else if (spec) {
+        const m = new RescueMission(initial.config, spec);
+        missionRef.current = m;
+        void loadMission(progressApi(), spec.missionId).then(
+          (saved) => m.restore(saved),
+          (err: unknown) => {
+            console.warn('[boia] no se pudo leer la misión', err);
+            m.restore(null);
+          },
+        );
+      }
       // `?cerca=<lugar>`: empezar al sur de ese lugar, fuera de su radio (pruebas y enlaces).
       const near = query.get(NEAR_PARAM);
       const nearObject = near
@@ -436,9 +559,25 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     return () => {
       cancelled = true;
       gameRef.current = null;
+      missionRef.current = null;
+      missionHost.current = null;
       g?.destroy();
     };
   }, [shipCatalog, adoptWorld, sessionId]);
+
+  // Tiempo a bordo para los logros de 5 y 20 minutos: sólo con la pestaña a la vista.
+  useEffect(() => {
+    if (!game) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      notifyGranted(
+        recordSignal(gameRepository(), { trigger: 'time_played', seconds: TIME_PLAYED_TICK_S }),
+      );
+    }, TIME_PLAYED_TICK_S * 1000);
+    return () => window.clearInterval(id);
+    // `notifyGranted` sólo encola avisos; basta con el motor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game]);
 
   // Sección «Barco»: aplica estilo y skin al barco en el agua, sin recargar.
   // `remember: false` (el barco por defecto de un mundo) no lo guarda como elección.
@@ -506,6 +645,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         if (!ok || request !== worldRequest.current || gameRef.current !== g) return;
         adoptWorld(next);
         syncWorldParam(next.id);
+        // La misión sigue (mismo paso, mismo destino guardado) con la piel del mundo nuevo.
+        missionRef.current?.setWorld(next.config);
+        void g.setCrewArt(rescueMissionOf(next.config)?.crewAsset ?? null);
         // Sin barco elegido (ni en la URL ni guardado), el del mundo nuevo.
         const want = requestedLook(window.location.search, shipCatalog);
         if (want.style === null && shipLook) {
@@ -619,6 +761,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       data-ship-style={shipLook?.style}
       data-ship-skin={shipLook?.skin}
       data-mundo={world.id}
+      data-mision={missionPhase ?? undefined}
+      data-tripulante={missionPhase === 'aboard' ? 'a-bordo' : undefined}
       style={{
         ...({
           '--mundo-acento': world.theme.ui.accent,
@@ -650,6 +794,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           >
             Inicio
           </Link>
+          {layout.balances ? <BalancesChip rect={layout.balances} /> : null}
           {layout.stats ? (
             <div
               data-testid="hud"
@@ -772,6 +917,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         />
       ) : null}
       {carnetOf ? <CarnetSheet userId={carnetOf} onClose={() => setCarnetOf(null)} /> : null}
+      {celebration ? (
+        <Celebration key={celebration} onDone={() => setCelebration(0)} />
+      ) : null}
       {error && (
         <p style={{ position: 'absolute', bottom: 16, left: 16, right: 16, textAlign: 'center' }}>
           {error}

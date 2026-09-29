@@ -1,4 +1,5 @@
 import type { BehaviorInput } from '../../behaviors';
+import { GROUND_Y_SCALE, HEIGHT_SCALE } from '../../iso';
 import type { PlaceInput, SharedMapInput } from '../map';
 import { type Maq, POS, U, at, ellipseCollision, near, proximity, size } from './units';
 
@@ -33,8 +34,35 @@ const TAGS = ['muestra'];
 export const PORT_ANCHOR: Maq = [0, 25.3];
 /** La Boia Fiestera (`zonas/fiestera/lugares/fiestera`): ancla del remanso. */
 export const FIESTERA_ANCHOR: Maq = [-3.8, 7.6];
+/** La última isla (`zonas/ultima/islas/isla`) y el nicho de la Fiestera (`zonas/ultima/lugares/nicho`). */
+export const ULTIMA_CENTER: Maq = [4.4, -27.4];
+const NICHO: Maq = [4.0, -28.2];
+/** Semieje menor y altura de la isla (`zonas/ultima/islas/isla`: `b`, `alto`). */
+const ULTIMA_B = 2.1;
+const ULTIMA_ALTO = 0.55;
 /** Arco de salida del circuito (`circuito/salida`): ancla del semáforo. */
 export const CIRCUIT_START: Maq = [12.6, 5.6];
+
+/**
+ * Dónde se queda la Fiestera en la última isla: el nicho, sobre la isla. La
+ * isla se dibuja a 1:1 alrededor de su centro, así el nicho queda a su
+ * distancia 1:1 del centro. Para que se pinte delante de la isla (el orden
+ * de dibujo va por `y`), el punto baja al borde sur de la isla por la
+ * vertical de pantalla del nicho y `z` lo vuelve a subir hasta él, más la
+ * altura de la isla. muestra
+ */
+export const NICHO_DROP = (() => {
+  const c = at(ULTIMA_CENTER);
+  const nx = c.x + (NICHO[0] - ULTIMA_CENTER[0]) * U;
+  const ny = c.y + (NICHO[1] - ULTIMA_CENTER[1]) * U;
+  const y = c.y + (ULTIMA_B + 0.3) * U;
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  return {
+    x: r2(nx),
+    y: r2(y),
+    z: r2(((y - ny) * GROUND_Y_SCALE) / HEIGHT_SCALE + ULTIMA_ALTO * U),
+  };
+})();
 
 // --- Costas y límites ----------------------------------------------------------
 
@@ -338,12 +366,12 @@ const ISLANDS: PlaceInput[] = [
     ],
   ),
   {
-    // La última isla: destino de la misión (la entrega es de T21).
+    // La última isla: destino de la misión de la Fiestera (T21).
     ...island(
       'ultima',
       'Última isla',
       'zonas/ultima/islas/isla',
-      [4.4, -27.4],
+      ULTIMA_CENTER,
       2.7,
       2.1,
       -10,
@@ -355,7 +383,13 @@ const ISLANDS: PlaceInput[] = [
         ...['nicho', 'muelle', 'hoguera', 'amigas'].map((l) => `zonas/ultima/lugares/${l}`),
       ],
     ),
-    params: { missionDestination: 'fiestera' },
+    params: {
+      missionDestination: 'fiestera',
+      // Dónde se queda la Fiestera al bajar (el nicho de la isla) y el premio grande
+      // de la entrega (REQ-AVE-008) [pendiente Álvaro].
+      missionDrop: NICHO_DROP,
+      missionReward: { points: 100, coins: 100 },
+    },
   },
   // Islas de los minijuegos (T23): INICIAR_MINIJUEGO con `faro` y `canon`.
   island('faro', 'Isla del Faro', 'minijuegos/faro/isla', [-10.5, -25.2], 1.9, 1.3, 30, 3.4, [
@@ -369,6 +403,9 @@ const ISLANDS: PlaceInput[] = [
 ];
 
 // --- El Remanso de los Cocodrilos (composición local; la misión es de T21) ------
+
+/** Radio en que los cocodrilos se sumergen (`zonas/fiestera/proximidad/cocodrilos`). */
+const CROC_RADIUS = proximity(4.0, 'encuentro');
 
 const remanso = (p: Maq) => near(FIESTERA_ANCHOR, p);
 
@@ -397,14 +434,16 @@ const FIESTERA: PlaceInput[] = [
     },
     behaviors: [
       bounce(0.3),
-      prox(),
+      // Pide ayuda en bocadillos desde que los cocodrilos empiezan a sumergirse (REQ-AVE-005);
+      // sube a bordo en el radio de rescate, el de `geometry.proximityRadius`.
+      { type: 'proximity', params: { radius: CROC_RADIUS } },
       talk([
         '¡Eh, barquito! Estos señores no me dejan ir a la fiesta.',
         '¿Me llevas a la última isla? Te lo pagaré bailando.',
       ]),
     ],
-    // Radios de la misión para T21: rescate (el de proximidad) y cocodrilos.
-    params: { mission: 'fiestera', crocRadius: proximity(4.0, 'encuentro') },
+    // La misión (T21): rescate en el radio de proximidad, cocodrilos en `crocRadius`.
+    params: { mission: 'fiestera', character: 'boia-fiestera', crocRadius: CROC_RADIUS },
     source: [
       'zonas/fiestera/lugares/fiestera',
       'zonas/fiestera',

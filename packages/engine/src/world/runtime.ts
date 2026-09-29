@@ -127,7 +127,15 @@ interface Obj {
   object: WorldObject;
   x: number;
   y: number;
+  /** Altura sobre el agua (u) de un movimiento guionizado (la Fiestera que sube a bordo). */
+  z: number;
   present: boolean;
+  /**
+   * Sin interacción: se dibuja, pero no choca, no tiene proximidad ni
+   * contacto y no dispara nada (la Fiestera mientras sube a bordo y ya
+   * entregada en su isla, T21).
+   */
+  inert: boolean;
   collision: CollisionRule | null;
   /** Radio de contacto (activación o colisión). */
   touchRadius: number | null;
@@ -174,6 +182,8 @@ export interface ObjectRuntimeState {
   id: string;
   x: number;
   y: number;
+  /** Altura sobre el agua (u); 0 salvo en movimientos guionizados. */
+  z?: number;
   present: boolean;
   inProximity: boolean;
 }
@@ -262,7 +272,9 @@ export class WorldRuntime {
         object: o,
         x: o.position.x,
         y: o.position.y,
+        z: 0,
         present: o.state?.visible ?? true,
+        inert: false,
         collision: collisionRuleOf(o),
         touchRadius: touch,
         inContact: false,
@@ -304,7 +316,16 @@ export class WorldRuntime {
 
   objectState(id: string): ObjectRuntimeState | undefined {
     const o = this.byId.get(id);
-    return o && { id, x: o.x, y: o.y, present: o.present, inProximity: o.inProximity };
+    return (
+      o && {
+        id,
+        x: o.x,
+        y: o.y,
+        ...(o.z ? { z: o.z } : {}),
+        present: o.present,
+        inProximity: o.inProximity,
+      }
+    );
   }
 
   objectStates(): ObjectRuntimeState[] {
@@ -343,7 +364,7 @@ export class WorldRuntime {
     const out: CircleObstacle[] = [];
     for (const o of this.objs) {
       const c = o.collision;
-      if (!o.present || !c?.solid) continue;
+      if (!o.present || o.inert || !c?.solid) continue;
       const restitution = c.mode === 'bounce' ? c.intensity : 0;
       out.push({ x: o.x, y: o.y, radius: c.radius, restitution });
       for (const p of c.parts) {
@@ -356,14 +377,33 @@ export class WorldRuntime {
   // --- Encuentros guionizados desde la aplicación --------------------------
 
   /**
-   * Mueve un objeto (el delfín que salta, T20; los cocodrilos de T21). Su
-   * proximidad y su contacto se recalculan en el siguiente paso.
+   * Mueve un objeto (el delfín que salta, T20; la Fiestera que sube a bordo,
+   * T21). `z` lo levanta sobre el agua (u; sólo se ve, no cambia la
+   * simulación). Su proximidad y su contacto se recalculan en el siguiente paso.
    */
-  moveObject(id: string, x: number, y: number): boolean {
+  moveObject(id: string, x: number, y: number, z = 0): boolean {
     const o = this.byId.get(id);
     if (!o) return false;
     o.x = x;
     o.y = y;
+    o.z = z;
+    return true;
+  }
+
+  /**
+   * Quita o devuelve la interacción de un objeto: sin ella se dibuja pero no
+   * choca ni dispara nada, y sale de su proximidad y de su diálogo.
+   */
+  setObjectInteractive(id: string, interactive: boolean): boolean {
+    const o = this.byId.get(id);
+    if (!o) return false;
+    if (o.inert === !interactive) return true;
+    o.inert = !interactive;
+    if (o.inert) {
+      o.inContact = false;
+      if (o.inProximity) this.leaveProximity(o, null, null);
+      if (this.active?.obj === o) this.endDialogue('interrupted');
+    }
     return true;
   }
 
@@ -414,7 +454,7 @@ export class WorldRuntime {
 
     const r = cfg.radius;
     for (const o of this.objs) {
-      if (!o.present) continue;
+      if (!o.present || o.inert) continue;
       const d = Math.hypot(ship.x - o.x, ship.y - o.y);
 
       if (o.touchRadius !== null) {
@@ -460,7 +500,7 @@ export class WorldRuntime {
   /** Remolinos: giro alrededor del centro, más fuerte cuanto más dentro. */
   private applySwirls(ship: ShipState, dt: number): void {
     for (const o of this.objs) {
-      if (!o.swirl || !o.present || o.proximityRadius === null) continue;
+      if (!o.swirl || !o.present || o.inert || o.proximityRadius === null) continue;
       const dx = ship.x - o.x;
       const dy = ship.y - o.y;
       const d = Math.hypot(dx, dy);

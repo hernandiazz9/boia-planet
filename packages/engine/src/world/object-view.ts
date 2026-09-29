@@ -65,18 +65,28 @@ function drawPlaceholder(shape: string, r: number): Graphics {
   return g;
 }
 
+/** s que duran las ondas al sumergirse o emerger. muestra */
+const RIPPLE_SECONDS = 0.9;
+
 /**
  * Vista Pixi de un objeto del mundo: sprite (con bucle si el asset lo trae)
- * o marcador. Sigue la posición y la presencia que da el runtime.
+ * o marcador. Sigue la posición y la presencia que da el runtime. Si el arte
+ * trae `sumergirse` (los cocodrilos), al desaparecer lo reproduce con ondas
+ * antes de ocultarse, y al volver lo reproduce al revés (REQ-AVE-005).
  */
 export class ObjectView {
   readonly view = new Container();
   private readonly sprite: Sprite | null;
+  private readonly ripples = new Graphics();
+  private present = true;
+  /** Sumergirse (`out`) o emerger (`in`) en curso; `start` se fija en el primer `animate`. */
+  private dive: { dir: 'out' | 'in'; start: number | null } | null = null;
 
   private constructor(
     readonly object: WorldObject,
     readonly visual: ObjectVisual,
     private readonly frames: Texture[],
+    private readonly diveFrames: Texture[] = [],
   ) {
     if (visual.kind === 'sprite' && frames.length > 0) {
       const s = new Sprite(frames[0]!);
@@ -91,6 +101,7 @@ export class ObjectView {
       const shape = visual.kind === 'placeholder' ? visual.shape : object.identity.category;
       this.view.addChild(drawPlaceholder(shape, r));
     }
+    this.view.addChild(this.ripples);
     this.sync({
       id: object.identity.id,
       x: object.position.x,
@@ -106,6 +117,7 @@ export class ObjectView {
     art: ReadonlyMap<string, LoadedArt>,
   ): Promise<ObjectView> {
     let frames: Texture[] = [];
+    let dive: Texture[] = [];
     if (visual.kind === 'sprite') {
       const a = art.get(visual.assetId);
       try {
@@ -114,8 +126,14 @@ export class ObjectView {
         console.warn(`[boia] imágenes de «${visual.assetId}» incompletas; marcador`, err);
         frames = [];
       }
+      try {
+        if (a && visual.dive && frames.length > 0) dive = await loadTextures(a.baseUrl, visual.dive.frames);
+      } catch (err) {
+        console.warn(`[boia] «${visual.assetId}» sin fotogramas de sumergirse`, err);
+        dive = [];
+      }
     }
-    return new ObjectView(object, visual, frames);
+    return new ObjectView(object, visual, frames, dive);
   }
 
   sync(state: ObjectRuntimeState): void {
@@ -124,15 +142,49 @@ export class ObjectView {
     // Lo que va a ras de agua (anillo de salida, remolino, posidonia) queda
     // siempre debajo del barco; lo demás se ordena por profundidad.
     this.view.zIndex = this.object.appearance.layer === 'water' ? -1e7 + state.y : state.y;
-    this.view.visible = state.present;
+    if (state.present !== this.present) {
+      this.present = state.present;
+      // Con fotogramas de sumergirse, se ve el paso; sin ellos, aparece o desaparece.
+      this.dive = this.diveFrames.length > 1 ? { dir: state.present ? 'in' : 'out', start: null } : null;
+    }
+    this.view.visible = state.present || this.dive?.dir === 'out';
   }
 
   /** Avanza el bucle del asset (`t` en s de juego). */
   animate(t: number): void {
     const v = this.visual;
-    if (!this.sprite || v.kind !== 'sprite' || this.frames.length < 2 || v.fps <= 0) return;
+    if (!this.sprite || v.kind !== 'sprite') return;
+    if (this.dive && v.dive) {
+      this.dive.start ??= t;
+      const e = t - this.dive.start;
+      const n = this.diveFrames.length;
+      const i = Math.min(n - 1, Math.floor(e * v.dive.fps));
+      this.sprite.texture = this.diveFrames[this.dive.dir === 'out' ? i : n - 1 - i]!;
+      this.drawRipples(e);
+      const done = e >= n / v.dive.fps && e >= RIPPLE_SECONDS;
+      if (!done) return;
+      if (this.dive.dir === 'out') this.view.visible = false;
+      this.dive = null;
+      this.ripples.clear();
+    }
+    if (this.frames.length < 2 || v.fps <= 0) return;
     const n = this.frames.length;
     const i = Math.floor(t * v.fps);
     this.sprite.texture = this.frames[v.loop ? i % n : Math.min(i, n - 1)]!;
+  }
+
+  /** Anillos de onda que se abren en el agua al sumergirse o emerger. */
+  private drawRipples(e: number): void {
+    const g = this.ripples;
+    g.clear();
+    const v = this.visual;
+    if (v.kind !== 'sprite') return;
+    const base = (this.sprite?.width ?? 80) * 0.35;
+    for (const delay of [0, 0.25]) {
+      const k = (e - delay) / RIPPLE_SECONDS;
+      if (k <= 0 || k >= 1) continue;
+      const r = base * (0.5 + k);
+      g.ellipse(0, 0, r, r * 0.5).stroke({ width: 2, color: 0xffffff, alpha: 0.7 * (1 - k) });
+    }
   }
 }

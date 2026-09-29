@@ -37,6 +37,11 @@ export const HUD_GAP = 8;
 export const HUD_BUTTON = 44;
 /** Caja de datos de depuración (FPS, velocidad) junto a Inicio. muestra */
 export const HUD_STATS = { w: 120, h: 44 };
+/**
+ * Saldos (puntos y monedas, REQ-IDE-027) junto a Inicio, antes que los datos
+ * de depuración: si no caben los dos, se quedan los saldos. muestra
+ */
+export const HUD_BALANCES = { w: 56, h: 44 };
 
 /** D-07: 96 px en móvil sin pasar del 22 % del ancho; 128 px en escritorio. */
 export const MINIMAP_MOBILE = 96;
@@ -94,7 +99,9 @@ export function joystickZone(vp: Viewport): Rect {
 
 export interface FixedHud {
   home: Rect;
-  /** null si no cabe entre Inicio y la brújula. */
+  /** Puntos y monedas; null si no cabe entre Inicio y la brújula. */
+  balances: Rect | null;
+  /** null si no cabe entre Inicio (y los saldos) y la brújula. */
   stats: Rect | null;
   compass: Rect;
   menu: Rect;
@@ -106,9 +113,21 @@ export function fixedHud(vp: Viewport): FixedHud {
   const home = { x: m.left, y: m.top, w: B, h: B };
   const menu = { x: vp.width - m.right - B, y: m.top, w: B, h: B };
   const compass = { x: menu.x - HUD_GAP - B, y: m.top, w: B, h: B };
-  const stats = { x: home.x + B + HUD_GAP, y: m.top, ...HUD_STATS };
-  const statsFits = stats.x + stats.w + HUD_GAP <= compass.x;
-  return { home, stats: statsFits ? stats : null, compass, menu };
+  const fits = (r: Rect) => r.x + r.w + HUD_GAP <= compass.x;
+  const balances = { x: home.x + B + HUD_GAP, y: m.top, ...HUD_BALANCES };
+  const hasBalances = fits(balances);
+  const stats = {
+    x: hasBalances ? balances.x + balances.w + HUD_GAP : balances.x,
+    y: m.top,
+    ...HUD_STATS,
+  };
+  return {
+    home,
+    balances: hasBalances ? balances : null,
+    stats: fits(stats) ? stats : null,
+    compass,
+    menu,
+  };
 }
 
 /** Rectángulo de cada zona del minimapa, válida o no. */
@@ -131,7 +150,13 @@ export function minimapZoneRects(vp: Viewport): Record<MinimapZone, Rect> {
 /** Rectángulos del HUD fijo (sin el minimapa ni el aviso). */
 function fixedRects(vp: Viewport): Rect[] {
   const f = fixedHud(vp);
-  return [f.home, f.compass, f.menu, ...(f.stats ? [f.stats] : [])];
+  return [
+    f.home,
+    f.compass,
+    f.menu,
+    ...(f.stats ? [f.stats] : []),
+    ...(f.balances ? [f.balances] : []),
+  ];
 }
 
 /**

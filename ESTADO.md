@@ -4,6 +4,36 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T21: misión de la Boia Fiestera, logros, puntos y monedas
+
+La misión principal (REQ-AVE-005…011) y el sistema de logros (REQ-IDE-024…027) en `/juego`, sobre el repositorio local de T16. Textos, premios, tiempos y la lista de logros son `muestra` [pendiente Álvaro].
+
+Qué existe:
+- Motor, `@boia/engine/mission` (`packages/engine/src/mission/rescue.ts`, puro): `rescueMissionOf(world)` saca la misión de los datos del mapa, genérica por mundo (T24 la reutiliza para Acuarela sin tocarla): el personaje es el objeto con `params.mission` (`fiestera`, personaje `boia-fiestera`), los cocodrilos son los de categoría `cocodrilo` de su zona, el destino es el lugar con `params.missionDestination` (sin destino no hay misión). `RescueMission`: `loading` → `waiting` → `boarding` → `aboard` → `landing` → `delivered`. Con el barco a menos de `crocRadius` los cocodrilos se sumergen de uno en uno (el más cercano primero, cada 0,4 s) y al alejarse vuelven; en el radio de rescate y con todos abajo, ella sale del agua y sube al barco con un saltito (1 s) y pasa al slot TRIPULANTE; en el radio del destino, desde cualquier lado, baja (1,2 s) y se queda en el nicho de la isla (`params.missionDrop`). El destino se fija al rescatar y se guarda por id de lugar: sobrevive al cambio de mundo y a que el Admin cambie el de las partidas nuevas. `setWorld` pasa la misión a otro mundo sin perder paso ni destino.
+- Motor: `WorldRuntime.moveObject(id, x, y, z)` (altura sólo visual) y `setObjectInteractive(id, on)` (sin choque, proximidad ni diálogo: la Fiestera subiendo y ya en su isla); `ObjectView` reproduce `sumergirse` (y al revés al emerger) con anillos de onda si el arte lo trae (los cocodrilos de T18); `Game.setCrewArt(asset)` dibuja la pieza `tripulante` del mundo (`mundos/<mundo>/fiestera#tripulante`, bailando) sobre `slot_passenger`, también al cambiar de barco; `GameOptions.onStep` (cada paso fijo) para guiones de la web; `hudLayout` tiene `balances` (saldos junto a Inicio, antes que los datos de depuración).
+- Mapa (`packages/world/src/worlds/arcilla/map.ts`): la Fiestera pide ayuda desde el radio de los cocodrilos (4,0) y sube a bordo en el de rescate (2,6); `ultima` lleva `missionDrop` (el nicho, delante de la isla con altura) y `missionReward` (100 puntos y 100 monedas, muestra).
+- Web: `apps/web/app/juego/mission.ts` guarda el paso con `progress.setMission('fiestera', …)` (destino y temporada por id, nunca coordenadas), concede el premio grande una vez para siempre (`mision:fiestera:entrega`) y los logros de rescate y entrega; avisos «Nueva tripulante a bordo · Boia Fiestera rescatada · Destino: última isla» y el de la fiesta, confeti (`celebration.tsx`), `fanfare()` en `sound.ts`. A bordo, la Fiestera reacciona en el aviso de cada isla nueva. Sin recordatorio permanente de misión. `?pasajera=1` sigue enseñando el slot sin misión.
+- Web: `achievements.ts`: señales (boia, isla, secreto por categoría, tiempo a bordo, rescate, entrega, circuito, entrada) que dejan su huella por id de lugar en el progreso y conceden los logros del catálogo del repositorio (también secretos) cuya condición se cumple; `find_boia` del mapa es `find_buoy` del catálogo. El tiempo a bordo se apunta cada 15 s con la pestaña visible. Los logros del mundo ya no avisan por su cuenta: sólo avisa lo que el repositorio concede (uno a uno, 4 s, cola de T05). Saldos en el HUD (`balances.tsx`, `data-testid="saldos"`) y sección Logros del Menú con puntos, monedas, rango, lo conseguido y lo que falta (X/6 boies, minutos…).
+- Pruebas: `packages/engine/src/mission/rescue.test.ts` (pasos en orden, cocodrilos uno a uno, sin rescate con uno arriba, inerte a bordo y entregada, destino guardado tras cambiar de mundo y de destino), `apps/web/app/juego/mission.test.ts` (con repositorio: premio una vez tras recargar, destino tras cambiar de mundo, texto del aviso), `achievements.test.ts` (cada logro del catálogo se concede una vez, no antes y no tras recargar; saldos separados), `hud-layout.test.ts` (saldos). e2e `apps/web/e2e/fiestera.spec.ts` (escritorio): rescate, recarga a bordo, entrega con celebración y logro, y otra visita sin premio repetido.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint                               # exit 0; 53 archivos, 542 pruebas
+E2E_PORT=3171 pnpm e2e --workers=2 e2e/fiestera.spec.ts --project=desktop   # 1 pasada
+E2E_PORT=3174 pnpm e2e --workers=2                                     # exit 0; 80 pasadas, 14 omitidas
+```
+
+Desviaciones:
+- Los radios de la Fiestera: su diálogo salta en el radio de los cocodrilos (4,0) en vez del de rescate, para que pida ayuda mientras se sumergen (REQ-AVE-005) y no se corte al subir a bordo.
+- «Seis boies» no se puede conseguir todavía: el mapa sólo tiene una boia con `find_boia` (la del puerto). La lista es muestra.
+- Como en T20, al terminar Playwright se quedó esperando a un `next-server` huérfano del puerto de la prueba; se paró a mano ese proceso tras tener todos los resultados.
+- Sólo se formatearon con Prettier los archivos nuevos; los ya existentes que se tocaron no estaban formateados en main y se dejaron así para no mezclar cambios con T24.
+
+Sin probar:
+- Móviles reales. La misión entera sólo en escritorio (e2e); en móvil, lo mismo con el joystick.
+- El cambio de mundo a mitad de misión sólo con pruebas unitarias (en la web el mundo `prueba` usa el arte de Arcilla; la tripulante de Acuarela llega con T24).
+- El Admin fijando el destino de las partidas nuevas (REQ-AVE-011) funciona por datos (`params.missionDestination`), pero la pantalla y la migración auditada de partidas existentes son del Admin (T26 o después).
+
 ## 2026-09-29 — plan 002 T26: Admin de la demo con el botón «Probar admin»
 
 `/admin` abre el Admin de la versión de prueba (D-20, REQ-ADM-039) sin login, con un aviso fijo arriba: es una demo y los cambios se quedan en este navegador. Se llega desde «Probar admin» en el pie de la landing y en el Menú de a bordo de `/juego`. Copy, números y arte, `muestra` [pendiente Álvaro].

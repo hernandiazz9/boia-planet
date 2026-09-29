@@ -58,7 +58,7 @@ describe('zonas seguras del minimapa', () => {
       const safe = safeMinimapZones(vp);
       expect(safe.length, name(vp)).toBeGreaterThan(0);
       const layout = hudLayout(vp);
-      const fixed = [layout.home, layout.compass, layout.menu, layout.stats].filter(
+      const fixed = [layout.home, layout.compass, layout.menu, layout.stats, layout.balances].filter(
         (r): r is Rect => r !== null,
       );
       const rects = minimapZoneRects(vp);
@@ -73,7 +73,7 @@ describe('zonas seguras del minimapa', () => {
   it('el HUD fijo tampoco toca la zona del joystick ni se pisa entre sí', () => {
     for (const vp of VIEWPORTS) {
       const l = hudLayout(vp);
-      const all = [l.home, l.compass, l.menu, l.stats, l.minimap].filter(
+      const all = [l.home, l.compass, l.menu, l.stats, l.balances, l.minimap].filter(
         (r): r is Rect => r !== null,
       );
       for (const [i, a] of all.entries()) {
@@ -82,6 +82,15 @@ describe('zonas seguras del minimapa', () => {
         for (const b of all.slice(i + 1)) expect(intersects(a, b), name(vp)).toBe(false);
       }
       expect(intersects(l.notice, l.joystick), `aviso ${name(vp)}`).toBe(false);
+    }
+  });
+
+  it('los saldos caben en la fila de arriba en móvil y escritorio, antes que los datos', () => {
+    for (const vp of VIEWPORTS.filter((v) => v.width >= 360)) {
+      const l = hudLayout(vp);
+      expect(l.balances, name(vp)).not.toBeNull();
+      expect(l.balances!.y, name(vp)).toBe(l.home.y);
+      if (l.stats) expect(l.stats.x, name(vp)).toBeGreaterThan(l.balances!.x);
     }
   });
 

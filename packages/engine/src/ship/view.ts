@@ -41,6 +41,20 @@ interface Frame {
 }
 
 /**
+ * Arte de la tripulante (T18: la pieza `tripulante` del mundo, p. ej. la
+ * Boia Fiestera bailando): se dibuja con su pivote sobre `slot_passenger` de
+ * la vista que se ve, encima del barco.
+ */
+export interface CrewArt {
+  frames: Texture[];
+  fps: number;
+  /** Pivote en px de la imagen. */
+  pivot: Vec2;
+  /** px de pantalla por px de imagen (la escala del arte del mundo). */
+  scale: number;
+}
+
+/**
  * Sprite del barco: una imagen por cada una de las 8 vistas, elegida por el
  * rumbo real del casco. El pivote (contacto con el agua) queda en (0, 0).
  */
@@ -53,6 +67,8 @@ export class ShipSprite {
   private readonly picker: DirectionPicker;
   private shown: Direction | null = null;
   private passenger = false;
+  private crewArt: CrewArt | null = null;
+  private crew: Sprite | null = null;
 
   private constructor(
     frames: Map<Direction, Frame>,
@@ -180,14 +196,24 @@ export class ShipSprite {
     let framesBob = false;
     if (f.sprite && f.still) {
       let t = f.still;
-      if (this.passenger && f.withPassenger) t = f.withPassenger;
+      if (this.passenger && f.withPassenger && !this.crewArt) t = f.withPassenger;
       else if (idle && f.bob && f.bob.length > 0) {
         t = f.bob[Math.floor(time * (f.bobFps ?? 8)) % f.bob.length]!;
         framesBob = true;
       }
       if (f.sprite.texture !== t) f.sprite.texture = t;
     }
-    if (f.passengerNode) f.passengerNode.visible = this.passenger;
+    // Con arte de tripulante, ése manda sobre la pasajera del barco (imagen `_p` o figura).
+    const crew = this.crew && this.crewArt ? this.crew : null;
+    if (crew && this.crewArt) {
+      crew.visible = this.passenger;
+      if (this.passenger) {
+        crew.position.set(f.passengerSlot.x, f.passengerSlot.y);
+        const n = this.crewArt.frames.length;
+        if (n > 1) crew.texture = this.crewArt.frames[Math.floor(time * this.crewArt.fps) % n]!;
+      }
+    }
+    if (f.passengerNode) f.passengerNode.visible = this.passenger && !crew;
     // El vaivén se atenúa al arrancar, sin salto.
     const k = framesBob ? 0 : Math.max(0, 1 - speed / (IDLE_SPEED * 10));
     this.body.y = Math.sin((time * 2 * Math.PI) / BOB_PERIOD) * BOB_AMPLITUDE * k;
@@ -196,6 +222,25 @@ export class ShipSprite {
   /** Slot TRIPULANTE: visible sólo con la Boia Fiestera a bordo (§8.2, REQ-AVE-007). */
   setPassenger(on: boolean): void {
     this.passenger = on;
+  }
+
+  /** Arte de la tripulante (el del mundo que se juega); null vuelve a la del barco. */
+  setCrewArt(art: CrewArt | null): void {
+    this.crew?.destroy();
+    this.crew = null;
+    this.crewArt = art && art.frames.length > 0 ? art : null;
+    if (!this.crewArt) return;
+    const t = this.crewArt.frames[0]!;
+    const s = new Sprite(t);
+    s.anchor.set(this.crewArt.pivot.x / t.width, this.crewArt.pivot.y / t.height);
+    s.scale.set(this.crewArt.scale);
+    s.visible = false;
+    this.crew = s;
+    this.body.addChild(s);
+  }
+
+  get crewArtInUse(): CrewArt | null {
+    return this.crewArt;
   }
 
   get hasPassenger(): boolean {
