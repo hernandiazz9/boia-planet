@@ -86,7 +86,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: «Ir a la isla» on discount cards with a /juego autopilot (app/juego/autopilot.ts, skippable, reduced motion jumps), banner «Tienes un código de descuento para este evento» in the island panel and the shared checkout, «Mis códigos» with activo/usado/caducado, Admin Descuentos (create/edit/expire/hide at a place, audited), shop code TIENDA15, discount_found + purchase_confirmed emitted; store v4; 685 tests; /mar part pending → 75d9c55
 
 ## T44 — Landing that sails you: accesses, header, footer, Carnet invitations
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T42
 - Goal: From the landing, Tickets, Fotos and Tienda can open the world at their island with the ship arriving there (REQ-ENT-034, AVE-022), while the plain HTML paths stay for no-JS and «solo quiero las entradas». Header: Mi Carnet and a sound toggle (ENT-029). Footer: invitation to create the Carnet and to join WhatsApp, Instagram link (ENT-032, O13). Carnet invitations in the three contexts of REQ-IDE-008 (after a purchase, when closing the gallery, after 5 min or 3 achievements) with the pacing of REQ-IDE-009 (non-blocking, one per session, never twice after «Ahora no»). The ship position and heading are saved and restored on reload of /juego (REQ-IDE-004) and the local-progress notice explains its limits (IDE-007). Re-check that Tickets is visible without scroll at 360×640 with the 3D CTA.
 - Context: inventory §3 Accesos and Identidad; docs/spec/02-entrada-y-landing.md, 05-identidad-y-comunidad.md; apps/web/app/(landing)/**, apps/web/lib/world-handoff.ts, apps/web/app/juego/** (bootstrap at a place, `?cerca=`), apps/web/app/carnet/**; docs/propuestas/textos-zonas.md.
@@ -95,7 +95,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: invitation pacing (once per session, «Ahora no» respected); position restored after reload
   - `pnpm build` → landing ≤ 192 KB gzip
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; specs: Fotos from the landing lands the ship at Puerto de Fotos; Tickets visible without scroll at 360×640
-- Outcome:
+- Outcome: «⛵ Ir en barco…» from Tickets/Fotos/Tienda to /juego?ir=<island> (glide to a safe point, panel opens; HTML paths unchanged), placeHref/readPlaceRequest in lib/world-handoff.ts, header Mi Carnet + sound toggle + Instagram, footer invitations, Carnet invitations with pacing, ship position restored (browser storage, no store migration); 696 tests; landing 188.9 kB → 78671aa
 
 ## T45 — Local ranking, Carnet moderation, six boies, dolphin, island shortcut, Fiestera destination
 - Status: pending
@@ -132,7 +132,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## T48 — Admin hardening
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T42, T43
 - Goal: Deleting shows the impact (what links to it) and asks to type the name (REQ-ADM-029); trash with a retention setting and a purge that asks for confirmation again (ADM-030); achievements can be created, duplicated and versioned with icon, dates and scope, changing a condition makes a new version (ADM-021/022, on top of plan 003 T36); home and events edit as a draft with preview and «Publicar» (ADM-015), home CTAs editable and events excludable (ADM-017); validations for mission destination, circuits, dangling references and parameter ranges (ADM-013/014); music upload with licence fields (ADM-020, stored as data URL `muestra`); purchases and stamps written to the audit (ADM-007); docs/manual-admin.md with the manual data-request procedure (ADM-031).
 - Context: inventory §3 Admin; docs/spec/07-admin.md; apps/web/app/admin/**, apps/web/lib/admin/**, packages/store (overrides, audit, trash).
@@ -168,6 +168,8 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-29 T44: position and invitation state in localStorage/sessionStorage, not packages/store (no migration clash); one invitation per tab session, «Ahora no» silences that reason for good; header sound toggle drives music and effects together (agent)
+- 2026-09-29: after T44 the combined plan-004 passes typecheck and lint (orchestrator)
 - 2026-09-29 T43: /juego autopilot in apps/web (moveShip at 2.6×, ≤12 s, jumps if stuck, cancelled by steering); a code is used once per visitor; discount gains scope/priority/hiddenAt, «Caducar» sets endsAt now; menu tab «Mis códigos» keeps id `descuentos`; /juego?evento=<id>&piloto=1 starts the autopilot; sandbox emits purchase_confirmed (agent)
 - 2026-09-29: T43 first integration hit a 5 s vitest timeout in lib/barco/catalog.test.ts under load (flaky, unrelated); reverted pair dropped and re-integrated green (orchestrator)
 - 2026-09-29: T43 and T44 start in parallel without /mar (plan 003 still there); /mar parts of T43 go to a follow-up after plan 003 (orchestrator)
@@ -188,6 +190,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 T44: Instagram in the WhatsApp boia panel (place-panels.tsx); invitation inside the checkout before buying; /mar position restore and invitations (after plan 003); prettier drift in circuit-hud.tsx and world-progress.ts
 - 2026-09-29 T43: /mar follow-up after plan 003 — use place-panels DiscountCard in sheet.tsx with onGoToIsland → engineRef.current?.startVoyage(islandId), EventDiscountBanner above the island buy button, e2e mirroring descuentos.spec.ts; banner above the event page buy button (landing); lib/barco/catalog.test.ts palette test is slow (≈5.7 s) and flaky under load, raise its timeout
 - 2026-09-29 T42: /mar island sheet lacks state notice, «Ver fotos de la isla», memories and satellites, still links /#fotos (after plan 003); local.ts confirmSandbox checks stored state, not eventState; Admin › Fotos can't set `selection` or `album.islandId`; satellites' common location not configurable; Supabase event columns missing
 - 2026-09-29 T39: T45 must point place-art.ts at boias#… and secreto#secreto and move them out of `extras`; T40 must unhide B01/B05/B06 skins hidden by catalog.ts notes; stale sources_sha256 in untouched place manifests; arcilla*.glb export not byte-stable (Blender decimate)
@@ -211,3 +214,5 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 18:12 T43 launched · attempt 1 · agent a21a8aec83ac19724 (no /mar)
 - 2026-09-29 18:12 T44 launched · attempt 1 · agent ad8707af4ade97d6a (no /mar)
 - 2026-09-29 18:42 T43 done · branch worktree-agent-a21a8aec83ac19724 → 75d9c55 (e2e: known «Barco» ×2, 2 load flakes pass alone)
+- 2026-09-29 18:45 T48 launched · attempt 1 · agent afe990571df86d31f
+- 2026-09-29 18:47 T44 done · branch worktree-agent-ad8707af4ade97d6a → 78671aa
