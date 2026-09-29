@@ -7,7 +7,7 @@ import { SAMPLE_CONTENT } from '../../../lib/landing/sample-content';
 import { CHECKOUT_COPY } from '../../../lib/ticketing/copy';
 import { EventCard } from './event-card';
 
-const base = SAMPLE_CONTENT.events.find(canBuy)!;
+const base = SAMPLE_CONTENT.events.find((e) => canBuy(e))!;
 const withState = (state: BoiaEvent['state']): BoiaEvent => ({ ...base, state });
 
 function card(event: BoiaEvent): string {

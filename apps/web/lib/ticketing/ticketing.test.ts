@@ -1,4 +1,4 @@
-import { type Discount, EVENT_STATE_BEHAVIOR, discountSchema } from '@boia/contracts';
+import { type Discount, EVENT_STATE_BEHAVIOR, discountSchema, eventState } from '@boia/contracts';
 import {
   type BoiaRepository,
   SAMPLE_ACHIEVEMENTS,
@@ -21,11 +21,14 @@ const naufrago = discounts.find(
   (d) => d.endsAt !== undefined && onSale.some((e) => e.id === d.eventId),
 )!;
 const naufragoEvent = onSale.find((e) => e.id === naufrago.eventId)!;
-const otherEvent = onSale.find((e) => e.id !== naufrago.eventId)!;
 const ticketAchievement = SAMPLE_ACHIEVEMENTS.find((a) => a.trigger === TICKET_TRIGGER)!;
 // «Ahora»: una semana antes de que caduque el descuento del náufrago.
 const VALID = new Date(Date.parse(naufrago.endsAt!) - 7 * DAY);
 const EXPIRED = new Date(Date.parse(naufrago.endsAt!) + DAY);
+// Otro evento que siga a la venta en `VALID` (el estado sale de las fechas, T42).
+const otherEvent = onSale.find(
+  (e) => e.id !== naufrago.eventId && eventState(e, VALID) === 'on_sale',
+)!;
 
 function setup(now = VALID) {
   const repo = createLocalRepository({ storage: null, now: () => now });

@@ -2,6 +2,7 @@ import type { Artist } from '@boia/contracts';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
+import { PHOTOS_HOME_COPY } from '../../../lib/landing/card-copy';
 import { t } from '../../../lib/landing/texts';
 import type { ResolvedBlock } from '../../../lib/landing/resolve';
 import { ArtistRotator } from './artist-rotator';
@@ -10,6 +11,8 @@ import { EventCard } from './event-card';
 
 /** Lista completa de artistas (v14 §18.1). */
 export const ARTISTS_PAGE = '/artistas';
+/** «Fotos y eventos» (T42): todas las fotos por isla y por evento. */
+export const PHOTOS_PAGE = '/fotos';
 
 /**
  * Lista de bloques ya resueltos (`resolveHome`), en el orden configurado. Un
@@ -244,6 +247,18 @@ export function BlockView({
                 </li>
               ))}
             </ul>
+            {/* Sólo la selección; todas, por isla y por evento, en su página (REQ-COM-031). */}
+            <p className="photos-all">
+              <Link
+                className="button button--ghost"
+                href={PHOTOS_PAGE}
+                prefetch={false}
+                aria-label={PHOTOS_HOME_COPY.allAria}
+                data-testid="ver-fotos"
+              >
+                {PHOTOS_HOME_COPY.all}
+              </Link>
+            </p>
           </div>
         </section>
       );

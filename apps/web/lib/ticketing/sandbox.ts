@@ -1,4 +1,4 @@
-import { EVENT_STATE_BEHAVIOR } from '@boia/contracts';
+import { EVENT_STATE_BEHAVIOR, eventKicker, eventState } from '@boia/contracts';
 import type { BoiaRepository } from '@boia/store';
 import { completeBySignal } from '../../app/juego/achievements';
 import type {
@@ -52,12 +52,13 @@ export function createSandboxTicketing(
       const view: CheckoutEvent = {
         id: event.id,
         name: event.name,
-        format: event.format,
+        format: eventKicker(event),
         startsAt: event.startsAt,
         timeZone: event.timeZone,
         placeLabel: event.placeLabel,
       };
-      if (!EVENT_STATE_BEHAVIOR[event.state].purchasable) {
+      // Con el estado de ahora (REQ-COM-004): un evento pasado ya no se compra.
+      if (!EVENT_STATE_BEHAVIOR[eventState(event, now())].purchasable) {
         return { ok: false, reason: 'not_on_sale', event: view };
       }
       const found = await repo.progress.discounts();
@@ -66,7 +67,7 @@ export function createSandboxTicketing(
         session: {
           purchaseId: newId(event.id),
           event: view,
-          quote: quoteFor(event.id, found, now()),
+          quote: quoteFor(event, found, now()),
           flow: { kind: 'inline' },
         },
       };

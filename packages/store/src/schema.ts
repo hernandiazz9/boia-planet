@@ -29,7 +29,7 @@ import { STABLE_KEY, STABLE_KEY_MAX } from './ids';
  * Subir `SCHEMA_VERSION` exige añadir la migración en `migrations.ts` con su
  * prueba.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const iso = z.string().min(1);
 const stableKey = z.string().max(STABLE_KEY_MAX).regex(STABLE_KEY);

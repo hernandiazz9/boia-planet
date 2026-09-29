@@ -106,8 +106,73 @@ function v1ToV2(doc: Record<string, unknown>): Record<string, unknown> {
   return { ...doc, players, ledger: [...ledger, ...extra] };
 }
 
+/**
+ * Precios `muestra` que vivían en `apps/web/lib/ticketing/pricing.ts` antes
+ * de pasar al evento (T42). Copia fija: una migración no lee el código vivo.
+ */
+export const V3_EVENT_PRICES_CENTS: Readonly<Record<string, number>> = {
+  'ev-all-day-primavera': 2500,
+  'ev-noche-mayo': 1500,
+};
+
+/** Clave de serie a partir del formato de texto libre de antes («Noche» → `noche`). */
+function seriesKey(text: string): string | undefined {
+  const key = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return key || undefined;
+}
+
+/**
+ * Un evento guardado por el Admin antes de T42, llevado a la forma nueva.
+ * `format` era texto libre: «All Day…» pasa a `all_day` y el resto a
+ * `satelite` con su texto como serie. El estado lo había puesto el Admin a
+ * mano: sigue a mano (`manual`), así nada cambia solo al migrar. El precio de
+ * la tabla vieja se copia al evento.
+ */
+function eventV2ToV3(value: unknown): unknown {
+  if (!isObject(value)) return value;
+  const e: Record<string, unknown> = { ...value };
+  if (e.format !== 'all_day' && e.format !== 'satelite') {
+    const text = typeof e.format === 'string' ? e.format : '';
+    if (/all\s*day/i.test(text)) e.format = 'all_day';
+    else {
+      e.format = 'satelite';
+      const series = seriesKey(text);
+      if (series && e.series === undefined) e.series = series;
+    }
+  }
+  e.stateSource ??= 'manual';
+  const id = typeof e.id === 'string' ? e.id : '';
+  if (e.priceCents === undefined && V3_EVENT_PRICES_CENTS[id] !== undefined) {
+    e.priceCents = V3_EVENT_PRICES_CENTS[id];
+  }
+  return e;
+}
+
+/**
+ * v2 → v3 (T42): el evento gana formato cerrado (All Day o satélite), serie,
+ * cartel, actividades, precio, apertura de venta y estado por fechas. Sólo
+ * se tocan los eventos que el Admin guardó; la foto gana `selection`, que
+ * por defecto es falso y no necesita migración.
+ */
+function v2ToV3(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isObject(doc.content) || !isObject(doc.content.items)) return doc;
+  const items = doc.content.items;
+  if (!isObject(items.events)) return doc;
+  const events: Record<string, unknown> = {};
+  for (const [id, o] of Object.entries(items.events)) {
+    events[id] = isObject(o) ? { ...o, value: eventV2ToV3(o.value) } : o;
+  }
+  return { ...doc, content: { ...doc.content, items: { ...items, events } } };
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, name: 'logros que se reclaman (T36)', up: v1ToV2 },
+  { from: 2, to: 3, name: 'eventos con formato, precio y estado por fechas (T42)', up: v2ToV3 },
 ];
 
 export type MigrationOutcome =

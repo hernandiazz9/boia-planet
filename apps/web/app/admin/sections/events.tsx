@@ -1,6 +1,16 @@
 'use client';
 
-import { EVENT_STATES, type BoiaEvent, type EventState } from '@boia/contracts';
+import {
+  EVENT_FORMATS,
+  EVENT_FORMAT_LABELS,
+  EVENT_STATES,
+  type BoiaEvent,
+  type EventFormat,
+  type EventState,
+  type EventStateSource,
+  effectiveEvents,
+  eventState,
+} from '@boia/contracts';
 import { useState } from 'react';
 import type { EventInput } from '../../../lib/admin/actions';
 import { ADMIN_COPY } from '../../../lib/admin/copy';
@@ -22,16 +32,31 @@ export const STATE_LABELS: Record<EventState, string> = {
 
 const SANDBOX_TICKETS = 'https://example.com/boia-sandbox/tickets';
 
+export const SOURCE_LABELS: Record<EventStateSource, string> = {
+  dates: 'Por fechas',
+  manual: 'A mano',
+};
+
 interface Draft {
   id?: string;
   slug?: string;
   name: string;
-  format: string;
+  format: EventFormat;
+  series: string;
   startsAt: string;
+  endsAt: string;
+  saleOpensAt: string;
   placeLabel: string;
   state: EventState;
+  stateSource: EventStateSource;
   stateNote: string;
   description: string;
+  /** Una actividad por línea. */
+  activities: string;
+  posterUrl: string;
+  /** Precio en euros, como se escribe («12,50»). */
+  price: string;
+  priceSample: boolean;
   ticketUrl: string;
   islandId: string;
   artistIds: string[];
@@ -40,16 +65,36 @@ interface Draft {
 
 const EMPTY: Draft = {
   name: '',
-  format: 'All Day BOIA',
+  format: 'all_day',
+  series: '',
   startsAt: '',
+  endsAt: '',
+  saleOpensAt: '',
   placeLabel: 'Alicante',
   state: 'draft',
+  stateSource: 'dates',
   stateNote: '',
   description: '',
+  activities: '',
+  posterUrl: '',
+  price: '',
+  priceSample: true,
   ticketUrl: '',
   islandId: '',
   artistIds: [],
 };
+
+const euros = (cents: number | undefined) =>
+  cents === undefined ? '' : (cents / 100).toFixed(2).replace('.', ',');
+
+/** «12,50» → 1250. null si no es un importe. */
+export function centsOf(price: string): number | null {
+  const m = price
+    .trim()
+    .replace(',', '.')
+    .match(/^\d+(\.\d{1,2})?$/);
+  return m ? Math.round(Number(m[0]) * 100) : null;
+}
 
 function draftOf(e: BoiaEvent): Draft {
   return {
@@ -57,16 +102,32 @@ function draftOf(e: BoiaEvent): Draft {
     slug: e.slug,
     name: e.name,
     format: e.format,
+    series: e.series ?? '',
     startsAt: isoToLocal(e.startsAt, e.timeZone),
+    endsAt: isoToLocal(e.endsAt, e.timeZone),
+    saleOpensAt: isoToLocal(e.saleOpensAt, e.timeZone),
     placeLabel: e.placeLabel,
     state: e.state,
+    stateSource: e.stateSource,
     stateNote: e.stateNote ?? '',
     description: e.description,
+    activities: e.activities.join('\n'),
+    posterUrl: e.posterUrl ?? '',
+    price: euros(e.priceCents),
+    priceSample: e.priceSample,
     ticketUrl: e.ticketUrl ?? '',
     islandId: e.islandId ?? '',
     artistIds: e.artistIds,
     sample: e.sample,
   };
+}
+
+/** Fecha opcional del formulario → ISO con zona, o undefined; lanza si está mal escrita. */
+function optionalIso(local: string, what: string): string | undefined {
+  if (!local) return undefined;
+  const iso = localToIso(local, DEFAULT_TIME_ZONE);
+  if (!iso) throw new Error(`${what}: fecha no válida`);
+  return iso;
 }
 
 function EventForm({
@@ -90,6 +151,15 @@ function EventForm({
     run(async () => {
       const startsAt = localToIso(d.startsAt, DEFAULT_TIME_ZONE);
       if (!startsAt) throw new Error('falta la fecha y hora del evento');
+      const endsAt = optionalIso(d.endsAt, 'fin');
+      const saleOpensAt = optionalIso(d.saleOpensAt, 'apertura de la venta');
+      const priceCents = d.price.trim() ? centsOf(d.price) : undefined;
+      if (priceCents === null) throw new Error('precio: escribe un importe en euros, p. ej. 12,50');
+      // Con apertura de venta y estado por fechas, se guarda «a la venta»: las
+      // fechas enseñan «próximamente» hasta que abre (REQ-COM-004).
+      const state =
+        d.stateSource === 'dates' && saleOpensAt && d.state === 'coming_soon' ? 'on_sale' : d.state;
+      const series = d.series.trim();
       const input: EventInput = {
         ...(d.id ? { id: d.id } : {}),
         ...(d.slug ? { slug: d.slug } : {}),
@@ -98,9 +168,20 @@ function EventForm({
         startsAt,
         timeZone: DEFAULT_TIME_ZONE,
         placeLabel: d.placeLabel,
-        state: d.state,
+        state,
+        stateSource: d.stateSource,
         description: d.description,
         artistIds: d.artistIds,
+        activities: d.activities
+          .split('\n')
+          .map((a) => a.trim())
+          .filter(Boolean),
+        priceSample: d.priceSample,
+        ...(series ? { series } : {}),
+        ...(endsAt ? { endsAt } : {}),
+        ...(saleOpensAt ? { saleOpensAt } : {}),
+        ...(priceCents !== undefined ? { priceCents } : {}),
+        ...(d.posterUrl.trim() ? { posterUrl: d.posterUrl.trim() } : {}),
         ...(d.stateNote ? { stateNote: d.stateNote } : {}),
         ...(d.ticketUrl ? { ticketUrl: d.ticketUrl } : {}),
         ...(d.islandId ? { islandId: d.islandId } : {}),
@@ -129,8 +210,26 @@ function EventForm({
             data-testid="evento-nombre"
           />
         </Field>
-        <Field label="Formato">
-          <input required value={d.format} onChange={(e) => set('format', e.target.value)} />
+        <Field label="Formato" hint="Un satélite sin isla sale en la isla del próximo All Day.">
+          <select
+            value={d.format}
+            onChange={(e) => set('format', e.target.value as EventFormat)}
+            data-testid="evento-formato"
+          >
+            {EVENT_FORMATS.map((f) => (
+              <option key={f} value={f}>
+                {EVENT_FORMAT_LABELS[f]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Serie" hint="Clave en minúsculas: boia-club, noche… Sale en las tarjetas.">
+          <input
+            value={d.series}
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+            onChange={(e) => set('series', e.target.value)}
+            data-testid="evento-serie"
+          />
         </Field>
         <Field label="Fecha y hora (Alicante)">
           <input
@@ -139,6 +238,22 @@ function EventForm({
             value={d.startsAt}
             onChange={(e) => set('startsAt', e.target.value)}
             data-testid="evento-fecha"
+          />
+        </Field>
+        <Field label="Fin (opcional)" hint="Sin fin: 12 h después del inicio. Pasado, finaliza.">
+          <input
+            type="datetime-local"
+            value={d.endsAt}
+            onChange={(e) => set('endsAt', e.target.value)}
+            data-testid="evento-fin"
+          />
+        </Field>
+        <Field label="Apertura de la venta (opcional)" hint="Antes: «Próximamente».">
+          <input
+            type="datetime-local"
+            value={d.saleOpensAt}
+            onChange={(e) => set('saleOpensAt', e.target.value)}
+            data-testid="evento-apertura"
           />
         </Field>
         <Field label="Lugar público" hint="Nunca la dirección de una ubicación secreta.">
@@ -161,6 +276,22 @@ function EventForm({
             ))}
           </select>
         </Field>
+        <Field
+          label="Cambio de estado"
+          hint="Por fechas: próximamente → a la venta → finalizado solos. A mano: no cambia."
+        >
+          <select
+            value={d.stateSource}
+            onChange={(e) => set('stateSource', e.target.value as EventStateSource)}
+            data-testid="evento-origen-estado"
+          >
+            {(['dates', 'manual'] as const).map((src) => (
+              <option key={src} value={src}>
+                {SOURCE_LABELS[src]}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="Nota del estado" hint="Para pospuesto o cancelado.">
           <input value={d.stateNote} onChange={(e) => set('stateNote', e.target.value)} />
         </Field>
@@ -178,6 +309,30 @@ function EventForm({
             ))}
           </select>
         </Field>
+        <Field label="Precio (€)" hint="Precio de la compra de prueba.">
+          <input
+            inputMode="decimal"
+            value={d.price}
+            placeholder="20,00"
+            onChange={(e) => set('price', e.target.value)}
+            data-testid="evento-precio"
+          />
+        </Field>
+        <Field label="Precio de muestra">
+          <input
+            type="checkbox"
+            checked={d.priceSample}
+            onChange={(e) => set('priceSample', e.target.checked)}
+          />
+        </Field>
+        <Field label="Cartel (URL)" hint="Vacío: «Cartel próximamente».">
+          <input
+            value={d.posterUrl}
+            placeholder="https://… o /…"
+            onChange={(e) => set('posterUrl', e.target.value)}
+            data-testid="evento-cartel"
+          />
+        </Field>
         <Field label="Enlace de entradas" hint="Sandbox hasta que haya ticketera (D-06, D-20).">
           <input
             type="url"
@@ -193,6 +348,14 @@ function EventForm({
           rows={3}
           value={d.description}
           onChange={(e) => set('description', e.target.value)}
+        />
+      </Field>
+      <Field label="Actividades" hint="Una por línea.">
+        <textarea
+          rows={3}
+          value={d.activities}
+          onChange={(e) => set('activities', e.target.value)}
+          data-testid="evento-actividades"
         />
       </Field>
       <details className="admin-details">
@@ -258,6 +421,7 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
   const changedSet = new Set(changed ?? []);
   const now = new Date();
   const worldPlaces = ctx.registry.get(ctx.registry.defaultId).places;
+  const current = effectiveEvents(events, now);
   const islandName = (id: string | undefined) =>
     id ? (worldPlaces.find((p) => p.id === id)?.name ?? id) : '—';
 
@@ -265,7 +429,7 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
     <section>
       <SectionHead
         title="Eventos"
-        lead="Cada evento tiene uno de los siete estados, que se cambia a mano, y puede ir a una isla."
+        lead="Cada evento tiene uno de los siete estados: por fechas (próximamente → a la venta → finalizado) o fijado a mano, con auditoría. Puede ir a una isla."
       >
         <button
           type="button"
@@ -293,8 +457,12 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
                 <strong>{e.name}</strong> <Changed on={changedSet.has(e.id)} />
                 <p className="admin-meta">
                   {isoToLocal(e.startsAt, e.timeZone).replace('T', ' ')} · {e.placeLabel} · isla:{' '}
-                  {islandName(e.islandId)}
+                  {islandName(e.islandId)} · {EVENT_FORMAT_LABELS[e.format]}
                   {e.sample ? ' · muestra' : ''}
+                </p>
+                <p className="admin-meta" data-testid={`evento-ahora-${e.id}`}>
+                  Ahora: {STATE_LABELS[eventState(e, now)]} (
+                  {SOURCE_LABELS[e.stateSource].toLowerCase()})
                 </p>
               </div>
               <label className="admin-field admin-field--inline">
@@ -303,11 +471,16 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
                   value={e.state}
                   disabled={busy}
                   data-testid={`evento-estado-${e.id}`}
-                  onChange={(ev) =>
+                  onChange={(ev) => {
+                    // Cambiarlo aquí es corregirlo a mano: las fechas ya no lo tocan (REQ-COM-004).
+                    const state = ev.target.value as EventState;
                     void run(() =>
-                      ctx.actions.setEventState(e.id, ev.target.value as EventState, e.stateNote),
-                    )
-                  }
+                      ctx.actions.saveEvent(
+                        { ...e, state, stateSource: 'manual' },
+                        `estado a mano: ${state}`,
+                      ),
+                    );
+                  }}
                 >
                   {EVENT_STATES.map((s) => (
                     <option key={s} value={s}>
@@ -380,13 +553,13 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
       <p className="admin-lead">{ADMIN_COPY.islandKeepsMemories}</p>
       <ul className="admin-list" data-testid="islas-eventos">
         {eventIslands(ctx.registry.map).map((p) => {
-          const current = islandEvent(p.id, events, now);
-          const memories = islandMemories(p.id, events, now);
+          const opens = islandEvent(p.id, current, now);
+          const memories = islandMemories(p.id, current, now);
           return (
             <li key={p.id} className="admin-card" data-testid={`isla-${p.id}`}>
               <strong>{islandName(p.id)}</strong>
               <p className="admin-meta">
-                Abre ahora: {current ? current.name : 'su panel de isla (sin evento vigente)'}
+                Abre ahora: {opens ? opens.name : 'su panel de isla (sin evento vigente)'}
               </p>
               <p className="admin-meta">
                 Recuerdos:{' '}

@@ -1,19 +1,21 @@
-import { type Discount, discountStatus } from '@boia/contracts';
+import { type BoiaEvent, type Discount, discountStatus } from '@boia/contracts';
+import { SAMPLE_CONTENT } from '../landing/sample-content';
 import type { AppliedDiscount, Quote } from './adapter';
 
 /**
- * Precios de la compra de prueba, en céntimos. Todos `muestra`: el precio real
- * lo pone la ticketera cuando Álvaro la contrate (D-06). Un evento sin precio
- * aquí usa `DEFAULT_SAMPLE_PRICE_CENTS`.
+ * Precios de la compra de prueba, en céntimos. El precio es del evento
+ * (`priceCents`, T42; antes vivía aquí en una tabla) y es `muestra` hasta que
+ * lo ponga la ticketera que contrate Álvaro (D-06). Un evento sin precio usa
+ * `DEFAULT_SAMPLE_PRICE_CENTS`.
  */
-export const SAMPLE_PRICES_CENTS: Readonly<Record<string, number>> = {
-  'ev-all-day-primavera': 2500,
-  'ev-noche-mayo': 1500,
-};
 export const DEFAULT_SAMPLE_PRICE_CENTS = 2000;
 
-export function samplePriceCents(eventId: string): number {
-  return SAMPLE_PRICES_CENTS[eventId] ?? DEFAULT_SAMPLE_PRICE_CENTS;
+type Priced = Pick<BoiaEvent, 'id' | 'priceCents'>;
+
+/** Precio de un evento; con sólo el id, el del evento de la muestra. */
+export function samplePriceCents(event: Priced | string): number {
+  const e = typeof event === 'string' ? SAMPLE_CONTENT.events.find((x) => x.id === event) : event;
+  return e?.priceCents ?? DEFAULT_SAMPLE_PRICE_CENTS;
 }
 
 /** Lo que descuenta un código sobre un precio, sin pasar de ese precio. */
@@ -49,12 +51,13 @@ export function applicableDiscount(
 }
 
 export function quoteFor(
-  eventId: string,
+  event: Priced | string,
   found: readonly { discount: Discount }[],
   now: Date,
   quantity = 1,
 ): Quote {
-  const unitCents = samplePriceCents(eventId);
+  const eventId = typeof event === 'string' ? event : event.id;
+  const unitCents = samplePriceCents(event);
   const discount = applicableDiscount(eventId, found, unitCents, now);
   const totalCents = Math.max(0, unitCents * quantity - (discount?.cents ?? 0));
   return { currency: 'EUR', unitCents, quantity, discount, totalCents, sample: true };

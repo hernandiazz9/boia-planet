@@ -1,4 +1,5 @@
 export * from './events';
+export * from './event-labels';
 export * from './home-blocks';
 export * from './content';
 export * from './analytics';

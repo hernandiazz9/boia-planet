@@ -100,3 +100,87 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* T42: estado del evento, recuerdos con cartel, fotos de la isla y satélites. */
+.juego-panel {
+  max-height: 72svh;
+  overflow-y: auto;
+}
+.juego-estado {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: #e5e7eb;
+  color: #12233f;
+}
+.juego-estado.is-sold_out,
+.juego-estado.is-cancelled {
+  background: #ffd9d2;
+  color: #5a1409;
+}
+.juego-estado.is-postponed,
+.juego-estado.is-coming_soon {
+  background: #fff1c7;
+  color: #6b4a00;
+}
+.juego-panel-aviso {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border-left: 4px solid #f26a1b;
+  background: #fdebd9;
+  font-weight: 600;
+}
+.juego-panel-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.juego-panel-links a,
+.juego-panel-link,
+.juego-panel-warmup a {
+  color: #c2410c;
+  font-weight: 700;
+}
+.juego-panel-warmup {
+  display: block;
+  font-size: 13px;
+}
+.juego-recuerdos {
+  list-style: none;
+  padding: 0 !important;
+  display: grid;
+  gap: 8px;
+}
+.juego-recuerdos li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.juego-cartel {
+  flex: none;
+  width: 54px;
+  aspect-ratio: 3 / 4;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.juego-cartel.is-texto {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #1b4a73, #0b1830);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+}
+.juego-cartel-fila .juego-cartel {
+  width: 96px;
+  font-size: 12px;
+}

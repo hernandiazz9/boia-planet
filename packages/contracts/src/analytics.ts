@@ -21,7 +21,7 @@ export interface FunnelEventProps {
   tickets_panel_open: { source: 'hero' | 'header' | 'deep_link' | 'event' };
   ticket_click_out: {
     eventId: string;
-    source: 'priority_event' | 'upcoming_events' | 'tickets_panel';
+    source: 'priority_event' | 'upcoming_events' | 'tickets_panel' | 'event_page';
   };
   purchase_confirmed: { eventId: string; provider: string; orderRef: string };
 }

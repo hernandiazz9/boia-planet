@@ -1,5 +1,6 @@
-import { homeContentSchema, type HomeContent } from '@boia/contracts';
+import { type Album, albumSchema, homeContentSchema, type HomeContent } from '@boia/contracts';
 import {
+  SAMPLE_ALBUMS,
   SAMPLE_ARTISTS,
   SAMPLE_EVENTS,
   SAMPLE_HOME_BLOCKS,
@@ -21,3 +22,6 @@ export const SAMPLE_CONTENT: HomeContent = homeContentSchema.parse({
   photos: SAMPLE_PHOTOS,
   promotions: SAMPLE_PROMOTIONS,
 });
+
+/** Álbumes de la muestra (la home no los usa; sí «Fotos y eventos» y la ficha de evento). */
+export const SAMPLE_ALBUM_CONTENT: Album[] = SAMPLE_ALBUMS.map((a) => albumSchema.parse(a));

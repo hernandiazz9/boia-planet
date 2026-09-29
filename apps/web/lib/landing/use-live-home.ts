@@ -1,6 +1,7 @@
 'use client';
 
 import type { HomeContent } from '@boia/contracts';
+import type { BoiaRepository } from '@boia/store';
 import { useEffect, useRef, useState } from 'react';
 import { setTextOverrides } from './texts';
 
@@ -40,9 +41,25 @@ export function useLiveHome<V>(
   initial: V,
   derive: (content: HomeContent, now: Date) => V | Promise<V>,
 ): LiveHome<V> {
-  const [state, setState] = useState<LiveHome<V>>(() => ({ view: initial, live: false }));
   const deriveRef = useRef(derive);
   deriveRef.current = derive;
+  return useLiveRepo(initial, async (repo, now) =>
+    deriveRef.current(await repo.content.home(), now),
+  );
+}
+
+/**
+ * Como `useLiveHome`, pero leyendo del repositorio lo que haga falta (la
+ * ficha de evento y «Fotos y eventos» leen también los álbumes, T42). Pone
+ * los textos del Admin y vuelve a leer con cada cambio de contenido.
+ */
+export function useLiveRepo<V>(
+  initial: V,
+  read: (repo: BoiaRepository, now: Date) => Promise<V>,
+): LiveHome<V> {
+  const [state, setState] = useState<LiveHome<V>>(() => ({ view: initial, live: false }));
+  const readRef = useRef(read);
+  readRef.current = read;
 
   useEffect(() => {
     let alive = true;
@@ -52,17 +69,19 @@ export function useLiveHome<V>(
         .then(({ gameRepository }) => {
           if (!alive) return;
           const repo = gameRepository();
-          const read = async () => {
-            const [content, texts] = await Promise.all([repo.content.home(), repo.content.texts()]);
-            const view = await deriveRef.current(content, new Date());
+          const refresh = async () => {
+            const [view, texts] = await Promise.all([
+              readRef.current(repo, new Date()),
+              repo.content.texts(),
+            ]);
             if (!alive) return;
             setTextOverrides(texts);
             setState({ view, live: true });
           };
           off = repo.subscribe(({ areas }) => {
-            if (areas.includes('content')) void read();
+            if (areas.includes('content')) void refresh();
           });
-          return read();
+          return refresh();
         })
         .catch((err: unknown) =>
           console.warn('[boia] no se pudo leer el contenido del Admin', err),

@@ -1,11 +1,20 @@
 'use client';
 
-import { type BoiaEvent, EVENT_STATE_BEHAVIOR } from '@boia/contracts';
+import {
+  type BoiaEvent,
+  eventKicker,
+  isIslandlessSatellite,
+  islandUpcomingEvents,
+  nextAllDay,
+  upcomingEvents as listedUpcoming,
+} from '@boia/contracts';
 import type { FoundDiscount } from '@boia/store';
 import type { WorldObject } from '@boia/world';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { islandMemories } from '../../lib/admin/world';
+import { EVENTOS_COPY } from '../../lib/landing/eventos-copy';
+import { eventHref, galleryAnchor, photosHref } from '../../lib/landing/eventos';
 import { liveContent } from '../../lib/landing/live-content';
 import './place-panels.css';
 
@@ -38,15 +47,19 @@ function formatDate(iso: string, timeZone: string): string {
   }).format(new Date(iso));
 }
 
-/** Próximos eventos: el de la isla primero, luego el prioritario y el resto por fecha. */
-export function upcomingEvents(islandEventId?: string, limit = 3): BoiaEvent[] {
-  const priorityBlock = block('priority_event');
-  const priority = priorityBlock?.type === 'priority_event' ? priorityBlock.eventId : undefined;
-  const rank = (e: BoiaEvent) => (e.id === islandEventId ? 0 : e.id === priority ? 1 : 2);
-  return liveContent()
-    .events    .filter((e) => EVENT_STATE_BEHAVIOR[e.state].listed && e.state !== 'finished')
-    .sort((a, b) => rank(a) - rank(b) || a.startsAt.localeCompare(b.startsAt))
-    .slice(0, limit);
+/**
+ * Próximos eventos de una isla (REQ-AVE-014, REQ-COM-005): primero los suyos
+ * y, si es la localización común, los satélites sin isla (O7); después, hasta
+ * `limit`, los demás próximos por fecha. `excludeId`: el que la isla ya
+ * enseña arriba. Con su estado de ahora (REQ-COM-004).
+ */
+export function upcomingEvents(islandId?: string, limit = 4, excludeId?: string): BoiaEvent[] {
+  const now = new Date();
+  const events = liveContent(now).events;
+  const own = islandId ? islandUpcomingEvents(islandId, events, now, excludeId) : [];
+  const ids = new Set([...own.map((e) => e.id), excludeId]);
+  const rest = listedUpcoming(events, now).filter((e) => !ids.has(e.id));
+  return [...own, ...rest].slice(0, Math.max(limit, own.length));
 }
 
 function textOf(o: WorldObject | undefined, key: string): string | undefined {
@@ -62,20 +75,67 @@ function Close({ onClose }: { onClose: () => void }) {
   );
 }
 
-function Upcoming({ onSteer }: { onSteer: (eventId: string) => boolean }) {
-  const events = upcomingEvents();
+/** Nombre de un estado sin compra, para la lista (el «a la venta» no se rotula). */
+function StateTag({ event }: { event: BoiaEvent }) {
+  if (event.state === 'on_sale') return null;
+  return (
+    <span className={`juego-estado is-${event.state}`} data-testid="estado-evento">
+      {EVENTOS_COPY.state[event.state]}
+    </span>
+  );
+}
+
+/**
+ * «Próximos eventos» de una isla (REQ-AVE-014), con la línea «Calienta para
+ * el próximo All Day» de los satélites sin isla (REQ-COM-010, O7). Cada
+ * evento enlaza a su ficha; los que tienen isla, además, ponen rumbo a ella.
+ */
+export function IslandUpcoming({
+  islandId,
+  excludeId,
+  onSteer,
+}: {
+  islandId?: string | undefined;
+  excludeId?: string | undefined;
+  onSteer?: ((eventId: string) => boolean) | undefined;
+}) {
+  const events = upcomingEvents(islandId, 4, excludeId);
   if (events.length === 0) return null;
+  const now = new Date();
+  const next = nextAllDay(liveContent(now).events, now);
   return (
     <div className="juego-panel-block" data-testid="panel-proximos">
-      <h3>Próximos eventos</h3>
+      <h3>{EVENTOS_COPY.island.upcomingHeading}</h3>
       <ul>
         {events.map((e) => (
-          <li key={e.id}>
-            <strong>{e.name}</strong> · {formatDate(e.startsAt, e.timeZone)}
-            {e.sample ? ' · muestra' : ''}{' '}
-            <button type="button" className="juego-link-button" onClick={() => onSteer(e.id)}>
-              Rumbo a su isla
-            </button>
+          <li key={e.id} data-evento={e.id}>
+            <Link href={eventHref(e.slug)} prefetch={false}>
+              <strong>{e.name}</strong>
+            </Link>{' '}
+            · {formatDate(e.startsAt, e.timeZone)}
+            {e.series ? ` · ${eventKicker(e)}` : ''}
+            {e.sample ? ' · muestra' : ''} <StateTag event={e} />
+            {isIslandlessSatellite(e) ? (
+              <span className="juego-panel-warmup" data-testid={`calienta-${e.id}`}>
+                {next ? (
+                  <>
+                    {EVENTOS_COPY.warmup}:{' '}
+                    <Link href={eventHref(next.slug)} prefetch={false}>
+                      {next.name}
+                    </Link>
+                  </>
+                ) : (
+                  EVENTOS_COPY.warmupNone
+                )}
+              </span>
+            ) : onSteer && e.islandId && e.islandId !== islandId ? (
+              <>
+                {' '}
+                <button type="button" className="juego-link-button" onClick={() => onSteer(e.id)}>
+                  {EVENTOS_COPY.island.steer}
+                </button>
+              </>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -83,19 +143,64 @@ function Upcoming({ onSteer }: { onSteer: (eventId: string) => boolean }) {
   );
 }
 
-/** Los eventos que ya pasaron por esta isla: la isla se queda con ellos (T26, REQ-COM-002). */
-function Memories({ placeId }: { placeId: string }) {
+/** «Ver fotos de la isla» (D-23, punto 7): «Fotos y eventos» en la galería de esta isla. */
+export function IslandPhotosLink({ islandId }: { islandId: string }) {
+  return (
+    <a
+      className="juego-panel-link"
+      href={photosHref(galleryAnchor({ islandId, slug: islandId }))}
+      data-testid="ver-fotos-isla"
+    >
+      {EVENTOS_COPY.island.photosCta}
+    </a>
+  );
+}
+
+/** Cartel de un evento: la imagen o un cartel de texto con su nombre. */
+function Poster({ event }: { event: BoiaEvent }) {
+  if (event.posterUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- cartel del Admin, dominio aún sin fijar
+      <img
+        className="juego-cartel"
+        src={event.posterUrl}
+        alt={EVENTOS_COPY.posterAlt(event.name)}
+      />
+    );
+  }
+  return (
+    <span
+      className="juego-cartel is-texto"
+      role="img"
+      aria-label={EVENTOS_COPY.posterAlt(event.name)}
+    >
+      {event.name}
+    </span>
+  );
+}
+
+/**
+ * Los eventos que ya pasaron por esta isla, con su cartel: la isla se queda
+ * con ellos (T26, REQ-COM-002, REQ-COM-005).
+ */
+export function IslandMemories({ placeId }: { placeId: string }) {
   const memories = islandMemories(placeId, liveContent().events, new Date());
   if (memories.length === 0) {
-    return <p className="juego-panel-pending">Fotos y recuerdos de esta isla: próximamente.</p>;
+    return <p className="juego-panel-pending">{EVENTOS_COPY.island.memoriesEmpty}</p>;
   }
   return (
     <div className="juego-panel-block" data-testid="panel-recuerdos">
-      <h3>Recuerdos de esta isla</h3>
-      <ul>
+      <h3>{EVENTOS_COPY.island.memoriesHeading}</h3>
+      <ul className="juego-recuerdos">
         {memories.map((e) => (
-          <li key={e.id}>
-            <strong>{e.name}</strong> · {formatDate(e.startsAt, e.timeZone)}
+          <li key={e.id} data-evento={e.id} data-estado={e.state}>
+            <Poster event={e} />
+            <span>
+              <Link href={eventHref(e.slug)} prefetch={false}>
+                <strong>{e.name}</strong>
+              </Link>{' '}
+              · {formatDate(e.startsAt, e.timeZone)} <StateTag event={e} />
+            </span>
           </li>
         ))}
       </ul>
@@ -131,8 +236,13 @@ export function PlacePanel({
             </li>
           ))}
         </ul>
-        <Link className="juego-panel-cta" href="/#fotos" data-testid="panel-fotos-galeria">
-          Ver la galería
+        <Link
+          className="juego-panel-cta"
+          href={photosHref()}
+          prefetch={false}
+          data-testid="panel-fotos-galeria"
+        >
+          Ver «Fotos y eventos»
         </Link>
       </section>
     );
@@ -189,8 +299,9 @@ export function PlacePanel({
       <p className="juego-panel-kicker">{textOf(object, 'kicker') ?? 'Isla'} · muestra</p>
       <h2>{name}</h2>
       {textOf(object, 'body') ? <p>{textOf(object, 'body')}</p> : null}
-      <Memories placeId={state.objectId} />
-      <Upcoming onSteer={onSteer} />
+      <IslandMemories placeId={state.objectId} />
+      <IslandPhotosLink islandId={state.objectId} />
+      <IslandUpcoming islandId={state.objectId} onSteer={onSteer} />
     </section>
   );
 }
@@ -227,7 +338,10 @@ export function DiscountCard({ found, testId }: { found: FoundDiscount; testId?:
       <p className="juego-descuento-label">{d.label}</p>
       <p className="juego-descuento-code">
         <code data-testid="descuento-codigo">{d.code}</code>{' '}
-        <span className={`juego-descuento-status is-${found.status}`} data-testid="descuento-estado">
+        <span
+          className={`juego-descuento-status is-${found.status}`}
+          data-testid="descuento-estado"
+        >
           {STATUS[found.status]}
         </span>
       </p>
@@ -263,11 +377,17 @@ export function DiscountCard({ found, testId }: { found: FoundDiscount; testId?:
 
 export function DiscountPanel({ found, onClose }: { found: FoundDiscount; onClose: () => void }) {
   return (
-    <section className="juego-panel" data-testid="panel-descuento" aria-label="Descuento encontrado">
+    <section
+      className="juego-panel"
+      data-testid="panel-descuento"
+      aria-label="Descuento encontrado"
+    >
       <Close onClose={onClose} />
       <p className="juego-panel-kicker">Descuento encontrado · muestra</p>
       <DiscountCard found={found} />
-      <p className="juego-panel-pending">Lo tienes guardado en el Menú de a bordo, en Descuentos.</p>
+      <p className="juego-panel-pending">
+        Lo tienes guardado en el Menú de a bordo, en Descuentos.
+      </p>
     </section>
   );
 }

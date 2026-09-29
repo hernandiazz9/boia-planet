@@ -1,6 +1,9 @@
 import {
   canBuy,
+  effectiveEvents,
   hasActivePromotion,
+  isIslandlessSatellite,
+  nextAllDay,
   isBlockScheduled,
   resolvePriorityEvent,
   upcomingEvents,
@@ -73,7 +76,9 @@ export function resolveBlock(
       return block.paragraphs.length > 0 || block.verbs.length > 0 ? block : null;
 
     case 'photos': {
+      // Sólo la selección de Álvaro (D-23, respuesta 6); el resto, en /fotos.
       const photos = content.photos
+        .filter((p) => p.selection)
         .filter((p) => block.albumId === undefined || p.albumId === block.albumId)
         .slice(0, block.limit);
       return photos.length > 0 ? { ...block, photos } : null;
@@ -105,19 +110,32 @@ export function shownPriorityEvent(content: HomeContent, now: Date): BoiaEvent |
  * compra disponible. `onSale` es falso si no hay nada que comprar: entonces
  * el panel dice «Próximamente» sin inventar entradas.
  */
-export function resolveTicketsPanel(
-  content: HomeContent,
-  now: Date,
-): { featured: BoiaEvent | undefined; others: BoiaEvent[]; onSale: boolean } {
+export function resolveTicketsPanel(content: HomeContent, now: Date): TicketsView {
   const priorityBlock = content.blocks.find(
     (b): b is HomeBlockOf<'priority_event'> => b.type === 'priority_event',
   );
   const featured = resolvePriorityEvent(content.events, priorityBlock?.eventId, now);
   const others = upcomingEvents(content.events, now)
-    .filter(canBuy)
+    .filter((e) => canBuy(e))
     .filter((e) => e.id !== featured?.id);
   const onSale = others.length > 0 || (featured !== undefined && canBuy(featured));
-  return { featured, others, onSale };
+  // Los satélites sin isla enlazan al próximo All Day (REQ-COM-010, O7).
+  const hasSatellite = [featured, ...others].some((e) => e && isIslandlessSatellite(e));
+  const next = hasSatellite ? nextAllDay(content.events, now) : undefined;
+  return {
+    featured,
+    others,
+    onSale,
+    nextAllDay: next ? { name: next.name, slug: next.slug } : null,
+  };
+}
+
+export interface TicketsView {
+  featured: BoiaEvent | undefined;
+  others: BoiaEvent[];
+  onSale: boolean;
+  /** El próximo All Day, para la línea de los satélites; null si no hay. */
+  nextAllDay: { name: string; slug: string } | null;
 }
 
 /** id de ancla de cada tipo de bloque, para enlazar sólo secciones que existen. */
@@ -152,23 +170,24 @@ export interface HomeView {
   main: ResolvedBlock[];
   footer: ResolvedBlock[];
   sections: string[];
-  tickets: { featured: BoiaEvent | undefined; others: BoiaEvent[]; onSale: boolean };
+  tickets: TicketsView;
   artists: Artist[];
   /** ids de los eventos con compra disponible (`canBuy`). */
   buyable: string[];
 }
 
-export function resolveHome(content: HomeContent, now: Date): HomeView {
+export function resolveHome(stored: HomeContent, now: Date): HomeView {
+  // Cada evento con su estado de ahora (REQ-COM-004): lo pintado no depende
+  // de que alguien cambie el estado a mano cuando pasa la fecha.
+  const content: HomeContent = { ...stored, events: effectiveEvents(stored.events, now) };
   const resolved = (blocks: readonly HomeBlock[]) =>
-    blocks
-      .map((b) => resolveBlock(b, content, now))
-      .filter((b): b is ResolvedBlock => b !== null);
+    blocks.map((b) => resolveBlock(b, content, now)).filter((b): b is ResolvedBlock => b !== null);
   return {
     main: resolved(content.blocks.filter((b) => b.type !== 'footer')),
     footer: resolved(content.blocks.filter((b) => b.type === 'footer')),
     sections: landingSections(content, now),
     tickets: resolveTicketsPanel(content, now),
     artists: content.artists,
-    buyable: content.events.filter(canBuy).map((e) => e.id),
+    buyable: content.events.filter((e) => canBuy(e)).map((e) => e.id),
   };
 }

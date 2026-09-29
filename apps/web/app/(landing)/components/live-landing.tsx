@@ -44,6 +44,7 @@ export function LiveLanding({ initial, heroScene }: { initial: HomeView; heroSce
         featured={view.tickets.featured}
         others={view.tickets.others}
         onSale={view.tickets.onSale}
+        nextAllDay={view.tickets.nextAllDay}
         artists={view.artists}
         buyable={buyable}
       />

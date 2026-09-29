@@ -20,6 +20,11 @@ export const photoSchema = z.object({
   src: z.url().optional(),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
+  /**
+   * Selección de Álvaro (D-23, respuesta 6): la home enseña sólo estas; el
+   * resto se ve en «Fotos y eventos» (`/fotos`, REQ-COM-031).
+   */
+  selection: z.boolean().default(false),
 });
 export type Photo = z.infer<typeof photoSchema>;
 
@@ -28,6 +33,11 @@ export const albumSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   eventId: z.string().optional(),
+  /**
+   * Isla del álbum si no es de un evento («Tardes en la cala»). Si es de un
+   * evento, su galería es la de la isla del evento (REQ-COM-031).
+   */
+  islandId: z.string().optional(),
   /** Fecha del álbum en ISO 8601 con zona. */
   date: z.iso.datetime({ offset: true }).optional(),
   coverPhotoId: z.string().optional(),

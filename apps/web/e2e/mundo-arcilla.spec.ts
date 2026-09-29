@@ -138,7 +138,7 @@ test('Puerto de Fotos: abre la galería', async ({ page }) => {
   const panel = page.getByTestId('panel-fotos');
   await sailNorthUntil(page, () => expect(panel).toBeVisible({ timeout: 20_000 }));
   await expect(panel.getByRole('heading', { name: photos.identity.name })).toBeVisible();
-  await expect(panel.getByTestId('panel-fotos-galeria')).toHaveAttribute('href', '/#fotos');
+  await expect(panel.getByTestId('panel-fotos-galeria')).toHaveAttribute('href', '/fotos');
 });
 
 test('tienda: enlace externo en otra pestaña', async ({ page }) => {

@@ -14,12 +14,15 @@ export function TicketsPanel({
   onSale,
   artists,
   buyable,
+  nextAllDay = null,
 }: {
   featured: BoiaEvent | undefined;
   others: readonly BoiaEvent[];
   onSale: boolean;
   artists: readonly Artist[];
   buyable: ReadonlySet<string>;
+  /** Para la línea «Calienta para el próximo All Day» de los satélites (O7). */
+  nextAllDay?: { name: string; slug: string } | null;
 }) {
   return (
     <section
@@ -51,6 +54,7 @@ export function TicketsPanel({
               buyable={buyable.has(featured.id)}
               source="tickets_panel"
               featured
+              nextAllDay={nextAllDay}
             />
           </div>
         )}
@@ -63,6 +67,7 @@ export function TicketsPanel({
                   artists={artists}
                   buyable={buyable.has(e.id)}
                   source="tickets_panel"
+                  nextAllDay={nextAllDay}
                 />
               </li>
             ))}

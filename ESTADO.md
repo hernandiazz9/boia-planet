@@ -4,6 +4,34 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T42: eventos y fotos: ficha de evento, «Fotos y eventos», estado de la isla, satélites
+
+Qué existe:
+- **Contrato de evento** (`packages/contracts/src/events.ts`): `format` pasa a `all_day | satelite` (antes, texto libre), más `series` (clave estable: `boia-club`, `noche`; su nombre sale en las tarjetas con `eventKicker`, `event-labels.ts`, sin zod), `endsAt`, `saleOpensAt`, `activities`, `posterUrl`, `priceCents` + `priceSample` (el precio sale de `lib/ticketing/pricing.ts`; `samplePriceCents` y `quoteFor` aceptan el evento o su id) y `stateSource: dates | manual`.
+- **Estado por fechas** (REQ-COM-004): `eventState(e, now)`. A mano manda lo guardado. Por fechas: borrador y finalizado a mano se quedan; pasado el fin (`endsAt` o inicio + 12 h), finaliza (cancelado y pospuesto conservan su aviso); agotado/pospuesto/cancelado los pone el Admin; con apertura de venta, antes «próximamente» y después «a la venta». `upcomingEvents`, `resolvePriorityEvent` y `canBuy(e, now)` lo usan; `resolveHome` y `liveContent()` (así /juego y /mar) entregan los eventos con su estado de ahora.
+- **Satélites** (REQ-COM-010, O7): `nextAllDay`, `commonIslandId` (la isla del próximo All Day, o `allday`) e `islandUpcomingEvents`. Un satélite sin isla sale en «Próximos eventos» de esa isla y en Tickets con «Calienta para el próximo All Day» y enlace a su ficha (o «todavía no tiene fecha» si no hay).
+- **Primer evento real** `halloween-2026`: «BOIA Club · Halloween», Kiki García Bar, 31-10-2026, satélite de la serie `boia-club`, sin isla, a la venta (sandbox), cartel «próximamente», precio 10 € de muestra, `sample: false`. La muestra: primavera y verano (con apertura de venta) en `allday`; el All Day 2026 finalizado pasa a `allday` (recuerdos); Noche de mayo es satélite `noche`.
+- **Fotos**: `photo.selection` (la home enseña sólo esas, con «Ver todas» → `/fotos`) y `album.islandId` (álbum de una isla sin evento). Muestra: 8 fotos del All Day 2026 y 3 de la cala, 5 en la selección.
+- **`/eventos/<slug>`** (`app/(landing)/eventos/[slug]`): ficha sin motor, sin entrada, funciona sin JS; cartel (o «Cartel próximamente»), fecha y hora, lugar, formato y serie, precio, actividades, cartel de artistas, aviso de estado, compra sólo a la venta, «Ir a su isla» (`/juego?evento=` del evento que abre la isla), recuerdos si finalizó y otros próximos. ISR cada 5 min (el estado depende de la hora); los eventos creados en el Admin se pintan en el cliente (`LiveEvent`).
+- **`/fotos`** («Fotos y eventos»): una galería por isla de evento (siempre, con su ancla `#<isla>`), una por evento sin isla con álbum (`#<slug>`) y la general. Lógica pura en `lib/landing/eventos.ts` (`eventPageView`, `photoGalleries`); textos en `lib/landing/eventos-copy.ts` y `card-copy.ts` (de textos-zonas, hasta que T49 los pase a i18n).
+- **Isla en /juego** (`world-ui.tsx`, `place-panels.tsx`): el panel del evento enseña el estado (agotado sin compra, pospuesto/cancelado con aviso, finalizado con su cartel), «Ver el evento», «Ver fotos de la isla» (`/fotos#<isla>`), recuerdos con cartel y «Próximos eventos» (los de la isla y sus satélites primero). El Puerto de Fotos lleva a `/fotos`.
+- **Admin › Eventos**: formato, serie, fin, apertura de venta, «Cambio de estado» (por fechas / a mano), precio, cartel y actividades; la lista dice «Ahora: <estado> (por fechas|a mano)» y cambiar el estado desde la lista lo fija a mano.
+- **Migración v2 → v3** (`SCHEMA_VERSION = 3`): los eventos guardados por el Admin pasan a `all_day`/`satelite` (con la serie del texto viejo), `stateSource: manual` y el precio de la tabla vieja.
+- Pruebas: los siete estados por fechas, un finalizado nunca enseña compra (tarjeta, ficha, isla, por fecha y a mano), satélite bajo el próximo All Day, galerías y selección, migración; e2e `eventos.spec.ts` y `ciclo-evento.spec.ts` (REQ-COM-014: publicar, agotar, finalizar, otro en la isla, posponer y cancelar). Capturas `docs/informes/img/p004-t42-{evento,fotos,isla-estado}.png` (`RECORD_T42=1 … record-eventos.spec.ts --project=mobile`).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 65 archivos, 668 pruebas
+pnpm build                                 # exit 0; landing 186,8 kB gzip de 192 kB (+4,3 kB de SVG del logo por CSS = 191,1 kB)
+E2E_PORT=<libre> pnpm e2e --workers=2      # ver el informe de la tarea
+```
+
+Pendiente / para otros encargos:
+- `/mar` (plan 003): `app/mar/sheet.tsx` ya recibe los estados de ahora por `liveContent()`, pero su hoja de isla no tiene aviso de estado, «Ver fotos de la isla», recuerdos con cartel ni satélites, y su «Ver la galería» sigue en `/#fotos`.
+- `packages/store/src/local.ts` (`confirmSandbox`) comprueba el estado guardado, no `eventState`: el sandbox ya lo filtra antes, pero la guarda del repositorio debería usarlo.
+- Admin › Fotos no deja marcar la selección ni ligar un álbum a una isla; la localización común de los satélites no se configura en el Admin (es la isla del próximo All Day).
+- Supabase (`supabase/migrations`, tabla de eventos) no tiene las columnas nuevas.
+
 ## 2026-09-29 — plan 004 T39: arte: la mascota de BOIA en todas las boias, skins de barco a la venta, secretos
 
 Arte `muestra` renderizado con el pipeline de Blender; el motor todavía no lo usa (lo cablean T40 y T45).
