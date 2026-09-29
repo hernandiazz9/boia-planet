@@ -62,6 +62,24 @@ test('el mar 3D arranca, pasa a mapa y fija rumbo a la isla del evento', async (
   expect(errors).toEqual([]);
 });
 
+test('«Ir en nave» desde la ficha: despega, vuela y se posa sin abrir la compra', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const errors = await openMar(page);
+  await page.getByTestId('mar-mapa').click();
+  await page.locator('[data-pin="allday"]').click();
+  await page.getByTestId('mar-volar').click();
+  const main = page.locator('main.mar');
+  await expect(main).toHaveAttribute('data-flight', 'lift');
+  await expect(page.getByTestId('mar-ficha')).toHaveCount(0);
+  await expect(main).toHaveAttribute('data-flight', 'cruise', { timeout: 10_000 });
+  await expect(main).not.toHaveAttribute('data-flight', /./, { timeout: 20_000 });
+  await expect(page.getByTestId('mar-rumbo-activo')).toHaveCount(0);
+  await expect(page.getByTestId('checkout')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test('la landing enlaza el mar 3D', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('cta-3d')).toHaveAttribute('href', '/mar');
