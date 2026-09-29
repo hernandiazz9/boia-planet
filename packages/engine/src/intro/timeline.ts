@@ -1,5 +1,6 @@
 import { pickFraming, type IntroConfig } from './config';
 import { clamp01, ramp, type Viewport } from './math';
+import { portCamera, revealCamera, type PortReveal } from './port';
 import {
   appearPose,
   landingAnchor,
@@ -23,7 +24,7 @@ import {
  */
 
 export type IntroMode = 'intro' | 'reduced' | 'direct';
-export type IntroAct = 'appear' | 'pause' | 'landing' | 'landed';
+export type IntroAct = 'appear' | 'pause' | 'landing' | 'landed' | 'explore';
 
 /** Dónde va la entrada: lo lleva el controlador, la línea de tiempo sólo lo lee. */
 export interface TimelineState {
@@ -194,6 +195,37 @@ export function frameAt(
     button: out,
     content: ramp(e, L.content),
     done: false,
+  };
+}
+
+/** Tramo del alejamiento en el que se aparta la landing (su HTML). */
+export const EXPLORE_CONTENT_OUT = [0, 0.3] as const;
+
+/**
+ * EXPLORAR (T28, D-20 punto 6): desde el encuadre de llegada, la cámara se
+ * aleja un poco hasta el encuadre del puerto, el del juego al empezar, con
+ * el barco en la salida. La landing se aparta al principio; el mundo vivo
+ * sigue igual. `game` es la vista del juego (la ventana) si no es la escena.
+ */
+export function exploreFrame(
+  cfg: IntroConfig,
+  geo: IntroGeometry,
+  reveal: PortReveal,
+  vp: Viewport,
+  t: number,
+  game: Viewport = vp,
+): IntroFrame {
+  const base = finalFrame(cfg, geo, vp, 0);
+  const dur = reveal.durationMs;
+  const time = Math.max(0, Math.min(t, dur));
+  const e = dur > 0 ? time / dur : 1;
+  return {
+    ...base,
+    act: 'explore',
+    t: time,
+    camera: revealCamera(base.camera, portCamera(reveal, game), vp, e, reveal.easing),
+    content: 1 - ramp(e, EXPLORE_CONTENT_OUT),
+    done: e >= 1,
   };
 }
 

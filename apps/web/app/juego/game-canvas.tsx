@@ -39,7 +39,7 @@ import { liveWorld } from '../../lib/admin/live-world';
 import { liveContent } from '../../lib/landing/live-content';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
-import { claimWorld } from '../../lib/world-handoff';
+import { claimWorld, offerWorld } from '../../lib/world-handoff';
 import { TIME_PLAYED_TICK_S, recordSignal, signalFromWorldEvent } from './achievements';
 import { BalancesChip } from './balances';
 import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
@@ -317,7 +317,11 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           setPanel({ objectId: e.objectId, eventId: e.ref });
         } else if (e.target === 'info' || e.target === 'photos' || e.target === 'store') {
           setDiscountPanel(null);
-          setPlacePanel({ objectId: e.objectId, target: e.target, ...(e.ref ? { ref: e.ref } : {}) });
+          setPlacePanel({
+            objectId: e.objectId,
+            target: e.target,
+            ...(e.ref ? { ref: e.ref } : {}),
+          });
         }
         break;
       case 'content_close':
@@ -336,7 +340,9 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           // REQ-AVE-019: más premio cuanto más se aguanta dentro; cada tramo, una vez al día.
           const { tiers } = whirlpoolRef.current.exit(performance.now());
           for (const t of tiers) {
-            persist(grantEncounter(progressApi(), `lugar:remolino:${t.seconds}s`, t.coins, 'daily'));
+            persist(
+              grantEncounter(progressApi(), `lugar:remolino:${t.seconds}s`, t.coins, 'daily'),
+            );
           }
         }
         break;
@@ -416,6 +422,22 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     let cancelled = false;
     let g: Game | null = null;
 
+    // EXPLORAR desde la landing (REQ-ENT-012): la escena llega ya en el
+    // encuadre del puerto (T28) y su canvas se enseña al momento, mientras el
+    // juego carga; después el juego adopta su WebGL y su mar.
+    const surface = claimWorld();
+    let handed = false;
+    let target = canvas;
+    if (surface) {
+      target = surface.app.canvas;
+      target.className = 'juego-canvas';
+      target.removeAttribute('style');
+      delete target.dataset.ready;
+      // El canvas de React se queda oculto: React sigue siendo dueño de su nodo.
+      canvas.style.display = 'none';
+      canvas.before(target);
+    }
+
     const store = browserStore();
     storeRef.current = store;
     const saved = loadSettings(store);
@@ -478,18 +500,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       // Un ?estilo= válido queda guardado; uno desconocido no pisa lo guardado.
       const look = styled?.style && manifest ? { style: styled.style.id, skin: styled.skin } : null;
       if (look && want.style === look.style) rememberLook(look);
-      // EXPLORAR desde la landing: el juego adopta su canvas, su WebGL y su mar (REQ-ENT-012).
-      const surface = claimWorld();
-      let target = canvas;
-      if (surface) {
-        target = surface.app.canvas;
-        target.className = 'juego-canvas';
-        target.removeAttribute('style');
-        delete target.dataset.ready;
-        // El canvas de React se queda oculto: React sigue siendo dueño de su nodo.
-        canvas.style.display = 'none';
-        canvas.before(target);
-      }
+      handed = true;
       const created = await createGame(target, {
         world: initial.config,
         sea: initial.theme.sea,
@@ -562,6 +573,13 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       missionRef.current = null;
       missionHost.current = null;
       g?.destroy();
+      // Desmontado antes de arrancar (StrictMode, o se fue): la escena vuelve a
+      // estar en oferta para el siguiente montaje, que la recoge.
+      if (surface && !handed) {
+        target.remove();
+        canvas.style.display = '';
+        offerWorld(surface);
+      }
     };
   }, [shipCatalog, adoptWorld, sessionId]);
 

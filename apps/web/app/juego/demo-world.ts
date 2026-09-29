@@ -15,9 +15,8 @@ import {
 export const worlds: WorldRegistry = WORLD_REGISTRY;
 
 /**
- * El mundo de la entrada (la esfera de T14) y de su prueba: sigue siendo el
- * de muestra de plan 001, pequeño y con su punto de aterrizaje, hasta que T28
- * haga que EXPLORAR descubra el puerto del mundo activo. `/juego` elige el
- * suyo con `world-choice.ts`.
+ * El mundo de muestra de plan 001, pequeño: lo usan la sonda de la esfera
+ * (`/sphere-probe`) y algunas pruebas. La entrada juega desde T28 el mundo
+ * activo (`lib/intro/active.ts`) y `/juego` elige el suyo con `world-choice.ts`.
  */
 export const demoWorld: WorldConfig = parseWorldConfig(SAMPLE_WORLD);

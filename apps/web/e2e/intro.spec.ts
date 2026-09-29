@@ -295,7 +295,7 @@ test.describe('movimiento reducido', () => {
   });
 });
 
-test('motor bloqueado: ilustración de la isla y Tickets funcionando (REQ-ENT-017, 038)', async ({
+test('motor bloqueado: ilustración del puerto y Tickets funcionando (REQ-ENT-017, 038)', async ({
   page,
 }) => {
   // Cualquier chunk JS con la escena de la entrada no llega.
@@ -322,11 +322,15 @@ test('motor bloqueado: ilustración de la isla y Tickets funcionando (REQ-ENT-01
   expect(d.worldsAlive).toBe(0);
   await expect(canvases(page)).toHaveCount(0);
 
-  const island = page.locator('.hero__still-island');
-  await expect(island).toBeVisible();
-  expect(
-    await island.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
-  ).toBe(true);
+  // La ilustración ligera: las piezas junto al aterrizaje (el puerto, T28) y el barco.
+  const pieces = page.locator('.hero__still-piece, .hero__still-ship');
+  expect(await pieces.count()).toBeGreaterThan(1);
+  await expect(page.locator('.hero__still-ship')).toBeVisible();
+  for (const img of await pieces.all()) {
+    await expect
+      .poll(() => img.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0))
+      .toBe(true);
+  }
 
   await heroTickets(page).click();
   await expect(ticketsPanel(page)).toBeVisible();

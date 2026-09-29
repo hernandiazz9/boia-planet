@@ -1,4 +1,4 @@
-import type { WorldConfig } from '@boia/world';
+import { type SeaPalette, type WorldConfig, coastAssets } from '@boia/world';
 import {
   Application,
   Assets,
@@ -15,12 +15,12 @@ import {
 import type { GameSurface } from '../game';
 import { Water } from '../water';
 import { type ArtUrl, DEV_ART_URL, loadArt, manifestsOf } from '../world/assets';
-import { createCoastView } from '../world/coast-view';
+import { createWorldCoastView } from '../world/coast-view';
 import { ObjectView } from '../world/object-view';
 import { resolveObjectVisual } from '../world/visual';
 import type { IntroAssets } from './assets';
 import type { IntroConfig } from './config';
-import type { IntroSceneHandle } from './controller';
+import type { IntroSceneHandle, IntroSceneView } from './controller';
 import { rhoOf, type IntroGeometry } from './sphere';
 import type { IntroFrame } from './timeline';
 
@@ -161,6 +161,13 @@ export interface CreateIntroSceneOptions {
   height: number;
   resolution: number;
   artUrl?: ArtUrl;
+  /** Colores del mar del mundo (los mismos que pondrá el juego). */
+  sea?: SeaPalette;
+  /**
+   * Lo que la escena sabe del mundo activo (aterrizaje, geometría y puerto de
+   * este navegador): el controlador lo adopta al llegar la escena (T28).
+   */
+  view?: IntroSceneView;
 }
 
 function rng(seed: number) {
@@ -232,10 +239,7 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
   const [shipTexture, art] = await Promise.all([
     Assets.load<Texture>(opts.assets.ship.url),
     loadArt(
-      [
-        ...world.objects.map((o) => o.appearance.asset),
-        ...(world.coast?.asset ? [world.coast.asset] : []),
-      ],
+      [...world.objects.map((o) => o.appearance.asset), ...coastAssets(world.coast)],
       opts.artUrl ?? DEV_ART_URL,
     ),
   ]);
@@ -268,12 +272,9 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
         .filter((o) => o.identity.active)
         .map((o) => ObjectView.create(o, resolveObjectVisual(o, manifests, artScale), art)),
     );
-    const coasts = await createCoastView(
-      world.bounds,
-      world.coast?.asset ? art.get(world.coast.asset) : undefined,
-      artScale,
-    );
-    const water = new Water();
+    // Las mismas costas que el juego: losas de T01 o tiras de lugar de T18 (Arcilla).
+    const coasts = await createWorldCoastView(world.bounds, world.coast, art, artScale);
+    const water = new Water(opts.sea);
     const objects = new Container();
     objects.sortableChildren = true;
     for (const o of objectViews) {
@@ -453,6 +454,7 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
     };
     return {
       renderer,
+      ...(opts.view ? { view: opts.view } : {}),
       resize(w, h) {
         if (destroyed || (w === width && h === height)) return;
         width = w;
@@ -472,6 +474,11 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
         if (destroyed) return null;
         destroyed = true;
         water.view.removeFromParent();
+        // El juego pinta el mar en el escenario, en el origen: aquí iba dentro
+        // del mundo, desplazado a la cámara (con las coordenadas de Arcilla,
+        // miles de px fuera de la vista: se veía sólo el fondo).
+        water.view.position.set(0, 0);
+        water.view.scale.set(1);
         for (const c of app.stage.removeChildren()) c.destroy({ children: true });
         disposeTextures();
         delete canvas.dataset.scene;

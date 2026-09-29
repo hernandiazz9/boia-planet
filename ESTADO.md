@@ -4,6 +4,39 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T28: EXPLORAR descubre el puerto y la aventura empieza allí
+
+La entrada ya no es el mundo de muestra de plan 001: es el mundo activo (Arcilla por defecto) y aterriza en su punto de aterrizaje, la bocana de El Varadero. Al pulsar EXPLORAR la landing se aparta, la cámara se aleja un poco (de ×1,3 en móvil y ×1,45 en escritorio a la escala del juego, ×1) hasta el encuadre con el que empieza el juego —el barco en el anillo de salida, la primera boia delante y el mar abierto hacia el norte, camino de la Fiestera— y entonces la escena pasa a `/juego` (T12). Zoom, anclas, tamaño del mini-mundo y duración son `muestra` [pendiente Hernán/Álvaro en móvil real].
+
+Qué existe:
+- `packages/engine/src/intro/port.ts` (puro): `WorldIntro` (datos de entrada de un mundo: encuadre de llegada por ancho, trozo de mapa del mini-mundo y distancia de carga, duración y curva del alejamiento) con `validateWorldIntro`; `introConfigForWorld` (la configuración con el aterrizaje del mundo, su llegada y el barco en la salida mirando a su rumbo); `portReveal` / `portCamera` (la cámara con la que arranca el juego: centrada en el barco, sin bajar de la franja de tierra, `GAME_BOTTOM_LAND_PX` = `BOTTOM_LAND_PX` de `game.ts`, una prueba lo vigila); `revealCamera` (centro en línea recta, zoom en escala logarítmica); `shipViewFor`.
+- `timeline.ts`: acto `explore` (`exploreFrame`). `controller.ts`: fases `exploring` y `explored`; `explore(vistaDelJuego)` se aleja y arranca el juego al pintar el último fotograma, una vez; sin escena o con movimiento reducido arranca ya (REQ-ENT-010); pestaña oculta a medias lo termina; salir de la landing a medias no arranca nada. La escena puede traer su propia configuración, geometría y alejamiento (`IntroSceneHandle.view`), que el controlador adopta al llegar.
+- `world-geometry.ts`: el mini-mundo es un cuadrado del mapa centrado en el aterrizaje (`miniWorld.span`, 2400 u), no el mapa entero (Arcilla mide ~11 000 × 21 000 u: ni cabe en la textura ni su arte, 6 MB, en lo que dura la carga); `nearbyWorld` deja sólo los objetos y las costas cercanas; `worldIntroSetup` lo junta. `scene.ts` pinta las costas como el juego (`createWorldCoastView`, las tiras de Arcilla) y el mar con los colores del mundo.
+- `apps/web/lib/intro/worlds.ts`: datos de entrada por mundo (`WORLD_INTROS`, con `DEFAULT_WORLD_INTRO` para los que no tienen) y los puntos del mapa con lo que dejó el Admin (`mapa:entrada`, `mapa:salida`, `mapa:puerto`, T26). `lib/intro/active.ts` (navegador): el mundo de `/juego` en este navegador (`?mundo=`, elegido, activo del Admin) con los cambios del Admin, y el estilo de barco que llevará. `lib/intro/load.ts` (servidor): la entrada del mundo por defecto, la ilustración ligera como las piezas junto al aterrizaje (el puerto) en vez de la isla de muestra, el barco de cada estilo en su vista de salida y la precarga sólo de lo cercano.
+- `intro-stage.tsx`: EXPLORAR sube arriba, pone `html[data-explore]` (la landing se funde, `landing.css`), se aleja y al terminar cede la escena y navega; lleva `?mundo=` a `/juego` si la landing lo traía. Diagnóstico nuevo en `window.__boiaIntro`: `world`, `landingPoint` y `reveal` (inicio, fin, vista del juego, última cámara y dónde quedaron barco y puerto).
+- `/juego` (arranque): el canvas cedido se enseña nada más montar, antes de que cargue el juego (antes se veía el fondo un momento); si se desmonta antes de arrancar, la escena vuelve a quedar en oferta.
+- Pruebas: `packages/engine/src/intro/port.test.ts` (móvil y escritorio: EXPLORAR sólo aleja, termina en la cámara del juego con el barco en la salida del mundo activo y el puerto a la vista, arranca el juego una vez y después no pinta; vista del juego distinta de la escena; movimiento reducido; pestaña oculta; salir a medias; franja de tierra igual a la de `game.ts`; validación) y `apps/web/lib/intro/worlds.test.ts` (cada mundo registrado tiene entrada; el Admin mueve aterrizaje, salida y puerto y la entrada y el juego salen del mismo sitio; el encuadre del puerto de cada mundo enseña el puerto). e2e: `demo.spec.ts` comprueba en móvil y escritorio que la entrada es la del mundo activo, que el alejamiento se ve entero y acaba a escala de juego con barco y puerto en la vista, y que el juego arranca con el barco en la salida (minimapa), también por enlace directo a `/juego`; `intro.spec.ts` comprueba la ilustración del puerto con el motor bloqueado.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint                      # exit 0; 53 archivos, 537 pruebas
+E2E_PORT=3241 pnpm e2e --workers=2 e2e/demo.spec.ts           # exit 0; 8 pasadas
+E2E_PORT=3251 pnpm e2e --workers=2                            # exit 0; 80 pasadas, 14 omitidas
+```
+Como en T20 y T26, al terminar la suite Playwright esperaba a un `next-server` huérfano del `webServer`: se paró a mano (el del puerto de la prueba, de este worktree) con todas las pruebas ya con resultado.
+
+Desviaciones:
+- El mini-mundo de la entrada es el puerto y su mar (un trozo de 2400 u del mapa), no el mapa entero: con Arcilla, el mapa entero no se ve en una esfera de móvil ni carga a tiempo. Es un dato por mundo (`miniWorld.span`).
+- La llegada de la entrada queda más cerca que antes (×1,3 móvil, ×1,45 escritorio; antes ×0,72 y ×1) porque el juego va a ×1 sin zoom propio: para que EXPLORAR se aleje y el relevo no salte de escala, la llegada tiene que estar más cerca que el juego. `validateWorldIntro` exige zoom de llegada ≥ 1.
+- Arreglo de paso en `scene.ts` (`release`): el mar cedido llegaba al juego desplazado a la cámara de la entrada; con las coordenadas de Arcilla quedaba fuera de la vista y en `/juego` adoptado se veía sólo el color de fondo, sin olas. Ahora se entrega en el origen, como lo pinta el juego.
+- `apps/web/app/juego/demo-world.ts`: sólo el comentario (la entrada ya no usa el mundo de muestra).
+- La ilustración ligera y la página estática usan el mundo por defecto sin cambios del Admin; el navegador recalcula la escena con los suyos. Si el Admin mueve el aterrizaje, la ilustración ligera (sólo sin motor) sigue en el sitio de muestra.
+
+Sin probar:
+- Móviles reales: tiempo de carga del arte del puerto y de las tiras de costa dentro del presupuesto de 2 s; la sensación del alejamiento.
+- Con una skin temática del barco guardada, la entrada enseña la skin `base` y el juego la temática (cambia al pasar).
+- Acuarela (T24) usa `DEFAULT_WORLD_INTRO` hasta que tenga su entrada propia.
+
 ## 2026-09-29 — plan 002 T21: misión de la Boia Fiestera, logros, puntos y monedas
 
 La misión principal (REQ-AVE-005…011) y el sistema de logros (REQ-IDE-024…027) en `/juego`, sobre el repositorio local de T16. Textos, premios, tiempos y la lista de logros son `muestra` [pendiente Álvaro].

@@ -1,4 +1,4 @@
-import type { IntroConfig } from './config';
+import type { IntroConfig, ShipView } from './config';
 
 /**
  * Recursos de la ilustración ligera del hero (REQ-ENT-017, 038), resueltos
@@ -97,7 +97,6 @@ function resolveShip(m: unknown, baseUrl: string, config: IntroConfig) {
   if (!isObj(m)) throw new Missing('manifiesto de barco');
   const projection = isObj(m.projection) ? m.projection : {};
   const ppu = must(num(projection.pixels_per_unit), 'barco.projection.pixels_per_unit');
-  const image = must(isObj(m.image) ? m.image : null, 'barco.image');
   const directions = must(isObj(m.directions) ? m.directions : null, 'barco.directions');
   const anchorsOf = (d: string): Obj | null => {
     const dir = directions[d];
@@ -111,7 +110,27 @@ function resolveShip(m: unknown, baseUrl: string, config: IntroConfig) {
   const hull = Math.hypot(bow[0] - stern[0], bow[1] - stern[1]);
   if (!(hull > 1)) throw new Missing('barco: eslora de la vista W');
 
-  const view = config.ship.view;
+  return {
+    ppu,
+    artScale: config.ship.lengthPx / hull,
+    image: shipImage(m, baseUrl, 'barco', config.ship.view),
+  };
+}
+
+/**
+ * Una vista quieta (skin `base`, sin pasajera) de un manifiesto de barco: el
+ * de `barco/` o el de un estilo (`barco/estilos/<estilo>`, T11), que tienen
+ * la misma forma. La escala la pone la del barco de `barco/` (como el juego).
+ */
+export function shipImage(m: unknown, baseUrl: string, dir: string, view: ShipView): ArtImage {
+  if (!isObj(m)) throw new Missing(`manifiesto de ${dir}`);
+  const image = must(isObj(m.image) ? m.image : null, `${dir}.image`);
+  const directions = must(isObj(m.directions) ? m.directions : null, `${dir}.directions`);
+  const dirView = directions[view];
+  const anchors = must(
+    isObj(dirView) && isObj(dirView.anchors) ? dirView.anchors : null,
+    `${dir}.directions.${view}.anchors`,
+  );
   const images = Array.isArray(m.images) ? m.images.filter(isObj) : [];
   const style = typeof m.style === 'string' ? m.style : undefined;
   const entry = images.find(
@@ -124,20 +143,30 @@ function resolveShip(m: unknown, baseUrl: string, config: IntroConfig) {
   );
   const file = must(
     entry && typeof entry.file === 'string' ? entry.file : null,
-    `barco base/${view}`,
+    `${dir} base/${view}`,
   );
-  const anchors = must(anchorsOf(view), `barco.directions.${view}.anchors`);
   return {
-    ppu,
-    artScale: config.ship.lengthPx / hull,
-    image: {
-      url: join(baseUrl, 'barco', file),
-      width: must(num(image.width), 'barco.image.width'),
-      height: must(num(image.height), 'barco.image.height'),
-      pivot: must(point(anchors.pivot), `barco ${view}.pivot`),
-      scale: 1,
-    } satisfies ArtImage,
+    url: join(baseUrl, dir, file),
+    width: must(num(image.width), `${dir}.image.width`),
+    height: must(num(image.height), `${dir}.image.height`),
+    pivot: must(point(anchors.pivot), `${dir} ${view}.pivot`),
+    scale: 1,
   };
+}
+
+/** Como `shipImage`, pero `null` si el manifiesto no cuadra. */
+export function tryShipImage(
+  m: unknown,
+  baseUrl: string,
+  dir: string,
+  view: ShipView,
+): ArtImage | null {
+  try {
+    return shipImage(m, baseUrl, dir, view);
+  } catch (err) {
+    if (err instanceof Missing) return null;
+    throw err;
+  }
 }
 
 /** Ids de manifiesto que necesita la ilustración ligera. */

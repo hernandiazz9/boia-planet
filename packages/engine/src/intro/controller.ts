@@ -1,7 +1,15 @@
 import type { IntroConfig } from './config';
 import type { Viewport } from './math';
+import type { PortReveal } from './port';
 import type { IntroGeometry } from './sphere';
-import { actDuration, frameAt, type IntroAct, type IntroFrame, type IntroMode } from './timeline';
+import {
+  actDuration,
+  exploreFrame,
+  frameAt,
+  type IntroAct,
+  type IntroFrame,
+  type IntroMode,
+} from './timeline';
 
 /**
  * Máquina de estados de la entrada «mini-mundo» (D-19). Sin DOM ni Pixi:
@@ -12,11 +20,14 @@ import { actDuration, frameAt, type IntroAct, type IntroFrame, type IntroMode } 
  * - la landing se muestra una sola vez (`onLanded` se llama una vez);
  * - la pausa no avanza sin el botón (o el avance automático, si está activo);
  * - entrar, saltar, interrumpir y destruir son idempotentes;
- * - nunca arranca el juego: sólo `explore()`, ya en la landing, lo hace.
+ * - nunca arranca el juego: sólo `explore()`, ya en la landing, lo hace;
+ *   con escena, primero se aleja hasta el puerto (T28) y al terminar lo
+ *   arranca, una vez.
  *
  * Fases: `waiting` (acto 0: escena cargando) → `appearing` (acto 1) →
- * `paused` (acto 2) → `landing` (acto 3) → `landed`; `destroyed` al
- * desmontar. Con movimiento reducido no hay acto 1 (el mini-mundo sale
+ * `paused` (acto 2) → `landing` (acto 3) → `landed` → (EXPLORAR)
+ * `exploring` (la cámara se aleja hasta el puerto) → `explored` (la escena
+ * ya es del juego); `destroyed` al desmontar. Con movimiento reducido no hay acto 1 (el mini-mundo sale
  * quieto) y el acto 3 es un fundido. Un enlace directo o una visita
  * posterior nacen ya en `landed`: la escena, si llega, se pinta en el
  * encuadre final.
@@ -29,14 +40,34 @@ import { actDuration, frameAt, type IntroAct, type IntroFrame, type IntroMode } 
 export const MAX_FRAME_STEP_MS = 250;
 
 export type IntroPhase =
-  'idle' | 'waiting' | 'appearing' | 'paused' | 'landing' | 'landed' | 'destroyed';
+  | 'idle'
+  | 'waiting'
+  | 'appearing'
+  | 'paused'
+  | 'landing'
+  | 'landed'
+  | 'exploring'
+  | 'explored'
+  | 'destroyed';
 export type SceneStatus = 'none' | 'loading' | 'ready' | 'failed' | 'disposed';
 export type IntroOutcome = 'played' | 'skipped' | 'none';
 export type EnterSource = 'button' | 'auto';
 
+/**
+ * Lo que la escena sabe mejor que la página estática: el mundo activo de este
+ * navegador (el elegido, con los cambios del Admin) puede aterrizar en otro
+ * punto o tener la salida en otro sitio. Se adopta al llegar la escena.
+ */
+export interface IntroSceneView {
+  config?: IntroConfig;
+  geometry?: IntroGeometry;
+  reveal?: PortReveal | null;
+}
+
 export interface IntroSceneHandle {
   render(frame: IntroFrame, clockSeconds: number): void;
   destroy(): void;
+  readonly view?: IntroSceneView;
 }
 
 export interface IntroControllerDeps<S extends IntroSceneHandle> {
@@ -56,6 +87,8 @@ export interface IntroControllerDeps<S extends IntroSceneHandle> {
   onChange?(): void;
   /** Única vía para arrancar el juego (Explorar). */
   startGame?(): void;
+  /** EXPLORAR: el alejamiento hasta el puerto (T28). Sin él, el juego arranca al momento. */
+  reveal?: PortReveal | null;
 }
 
 const ACT_OF: Partial<Record<IntroPhase, IntroAct>> = {
@@ -87,8 +120,17 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
   private actStartedAt: number | null = null;
   private cancelBudget: (() => void) | null = null;
   private cancelAuto: (() => void) | null = null;
+  private config: IntroConfig;
+  private geometry: IntroGeometry;
+  private reveal: PortReveal | null;
+  /** Vista del juego para el encuadre del puerto (si no, la de la escena). */
+  private gameView: Viewport | null = null;
 
-  constructor(private readonly deps: IntroControllerDeps<S>) {}
+  constructor(private readonly deps: IntroControllerDeps<S>) {
+    this.config = deps.config;
+    this.geometry = deps.geometry;
+    this.reveal = deps.reveal ?? null;
+  }
 
   get mode(): IntroMode {
     return this.deps.mode;
@@ -158,16 +200,38 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
     else if (this.phase === 'appearing') {
       this.toAct('paused');
       // Título y botón ya visibles: al volver no hay nada a medias.
-      this.actMs = this.deps.config.pause.uiInMs;
+      this.actMs = this.config.pause.uiInMs;
     } else if (this.phase === 'landing') this.land('played');
+    // Sin pantalla no hay alejamiento que ver: el juego arranca ya, en el puerto.
+    else if (this.phase === 'exploring') this.finishExplore();
   }
 
-  /** Explorar: arranca el juego una vez, y sólo desde la landing. */
-  explore(): boolean {
+  /**
+   * Explorar: arranca el juego una vez, y sólo desde la landing. Con escena y
+   * alejamiento, la cámara va primero hasta el encuadre del puerto (`game`:
+   * la vista del juego, si no es la de la escena) y el juego arranca al
+   * pintar el último fotograma. Con movimiento reducido no hay alejamiento
+   * (REQ-ENT-010): el juego arranca ya, en el puerto.
+   */
+  explore(game?: Viewport): boolean {
     if (this.phase !== 'landed' || this.gamesStarted > 0) return false;
     this.gamesStarted++;
-    this.deps.startGame?.();
-    this.changed();
+    const r = this.reveal;
+    if (
+      this.scene &&
+      this.sceneStatus === 'ready' &&
+      r &&
+      r.durationMs > 0 &&
+      this.deps.mode !== 'reduced'
+    ) {
+      this.gameView = game ?? null;
+      this.phase = 'exploring';
+      this.actMs = 0;
+      this.lastNow = this.actStartedAt = this.deps.now();
+      this.changed();
+      return true;
+    }
+    this.finishExplore();
     return true;
   }
 
@@ -176,8 +240,17 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
    * acto pasa al siguiente; terminar el aterrizaje muestra la landing.
    */
   frame(vp: Viewport): IntroFrame | null {
-    if (this.sceneStatus !== 'ready' || this.phase === 'destroyed') return null;
-    const { config, geometry, mode } = this.deps;
+    if (this.sceneStatus !== 'ready' || this.phase === 'destroyed' || this.phase === 'explored')
+      return null;
+    const { config, geometry } = this;
+    const { mode } = this.deps;
+    if (this.phase === 'exploring' && this.reveal) {
+      const now = this.deps.now();
+      const dt = Math.min(Math.max(0, now - (this.lastNow ?? now)), MAX_FRAME_STEP_MS);
+      this.lastNow = now;
+      this.actMs += dt;
+      return exploreFrame(config, geometry, this.reveal, vp, this.actMs, this.gameView ?? vp);
+    }
     const act = ACT_OF[this.phase];
     if (!act) return frameAt(config, geometry, vp, { act: 'landed', t: 0, spinMs: 0 }, 'direct');
 
@@ -213,10 +286,14 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
     return f;
   }
 
-  /** Pinta el fotograma de ahora en la escena, si la hay. */
+  /**
+   * Pinta el fotograma de ahora en la escena, si la hay. Pintado el último
+   * del alejamiento, el juego arranca (la escena se queda en ese encuadre).
+   */
   render(vp: Viewport, clockSeconds: number): IntroFrame | null {
     const f = this.frame(vp);
     if (f && this.scene) this.scene.render(f, clockSeconds);
+    if (f?.act === 'explore' && f.done && this.phase === 'exploring') this.finishExplore();
     return f;
   }
 
@@ -231,6 +308,12 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
     this.changed();
   }
 
+  private finishExplore(): void {
+    this.phase = 'explored';
+    this.deps.startGame?.();
+    this.changed();
+  }
+
   private toAct(phase: 'appearing' | 'paused' | 'landing'): void {
     this.phase = phase;
     this.actMs = 0;
@@ -241,7 +324,7 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
 
   private scheduleAuto(): void {
     this.clearAuto();
-    const auto = this.deps.config.pause.autoAdvance;
+    const auto = this.config.pause.autoAdvance;
     if (!auto.enabled) return;
     this.cancelAuto = this.deps.setTimer(() => {
       this.cancelAuto = null;
@@ -270,6 +353,10 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
         }
         this.scene = scene;
         this.sceneStatus = 'ready';
+        const view = scene.view;
+        if (view?.config) this.config = view.config;
+        if (view?.geometry) this.geometry = view.geometry;
+        if (view?.reveal !== undefined) this.reveal = view.reveal;
         if (this.phase === 'waiting') {
           this.cancelBudget?.();
           this.cancelBudget = null;
@@ -305,7 +392,13 @@ export class IntroController<S extends IntroSceneHandle = IntroSceneHandle> {
   }
 
   private land(outcome: IntroOutcome): void {
-    if (this.phase === 'landed' || this.phase === 'destroyed') return;
+    if (
+      this.phase === 'landed' ||
+      this.phase === 'exploring' ||
+      this.phase === 'explored' ||
+      this.phase === 'destroyed'
+    )
+      return;
     this.phase = 'landed';
     this.outcome = outcome;
     this.cancelBudget?.();

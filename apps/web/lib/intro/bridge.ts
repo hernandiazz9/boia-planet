@@ -35,6 +35,24 @@ export interface IntroDiagnostics {
   explored: boolean;
   /** Título del acto 2 (T27). */
   title: TitleDiagnostics;
+  /** Mundo de la escena (el de /juego en este navegador) y su aterrizaje, en coordenadas del mundo (T28). */
+  world: string | null;
+  landingPoint: { x: number; y: number } | null;
+  /** EXPLORAR descubre el puerto (T28). */
+  reveal: RevealDiagnostics;
+}
+
+export interface RevealDiagnostics {
+  /** ms de reloj desde la carga al pulsar EXPLORAR y al pintar el encuadre del puerto. */
+  startedMs: number | null;
+  finishedMs: number | null;
+  /** Vista del juego para la que se encuadró el puerto (px CSS). */
+  view: { width: number; height: number } | null;
+  /** Última cámara pintada: el punto (x, y) en px de juego a zoom 1 se pinta en (ax, ay). */
+  camera: { x: number; y: number; zoom: number; ax: number; ay: number } | null;
+  /** Dónde quedaron en la vista (px CSS) el barco en la salida y el puerto. */
+  ship: { x: number; y: number } | null;
+  port: { x: number; y: number } | null;
 }
 
 export interface TitleDiagnostics {

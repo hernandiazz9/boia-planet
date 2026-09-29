@@ -330,6 +330,25 @@ html[data-intro] .site-footer {
   transition: opacity 0.6s ease;
 }
 
+/* EXPLORAR (T28): la landing se aparta y la cámara se aleja hasta el puerto;
+   después, la escena pasa a /juego. */
+html[data-explore] {
+  overflow: hidden;
+}
+
+html[data-explore] .site-header,
+html[data-explore] .hero__content,
+html[data-explore] .hero__scene::after {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+html[data-explore] #contenido > :not(.hero),
+html[data-explore] .site-footer {
+  visibility: hidden;
+}
+
 /* Acto 0 (D-19): boia dibujada y «Cargando», sólo si la escena tarda. El
    retraso sale de la configuración (loading.showAfterMs, introCss). */
 .intro-loading {

@@ -3,12 +3,14 @@
 import {
   IntroController,
   mountMode,
+  onScreen,
   titlePoses,
   viewMoved,
   type BootEntry,
   type IntroFrame,
   type IntroMode,
   type IntroOutcome,
+  type PortReveal,
 } from '@boia/engine/intro';
 import type { IntroScene } from '@boia/engine/intro/scene';
 import { useRouter } from 'next/navigation';
@@ -83,6 +85,16 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       history: [],
       explored: false,
       title: { mode: 'flat', requestedMs: null, loadedMs: null, draws: 0, pose: null },
+      world: data.worldId,
+      landingPoint: { ...config.landingPoint },
+      reveal: {
+        startedMs: null,
+        finishedMs: null,
+        view: null,
+        camera: null,
+        ship: null,
+        port: null,
+      },
     };
     window.__boiaIntro = diag;
 
@@ -96,6 +108,9 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
     let lastSize = '';
     let lastFrameAt = 0;
     let focused = false;
+    /** EXPLORAR: adónde se va al terminar el alejamiento, y el alejamiento del mundo de la escena. */
+    let exploreHref: string | null = null;
+    let reveal: PortReveal = data.reveal;
 
     // Título 3D (T27): la hoja se pide cuando el mini-mundo ya está listo, no
     // antes (no compite con la escena). Hasta que llega, el título es texto.
@@ -207,10 +222,17 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       now: () => performance.now(),
       elapsedSinceBoot: mountedAt - t0,
       async createScene() {
-        const [{ createIntroScene }, { demoWorld }] = await Promise.all([
+        const [{ createIntroScene }, { activeIntro }] = await Promise.all([
           import('@boia/engine/intro/scene'),
-          import('../../juego/demo-world'),
+          import('../../../lib/intro/active'),
         ]);
+        // El mundo que se jugará en /juego en este navegador (el elegido, con
+        // los cambios del Admin): aterrizaje, trozo de mapa y puerto (T28).
+        const active = await activeIntro(window.location.search, config, data.assets.artScale);
+        if (!active) throw new Error('el aterrizaje o la salida del mundo caen fuera del mapa');
+        reveal = active.reveal;
+        diag.world = active.worldId;
+        diag.landingPoint = { ...active.config.landingPoint };
         const canvas = document.createElement('canvas');
         canvas.className = 'hero__canvas';
         host.appendChild(canvas);
@@ -218,10 +240,12 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
         try {
           scene = await createIntroScene({
             canvas,
-            world: demoWorld,
-            config,
-            geometry,
-            assets: data.assets,
+            world: active.world,
+            config: active.config,
+            geometry: active.geometry,
+            assets: { ...data.assets, ship: data.ships[active.shipStyle] ?? data.assets.ship },
+            sea: active.sea,
+            view: { config: active.config, geometry: active.geometry, reveal: active.reveal },
             width: vp.width,
             height: vp.height,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
@@ -241,11 +265,15 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       },
       onLanded,
       onChange: sync,
-      // EXPLORAR (REQ-ENT-012): la escena no se destruye; cede canvas, WebGL y
-      // mar al juego, que los recoge en /juego tras una navegación sin recarga.
+      reveal: data.reveal,
+      // EXPLORAR (REQ-ENT-012): la escena no se destruye; tras alejarse hasta
+      // el puerto (T28) cede canvas, WebGL y mar al juego, que los recoge en
+      // /juego tras una navegación sin recarga.
       startGame() {
         const surface = scene?.release();
         if (surface) offerWorld(surface);
+        if (diag.reveal.startedMs !== null) diag.reveal.finishedMs = performance.now() - t0;
+        router.push(exploreHref ?? '/juego');
       },
     });
     controllerRef.current = controller;
@@ -283,6 +311,13 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
         if (enterRef.current) enterRef.current.style.opacity = String(f.button);
         if (controller.phase === 'landing' && f.content > 0)
           html.setAttribute('data-intro', 'arrive');
+        if (f.act === 'explore') {
+          const view = diag.reveal.view ?? vp;
+          diag.reveal.camera = { ...f.camera };
+          diag.reveal.ship = onScreen(f.camera, reveal.ship);
+          diag.reveal.port = onScreen(f.camera, reveal.port);
+          diag.reveal.view = view;
+        }
       }
       lastSize = size;
       const next = controller.phase;
@@ -292,6 +327,7 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
         next === 'waiting' ||
         next === 'appearing' ||
         next === 'landing' ||
+        next === 'exploring' ||
         (next === 'paused' && (!reduced || (f?.title ?? 0) < 1));
       const idle = !reduced && controller.sceneStatus === 'ready' && visible;
       if (moving || idle) raf = requestAnimationFrame(loop);
@@ -338,8 +374,20 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       const link = e.target instanceof Element ? e.target.closest('a.cta-explore') : null;
       if (!link) return;
       e.preventDefault();
-      diag.explored = controller.explore();
-      router.push(link.getAttribute('href') ?? '/juego');
+      if (exploreHref !== null) return; // ya se está explorando
+      exploreHref = exploreTarget(link.getAttribute('href') ?? '/juego');
+      router.prefetch(exploreHref);
+      // La landing se aparta (CSS de `data-explore`) y la cámara se aleja hasta
+      // el puerto; al pintar su encuadre, `startGame` cede la escena y navega.
+      window.scrollTo(0, 0);
+      html.dataset.explore = '';
+      // La vista del juego (/juego ocupa la ventana), empezando donde el hero.
+      const game = { width: window.innerWidth, height: window.innerHeight };
+      diag.reveal.view = game;
+      diag.reveal.startedMs = performance.now() - t0;
+      diag.explored = controller.explore(game);
+      if (!diag.explored) router.push(exploreHref);
+      kick();
     };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('resize', onResize);
@@ -375,7 +423,12 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       io?.disconnect();
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
-      const unfinished = controller.phase !== 'landed' && controller.phase !== 'destroyed';
+      delete html.dataset.explore;
+      const unfinished =
+        controller.phase !== 'landed' &&
+        controller.phase !== 'exploring' &&
+        controller.phase !== 'explored' &&
+        controller.phase !== 'destroyed';
       controller.destroy();
       sync();
       delete html.dataset.introAct;
@@ -395,14 +448,18 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
 
   const still = data && (
     <div className="hero__still">
-      {/* eslint-disable-next-line @next/next/no-img-element -- arte servido desde art/ (D-16) */}
-      <img
-        className="hero__still-island"
-        src={data.assets.island.url}
-        alt=""
-        width={data.assets.island.width}
-        height={data.assets.island.height}
-      />
+      {data.still.map((p, i) => (
+        // eslint-disable-next-line @next/next/no-img-element -- arte servido desde art/ (D-16)
+        <img
+          key={i}
+          className="hero__still-piece"
+          data-piece={i}
+          src={p.art.url}
+          alt=""
+          width={p.art.width}
+          height={p.art.height}
+        />
+      ))}
       {/* eslint-disable-next-line @next/next/no-img-element -- arte servido desde art/ (D-16) */}
       <img
         className="hero__still-ship"
@@ -465,6 +522,18 @@ export function IntroStage({ data, skipLabel }: { data: IntroData | null; skipLa
       )}
     </>
   );
+}
+
+/**
+ * El destino de EXPLORAR: el del enlace, llevando `?mundo=` si la landing lo
+ * traía (así /juego juega el mismo mundo que la escena que recibe).
+ */
+function exploreTarget(href: string): string {
+  const world = new URLSearchParams(window.location.search).get('mundo');
+  if (!world) return href;
+  const url = new URL(href, window.location.href);
+  if (!url.searchParams.has('mundo')) url.searchParams.set('mundo', world);
+  return url.pathname + url.search + url.hash;
 }
 
 /** Acto 0: una boia dibujada (muestra, hasta que haya arte o logo de BOIA). */

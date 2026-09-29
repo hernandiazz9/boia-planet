@@ -1,14 +1,17 @@
+import { minimapProjection } from '@boia/engine/ui';
 import { WORLD_REGISTRY } from '@boia/world';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { worldIntroFor } from '../lib/intro/worlds';
 import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 
 /**
  * Demo de punta a punta (T12), con datos de muestra y sin Supabase: entrada
- * «mini-mundo» (T14; en cada carga de `/`, D-21) → landing → EXPLORAR →
- * /juego con el mismo mundo → isla de evento → menú «Barco» → artistas. Corre en móvil 360×640 y en escritorio.
+ * «mini-mundo» (T14; en cada carga de `/`, D-21) → landing → EXPLORAR (la
+ * cámara se aleja hasta el puerto, T28) → /juego con el mismo mundo y el
+ * barco en el puerto → isla de evento → menú «Barco» → artistas. Corre en móvil 360×640 y en escritorio.
  *
  * Con DEMO_SHOTS=1 guarda además capturas del recorrido en docs/informes/img/
  * (p001-t12-<paso>-<móvil|escritorio>.png).
@@ -50,6 +53,31 @@ async function shot(page: Page, info: TestInfo, name: string) {
 
 const game = (page: Page) => page.getByTestId('juego');
 
+/** Salida del barco y puerto del mapa compartido (T20, T28). */
+const SPAWN = WORLD_REGISTRY.map.spawn;
+
+/**
+ * El barco está en la salida del puerto: la flecha del minimapa cae donde el
+ * minimapa proyecta la salida del mapa (a un par de px: el minimapa es pequeño).
+ */
+async function expectShipAtPort(page: Page) {
+  const minimap = page.getByTestId('minimapa').locator('svg').first();
+  await expect(minimap.locator('polygon')).toHaveCount(1, { timeout: 30_000 });
+  const got = await minimap.evaluate((svg) => {
+    const poly = svg.querySelector('polygon')!;
+    const m = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(poly.getAttribute('transform') ?? '');
+    return {
+      w: Number(svg.getAttribute('width')),
+      h: Number(svg.getAttribute('height')),
+      x: Number(m?.[1]),
+      y: Number(m?.[2]),
+    };
+  });
+  const want = minimapProjection(defaultWorld.config.bounds, got.w, got.h).project(SPAWN);
+  expect(Math.abs(got.x - want.x), 'barco en la salida (x del minimapa)').toBeLessThan(2);
+  expect(Math.abs(got.y - want.y), 'barco en la salida (y del minimapa)').toBeLessThan(2);
+}
+
 /** El motor corre (y escucha el teclado) cuando la caja de datos da FPS. */
 async function gameRunning(page: Page) {
   await expect(page.getByTestId('hud')).toContainText(/\d+ fps/, { timeout: 30_000 });
@@ -83,6 +111,13 @@ test('`/` → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con 
   await page.waitForFunction(() => window.__boiaIntro?.sceneStatus === 'ready', null, {
     timeout: 20_000,
   });
+  // La entrada es la del mundo activo: aterriza en su punto (el puerto, T28).
+  const arrived = (await page.evaluate(() => window.__boiaIntro))!;
+  expect(arrived.world).toBe(defaultWorld.id);
+  expect(arrived.landingPoint).toEqual({
+    x: WORLD_REGISTRY.map.introLanding.x,
+    y: WORLD_REGISTRY.map.introLanding.y,
+  });
   await shot(page, info, '1-landing');
 
   // Tickets abre el panel de muestra.
@@ -106,6 +141,33 @@ test('`/` → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con 
   const intro = await page.evaluate(() => window.__boiaIntro);
   expect(intro?.explored).toBe(true);
   expect(intro?.scenesCreated).toBe(1);
+  // EXPLORAR se aleja un poco hasta el puerto (T28, D-20 punto 6): el último
+  // encuadre es el del juego, a su escala, con el barco y el puerto a la vista.
+  const h = intro!.history;
+  expect(h.indexOf('explored'), 'se alejó y luego cedió la escena').toBe(
+    h.indexOf('exploring') + 1,
+  );
+  expect(h).toContain('exploring');
+  const reveal = intro!.reveal;
+  expect(reveal.finishedMs, 'el alejamiento terminó').not.toBeNull();
+  // Se vio el alejamiento entero (no se saltó a /juego).
+  expect(reveal.finishedMs! - reveal.startedMs!).toBeGreaterThanOrEqual(
+    worldIntroFor(defaultWorld.id).explore.durationMs - 50,
+  );
+  expect(reveal.camera!.zoom).toBe(1);
+  const view = reveal.view!;
+  expect(view).toEqual(page.viewportSize());
+  for (const [what, p] of [
+    ['barco', reveal.ship!],
+    ['puerto', reveal.port!],
+  ] as const) {
+    expect(p.x, `${what} a la vista (x)`).toBeGreaterThan(0);
+    expect(p.x, `${what} a la vista (x)`).toBeLessThan(view.width);
+    expect(p.y, `${what} a la vista (y)`).toBeGreaterThan(0);
+    expect(p.y, `${what} a la vista (y)`).toBeLessThan(view.height);
+  }
+  // Y el juego lo recoge con el barco en la salida del puerto.
+  await expectShipAtPort(page);
   // Ni segunda entrada ni un segundo canvas: uno solo, el de la landing.
   await expect(page.locator('.intro-overlay')).toHaveCount(0);
   await expect(page.locator('canvas:visible')).toHaveCount(1);
@@ -113,12 +175,16 @@ test('`/` → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con 
   await shot(page, info, '3-juego');
 
   // Rumbo norte hasta la isla de evento: su proximidad abre el panel del evento.
-  // El mapa de Arcilla es grande y la isla queda lejos del puerto (T28 hará
-  // que EXPLORAR descubra el puerto): se sigue junto a ella con `?cerca=`.
+  // El mapa de Arcilla es grande y la isla queda lejos del puerto: se sigue
+  // junto a ella con `?cerca=`.
   expect(eventIsland, `el mundo ${defaultWorld.id} tiene la isla de ${EVENT_ID}`).toBeDefined();
   await page.goto(`/juego?cerca=${eventIsland.identity.id}`);
   await gameRunning(page);
-  await page.locator('canvas:visible').first().focus().catch(() => {});
+  await page
+    .locator('canvas:visible')
+    .first()
+    .focus()
+    .catch(() => {});
   await page.keyboard.down('ArrowUp');
   const panel = page.getByTestId('panel-evento');
   await expect(panel).toBeVisible({ timeout: 45_000 });
@@ -138,6 +204,8 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
   await expect(game(page)).toHaveAttribute('data-ship-style', WORLD_SHIP_STYLE);
   await expect(game(page)).toHaveAttribute('data-ship-skin', 'base');
   await expect(game(page)).toHaveAttribute('data-world', 'nuevo');
+  // Un enlace directo a /juego empieza en limpio en el puerto del mundo activo (T28).
+  await expectShipAtPort(page);
 
   // Otro estilo: se aplica sin recargar.
   let menu = await openBarco(page);
