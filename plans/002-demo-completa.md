@@ -197,6 +197,18 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - A full recorded run on mobile (intro → port → Fiestera → an event island with purchase and stamp → a bottle → a minigame → switch world → admin change seen live) saved in docs/informes/img/ (path in the final message)
 - Outcome:
 
+## T31 — The intro plays on every full page load
+- Status: pending
+- Depends on: T27
+- Goal: Hernán wants the intro (mini-world, 3D «BOIA» letters, «Zarpar», landing) every time `/` is fully loaded or reloaded, not only on the first visit. Drop the «seen» gate (boia.intro.v2) for full loads of `/`; keep what still makes sense: deep links (/#tickets, event, gallery, ?menu=…) and routes other than `/` skip the intro (REQ-ENT-011), client-side navigation back to `/` inside the app does not replay it, «Saltar animación» and «Solo quiero ver las entradas» still work from the first moment, reduced motion keeps its still variant, the lightweight landing fallback stays. Record it as D-21 in docs/DECISIONES.md (author Hernán, amends REQ-ENT-009 and D-19's seen flag, Álvaro's approval pending) and update REQ-ENT-009 in docs/spec/02-entrada-y-landing.md; `/?intro=1` stays as an explicit replay.
+- Context: T14/T27 intro (packages/engine/src/intro/**, apps/web/lib/intro/**, intro config v3, seen flag boia.intro.v2); docs/spec/02-entrada-y-landing.md (REQ-ENT-009, 011); docs/DECISIONES.md (D-19, D-20 format); apps/web/e2e/** intro and landing specs (several assume return visits skip the intro).
+- Scope: may touch ESTADO.md (own top section), docs/DECISIONES.md, docs/spec/02-entrada-y-landing.md, packages/engine/src/intro/**, apps/web/lib/intro/**, apps/web/app/(landing)/** (intro gate only), apps/web/e2e/** / must not touch packages/world/**, apps/web/app/juego/**, art/**, tools/blender/**.
+- Done when:
+  - `python3 tools/spec/check.py` → exit 0; `grep -n "D-21" docs/DECISIONES.md` shows the decision
+  - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: a second full load of `/` plays the intro; a deep link skips it; in-app navigation back to `/` does not replay it
+  - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0 with the landing/intro/demo specs updated to the new rule
+- Outcome:
+
 ## Decisions
 - 2026-09-28: Hernán chose for the test version: persistence in the browser, worlds Arcilla (B05) + Acuarela (B02), the exploracion-mundos branch as base (integrated as 7614d51), 3D «BOIA» letters rendered in Blender, minigames brought forward, tickets granting the stamp directly, Admin behind a «Probar admin» button, EXPLORAR revealing a port, Supabase keys later (Hernán)
 - 2026-09-28: one shared map for all worlds: a place is one point with a stable id; each world supplies its skin, name and texts per place id; moving a place moves it in every world; new islands = one place + files named by world under art/mundos/<world-id>/<place-id>/, checked by `pnpm world:check` (Hernán)
@@ -209,6 +221,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T23: sessions in memory (reload invalidates), hidden tab pauses and voids the reward, record_only best kept in device storage, alarm on empty sea = false alarm, escaped pirate not an error (agent)
 - 2026-09-29 T18: canonical meshes and no SSS for world art so renders are byte-identical; puerto sprite is the central paseo, costa_sur tiles fill the bottom edge; orchestrator authorized the one-line skip of art/mundos in packages/engine swap.test.ts to keep main green (agent / orchestrator)
 - 2026-09-29 T27: only the light is pre-rendered (17 angles per letter) and motion is computed in the browser, so the loop is seamless and tunable without re-rendering; letters use Blender's Inter font, orange faces and navy sides; swap.test.ts now skips art/ folders without their own manifest.json (agent)
+- 2026-09-29: the intro plays on every full load of `/` (not only the first visit); deep links and in-app navigation still skip it (Hernán) → T31
 
 ## Proposals (new scope)
 - 2026-09-29 T27: the title sheet is upscaled ~1.6× on 3× DPR phones; consider a 2× sheet; letters use Inter until BOIA's real wordmark font is provided
