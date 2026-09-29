@@ -1,13 +1,13 @@
 # 04 · Aventura
 
-Fuente: v14 §7, §8, §9, §11, §12, §13, §47-A, §49.11 (adelantado a L1 por D-20) y los encuentros que enumeran los Prompts 1 y 3. Todos los encuentros se construyen con los comportamientos de [03-mundo-y-motor](03-mundo-y-motor.md): nada de lógica pegada a «la isla 3» o «el cocodrilo». Los logros y la economía que reparten están en [05-identidad-y-comunidad](05-identidad-y-comunidad.md).
+Fuente: v14 §7, §8, §9, §11, §12, §13, §47-A, §49.11 (adelantado a L1 por D-20) y los encuentros que enumeran los Prompts 1 y 3; D-22 para la duración de los diálogos. Todos los encuentros se construyen con los comportamientos de [03-mundo-y-motor](03-mundo-y-motor.md): nada de lógica pegada a «la isla 3» o «el cocodrilo». Los logros y la economía que reparten están en [05-identidad-y-comunidad](05-identidad-y-comunidad.md).
 
 ## Primera boia y diálogos
 
 El mundo enseña a jugar sin modales: una boia habla, el jugador puede saltarla y sigue navegando.
 
 - **REQ-AVE-001** `L1` — Colocar en el puerto de salida, justo tras el spawn inicial, una primera boia informativa prácticamente imposible de ignorar, que habla por proximidad con bocadillos y sonidos «plop», sin modal ni bloqueo. *Fuente: §7, P3, D-20*
-- **REQ-AVE-002** `L1` — Avanzar los bocadillos de boies, náufragos, personajes y demás encuentros cada 1,5 s, permitir avanzar o saltar con un toque sin obligar a esperar, e interrumpir con una reacción juguetona si el barco se aleja. *Fuente: §7, §25, §47-A, D-07*
+- **REQ-AVE-002** `L1` — Mantener cada bocadillo de boies, náufragos, personajes y demás encuentros al menos 3 s, más si el texto es largo (+60 ms por carácter a partir del 50, con tope de 8 s) [provisional], en lugar del 1,5 s de D-07; dar a cada bocadillo un botón de cerrar con etiqueta accesible, permitir avanzar o saltar con un toque sin obligar a esperar, e interrumpir con una reacción juguetona si el barco se aleja; igual en `/mar` y en `/juego`. *Fuente: §7, §25, §47-A, D-07, D-22*
 - **REQ-AVE-003** `L1` — Hacer que el diálogo tutorial explique la misión (encontrar a la Boia Fiestera y llevarla a la última isla) y mencione descuentos, monedas y secretos [pendiente Álvaro]. *Fuente: §7, §31.2*
 - **REQ-AVE-004** `L1` — Cerrar el tutorial señalando el Menú de a bordo con un pulso breve de su icono de ancla, sin abrirlo; al explicar el minimapa, una sola vez («tocar para ampliar, mantener pulsado para mover»), hacerlo pulsar entre 1 y 2 s sin abrirlo. *Fuente: §7, §10, §46, P3*
 

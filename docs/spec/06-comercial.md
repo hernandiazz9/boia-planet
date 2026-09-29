@@ -1,6 +1,6 @@
 # 06 · Comercial
 
-Fuente: v14 §5, §18, §22, §49.4, §49.12 y la tabla de estados de evento; D-06 y D-20. Los accesos con la isla visible están en [02-entrada-y-landing](02-entrada-y-landing.md); el sello en el Carnet, en [05-identidad-y-comunidad](05-identidad-y-comunidad.md).
+Fuente: v14 §5, §18, §22, §49.4, §49.12 y la tabla de estados de evento; D-06, D-20 y D-22. Los accesos con la isla visible están en [02-entrada-y-landing](02-entrada-y-landing.md); el sello en el Carnet, en [05-identidad-y-comunidad](05-identidad-y-comunidad.md).
 
 Vender entradas es el objetivo principal (§2.1). Comprar nunca queda bloqueado por el juego, la cuenta ni el motor.
 
@@ -42,7 +42,7 @@ La ticketera la elige y la contrata Álvaro (D-06, D-08). Hasta entonces el cód
 - **REQ-COM-017** `L1` — Confirmar una compra sólo por el webhook verificado del proveedor (en Fourvenues, `payment.success` con `metadata.internal_id`), que la vincula a la cuenta, e ignorar las notificaciones repetidas sin duplicar sellos ni recompensas. *Fuente: P1, P3, D-06*
 - **REQ-COM-018** `L1` — Si la ticketera elegida no tiene webhook, prescindir del sello automático y registrar la compra con QR o con el código del email de compra. *Fuente: §42.2, D-06*
 - **REQ-COM-019** `L1` — Registrar las devoluciones o anulaciones que notifique el proveedor y actualizar la validez del ticket y su sello con un ajuste auditado, sin portal de reembolsos; la política comercial se aprueba antes del lanzamiento [pendiente Álvaro]. *Fuente: §49.12*
-- **REQ-COM-035** `L1` — En la versión de prueba, sin ticketera, hacer que «Comprar entrada» en la landing, el panel de entradas y las islas de evento abra un checkout sandbox rotulado claramente como prueba (evento, precio `muestra` y el descuento del náufrago si se tiene) que, al confirmar, añade el sello del evento al Carnet una vez por ID de compra y concede el logro de la entrada, a través del mismo adaptador que usará la ticketera real; es una excepción temporal a REQ-IDE-021 y REQ-COM-017 que no se publica (REQ-PRO-020), y un evento finalizado nunca muestra compra. *Fuente: D-06, D-20*
+- **REQ-COM-035** `L1` — En la versión de prueba, sin ticketera, hacer que «Comprar entrada» en la landing, el panel de entradas, las islas de evento y el botón «Entradas» de `/mar` (REQ-ENT-040) abra un checkout sandbox rotulado claramente como prueba (evento, precio `muestra` y el descuento del náufrago si se tiene) que, al confirmar, añade el sello del evento al Carnet una vez por ID de compra y concede el logro de la entrada, a través del mismo adaptador que usará la ticketera real; es una excepción temporal a REQ-IDE-021 y REQ-COM-017 que no se publica (REQ-PRO-020), y un evento finalizado nunca muestra compra. *Fuente: D-06, D-20, D-22*
 
 ## Descuentos y promociones
 

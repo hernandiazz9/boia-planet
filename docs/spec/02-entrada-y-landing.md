@@ -1,6 +1,6 @@
 # 02 · Entrada y landing
 
-Fuente: v14 §4 (4.1 a 4.4), §47-B, §49.3, §49.6 y los criterios ENT 01 a ENT 06; D-19, D-20 y D-21 cambian la entrada. Es la prioridad de diseño de L1: la entrada es el primer momento de captación y su calidad se revisa como requisito de lanzamiento (§4.4). Los estados de evento que alimentan la landing están en [06-comercial](06-comercial.md); el motor y el mapa, en [03-mundo-y-motor](03-mundo-y-motor.md).
+Fuente: v14 §4 (4.1 a 4.4), §47-B, §49.3, §49.6 y los criterios ENT 01 a ENT 06; D-19, D-20 y D-21 cambian la entrada; D-22 añade el botón «Entradas» de `/mar`. Es la prioridad de diseño de L1: la entrada es el primer momento de captación y su calidad se revisa como requisito de lanzamiento (§4.4). Los estados de evento que alimentan la landing están en [06-comercial](06-comercial.md); el motor y el mapa, en [03-mundo-y-motor](03-mundo-y-motor.md).
 
 ## Entrada cinemática: el mini-mundo
 
@@ -67,3 +67,4 @@ Tickets, Fotos y Tienda llevan al barco al lugar del universo que les correspond
 - **REQ-ENT-037** `L1` — En Tickets general, usar la isla del evento prioritario vigente y listar todos los próximos eventos con compra disponible; sin eventos a la venta, mostrar Próximamente, sin inventar entradas ni ocultar recuerdos. *Fuente: §4.3, §49.6*
 - **REQ-ENT-038** `L1` — Cargar primero el HTML y una representación ligera de la isla y después el sector navegable bajo demanda, con animación breve y omisible; si el motor no carga, conservar la isla ilustrada y el panel con la misma información y acciones. *Fuente: §49.6, P2, P3*
 - **REQ-ENT-039** `L1` — Impedir que los teletransportes de los accesos comerciales concedan rescate, entrega o descubrimientos competitivos. *Fuente: §49.6, §49.15*
+- **REQ-ENT-040** `L1` — En `/mar`, mantener siempre en pantalla un botón «Entradas» (a cualquier zoom, en el modo mapa y en móvil, sin que lo tapen la hoja, el bocadillo ni el joystick) que lleva al barco en turbo, con estela y cámara que lo sigue, hasta la isla del evento vigente (`allday` o la que apunte el evento) y abre su checkout al llegar; «Saltar» o pulsar otra vez el botón abren el checkout al momento, con movimiento reducido se abre directo y, sin evento vigente, lleva a la sección de entradas de la landing. *Fuente: §2.1, §4.3, D-22*

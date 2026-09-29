@@ -1,12 +1,12 @@
 # 03 · Mundo y motor
 
-Fuente: v14 §6, §10, §24, §34, §35, §48 (48.1 a 48.3, 48.6, 48.9), §49.7, §49.14, §49.16, §49.17, MAP 01 y ART 01; D-04, D-05, D-12 y D-20. El editor que coloca estos objetos está en [07-admin](07-admin.md); los encuentros concretos (boies, Fiestera, circuito), en [04-aventura](04-aventura.md).
+Fuente: v14 §6, §10, §24, §34, §35, §48 (48.1 a 48.3, 48.6, 48.9), §49.7, §49.14, §49.16, §49.17, MAP 01 y ART 01; D-04, D-05, D-12, D-20 y D-22. El editor que coloca estos objetos está en [07-admin](07-admin.md); los encuentros concretos (boies, Fiestera, circuito), en [04-aventura](04-aventura.md).
 
 ## Dirección visual y técnica
 
-El mundo es 2D/2.5D con sprites por capas; el 3D sólo existe offline, en Blender, para producir sprites (D-05). Estética propia de BOIA: ilustración artesanal, personajes expresivos, carácter musical y pirata, sin copiar una obra concreta (§6.1).
+El mundo es 2D/2.5D con sprites por capas; el 3D sólo existe offline, en Blender, para producir sprites (D-05). La excepción es `/mar`, una vista 3D del mismo mapa compartido que carga three.js sólo en esa ruta (D-22, REQ-MUN-038). Estética propia de BOIA: ilustración artesanal, personajes expresivos, carácter musical y pirata, sin copiar una obra concreta (§6.1).
 
-- **REQ-MUN-001** `L1` — Construir un mundo 2D/2.5D isométrico ilustrado con sprites por capas, parallax, sombras, escalado y animaciones cortas, sin runtime 3D. *Fuente: §1, §6.1, P1*
+- **REQ-MUN-001** `L1` — Construir un mundo 2D/2.5D isométrico ilustrado con sprites por capas, parallax, sombras, escalado y animaciones cortas, sin runtime 3D en la landing, la entrada ni `/juego`; `/mar`, la vista 3D del mismo mapa (REQ-MUN-038), es la única ruta que carga three.js. *Fuente: §1, §6.1, P1, D-22*
 - **REQ-MUN-002** `L1` — Separar MOTOR BOIA, DATOS/EDITOR DEL MUNDO y ARTE/ASSETS, de modo que islas, obstáculos, personajes, banderas y decoración se sustituyan por recursos compatibles sin cambiar reglas ni perder asociaciones de contenido. *Fuente: §6.1, §24, §48.9, §49.17*
 - **REQ-MUN-003** `L1` — Animar el agua con texturas u ondas ligeras para que se sienta viva. *Fuente: §6.2, P1*
 - **REQ-MUN-004** `L1` — Dibujar una estela que se desvanece, reacciona a velocidad, giro, drift, boost, choque y parada, y corresponde al desplazamiento real del barco. *Fuente: §6.2, §49.17*
@@ -24,7 +24,7 @@ El mundo es 2D/2.5D con sprites por capas; el 3D sólo existe offline, en Blende
 
 Antes de construir bastan las reglas; el mapa de lanzamiento se diseña, se navega y se ajusta durante la construcción del mundo (§49.14, autonomía de §49.18). Después, el Admin amplía y recoloca sin reconstruir la aplicación.
 
-- **REQ-MUN-011** `L1` — Hacer infranqueables las costas laterales, dejar que el mapa crezca hacia arriba sin pared superior permanente y conducir suavemente de vuelta a aguas navegables desde la zona no publicada. *Fuente: §49.7, P3*
+- **REQ-MUN-011** `L1` — En `/juego`, hacer infranqueables las costas laterales, dejar que el mapa crezca hacia arriba sin pared superior permanente y conducir suavemente de vuelta a aguas navegables desde la zona no publicada; `/mar` no tiene costas y da la vuelta (REQ-MUN-038). *Fuente: §49.7, P3, D-22*
 - **REQ-MUN-012** `L1` — Cargar el mundo por sectores bajo demanda, con atlas, calidad adaptable y límites de memoria. *Fuente: P1, P3, D-02*
 - **REQ-MUN-013** `L1` — Definir el contrato de mapa: coordenadas isométricas, sectores, colisiones, anclajes de assets, rutas, destinos y validaciones. *Fuente: §49.14, P1, P2*
 - **REQ-MUN-014** `L1` — Usar la misma geometría y las mismas transformaciones isométricas en motor, colisión, minimapa, cámara y editor, de modo que lo colocado en el editor aparezca en el mismo sitio al jugar. *Fuente: P2, P3, D-04*
@@ -92,3 +92,9 @@ Un mapa, muchos mundos (D-20, exploración de `mundos/`). Los lugares (islas, bo
 - **REQ-MUN-035** `L1` — Describir el mundo como un único mapa compartido de lugares, cada uno con ID estable, posición, geometría, comportamientos y parámetros, más el spawn, el puerto de salida y el punto de aterrizaje de la entrada, y dar a cada mundo una skin por lugar (arte, nombre y textos) junto con su estilo de barco, paleta del mar, acento de la interfaz y música; mover un lugar lo mueve en todos los mundos, una isla nueva se añade una vez y cada mundo deja sus archivos en `art/mundos/<mundo>/<lugar>/`, un mundo sólo oculta un lugar con una marca explícita, y un lugar sin skin se ve como un marcador claro y lo señala la comprobación de mundos. *Fuente: §24, §48.9, D-20*
 - **REQ-MUN-036** `L1` — Dar a cada lugar un nombre común con un nombre propio opcional por mundo; al renombrar, elegir «solo en este mundo» (pone el nombre propio) o «en todos los mundos» (cambia el común y quita los propios); las islas de evento y de tickets empiezan con el mismo nombre en todos los mundos y las demás pueden llevar el nombre de un lugar real de la costa de cada mundo. *Fuente: D-20*
 - **REQ-MUN-037** `L1` — Ofrecer dos mundos, Arcilla (barco B05, el principal) y Acuarela (barco B02), cada uno con sus islas, su historia y su estilo de barco por defecto, y permitir cambiar de mundo desde el menú y como mundo activo del Admin conservando el progreso, que va por ID de lugar y nunca por coordenadas [pendiente Álvaro]. *Fuente: D-20*
+
+## Vista 3D `/mar`: el planeta de agua
+
+`/mar` dibuja en 3D el mismo mapa compartido que `/juego`, con los mismos lugares, comportamientos y progreso (D-22). Allí el mundo es un pequeño planeta de agua: sin costas, con cielo y estrellas en el horizonte. `/juego` sigue igual, con sus costas y sus límites.
+
+- **REQ-MUN-038** `L1` — En `/mar`, dibujar el mapa compartido como un pequeño planeta de agua: sin costas de hierba, arcilla, arena ni pueblo, con el castillo y la Explanada como islas en el mar (decorado propio de `/mar`, sin mover lugares del mapa compartido); la navegación da la vuelta (salir por un lado es volver por el opuesto) y el piloto automático, el turbo, los destinos, las recompensas y los disparadores siguen yendo por ID de lugar y toman el camino más corto; la superficie se curva hacia el horizonte con un cielo que sigue los ambientes de día, atardecer y noche, estrellas (más de noche, apenas de día) y un giro lento del planeta que nunca saca al barco de su rumbo; three.js se carga sólo en esta ruta y el cambio no altera `/juego` [pendiente Álvaro]. *Fuente: D-20, D-22*

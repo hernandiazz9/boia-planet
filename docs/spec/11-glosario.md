@@ -19,14 +19,15 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 
 ## Progreso y economía
 
-- **Logro.** Objetivo con condición del catálogo de triggers, que puede dar puntos, monedas o cosméticos (§14, §23.3; REQ-IDE-024).
+- **Logro.** Objetivo con condición del catálogo de triggers. Pasa por en curso, listo para reclamar y reclamado; su premio (puntos y monedas, una insignia, un barco o un cosmético) llega al pulsar «Reclamar» (§14, §23.3, D-22; REQ-IDE-024, REQ-IDE-052).
+- **Reclamar.** Acción que cobra el premio de un logro completado, una sola vez (D-22; REQ-IDE-024).
 - **Trigger.** Hecho del motor que una condición de logro puede observar: visitar isla, encontrar boia, recoger objetos, completar circuito, tiempo jugado, comprar entrada, rescatar o entregar (§23.3).
 - **Logro global.** Logro disponible para todas las cuentas desde su publicación. Retroactivo y concesión masiva son L2 (§49.1).
 - **Puntos de prestigio.** Saldo que da rango y ranking. Nunca baja por gastar (§14; REQ-IDE-027).
 - **Monedas.** Saldo gastable en personalización, separado de los puntos (§14).
 - **Rango.** Nivel lúdico derivado de los puntos (P3; REQ-IDE-028).
 - **Transacción idempotente.** Concesión registrada con ID estable: repetirla no duplica nada (P1; REQ-ARQ-007).
-- **Aviso.** Notificación temporal de 4 s, arriba, en cola, para descubrimientos y logros (D-07; REQ-IDE-026).
+- **Aviso.** Notificación temporal, arriba, en cola, para descubrimientos y logros; dura al menos 3 s, más si el texto es largo, y se puede cerrar (D-07, D-22; REQ-IDE-026).
 
 ## Eventos y comercio
 
@@ -50,6 +51,7 @@ Términos del producto tal como se usan en esta spec. Entre paréntesis, la secc
 - **Temporada.** Configuración versionada del mundo (islas, spawn, destino de misión, eventos, diálogos, logros). Cada mundo hace de temporada; duplicarla es L2 (§23.4, D-20; REQ-ARQ-008, REQ-ADM-032).
 - **Mapa compartido, lugar.** Lista única de lugares (islas, boies, encuentros, puerto) con ID estable, posición y comportamientos, común a todos los mundos. Mover un lugar lo mueve en todos (D-20; REQ-MUN-035).
 - **Mundo.** Forma que toma el mapa compartido en una temporada: una skin por lugar (arte, nombre y textos), una historia y un estilo de barco. Arcilla (B05) y Acuarela (B02) (D-20; REQ-MUN-037).
+- **`/mar`, planeta de agua.** Vista 3D del mapa compartido, al lado de `/juego`: un pequeño planeta de agua sin costas donde la navegación da la vuelta, con cielo y estrellas en el horizonte y el botón «Entradas» siempre a mano (D-22; REQ-MUN-038, REQ-ENT-040).
 - **Skin de lugar, nombre propio.** Lo que un mundo aporta a un lugar; el nombre propio sustituye al común sólo en ese mundo (D-20; REQ-MUN-036).
 - **Puerto de salida.** Lugar donde empieza el barco al explorar, con la primera boia: El Varadero en Arcilla (D-20; REQ-ENT-012).
 - **Borrador, revisión, publicación.** Guardar crea un borrador; publicar crea una revisión inmutable y la activa de forma atómica; restaurar vuelve a una revisión anterior (P2; REQ-ADM-015).

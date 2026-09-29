@@ -4,6 +4,28 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 003 T32: decisión D-22 y borrador del catálogo de logros
+
+Sólo documentos; no se toca código.
+
+Qué hay:
+- `docs/DECISIONES.md`: D-22 (Hernán, pendiente Álvaro) con los cinco puntos: `/mar` como vista 3D del mapa compartido (three.js sólo allí, corrige D-05 para esa ruta), planeta de agua sin costas con vuelta, cielo y estrellas (`/juego` conserva sus costas), botón «Entradas» siempre visible con viaje en turbo y checkout al llegar, diálogos y avisos de al menos 3 s con botón de cerrar (corrige los 1,5 s y 4 s de D-07), y logros que se reclaman con premio según el logro. Nueva pregunta P14 para Álvaro.
+- `docs/spec/`: modificados REQ-MUN-001, REQ-MUN-011, REQ-AVE-002, REQ-IDE-024, REQ-IDE-025, REQ-IDE-026, REQ-IDE-031 y REQ-COM-035; nuevos REQ-MUN-038 (planeta de agua de `/mar`), REQ-ENT-040 (botón «Entradas» de `/mar`) y REQ-IDE-052 (premio según el logro). Filas en 09, tablas de 00-indice y glosario al día.
+- `docs/propuestas/logros-catalogo.md`: borrador de 23 logros (escalones, 3 ocultos, uno o más por actividad), con señal existente o NUEVA, premio por tipo, qué pasa con los 10 logros de hoy (`boies-6` → `boies-3`) y 9 puntos abiertos para Hernán. Espera su aprobación antes de T36.
+
+Comandos:
+```
+python3 tools/spec/check.py        # exit 0; 289 requisitos, 0 duplicados, centinelas 10/10
+python3 tools/spec/test_check.py   # exit 0; 18 pruebas
+```
+
+Desviaciones:
+- D-22 fija la regla de duración de T35 (+60 ms por carácter a partir del 50, tope 8 s) como valores de muestra, marcados `[provisional]` en REQ-AVE-002.
+- El minimapa redondo de `/mar` (T34) no entra en D-22: no estaba entre los cinco puntos.
+
+Sin probar:
+- Nada que ejecutar más allá de la comprobación de la spec.
+
 ## 2026-09-29 — plan 002 T29: pulido esencial, presupuesto de la landing y una suite e2e que termina sola
 
 Reducido a lo esencial tras dos intentos atascados. De sus ramas WIP se tomó sólo lo terminado y probado (landing, Playwright, minimapa); el sonido, WebKit, las specs de rendimiento y accesibilidad, el presupuesto de /juego y lo de `art/` se dejan fuera.

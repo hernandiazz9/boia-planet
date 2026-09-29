@@ -1,6 +1,6 @@
 # 05 · Identidad y comunidad
 
-Fuente: v14 §14 a §17, §19 a §21, §40, §42 a §44, §46, §49.8 a §49.10; D-09, D-10 y D-20. Cómo se guardan saldos y transacciones está en [08-arquitectura-y-datos](08-arquitectura-y-datos.md); cómo se administran, en [07-admin](07-admin.md).
+Fuente: v14 §14 a §17, §19 a §21, §40, §42 a §44, §46, §49.8 a §49.10; D-09, D-10, D-20 y D-22. Cómo se guardan saldos y transacciones está en [08-arquitectura-y-datos](08-arquitectura-y-datos.md); cómo se administran, en [07-admin](07-admin.md).
 
 ## Invitado y cuenta
 
@@ -45,17 +45,18 @@ Sello de compra no es asistencia: la asistencia confirmada sólo la da el check-
 
 ## Logros, avisos y economía
 
-- **REQ-IDE-024** `L1` — Unificar misiones y logros en un solo sistema de LOGROS/PROGRESO que responde qué he conseguido y qué me falta, con progreso, puntos y recompensas. *Fuente: §14, P3*
-- **REQ-IDE-025** `L1` — Cargar la lista de logros de lanzamiento aprobada [pendiente Álvaro], con los ejemplos de la v14 como base: primera boia, X/6 boies, islas descubiertas, entrada comprada, 5/20 minutos jugando, Boia Fiestera rescatada y entregada, circuito y secretos. *Fuente: §14, §28, §33*
-- **REQ-IDE-026** `L1` — Mostrar cada aviso de descubrimiento o logro 4 s, arriba, con estética azul marino y naranja y sonido corto, en cola y de uno en uno. *Fuente: §14, §46, P3, D-07, D-08*
+- **REQ-IDE-024** `L1` — Unificar misiones y logros en un solo sistema de LOGROS/PROGRESO que responde qué he conseguido y qué me falta, con un contador de logros, el progreso de cada uno (lleva/pide y «te queda…») y tres estados: en curso, listo para reclamar y reclamado; completar un logro no concede nada hasta pulsar «Reclamar», que da el premio una sola vez por ID; el mismo flujo y el mismo progreso en `/mar` y en `/juego`. *Fuente: §14, P3, D-22*
+- **REQ-IDE-025** `L1` — Cargar la lista de logros de lanzamiento aprobada [pendiente Álvaro], con los ejemplos de la v14 como base (primera boia, X/6 boies, islas descubiertas, entrada comprada, 5/20 minutos jugando, Boia Fiestera rescatada y entregada, circuito y secretos) y el catálogo de `docs/propuestas/logros-catalogo.md` una vez que lo apruebe Hernán: unos 20 logros con escalones donde tiene sentido, algunos ocultos y al menos uno por actividad principal. *Fuente: §14, §28, §33, D-22*
+- **REQ-IDE-026** `L1` — Mostrar cada aviso de descubrimiento o logro arriba, durante el tiempo de lectura de REQ-AVE-002 (al menos 3 s, más si el texto es largo) en lugar de los 4 s de D-07, con botón de cerrar, estética azul marino y naranja y sonido corto, en cola y de uno en uno. *Fuente: §14, §46, P3, D-07, D-08, D-22*
 - **REQ-IDE-027** `L1` — Llevar puntos de prestigio y monedas gastables como saldos separados: los puntos dan prestigio, rango y ranking; las monedas compran personalización; gastar monedas nunca reduce puntos, rango ni ranking. *Fuente: §14, §21, P1*
 - **REQ-IDE-028** `L1` — Derivar de los puntos unos rangos lúdicos configurables desde el Admin [pendiente Álvaro]. *Fuente: §14, P3*
 - **REQ-IDE-029** `L1` — Hacer ajustables desde el Admin las cantidades, precios y recompensas iniciales de la economía: premios de objetos en el editor del mundo, de logros en Logros, y precios de cosméticos y umbrales de rango en Logros y cosméticos [pendiente Álvaro]. *Fuente: §28, §33, §36, P1*
+- **REQ-IDE-052** `L1` — Conceder al reclamar un premio según el logro: puntos y monedas por defecto; una insignia visible en Mi Carnet por comprar entrada; un barco de estilo concreto, bloqueado en Mi Barco hasta reclamarlo, para los logros complejos; y un cosmético del barco (bandera, estela o color) para algunos; cantidades y premios los fija el catálogo aprobado [pendiente Álvaro]. *Fuente: §14, §15, §28, D-22*
 
 ## Mi Barco
 
 - **REQ-IDE-030** `L1` — Permitir en Mi Barco cambiar el color desde el principio y equipar skins y cosméticos básicos [pendiente Álvaro]. *Fuente: §15, D-02*
-- **REQ-IDE-031** `L1` — Desbloquear con monedas banderas, accesorios, aspectos y estelas, y permitir que los logros concedan cosméticos directamente. *Fuente: §6.2, §15*
+- **REQ-IDE-031** `L1` — Desbloquear con monedas banderas, accesorios, aspectos y estelas, y permitir que los logros concedan cosméticos y barcos de estilo directamente al reclamarlos (REQ-IDE-052). *Fuente: §6.2, §15, D-22*
 - **REQ-IDE-032** `L1` — Garantizar que skins y cosméticos no modifican velocidad, drift, colisiones, hitbox ni tiempos competitivos. *Fuente: §15, §49.17*
 - **REQ-IDE-033** `L1` — Guardar la configuración visual del barco en la cuenta, o en el dispositivo si es invitado. *Fuente: §15, §49.10*
 

@@ -1,6 +1,6 @@
 # 00 · Índice de la especificación v15
 
-**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-20 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
+**Qué prevalece.** `docs/DECISIONES.md` prevalece sobre esta especificación y sobre la v14: si algo de aquí contradice una decisión vigente, vale la decisión y esta spec se corrige. La v14 de Álvaro (`docs/fuente/v14-maestro.md`) queda como fuente histórica: no se lee para trabajar, se cita. Esta spec consolida la v14 con las decisiones D-01 a D-22 aplicadas: cada requisito aparece una vez, con ID, fuente, alcance y criterio verificable.
 
 ## Cómo se usa
 
@@ -12,7 +12,7 @@ Una sesión de trabajo lee este índice y los archivos que nombre su encargo, no
 |---|---|---|
 | [01-producto-y-flujos](01-producto-y-flujos.md) | Visión, dos caminos, flujos, tipos de evento, reglas UX, cobertura del piloto, contenido de BOIA y publicación | §1–3, §25–28, §30, §33, §39, §45–47, §49.18 |
 | [02-entrada-y-landing](02-entrada-y-landing.md) | Cinemática del mini-mundo (D-19) con «BOIA» en letras 3D (D-20), landing en el mundo, home por bloques, accesos con la isla visible, ENT 01–06 | §4, §47-B, §49.3, §49.6 |
-| [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, mundos sobre un mapa compartido (D-20), MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
+| [03-mundo-y-motor](03-mundo-y-motor.md) | Estética, agua, controles, mapa y ritmo, minimapa, objetos modulares, barco y sprites, mundos sobre un mapa compartido (D-20), la vista 3D `/mar` como planeta de agua (D-22), MAP 01, ART 01 | §6, §10, §24, §34, §35, §48, §49.7, §49.14, §49.16, §49.17 |
 | [04-aventura](04-aventura.md) | Tutorial, Boia Fiestera, islas, mar vivo, náufrago, circuito y minijuegos (adelantados por D-20) | §7–9, §11–13, §47-A, §49.11 |
 | [05-identidad-y-comunidad](05-identidad-y-comunidad.md) | Invitado y cuenta, Carnet, sellos, logros, economía, Mi Barco, menú, ranking, botellas, encuestas y mensajes | §14–17, §19–21, §40, §42–44, §46, §49.8–49.10 |
 | [06-comercial](06-comercial.md) | Eventos y sus 7 estados, ticketera, descuentos y promociones, artistas, filosofía, fotos y tienda | §5, §18, §22, §49.4, §49.12 |
@@ -114,8 +114,8 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | §10: minimapa 25–35 % menor que el del prototipo | 96 px de lado en móvil, máx. 22 % del ancho; 128 px en escritorio | REQ-MUN-019 |
 | §4.2, §46: CTA Explorar el doble de prominente | Alto mín. 56 px, ancho completo hasta 480 px, pulso ≤ 4 % cada 3 s | REQ-ENT-026 |
 | §4.2: Tickets siempre evidente | ≥ 44 px de alto, visible sin scroll en 360×640 | REQ-ENT-027 |
-| §14, §46: avisos de ~3–4 s | 4 s, en cola, uno a la vez, arriba | REQ-IDE-026 |
-| §7, §47-A: diálogos de ~1,5 s | 1,5 s por bocadillo, toque para avanzar o saltar | REQ-AVE-002 |
+| §14, §46: avisos de ~3–4 s | Al menos 3 s y más si el texto es largo, con botón de cerrar, en cola, uno a la vez, arriba (D-22 corrige los 4 s de D-07) | REQ-IDE-026 |
+| §7, §47-A: diálogos de ~1,5 s | Al menos 3 s por bocadillo, más si el texto es largo (tope 8 s), con botón de cerrar; toque para avanzar o saltar (D-22 corrige el 1,5 s de D-07) | REQ-AVE-002 |
 | §18, §47-A: rotación de artistas de ~5 s | 5 s | REQ-COM-026 |
 | §13, §46: boost de ~2 s | 2 s | REQ-AVE-029 |
 | §10: pulsación larga de ~0,5 s | 500 ms | REQ-MUN-021 |
@@ -132,6 +132,8 @@ Cada punto donde esta spec se aparta de la v14, con la sección, la razón y el 
 | §4.1, §47-B: título plano de la entrada | «BOIA» en letras 3D renderizadas en Blender, servidas como imágenes | D-05, D-20 | REQ-ENT-003 |
 | §4.3, §7: Explorar lleva al spawn con la primera boia | El spawn está en el puerto de salida; Explorar muestra el puerto de salida de cada mundo, con la primera boia y la salida hacia la Boia Fiestera | D-20 | REQ-ENT-012, REQ-AVE-001 |
 | §23.4, §24: una temporada es una configuración del mundo | Un mapa compartido de lugares y un mundo por temporada, cada uno con sus skins, nombres, historia y barco | D-20 | REQ-MUN-035 a REQ-MUN-037, REQ-ADM-032 |
+| §1, §6.1: mundo 2D/2.5D sin runtime 3D | Sigue así en la landing, la entrada y `/juego`; `/mar` es una vista 3D del mismo mapa con three.js, sólo en esa ruta, y allí el mundo es un planeta de agua sin costas | D-05, D-22 | REQ-MUN-001, REQ-MUN-011, REQ-MUN-038 |
+| §14: los logros se conceden al cumplirse | Se completan y quedan listos para reclamar; el premio llega al pulsar «Reclamar» y depende del logro (monedas y puntos, insignia, barco o cosmético) | D-22 | REQ-IDE-024, REQ-IDE-031, REQ-IDE-052 |
 | §44.2, §46 frente a §8.1: «tripulación» y «tripulante» | «Tripulación» nunca para usuarios; «tripulante» para la Fiestera | D-08 | REQ-IDE-020, REQ-AVE-006 |
 | P1: la IA selecciona la ticketera | La elige Álvaro con un ADR comparativo | D-06, D-08 | REQ-COM-015 |
 | Introducción, §49.5, §50: conservar el repositorio | Desde cero | D-01 | — |

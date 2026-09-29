@@ -77,6 +77,7 @@ Definidos en [02-entrada-y-landing](02-entrada-y-landing.md). 39 requisitos: 37 
 | REQ-ENT-037 | Tickets general | §4.3, §49.6 | L1 | Test con 0, 1 y 3 eventos a la venta | — |
 | REQ-ENT-038 | Carga ligera primero | §49.6, P2, P3 | L1 | e2e con WebGL desactivado: isla ilustrada y panel con las mismas acciones | — |
 | REQ-ENT-039 | Teletransportes sin premios | §49.6, §49.15 | L1 | Ningún teletransporte registra rescate, entrega ni descubrimiento | — |
+| REQ-ENT-040 | `/mar`: botón «Entradas» siempre visible, con viaje en turbo | §2.1, §4.3, D-22 | L1 | e2e: el botón se ve al zoom de cubierta y en el modo mapa; pulsarlo y «Saltar» abre el checkout del evento vigente | — |
 
 ## MUN · Mundo y motor
 
@@ -84,7 +85,7 @@ Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 37 requisitos: 36 L1, 1 L2
 
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
-| REQ-MUN-001 | Mundo 2D/2.5D sin 3D | §1, §6.1, P1 | L1 | Ningún runtime 3D en el bundle; revisión visual en el hito | — |
+| REQ-MUN-001 | Mundo 2D/2.5D; 3D sólo en `/mar` | §1, §6.1, P1, D-22 | L1 | Ningún runtime 3D en el bundle de la landing, la entrada ni `/juego`; three.js sólo en el de `/mar`; revisión visual en el hito | — |
 | REQ-MUN-002 | Motor, datos y arte separados | §6.1, §24, §48.9, §49.17 | L1 | Sustituir un asset por otro compatible sin cambiar código (ART 01) | — |
 | REQ-MUN-003 | Agua viva | §6.2, P1 | L1 | Revisión visual, dentro del presupuesto de FPS | — |
 | REQ-MUN-004 | Estela reactiva | §6.2, §49.17 | L1 | Grabación de los 6 estados; la estela sigue el desplazamiento real | — |
@@ -94,7 +95,7 @@ Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 37 requisitos: 36 L1, 1 L2
 | REQ-MUN-008 | Teclado de dos modos y drift en escritorio | P1, P3, D-14 | L1 | Test de teclado en ambos modos: mover, drift, sensibilidad y preferencia guardada | — |
 | REQ-MUN-009 | Física independiente de los FPS | P3 | L1 | Test del motor a 30 y 60 FPS con la misma trayectoria | — |
 | REQ-MUN-010 | Sin aceleración bloqueada | P3 | L1 | Tests de dedo perdido y pestaña oculta; un barco en tierra vuelve a agua segura | — |
-| REQ-MUN-011 | Costas, límite superior y zona no publicada | §49.7, P3 | L1 | Test de colisión con costas y de retorno desde la zona no publicada | — |
+| REQ-MUN-011 | Costas, límite superior y zona no publicada en `/juego` | §49.7, P3, D-22 | L1 | Test de colisión con costas y de retorno desde la zona no publicada en `/juego` | — |
 | REQ-MUN-012 | Carga por sectores | P1, P3, D-02 | L1 | Sólo se descargan los sectores cercanos; memoria medida en el dispositivo mínimo | — |
 | REQ-MUN-013 | Contrato de mapa | §49.14, P1, P2 | L1 | Esquema del mapa en packages/world con tests de validación | — |
 | REQ-MUN-014 | Misma geometría en editor y juego | P2, P3, D-04 | L1 | Test: un objeto colocado en el editor aparece en las mismas coordenadas al jugar | — |
@@ -121,6 +122,7 @@ Definidos en [03-mundo-y-motor](03-mundo-y-motor.md). 37 requisitos: 36 L1, 1 L2
 | REQ-MUN-035 | Un mapa compartido, una skin por mundo | §24, §48.9, D-20 | L1 | Test: mover un lugar cambia su posición en todos los mundos; `pnpm world:check` sale con 1 ante una skin que falta o un ID de lugar desconocido | — |
 | REQ-MUN-036 | Nombres comunes y propios por mundo | D-20 | L1 | Test: renombrar «solo en este mundo» no toca los demás; «en todos los mundos» cambia el común y quita los propios; las islas de evento tienen el mismo nombre en todos | — |
 | REQ-MUN-037 | Arcilla y Acuarela, con cambio de mundo | D-20 | L1 | Cambiar de mundo desde el menú deja el barco en el mismo punto y conserva descubrimientos y recompensas; cada mundo usa su barco por defecto | [pendiente Álvaro] Mundos, historias y nombres (P11) |
+| REQ-MUN-038 | `/mar`: planeta de agua con cielo y estrellas | D-20, D-22 | L1 | Test: con la vuelta activada, salir por cada lado vuelve por el opuesto y el piloto automático toma el camino corto; sin ella (`/juego`) el límite no cambia; capturas del horizonte de día y de noche | [pendiente Álvaro] Planeta de agua (P14) |
 
 ## AVE · Aventura
 
@@ -129,7 +131,7 @@ Definidos en [04-aventura](04-aventura.md). 39 requisitos: 36 L1, 2 L2, 1 diferi
 | ID | Requisito | Fuente | Alcance | Criterio verificable | Notas |
 |---|---|---|---|---|---|
 | REQ-AVE-001 | Primera boia en el puerto, tras el spawn | §7, P3, D-20 | L1 | En móvil, la boia es visible en el primer encuadre del puerto tras Explorar y habla sin modal | — |
-| REQ-AVE-002 | Bocadillos cada 1,5 s con salto | §7, §25, §47-A, D-07 | L1 | Test: intervalo de 1,5 s; un toque avanza; alejarse interrumpe | — |
+| REQ-AVE-002 | Bocadillos legibles, con cerrar y salto | §7, §25, §47-A, D-07, D-22 | L1 | Test: duración = máx(3 s, regla por longitud) con tope de 8 s; el botón de cerrar lo quita al momento; un toque avanza; alejarse interrumpe; igual en `/mar` y `/juego` | [provisional] Valores de la regla por longitud |
 | REQ-AVE-003 | Guion del tutorial | §7, §31.2 | L1 | Texto aprobado por Álvaro cargado | [pendiente Álvaro] |
 | REQ-AVE-004 | Pulsos del ancla y del minimapa | §7, §10, §46, P3 | L1 | Grabación: la última intervención hace pulsar el ancla; el minimapa pulsa 1–2 s sin abrirse; la explicación no se repite | — |
 | REQ-AVE-005 | Boia Fiestera entre cocodrilos | §8.1, P3 | L1 | Grabación del encuentro con 3 o 4 cocodrilos que se sumergen uno a uno | — |
@@ -197,14 +199,14 @@ Definidos en [05-identidad-y-comunidad](05-identidad-y-comunidad.md). 51 requisi
 | REQ-IDE-021 | Sello por compra confirmada | §42.2, §46, §49.12, P1 | L1 | Webhook repetido 2 veces deja 1 sello; volver de la ticketera no crea sello | — |
 | REQ-IDE-022 | Sello como recuerdo | §42.2 | L1 | Revisión de diseño en el hito | — |
 | REQ-IDE-023 | QR alternativo de sello | §42.2, §46, D-06 | L2 | Un QR válido añade el sello una sola vez | [provisional] Alcance: D-02 sólo nombra el check-in por QR |
-| REQ-IDE-024 | Logros: conseguidos y pendientes | §14, P3 | L1 | La sección Logros muestra conseguidos, pendientes y progreso | — |
-| REQ-IDE-025 | Logros de lanzamiento | §14, §28, §33 | L1 | Lista aprobada cargada como datos | [pendiente Álvaro] |
-| REQ-IDE-026 | Avisos de 4 s en cola | §14, §46, P3, D-07, D-08 | L1 | Test: 3 logros seguidos se muestran uno a uno, 4 s cada uno | — |
+| REQ-IDE-024 | Logros que se reclaman: en curso, listos y reclamados | §14, P3, D-22 | L1 | Test: completar deja el logro listo sin conceder nada; «Reclamar» concede una vez; la sección muestra el contador, el progreso y «te queda…» en `/mar` y `/juego` | — |
+| REQ-IDE-025 | Logros de lanzamiento | §14, §28, §33, D-22 | L1 | Lista aprobada cargada como datos; el catálogo de `docs/propuestas/logros-catalogo.md` aprobado por Hernán | [pendiente Álvaro] |
+| REQ-IDE-026 | Avisos legibles en cola, con cerrar | §14, §46, P3, D-07, D-08, D-22 | L1 | Test: 3 logros seguidos se muestran uno a uno, cada uno al menos 3 s y más si el texto es largo; cerrar pasa al siguiente tras su pausa | — |
 | REQ-IDE-027 | Puntos y monedas separados | §14, §21, P1 | L1 | Gastar monedas no cambia rango ni ranking | — |
 | REQ-IDE-028 | Rangos lúdicos | §14, P3 | L1 | Cambiar un umbral desde el Admin recalcula el rango mostrado | [pendiente Álvaro] |
 | REQ-IDE-029 | Economía ajustable desde el Admin | §28, §33, §36, P1 | L1 | Cambiar un premio, un precio o un umbral desde el Admin, sin despliegue | [pendiente Álvaro] |
 | REQ-IDE-030 | Color y cosméticos básicos | §15, D-02 | L1 | Cambiar color y skin desde Mi Barco | [pendiente Álvaro] Catálogo inicial de Álvaro |
-| REQ-IDE-031 | Cosméticos por monedas o logros | §6.2, §15 | L1 | Test: comprar con monedas y recibir uno por logro | — |
+| REQ-IDE-031 | Cosméticos por monedas o logros | §6.2, §15, D-22 | L1 | Test: comprar con monedas y recibir un cosmético y un barco al reclamar un logro | — |
 | REQ-IDE-032 | Cosméticos sin efecto en la física | §15, §49.17 | L1 | Test: tiempos y colisiones iguales con distintas skins | — |
 | REQ-IDE-033 | Barco guardado | §15, §49.10 | L1 | Recargar conserva el barco con cuenta y como invitado | — |
 | REQ-IDE-034 | Menú de a bordo | §19, §46 | L1 | Captura del menú con los 7 accesos | [provisional] Contradicción: «Inicio» en §19 y en §4.4 |
@@ -225,6 +227,7 @@ Definidos en [05-identidad-y-comunidad](05-identidad-y-comunidad.md). 51 requisi
 | REQ-IDE-049 | Capa personal diferida | §40.2, §42.4, §44.2, §44.4, D-02 | diferido | No se implementa; el esquema no la impide | — |
 | REQ-IDE-050 | Exportar y borrar desde la web | §49.13, D-02 | L2 | Solicitud desde la web gestionada de principio a fin | — |
 | REQ-IDE-051 | Versión de prueba: invitado con apodo y botella propia | D-20 | L1 | e2e sin correo: crear apodo, Carnet y botella; un segundo navegador no ve esa botella; la pantalla dice que todo se guarda en este navegador | Sólo versión de prueba; se retira con REQ-IDE-002 |
+| REQ-IDE-052 | Premio según el logro | §14, §15, §28, D-22 | L1 | Test: cada tipo de premio (monedas y puntos, insignia, barco, cosmético) llega a su sitio al reclamar y sólo una vez | [pendiente Álvaro] Economía y catálogo (P14) |
 
 ## COM · Comercial
 
@@ -266,7 +269,7 @@ Definidos en [06-comercial](06-comercial.md). 35 requisitos: 31 L1, 4 L2, 0 dife
 | REQ-COM-032 | Vídeos sin bloquear la carga | §4.4, §49.6, P3 | L1 | La home carga sin descargar vídeos completos | [provisional] Alcance: D-02 dice «fotos» |
 | REQ-COM-033 | Tienda L1 con enlace externo | §4.3, §22, §49.6, D-02 | L1 | Tienda desde la landing muestra la isla y el enlace externo | [pendiente Álvaro] [provisional] Alcance: §49.6 frente a «enlace externo» de D-02 |
 | REQ-COM-034 | Tienda con checkout propio | §22, P3, D-02 | L2 | Compra en sandbox sin datos de tarjeta guardados | — |
-| REQ-COM-035 | Versión de prueba: sello por checkout sandbox | D-06, D-20 | L1 | e2e: confirmar la compra de prueba añade 1 sello y 1 logro; repetir con el mismo ID de compra no añade nada; el checkout se rotula como prueba | Sólo versión de prueba; se retira con la ticketera real (P2) |
+| REQ-COM-035 | Versión de prueba: sello por checkout sandbox | D-06, D-20, D-22 | L1 | e2e: confirmar la compra de prueba añade 1 sello y 1 logro; repetir con el mismo ID de compra no añade nada; el checkout se rotula como prueba | Sólo versión de prueba; se retira con la ticketera real (P2) |
 
 ## ADM · Admin
 

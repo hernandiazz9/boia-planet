@@ -414,6 +414,58 @@ de «ya la vio» de D-19; REQ-ENT-001 y REQ-ENT-008 dejan de hablar de
 es identidad y experiencia de Álvaro (P9): falta su visto bueno; hasta que
 conteste se avanza con esta decisión.
 
+## D-22 · `/mar`, planeta de agua, «Entradas» siempre a mano, diálogos legibles y logros que se reclaman · 2026-09-29 · Hernán · pendiente Álvaro
+
+Hernán prueba la vista 3D `/mar` (commit 23890e5) y decide cómo sigue, para
+la versión de prueba de D-20 (todo en el navegador y `muestra`):
+
+1. **`/mar` es una vista 3D del mapa compartido, al lado de `/juego`.** Los
+   mismos lugares, con sus IDs, comportamientos y progreso (REQ-MUN-035),
+   dibujados con three.js en tiempo real. three.js se carga sólo en `/mar`:
+   la landing, la entrada y `/juego` siguen sin runtime 3D. Corrige D-05
+   («el 3D sólo existe offline, en Blender») para esa ruta; el pipeline de
+   sprites de D-05 sigue igual para todo lo demás.
+2. **En `/mar` el mundo es un pequeño planeta de agua.** Sin costas de
+   hierba, arcilla, arena ni pueblo: el castillo en su colina y la Explanada
+   pasan a ser islas en el mar (decorado propio de `/mar`, sin tocar las
+   posiciones del mapa compartido). La navegación da la vuelta: quien sale
+   por un lado vuelve por el opuesto, y el piloto automático elige el camino
+   más corto. La superficie se curva hacia el horizonte, se ve el cielo con
+   estrellas (más de noche, apenas de día) y el planeta gira despacio por su
+   cuenta sin sacar al barco de su rumbo. `/juego` conserva sus costas y sus
+   límites (REQ-MUN-011).
+3. **El botón «Entradas» está siempre en pantalla en `/mar`.** Al pulsarlo,
+   el barco navega en turbo, con estela y cámara que lo sigue, hasta la isla
+   del evento actual (`allday` o la isla a la que apunte el evento vigente)
+   y al llegar se abre el checkout de ese evento. Se puede saltar: «Saltar»
+   o pulsar otra vez el botón abre el checkout al momento, y con movimiento
+   reducido se abre directo. Sin evento vigente, lleva a la sección de
+   entradas de la landing. Comprar sigue sin depender del juego (REQ-PRO-002).
+4. **Los diálogos se pueden leer.** Cada bocadillo y cada aviso dura al
+   menos 3 s, más si el texto es largo (valores de muestra: +60 ms por
+   carácter a partir del 50, con tope de 8 s), y siempre lleva un botón de
+   cerrar; tocar el texto sigue avanzando. Igual en `/mar` y en `/juego`.
+   Corrige los 1,5 s por bocadillo y los 4 s por aviso de D-07.
+5. **Los logros se reclaman.** Un logro pasa por «en curso» (lleva/pide,
+   «te queda…»), «listo para reclamar» y «reclamado»; completarlo no da nada
+   todavía: el premio se concede sólo al pulsar «Reclamar», una sola vez.
+   El mismo flujo y el mismo progreso en `/mar` y en `/juego`. El premio
+   depende del logro: monedas y puntos por defecto; una insignia del Carnet
+   por comprar entrada; un barco de estilo concreto (de los 8 de
+   `art/barco/estilos/`) para los logros complejos; cosméticos del barco
+   (bandera, estela, color) para algunos. El catálogo se redacta primero
+   (`docs/propuestas/logros-catalogo.md`) y Hernán lo aprueba antes de
+   implementarlo.
+
+Modifica REQ-MUN-001, REQ-MUN-011, REQ-AVE-002, REQ-IDE-024, REQ-IDE-025,
+REQ-IDE-026, REQ-IDE-031 y REQ-COM-035, y añade REQ-MUN-038 (el planeta de
+agua de `/mar`), REQ-ENT-040 (el botón «Entradas» de `/mar`) y REQ-IDE-052
+(premios según el logro): todos citan ahora D-22. Los puntos 1, 3 y 4 son
+técnicos o de usabilidad y los decide Hernán; el planeta de agua (punto 2),
+la economía de premios y el catálogo (punto 5) tocan identidad y negocio y
+falta el visto bueno de Álvaro (P14). Hasta que conteste se avanza con esta
+decisión.
+
 ## Preguntas abiertas
 
 | # | Pregunta | Para | Traba |
@@ -430,3 +482,4 @@ conteste se avanza con esta decisión.
 | P11 | ¿Aprueba los dos mundos, Arcilla (B05) y Acuarela (B02), con sus historias y los nombres de sus lugares (`mundos/arcilla/diseno.md` y el de Acuarela cuando exista)? | Álvaro | historias y nombres definitivos; todo es `muestra` |
 | P12 | ¿Aprueba el título «BOIA» en letras 3D y que tras EXPLORAR se empiece en el puerto El Varadero (D-20, puntos 5 y 6)? | Álvaro | cerrar ENT 06 junto con P9 |
 | P13 | ¿Se puede enseñar fuera del equipo la versión de prueba, con sello de prueba y «Probar admin» abierto, y con qué enlaces reales (tickets, tienda, WhatsApp, redes, contacto)? | Álvaro | compartir la URL de Vercel más allá de Hernán y Álvaro |
+| P14 | ¿Aprueba `/mar` como planeta de agua sin costas (D-22, punto 2) y los logros que se reclaman con premios por tipo, incluidos barcos de estilo bloqueados hasta reclamarlos (D-22, punto 5, y `docs/propuestas/logros-catalogo.md`)? | Álvaro | catálogo y economía definitivos; todo es `muestra` |
