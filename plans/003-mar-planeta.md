@@ -62,10 +62,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - Outcome: compact.ts feeds /mar (islands at half spacing, PLANET_MARGIN 150 u, planet 2600×4400 u); buoy route port → Cala → Fiestera → allday → Fotos → Tienda → Cañón → Faro → Última, loop over the north edge; port→event 8.4–8.9 s; 665 tests, e2e 105 passed → 4b99bfe
 
 ## T34 — Round, transparent minimap of the turning planet
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T50
-- Goal: Replace the «Mapa» button in `/mar` with a round, semi-transparent minimap in a corner: a small render of the whole planet turning (same slow drift as T33), with the ship and the island pins (event island highlighted), readable at 360 px wide and not covering the «Entradas» button. Tapping it opens the big map (today's map mode, adapted to the planet: the whole globe in view, pins tappable, set course from there); tapping it again or «Cerrar» returns to the deck. The M key keeps working. Reuse the shared projection/gesture helpers (packages/engine/src/ui/minimap.ts) where they fit; the minimap must cost little (low-res render target or a 2D canvas, updated at a reduced rate).
-- Context: apps/web/app/mar/engine/mar3d.ts (toggleMap, MAP_ZOOM 0.55, mapMode ~127, ~372–383, ~1562), apps/web/app/mar/mar-client.tsx, mar.css; apps/web/app/juego/minimap.tsx (Minimap, ExpandedMap) and packages/engine/src/ui/minimap.ts as reference; T33 Outcome.
+- Goal: Replace the «Mapa» button in `/mar` with a round, semi-transparent minimap in a corner: a small render of the whole planet turning (same slow drift as T33), with the ship and the island pins (event island highlighted), readable at 360 px wide and not covering the «Entradas» button. Tapping it opens the big map (today's map mode, adapted to the planet: the whole globe in view, pins tappable, set course from there); tapping it again or «Cerrar» returns to the deck. The M key keeps working. Also (Hernán, after trying production on his phone): in portrait phones the ship sits in the centre of the visible play area (between the top HUD and the bottom controls), also while sailing, and the start zoom is adapted to the screen (by aspect/width) so the ship reads clearly and the next buoys or nearest island are in view; desktop keeps today's start. Reuse the shared projection/gesture helpers (packages/engine/src/ui/minimap.ts) where they fit; the minimap must cost little (low-res render target or a 2D canvas, updated at a reduced rate).
+- Context: apps/web/app/mar/engine/mar3d.ts (toggleMap, MAP_ZOOM 0.55, mapMode ~127, ~372–383, ~1562; `Mar3D.planetSpin`/`planetBounds` from T33), apps/web/app/mar/engine/compact.ts (T50 compact layout and buoy route: show the route on the minimap and the big map), apps/web/app/mar/mar-client.tsx, mar.css; apps/web/app/juego/minimap.tsx (Minimap, ExpandedMap) and packages/engine/src/ui/minimap.ts as reference; T33 Outcome.
 - Scope: may touch ESTADO.md (own top section), apps/web/app/mar/**, apps/web/e2e/mar-3d.spec.ts / must not touch apps/web/app/juego/**, packages/engine/src/ui/minimap.ts (use as is), packages/store/**.
 - Done when:
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
@@ -114,6 +114,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29: Hernán liked the T33 screenshots and is trying /mar before T34 (Hernán)
 - 2026-09-29: after trying /mar, Hernán wants it smaller and with a path: halve the distances (/mar only), a buoy route in story order; new task T50 before T34, and T34 builds on the compact world (Hernán)
 - 2026-09-29 T50: route order kept (Fiestera boards at stop 3, delivered at the last); Cañón before Faro; mar vivo within 240 u of the route; castle and Explanada either side of the port; map camera lifted 48 px; fixed T33 respawn positions not scaled (agent)
+- 2026-09-29: mobile camera centred on the ship and a phone-adapted start zoom, added to the running T34 (same files) (Hernán)
 
 ## Proposals (new scope)
 - 2026-09-29 T50: El Freu circuit not moved (would overlap the shop), its gates 370–630 u off the route; the /mar circuit is half as long, so «Rayo del Freu» (43.6 s, measured in /juego) is easier in /mar
@@ -136,3 +137,6 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29 17:46 paused for Hernán to try /mar before T34 · watchdog timers stopped by Hernán
 - 2026-09-29 17:55 T50 added (Hernán) and launched · attempt 1 · agent aabae9a6908dbeb13
 - 2026-09-29 18:22 T50 done · branch worktree-agent-aabae9a6908dbeb13 → 4b99bfe · paused for Hernán to try it
+- 2026-09-29 18:40 pushed main to origin (Hernán: deploy by push) · 23890e5..2293bc1
+- 2026-09-29 18:40 T34 launched · attempt 1 · agent ab0186aa256ff8696
+- 2026-09-29 18:55 T34 scope extended by message: mobile camera centring and start zoom (Hernán)
