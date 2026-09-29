@@ -1,0 +1,1444 @@
+{
+  "id": "puerto",
+  "kind": "place",
+  "category": "puerto",
+  "world": "acuarela",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "acuarela",
+  "ship": "B02",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/world.py",
+      "tools/blender/lugares.py",
+      "tools/blender/lugares.json",
+      "tools/blender/mundos_arte.py",
+      "tools/blender/mundo_arcilla.py",
+      "tools/blender/mundo_acuarela.py",
+      "tools/blender/render.py",
+      "tools/blender/styles/02_acuarela_ilustrada.py",
+      "mundos/temas.py",
+      "mundos/arcilla/escena.py",
+      "mundos/arcilla/piezas.py",
+      "mundos/arcilla/herramientas/mapa.py",
+      "mundos/arcilla/mapa.json",
+      "mundos/acuarela/tema.py",
+      "mundos/acuarela/piezas.py",
+      "mundos/acuarela/lugares.json",
+      "mundos/acuarela/zonas/puerto.py"
+    ],
+    "sources_sha256": "a30e6e282a878311921564ec379136fa71839bf62704148115adad1d9929c522",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 16,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma cámara y densidad que los sprites del barco (D-13, D-15): una unidad de la maqueta mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua. Tamaños a 1:1 con el barco; las posiciones del mapa las escala el motor (mapa.json, ritmo.factor_juego)"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). map_pos y offset_units en unidades del mapa (u_maq, ejes de mapa.json: x a la derecha, y hacia el espectador); offset_units = map_pos - place.pos. En los círculos sobre el agua radius_px es el semieje horizontal; el vertical mide la mitad",
+  "place": {
+    "ref": "zonas/puerto",
+    "pos": [
+      0.0,
+      25.3
+    ],
+    "event_island": false,
+    "name": "La Explanada",
+    "shared_name": false,
+    "catalog": "tools/blender/lugares.json"
+  },
+  "anchors_doc": {
+    "pivot": "punto del mapa a ras de agua que da map_pos: centro de la isla u objeto; fijo en todas las imágenes",
+    "caseta": "punto zonas/puerto/lugares/caseta de mapa.json: el quiosco de la música",
+    "muelle": "punta del muelle a ras de cubierta: donde se amarra",
+    "rotulo": "encima del punto más alto del arte: nombre o aviso del lugar",
+    "luz": "luz de la baliza",
+    "tope": "encima de la cabeza o la punta: bocadillos y reacciones"
+  },
+  "parts": [
+    {
+      "id": "puerto",
+      "role": "puerto",
+      "collision": "bloquear",
+      "map_pos": [
+        0.0,
+        30.6
+      ],
+      "offset_units": [
+        0.0,
+        5.3
+      ],
+      "doc": "tramo central de la Explanada: muro, mosaico de olas, datileras, quiosco de la música, muelle y barcas; a los lados siguen las losas de costa_sur",
+      "image": {
+        "width": 1168,
+        "height": 432,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        584.0,
+        292.0
+      ],
+      "anchors": {
+        "pivot": [
+          584.0,
+          292.0
+        ],
+        "caseta": [
+          301.52,
+          203.64
+        ],
+        "muelle": [
+          420.69,
+          46.34
+        ],
+        "rotulo": [
+          584.0,
+          13.03
+        ]
+      },
+      "anchors_on_art": [
+        "pivot",
+        "caseta",
+        "muelle"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            1148.97,
+            292.0
+          ],
+          [
+            1147.22,
+            369.72
+          ],
+          [
+            1141.92,
+            384.14
+          ],
+          [
+            1132.9,
+            393.45
+          ],
+          [
+            1119.81,
+            400.21
+          ],
+          [
+            1102.08,
+            405.33
+          ],
+          [
+            1078.68,
+            409.21
+          ],
+          [
+            1047.75,
+            412.07
+          ],
+          [
+            1005.23,
+            414.05
+          ],
+          [
+            939.31,
+            415.21
+          ],
+          [
+            584.05,
+            415.59
+          ],
+          [
+            228.69,
+            415.21
+          ],
+          [
+            162.77,
+            414.05
+          ],
+          [
+            120.25,
+            412.07
+          ],
+          [
+            89.32,
+            409.21
+          ],
+          [
+            65.92,
+            405.33
+          ],
+          [
+            48.19,
+            400.21
+          ],
+          [
+            35.1,
+            393.45
+          ],
+          [
+            26.08,
+            384.14
+          ],
+          [
+            20.78,
+            369.72
+          ],
+          [
+            19.03,
+            292.01
+          ],
+          [
+            20.78,
+            214.28
+          ],
+          [
+            26.08,
+            199.86
+          ],
+          [
+            35.1,
+            190.56
+          ],
+          [
+            48.19,
+            183.79
+          ],
+          [
+            65.92,
+            178.67
+          ],
+          [
+            89.32,
+            174.79
+          ],
+          [
+            120.25,
+            171.93
+          ],
+          [
+            162.77,
+            169.96
+          ],
+          [
+            228.69,
+            168.8
+          ],
+          [
+            583.93,
+            168.41
+          ],
+          [
+            939.31,
+            168.8
+          ],
+          [
+            1005.23,
+            169.96
+          ],
+          [
+            1047.75,
+            171.93
+          ],
+          [
+            1078.68,
+            174.79
+          ],
+          [
+            1102.08,
+            178.67
+          ],
+          [
+            1119.81,
+            183.79
+          ],
+          [
+            1132.9,
+            190.56
+          ],
+          [
+            1141.92,
+            199.86
+          ],
+          [
+            1147.22,
+            214.28
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          584.0,
+          292.0
+        ],
+        "radius_px": 280.0,
+        "radius_units": 3.1719
+      },
+      "images": [
+        {
+          "file": "puerto.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "escollera_oeste",
+      "role": "isla",
+      "collision": "bloquear",
+      "map_pos": [
+        -3.9,
+        25.1
+      ],
+      "offset_units": [
+        -3.9,
+        -0.2
+      ],
+      "doc": "escollera de bloques de hormigón",
+      "image": {
+        "width": 368,
+        "height": 336,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        184.0,
+        179.0
+      ],
+      "anchors": {
+        "pivot": [
+          184.0,
+          179.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            298.84,
+            59.69
+          ],
+          [
+            304.27,
+            62.8
+          ],
+          [
+            306.74,
+            68.78
+          ],
+          [
+            306.19,
+            77.47
+          ],
+          [
+            302.63,
+            88.66
+          ],
+          [
+            296.14,
+            102.08
+          ],
+          [
+            286.9,
+            117.39
+          ],
+          [
+            275.12,
+            134.21
+          ],
+          [
+            261.1,
+            152.14
+          ],
+          [
+            245.18,
+            170.73
+          ],
+          [
+            227.75,
+            189.53
+          ],
+          [
+            209.24,
+            208.06
+          ],
+          [
+            190.12,
+            225.88
+          ],
+          [
+            170.84,
+            242.55
+          ],
+          [
+            151.89,
+            257.65
+          ],
+          [
+            133.73,
+            270.81
+          ],
+          [
+            116.8,
+            281.72
+          ],
+          [
+            101.53,
+            290.09
+          ],
+          [
+            88.29,
+            295.73
+          ],
+          [
+            77.41,
+            298.49
+          ],
+          [
+            69.15,
+            298.32
+          ],
+          [
+            63.72,
+            295.2
+          ],
+          [
+            61.26,
+            289.22
+          ],
+          [
+            61.81,
+            280.53
+          ],
+          [
+            65.37,
+            269.34
+          ],
+          [
+            71.86,
+            255.93
+          ],
+          [
+            81.1,
+            240.62
+          ],
+          [
+            92.88,
+            223.79
+          ],
+          [
+            106.9,
+            205.86
+          ],
+          [
+            122.82,
+            187.27
+          ],
+          [
+            140.25,
+            168.47
+          ],
+          [
+            158.75,
+            149.94
+          ],
+          [
+            177.88,
+            132.12
+          ],
+          [
+            197.16,
+            115.45
+          ],
+          [
+            216.11,
+            100.35
+          ],
+          [
+            234.27,
+            87.19
+          ],
+          [
+            251.2,
+            76.29
+          ],
+          [
+            266.47,
+            67.91
+          ],
+          [
+            279.7,
+            62.27
+          ],
+          [
+            290.59,
+            59.51
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          184.0,
+          179.0
+        ],
+        "radius_px": 175.98,
+        "radius_units": 1.9936
+      },
+      "images": [
+        {
+          "file": "escollera_oeste.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "escollera_este",
+      "role": "isla",
+      "collision": "bloquear",
+      "map_pos": [
+        3.9,
+        25.1
+      ],
+      "offset_units": [
+        3.9,
+        -0.2
+      ],
+      "doc": "escollera de bloques de hormigón",
+      "image": {
+        "width": 368,
+        "height": 336,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        188.0,
+        183.0
+      ],
+      "anchors": {
+        "pivot": [
+          188.0,
+          183.0
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            302.85,
+            302.32
+          ],
+          [
+            294.59,
+            302.49
+          ],
+          [
+            283.71,
+            299.73
+          ],
+          [
+            270.47,
+            294.09
+          ],
+          [
+            255.2,
+            285.72
+          ],
+          [
+            238.27,
+            274.81
+          ],
+          [
+            220.11,
+            261.65
+          ],
+          [
+            201.16,
+            246.55
+          ],
+          [
+            181.88,
+            229.88
+          ],
+          [
+            162.76,
+            212.06
+          ],
+          [
+            144.25,
+            193.53
+          ],
+          [
+            126.82,
+            174.73
+          ],
+          [
+            110.9,
+            156.14
+          ],
+          [
+            96.88,
+            138.21
+          ],
+          [
+            85.1,
+            121.39
+          ],
+          [
+            75.86,
+            106.08
+          ],
+          [
+            69.37,
+            92.66
+          ],
+          [
+            65.81,
+            81.47
+          ],
+          [
+            65.26,
+            72.78
+          ],
+          [
+            67.73,
+            66.8
+          ],
+          [
+            73.16,
+            63.69
+          ],
+          [
+            81.41,
+            63.51
+          ],
+          [
+            92.3,
+            66.27
+          ],
+          [
+            105.53,
+            71.91
+          ],
+          [
+            120.8,
+            80.29
+          ],
+          [
+            137.73,
+            91.19
+          ],
+          [
+            155.89,
+            104.35
+          ],
+          [
+            174.84,
+            119.45
+          ],
+          [
+            194.12,
+            136.12
+          ],
+          [
+            213.25,
+            153.94
+          ],
+          [
+            231.75,
+            172.47
+          ],
+          [
+            249.18,
+            191.27
+          ],
+          [
+            265.1,
+            209.86
+          ],
+          [
+            279.12,
+            227.79
+          ],
+          [
+            290.9,
+            244.62
+          ],
+          [
+            300.14,
+            259.93
+          ],
+          [
+            306.63,
+            273.34
+          ],
+          [
+            310.19,
+            284.53
+          ],
+          [
+            310.74,
+            293.22
+          ],
+          [
+            308.28,
+            299.2
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          188.0,
+          183.0
+        ],
+        "radius_px": 175.98,
+        "radius_units": 1.9936
+      },
+      "images": [
+        {
+          "file": "escollera_este.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "baliza_verde",
+      "role": "objeto",
+      "collision": "bloquear",
+      "map_pos": [
+        -2.6,
+        22.4
+      ],
+      "offset_units": [
+        -2.6,
+        -2.9
+      ],
+      "image": {
+        "width": 80,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        40.0,
+        113.0
+      ],
+      "anchors": {
+        "pivot": [
+          40.0,
+          113.0
+        ],
+        "luz": [
+          40.0,
+          35.02
+        ]
+      },
+      "anchors_on_art": [
+        "pivot",
+        "luz"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            61.19,
+            113.0
+          ],
+          [
+            60.47,
+            115.74
+          ],
+          [
+            58.35,
+            118.3
+          ],
+          [
+            54.98,
+            120.49
+          ],
+          [
+            50.59,
+            122.18
+          ],
+          [
+            45.48,
+            123.23
+          ],
+          [
+            40.0,
+            123.59
+          ],
+          [
+            34.52,
+            123.23
+          ],
+          [
+            29.41,
+            122.18
+          ],
+          [
+            25.02,
+            120.49
+          ],
+          [
+            21.65,
+            118.3
+          ],
+          [
+            19.54,
+            115.74
+          ],
+          [
+            18.81,
+            113.0
+          ],
+          [
+            19.54,
+            110.26
+          ],
+          [
+            21.65,
+            107.7
+          ],
+          [
+            25.02,
+            105.51
+          ],
+          [
+            29.41,
+            103.83
+          ],
+          [
+            34.52,
+            102.77
+          ],
+          [
+            40.0,
+            102.41
+          ],
+          [
+            45.48,
+            102.77
+          ],
+          [
+            50.59,
+            103.83
+          ],
+          [
+            54.98,
+            105.51
+          ],
+          [
+            58.35,
+            107.7
+          ],
+          [
+            60.47,
+            110.26
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          40.0,
+          113.0
+        ],
+        "radius_px": 21.19,
+        "radius_units": 0.24
+      },
+      "images": [
+        {
+          "file": "baliza_verde.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "baliza_roja",
+      "role": "objeto",
+      "collision": "bloquear",
+      "map_pos": [
+        2.6,
+        22.4
+      ],
+      "offset_units": [
+        2.6,
+        -2.9
+      ],
+      "image": {
+        "width": 80,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        40.0,
+        113.0
+      ],
+      "anchors": {
+        "pivot": [
+          40.0,
+          113.0
+        ],
+        "luz": [
+          40.0,
+          35.02
+        ]
+      },
+      "anchors_on_art": [
+        "pivot",
+        "luz"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            61.18,
+            113.0
+          ],
+          [
+            60.46,
+            115.74
+          ],
+          [
+            58.35,
+            118.3
+          ],
+          [
+            54.98,
+            120.49
+          ],
+          [
+            50.59,
+            122.18
+          ],
+          [
+            45.48,
+            123.23
+          ],
+          [
+            40.0,
+            123.59
+          ],
+          [
+            34.52,
+            123.23
+          ],
+          [
+            29.41,
+            122.18
+          ],
+          [
+            25.02,
+            120.49
+          ],
+          [
+            21.65,
+            118.3
+          ],
+          [
+            19.53,
+            115.74
+          ],
+          [
+            18.81,
+            113.0
+          ],
+          [
+            19.53,
+            110.26
+          ],
+          [
+            21.65,
+            107.7
+          ],
+          [
+            25.02,
+            105.51
+          ],
+          [
+            29.41,
+            103.83
+          ],
+          [
+            34.52,
+            102.77
+          ],
+          [
+            40.0,
+            102.41
+          ],
+          [
+            45.48,
+            102.77
+          ],
+          [
+            50.59,
+            103.83
+          ],
+          [
+            54.98,
+            105.51
+          ],
+          [
+            58.35,
+            107.7
+          ],
+          [
+            60.46,
+            110.26
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          40.0,
+          113.0
+        ],
+        "radius_px": 21.19,
+        "radius_units": 0.24
+      },
+      "images": [
+        {
+          "file": "baliza_roja.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "anillo",
+      "role": "spawn",
+      "collision": "ninguna",
+      "map_pos": [
+        0,
+        25.3
+      ],
+      "offset_units": [
+        0.0,
+        0.0
+      ],
+      "doc": "anillo de salida (SPAWN/RESPAWN) con farolillos flotantes: el barco aparece en su centro",
+      "image": {
+        "width": 208,
+        "height": 128,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        104.0,
+        69.0
+      ],
+      "anchors": {
+        "pivot": [
+          104.0,
+          69.0
+        ]
+      },
+      "anchors_on_art": [],
+      "images": [
+        {
+          "file": "anillo.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "boia",
+      "role": "personaje",
+      "collision": "bloquear",
+      "map_pos": [
+        0,
+        20.4
+      ],
+      "offset_units": [
+        0.0,
+        -4.9
+      ],
+      "image": {
+        "width": 224,
+        "height": 176,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        112.0,
+        111.0
+      ],
+      "anchors": {
+        "pivot": [
+          112.0,
+          111.0
+        ],
+        "tope": [
+          112.0,
+          29.66
+        ]
+      },
+      "anchors_on_art": [
+        "pivot",
+        "tope"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            160.55,
+            111.0
+          ],
+          [
+            158.9,
+            117.28
+          ],
+          [
+            154.05,
+            123.14
+          ],
+          [
+            146.33,
+            128.17
+          ],
+          [
+            136.28,
+            132.03
+          ],
+          [
+            124.57,
+            134.45
+          ],
+          [
+            112.0,
+            135.28
+          ],
+          [
+            99.43,
+            134.45
+          ],
+          [
+            87.72,
+            132.03
+          ],
+          [
+            77.67,
+            128.17
+          ],
+          [
+            69.95,
+            123.14
+          ],
+          [
+            65.1,
+            117.28
+          ],
+          [
+            63.45,
+            111.0
+          ],
+          [
+            65.1,
+            104.72
+          ],
+          [
+            69.95,
+            98.86
+          ],
+          [
+            77.67,
+            93.84
+          ],
+          [
+            87.72,
+            89.98
+          ],
+          [
+            99.43,
+            87.55
+          ],
+          [
+            112.0,
+            86.73
+          ],
+          [
+            124.57,
+            87.55
+          ],
+          [
+            136.28,
+            89.98
+          ],
+          [
+            146.33,
+            93.84
+          ],
+          [
+            154.05,
+            98.86
+          ],
+          [
+            158.9,
+            104.72
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          112.0,
+          111.0
+        ],
+        "radius_px": 48.55,
+        "radius_units": 0.55
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          112.0,
+          111.0
+        ],
+        "radius_px": 282.48,
+        "radius_units": 3.2
+      },
+      "images": [
+        {
+          "file": "boia.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "bocadillo",
+      "role": "decoracion",
+      "collision": "ninguna",
+      "map_pos": [
+        0.55,
+        20.4
+      ],
+      "offset_units": [
+        0.55,
+        -4.9
+      ],
+      "doc": "bocadillo de papel que flota sobre la boia de la entrada; el pivote es el punto del agua bajo él",
+      "image": {
+        "width": 112,
+        "height": 176,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        56.0,
+        156.0
+      ],
+      "anchors": {
+        "pivot": [
+          56.0,
+          156.0
+        ]
+      },
+      "anchors_on_art": [],
+      "images": [
+        {
+          "file": "bocadillo.png",
+          "frame": 0
+        }
+      ]
+    },
+    {
+      "id": "whatsapp",
+      "role": "personaje",
+      "collision": "bloquear",
+      "map_pos": [
+        -4.8,
+        21.4
+      ],
+      "offset_units": [
+        -4.8,
+        -3.9
+      ],
+      "image": {
+        "width": 112,
+        "height": 128,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        56.0,
+        97.0
+      ],
+      "anchors": {
+        "pivot": [
+          56.0,
+          97.0
+        ],
+        "tope": [
+          56.0,
+          24.37
+        ]
+      },
+      "anchors_on_art": [
+        "pivot",
+        "tope"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            84.25,
+            97.0
+          ],
+          [
+            83.29,
+            100.66
+          ],
+          [
+            80.46,
+            104.06
+          ],
+          [
+            75.97,
+            106.99
+          ],
+          [
+            70.12,
+            109.23
+          ],
+          [
+            63.31,
+            110.64
+          ],
+          [
+            56.0,
+            111.13
+          ],
+          [
+            48.69,
+            110.64
+          ],
+          [
+            41.88,
+            109.23
+          ],
+          [
+            36.03,
+            106.99
+          ],
+          [
+            31.54,
+            104.06
+          ],
+          [
+            28.71,
+            100.66
+          ],
+          [
+            27.75,
+            97.0
+          ],
+          [
+            28.71,
+            93.35
+          ],
+          [
+            31.54,
+            89.94
+          ],
+          [
+            36.03,
+            87.01
+          ],
+          [
+            41.88,
+            84.77
+          ],
+          [
+            48.69,
+            83.36
+          ],
+          [
+            56.0,
+            82.88
+          ],
+          [
+            63.31,
+            83.36
+          ],
+          [
+            70.12,
+            84.77
+          ],
+          [
+            75.97,
+            87.01
+          ],
+          [
+            80.46,
+            89.94
+          ],
+          [
+            83.29,
+            93.35
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          56.0,
+          97.0
+        ],
+        "radius_px": 28.25,
+        "radius_units": 0.32
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          56.0,
+          97.0
+        ],
+        "radius_px": 141.24,
+        "radius_units": 1.6
+      },
+      "images": [
+        {
+          "file": "whatsapp.png",
+          "frame": 0
+        }
+      ]
+    }
+  ]
+}

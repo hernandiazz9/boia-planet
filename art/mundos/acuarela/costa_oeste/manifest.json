@@ -1,0 +1,122 @@
+{
+  "id": "costa_oeste",
+  "kind": "place",
+  "category": "costa",
+  "world": "acuarela",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "acuarela",
+  "ship": "B02",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/world.py",
+      "tools/blender/lugares.py",
+      "tools/blender/lugares.json",
+      "tools/blender/mundos_arte.py",
+      "tools/blender/mundo_arcilla.py",
+      "tools/blender/mundo_acuarela.py",
+      "tools/blender/render.py",
+      "tools/blender/styles/02_acuarela_ilustrada.py",
+      "mundos/temas.py",
+      "mundos/arcilla/escena.py",
+      "mundos/arcilla/piezas.py",
+      "mundos/arcilla/herramientas/mapa.py",
+      "mundos/arcilla/mapa.json",
+      "mundos/acuarela/tema.py",
+      "mundos/acuarela/piezas.py",
+      "mundos/acuarela/lugares.json",
+      "mundos/acuarela/zonas/costas.py",
+      "mundos/arcilla/zonas/costas.py"
+    ],
+    "sources_sha256": "58682bad16fedff6339bde00524b772be3dffb19cc7e7085a633a5971fd78a88",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 16,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma cámara y densidad que los sprites del barco (D-13, D-15): una unidad de la maqueta mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua. Tamaños a 1:1 con el barco; las posiciones del mapa las escala el motor (mapa.json, ritmo.factor_juego)"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). map_pos y offset_units en unidades del mapa (u_maq, ejes de mapa.json: x a la derecha, y hacia el espectador); offset_units = map_pos - place.pos. En los círculos sobre el agua radius_px es el semieje horizontal; el vertical mide la mitad",
+  "place": {
+    "ref": "costas/costa_oeste",
+    "pos": [
+      -15.0,
+      31.0
+    ],
+    "event_island": false,
+    "name": "Serra Gelada",
+    "shared_name": false,
+    "catalog": "tools/blender/lugares.json"
+  },
+  "anchors_doc": {
+    "pivot": "punto del mapa a ras de agua que da map_pos: centro de la isla u objeto; fijo en todas las imágenes"
+  },
+  "parts": [
+    {
+      "id": "costa_oeste",
+      "role": "losa",
+      "collision": "bloquear",
+      "map_pos": [
+        -15.0,
+        -2.65
+      ],
+      "offset_units": [
+        0.0,
+        -33.65
+      ],
+      "image": {
+        "width": 640,
+        "height": 768,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 0
+      },
+      "pivot_px": [
+        441.0,
+        0.0
+      ],
+      "anchors": {
+        "pivot": [
+          441.0,
+          0.0
+        ]
+      },
+      "anchors_on_art": [],
+      "tile": {
+        "axis": "y",
+        "land_side": "left",
+        "period_px": 768,
+        "period_units": 17.4,
+        "shore_px": {
+          "mean": 491.15,
+          "min": 420.7,
+          "max": 504.56
+        },
+        "collision_px": 546.0,
+        "outer_fill": "#CEC99D",
+        "map_line": {
+          "doc": "x = -15 de mapa.json (costas/costa_oeste/linea); la fila 0 es y = -2.6500 + n·period_units",
+          "px": 441.0
+        },
+        "doc": "se repite sin costura a lo largo de `axis` cada period_px (period_units en el mapa); el lado de tierra llega opaco al borde y más allá se rellena con outer_fill; el lado del agua es transparente. shore_px: la orilla (tierra a ras de agua) en ese eje; collision_px: donde tiene que pararse el casco (lo sólido más saliente: orilla, rocas); map_line.px: la línea de la costa de mapa.json en ese eje"
+      },
+      "images": [
+        {
+          "file": "costa_oeste.png",
+          "frame": 0
+        }
+      ]
+    }
+  ]
+}

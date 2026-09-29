@@ -2,6 +2,7 @@
 
     Blender -b -P tools/blender/contact_sheet_mundo.py -- --mundo arcilla
     Blender -b -P tools/blender/contact_sheet_mundo.py -- --mundo arcilla --art tools/blender/out/rerun --out /tmp/h.png
+    Blender -b -P tools/blender/contact_sheet_mundo.py -- --mundo acuarela --out docs/informes/img/p002-t19-hoja-acuarela.png
 
 Escala de juego: la de contact_sheet.py (el barco del mundo mide SHIP_LENGTH px de
 eslora, D-15) por `--dpr` (2 = pantalla de densidad 2). Todo el arte del mundo
@@ -25,8 +26,9 @@ sys.path.insert(0, HERE)
 import contact_sheet as CS  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(HERE))
-SEA = {"arcilla": (0x1A, 0x7A, 0xA6)}          # mundos/temas.py: Arcilla.HEX["sea"]
-SHIP_STYLE = {"arcilla": "arcilla"}             # art/barco/estilos/<estilo>
+SEA = {"arcilla": (0x1A, 0x7A, 0xA6),          # mundos/temas.py: Arcilla.HEX["sea"]
+       "acuarela": (0x5F, 0xB3, 0xAE)}         # mundos/acuarela/tema.py: HEX["sea"]
+SHIP_STYLE = {"arcilla": "arcilla", "acuarela": "acuarela"}     # art/barco/estilos/<estilo>
 INK = (0x23, 0x1C, 0x1A)
 PAPER = (0xFF, 0xF7, 0xEC)
 

@@ -4,6 +4,38 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T19: mundo Acuarela (B02), diseño y arte sobre el mapa compartido
+
+El segundo mundo, Acuarela ilustrada, sobre el mismo mapa que Arcilla (D-20): mismos 19 ids, posiciones, huellas, anclajes y animaciones; cambian la isla, el hito, el nombre y la historia. Todo es `muestra`.
+
+Qué existe:
+- `mundos/acuarela/diseno.md`: concepto, historia (el cuaderno de viaje de una pintora de Cala Cantalar; la noche de Sant Joan, de la Explanada a la hoguera de Tabarca) y una sección por id del catálogo compartido (lugar real, papel, hito, historia, arte), paleta, cómo se pinta, decisiones y preguntas para Álvaro. Nombres de sitios reales de la costa de Alicante; `allday` (la única isla de evento) conserva el nombre compartido.
+- `mundos/acuarela/lugares.json` (nombre, lugar real, hito, historia y anclajes por id), `tema.py` (estilo 02 del barco B02, ruido en píxeles de pantalla y periódico en las losas), `piezas.py` y `zonas/*.py` (las escenas de cada lugar).
+- `mundos/acuarela/herramientas/cobertura.py`: por cada id de `tools/blender/lugares.json` comprueba entrada en `lugares.json`, sección en `diseno.md`, manifiesto e imágenes en `art/mundos/acuarela/<id>/`, y el nombre (igual al de arcilla en islas de evento, distinto en el resto). Sale con 1 si falta algo.
+- `art/mundos/acuarela/<id>/`: 19 lugares, 116 imágenes, un `manifest.json` por lugar como en T18. La Fiestera a bordo es la pieza `tripulante` con `attach` al `slot_passenger` de `art/barco/estilos/acuarela` (B02).
+- `tools/blender/mundo_acuarela.py` (el mundo, con `postprocess`: la pasada de acuarela sobre cada PNG, sin el velo exterior por las notas_render de B02) y `WORLDS` con `acuarela` en `render.py` y `mundos_arte.py`; `mundos_arte.py` admite un `postprocess(img, period)` opcional por mundo (en losas, sobre los tres periodos antes de recortar). `contact_sheet_mundo.py` conoce el mar y el barco de acuarela.
+
+Comandos:
+```
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/render.py -- --all --out tools/blender/out/t19a   # exit 0, 502 imágenes, ~300 s (acuarela ~126 s)
+(el mismo con --out tools/blender/out/t19b) && diff -r tools/blender/out/t19a tools/blender/out/t19b             # exit 0: 556 archivos idénticos
+diff -rq tools/blender/out/t19a art        # todos los PNG iguales a los del repo; sólo cambian 35 líneas sources_sha256 (ver desviaciones)
+python3 tools/blender/check.py             # exit 0: 55 manifiestos, 504 imágenes; «mundo acuarela: 19 lugares válidos, 116 imágenes»
+python3 mundos/acuarela/herramientas/cobertura.py   # exit 0: 19 lugares, 0 faltas
+/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/contact_sheet_mundo.py -- --mundo acuarela --out docs/informes/img/p002-t19-hoja-acuarela.png
+pnpm test                                  # exit 0: 45 archivos, 478 pruebas
+```
+Hoja de contacto a escala de juego (dpr 2) sobre el mar del mundo: `docs/informes/img/p002-t19-hoja-acuarela.png`.
+
+Desviaciones:
+- Las `--all` se corrieron con `--out` en `tools/blender/out/` y no sobre `art/`: los manifiestos de `art/barco/**`, `art/mundos/arcilla/**` y los recursos viejos llevan un `sources_sha256` de antes (cambian `render.py` y `mundos_arte.py`), y regenerarlos habría tocado `art/mundos/arcilla/**`, fuera del alcance. Sus PNG salen idénticos; el próximo `--all` sobre `art/` sólo cambia esa línea.
+- Costas: la junta entre los dos tramos de la Platja de Sant Joan se desplaza 2,2 u (`FASE_E`) para que no caiga en la costura de la losa (check.py la veía saltar 2,96 con límite 2,73), y las datileras del Postiguet miden 1,3 en vez de 1,85 (la copa tocaba el borde del agua de la losa de 288 px). Orilla, colisión y línea del mapa siguen dentro de lo que valida check.py.
+- La geografía es libre: los sitios reales no están en su orden en la costa.
+
+Sin probar:
+- Nada carga todavía el arte de acuarela en el motor (T20). Cómo casan en el juego losas, esquinas y paseo sólo se ha visto en la hoja de contacto.
+- Nombres, historia y lugares reales están pendientes de Álvaro (preguntas al final de `diseno.md`).
+
 ## 2026-09-29 — plan 002 T31: la entrada se ve en cada carga de `/`
 
 La entrada (mini-mundo, letras 3D «BOIA», «Zarpar» y aterrizaje) ya no se ve sólo la primera vez: depende de la URL (D-21, pendiente Álvaro).

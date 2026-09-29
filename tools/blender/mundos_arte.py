@@ -22,6 +22,10 @@ Un `place` es {id, name, shared_name, parts: [part]}. Una `part` es un dict:
     hit_units, prox_units                   opcionales
     animations {nombre: {frames, fps, loop, reverse_of?}}
     tile {...} / corner {...} / attach {...} / no_water / canvas (w, h, pivot)
+
+Opcional en el módulo: postprocess(img, period=None) -> img (RGBA uint8, fila 0 arriba), una pasada sobre
+cada imagen recién renderizada (la acuarela la usa); en las losas se aplica a los tres periodos antes de
+recortar, con period = (eje, px) para que la pasada también se repita.
 """
 import hashlib
 import json
@@ -40,7 +44,7 @@ import world
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
-WORLDS = {"arcilla": "mundo_arcilla"}
+WORLDS = {"arcilla": "mundo_arcilla", "acuarela": "mundo_acuarela"}
 PPU = rig.pixels_per_unit()
 VERSION = "0.1.0"
 LICENSE = "muestra interna"
@@ -295,6 +299,7 @@ def render_part(state, part, out_dir, stats):
                           max(0.0, off[:, 1].max())))
         w, h, pivot, ytop = fit(boxes)
     images, first, rendered = [], None, []
+    post = getattr(state.mod, "postprocess", None)
     for i, e in enumerate(entries):
         ctx, objs, origin = _setup(state, part, e)
         rw, rh, rpivot = (w, 3 * h, (pivot[0], pivot[1] + h)) if tile and tile["axis"] == "y" else \
@@ -309,6 +314,8 @@ def render_part(state, part, out_dir, stats):
             ctx.scene.render.filepath = raw
             bpy.ops.render.render(write_still=True)
             img = read_png(raw)
+            if post:
+                img = post(img, period=(tile["axis"], h if tile["axis"] == "y" else w) if tile else None)
             if tile:
                 img = img[h:2 * h] if tile["axis"] == "y" else img[:, w:2 * w]
                 img, fill = fade_to_fill(img, tile["land"], tile.get("fill"))
@@ -322,6 +329,9 @@ def render_part(state, part, out_dir, stats):
             ctx.scene.render.filepath = path
             bpy.ops.render.render(write_still=True)
             img = None
+            if post:
+                img = post(read_png(path))
+                write_png(path, img)
         stats.append({"file": path, "seconds": round(time.perf_counter() - t0, 3), "bytes": os.path.getsize(path)})
         im = {"file": e["file"], "frame": e.get("frame", 0)}
         for k in ("animation", "variant"):

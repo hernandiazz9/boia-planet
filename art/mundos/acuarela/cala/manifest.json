@@ -1,0 +1,336 @@
+{
+  "id": "cala",
+  "kind": "place",
+  "category": "isla",
+  "world": "acuarela",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "acuarela",
+  "ship": "B02",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/world.py",
+      "tools/blender/lugares.py",
+      "tools/blender/lugares.json",
+      "tools/blender/mundos_arte.py",
+      "tools/blender/mundo_arcilla.py",
+      "tools/blender/mundo_acuarela.py",
+      "tools/blender/render.py",
+      "tools/blender/styles/02_acuarela_ilustrada.py",
+      "mundos/temas.py",
+      "mundos/arcilla/escena.py",
+      "mundos/arcilla/piezas.py",
+      "mundos/arcilla/herramientas/mapa.py",
+      "mundos/arcilla/mapa.json",
+      "mundos/acuarela/tema.py",
+      "mundos/acuarela/piezas.py",
+      "mundos/acuarela/lugares.json",
+      "mundos/acuarela/zonas/cala.py"
+    ],
+    "sources_sha256": "3a92eb0112b5260d5feec34a3dde200b1fd678492aaecc286978a2989fe30db7",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 16,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma cámara y densidad que los sprites del barco (D-13, D-15): una unidad de la maqueta mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua. Tamaños a 1:1 con el barco; las posiciones del mapa las escala el motor (mapa.json, ritmo.factor_juego)"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). map_pos y offset_units en unidades del mapa (u_maq, ejes de mapa.json: x a la derecha, y hacia el espectador); offset_units = map_pos - place.pos. En los círculos sobre el agua radius_px es el semieje horizontal; el vertical mide la mitad",
+  "place": {
+    "ref": "zonas/cala",
+    "pos": [
+      8.5,
+      13.0
+    ],
+    "event_island": false,
+    "name": "Cala Cantalar",
+    "shared_name": false,
+    "catalog": "tools/blender/lugares.json"
+  },
+  "anchors_doc": {
+    "pivot": "punto del mapa a ras de agua que da map_pos: centro de la isla u objeto; fijo en todas las imágenes",
+    "horno": "punto zonas/cala/lugares/horno de mapa.json: la casa de la pintora",
+    "chiringuito": "punto zonas/cala/lugares/chiringuito de mapa.json: la datilera grande",
+    "paella": "punto zonas/cala/lugares/paella de mapa.json: la mesa de los botes de pintura",
+    "pista": "punto zonas/cala/lugares/pista de mapa.json: el tendedero de hojas",
+    "embarcadero": "punto zonas/cala/lugares/embarcadero de mapa.json: el embarcadero de tablas",
+    "amarre": "punto zonas/cala/lugares/amarre de mapa.json: amarre del barco",
+    "torno": "punto zonas/cala/lugares/torno de mapa.json: el caballete y la pintora",
+    "rotulo": "encima del punto más alto del arte: nombre o aviso del lugar"
+  },
+  "parts": [
+    {
+      "id": "cala",
+      "role": "isla",
+      "collision": "bloquear",
+      "map_pos": [
+        8.5,
+        13.0
+      ],
+      "offset_units": [
+        0.0,
+        0.0
+      ],
+      "doc": "isla de la pintora: el taller de la pintora: casa encalada con buganvilla, caballete con el cuadro a medio pintar y el cuaderno tendido a secar",
+      "image": {
+        "width": 608,
+        "height": 480,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        304.0,
+        295.0
+      ],
+      "anchors": {
+        "pivot": [
+          304.0,
+          295.0
+        ],
+        "horno": [
+          285.46,
+          155.19
+        ],
+        "chiringuito": [
+          432.0,
+          225.72
+        ],
+        "paella": [
+          381.68,
+          279.66
+        ],
+        "pista": [
+          259.86,
+          239.8
+        ],
+        "embarcadero": [
+          508.8,
+          431.39
+        ],
+        "amarre": [
+          589.13,
+          414.62
+        ],
+        "torno": [
+          171.59,
+          203.71
+        ],
+        "rotulo": [
+          304.0,
+          12.61
+        ]
+      },
+      "anchors_on_art": [
+        "pivot",
+        "horno",
+        "chiringuito",
+        "paella",
+        "pista",
+        "embarcadero",
+        "torno"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            497.5,
+            391.75
+          ],
+          [
+            467.58,
+            404.73
+          ],
+          [
+            440.31,
+            412.42
+          ],
+          [
+            411.88,
+            416.82
+          ],
+          [
+            381.99,
+            418.18
+          ],
+          [
+            350.76,
+            416.58
+          ],
+          [
+            318.41,
+            412.07
+          ],
+          [
+            285.14,
+            404.64
+          ],
+          [
+            251.01,
+            394.22
+          ],
+          [
+            215.5,
+            380.49
+          ],
+          [
+            172.92,
+            360.54
+          ],
+          [
+            133.03,
+            339.25
+          ],
+          [
+            105.56,
+            321.5
+          ],
+          [
+            84.73,
+            304.43
+          ],
+          [
+            69.87,
+            287.8
+          ],
+          [
+            60.84,
+            271.62
+          ],
+          [
+            57.64,
+            256.01
+          ],
+          [
+            60.36,
+            241.06
+          ],
+          [
+            69.16,
+            226.84
+          ],
+          [
+            84.55,
+            213.21
+          ],
+          [
+            110.5,
+            198.25
+          ],
+          [
+            140.42,
+            185.28
+          ],
+          [
+            167.69,
+            177.58
+          ],
+          [
+            196.12,
+            173.18
+          ],
+          [
+            226.01,
+            171.82
+          ],
+          [
+            257.24,
+            173.42
+          ],
+          [
+            289.59,
+            177.94
+          ],
+          [
+            322.86,
+            185.37
+          ],
+          [
+            356.99,
+            195.78
+          ],
+          [
+            392.5,
+            209.51
+          ],
+          [
+            435.08,
+            229.46
+          ],
+          [
+            474.98,
+            250.75
+          ],
+          [
+            502.44,
+            268.51
+          ],
+          [
+            523.27,
+            285.57
+          ],
+          [
+            538.13,
+            302.21
+          ],
+          [
+            547.17,
+            318.38
+          ],
+          [
+            550.36,
+            334.0
+          ],
+          [
+            547.64,
+            348.94
+          ],
+          [
+            538.84,
+            363.16
+          ],
+          [
+            523.45,
+            376.79
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          304.0,
+          295.0
+        ],
+        "radius_px": 239.98,
+        "radius_units": 2.7185
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          304.0,
+          295.0
+        ],
+        "radius_px": 406.07,
+        "radius_units": 4.6
+      },
+      "images": [
+        {
+          "file": "cala.png",
+          "frame": 0
+        }
+      ]
+    }
+  ]
+}
