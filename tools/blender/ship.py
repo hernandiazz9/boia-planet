@@ -1,8 +1,8 @@
 """Barco de vela procedural: low-poly, sombreado toon de tres tonos y contorno.
 
 La geometría es una sola; las skins sólo cambian colores de materiales (y con
-ellos la bandera y las franjas de la vela). La pasajera ("Boia Fiestera",
-placeholder) cuelga del empty `slot_passenger` y se muestra u oculta.
+ellos la bandera y las franjas de la vela). La pasajera (la Boia Fiestera: la
+mascota de BOIA en pequeño, T39) cuelga del empty `slot_passenger` y se muestra u oculta.
 
 Uso suelto, para inspeccionar el modelo en Blender:
     Blender -b -P tools/blender/ship.py -- --skin noche --save tools/blender/out/ship.blend
@@ -62,10 +62,11 @@ SKINS = {
     },
 }
 
-# La pasajera no cambia con la skin del barco. Colores de muestra.
+# La pasajera no cambia con la skin del barco: la mascota de BOIA (art/marca/boia-mascota.jpg, T39) con los colores
+# muestreados del logo: cuerpo naranja, aro blanco, gorro azul marino y tinta.
 PASSENGER_COLORS = {
-    "buoy_a": "#FF4F9A", "buoy_b": "#FFF3F7", "hat": "#FFD23F",
-    "face": {"hex": "#1B1030", "flat": True},
+    "buoy_a": "#F5501E", "buoy_b": "#FBF8F2", "hat": "#34288A",
+    "face": {"hex": "#15101E", "flat": True},
 }
 
 # --- Dimensiones (unidades del mundo; el casco mide 2 de eslora) -------------
@@ -101,6 +102,7 @@ FLAG_Z0, FLAG_H, FLAG_W = 1.76, 0.20, 0.34
 
 PASSENGER_SLOT = (-0.42, -0.23)   # x, y en cubierta: a estribor (-Y), fuera de la línea del mástil
 PASSENGER_SCALE = 1.15
+PASSENGER_BODY_K = 1.22          # la mascota a bordo (passenger_meshes), respecto a su modelo
 
 DIRECTIONS = ["S", "SW", "W", "NW", "N", "NE", "E", "SE"]
 
@@ -321,55 +323,111 @@ PASSENGER_ROLES = ["buoy_a", "buoy_b", "hat", "face"]
 
 
 def build_passenger(mats, slot):
-    """Placeholder de la Boia Fiestera: cilindro con cara y gorro de fiesta."""
+    """La Boia Fiestera a bordo: la mascota de BOIA en pequeño (cuerpo, aro, gorro y cara)."""
     return [link_object(name, bm, [mats[r] for r in roles], slot, mats.outline, outline=outline)
             for name, bm, roles, outline in passenger_meshes()]
+
+
+def _ellipsoid(bm, c, a, b, h, segs=16, rings=10, idx=0, matrix=None):
+    """Elipsoide con vértices en orden fijo (sin create_uvsphere, que ordena distinto en cada proceso)."""
+    cx, cy, cz = c
+    m = matrix or Matrix.Identity(4)
+    top = bm.verts.new(m @ Vector((cx, cy, cz + h)))
+    bot = bm.verts.new(m @ Vector((cx, cy, cz - h)))
+    rows = []
+    for j in range(1, rings):
+        ph = math.pi / 2 - math.pi * j / rings
+        rows.append([bm.verts.new(m @ Vector((cx + a * math.cos(ph) * math.cos(2 * math.pi * k / segs),
+                                              cy + b * math.cos(ph) * math.sin(2 * math.pi * k / segs),
+                                              cz + h * math.sin(ph))))
+                     for k in range(segs)])
+    faces = []
+    for k in range(segs):
+        k1 = (k + 1) % segs
+        faces.append(bm.faces.new((top, rows[0][k], rows[0][k1])))
+        faces.append(bm.faces.new((bot, rows[-1][k1], rows[-1][k])))
+    for r0, r1 in zip(rows, rows[1:]):
+        for k in range(segs):
+            k1 = (k + 1) % segs
+            faces.append(bm.faces.new((r0[k], r1[k], r1[k1], r0[k1])))
+    for f in faces:
+        f.material_index = idx
+    return faces
+
+
+def _torus(bm, c, R, r, nu=20, nv=8, idx=0):
+    rings = [[bm.verts.new((c[0] + (R + r * math.cos(2 * math.pi * j / nv)) * math.cos(2 * math.pi * i / nu),
+                            c[1] + (R + r * math.cos(2 * math.pi * j / nv)) * math.sin(2 * math.pi * i / nu),
+                            c[2] + r * math.sin(2 * math.pi * j / nv))) for j in range(nv)] for i in range(nu)]
+    for i in range(nu):
+        for j in range(nv):
+            a, b = rings[i], rings[(i + 1) % nu]
+            f = bm.faces.new((a[j], b[j], b[(j + 1) % nv], a[(j + 1) % nv]))
+            f.material_index = idx
+
+
+def _cone(bm, base, tip, r, segs=12, idx=0):
+    base, tip = Vector(base), Vector(tip)
+    ax = (tip - base).normalized()
+    u = ax.orthogonal().normalized()
+    v = ax.cross(u)
+    ring = [bm.verts.new(base + r * (math.cos(2 * math.pi * k / segs) * u + math.sin(2 * math.pi * k / segs) * v))
+            for k in range(segs)]
+    t = bm.verts.new(tip)
+    for k in range(segs):
+        f = bm.faces.new((ring[k], ring[(k + 1) % segs], t))
+        f.material_index = idx
+    f = bm.faces.new(list(reversed(ring)))
+    f.material_index = idx
 
 
 def passenger_meshes():
     """Geometría de la pasajera, sin materiales: [(nombre, bmesh, roles, contorno)].
 
-    La comparten ship.py y los estilos de ship_styles.py; cada estilo pone sus materiales.
+    La Boia Fiestera a bordo es la mascota de BOIA en pequeño (art/marca/boia-mascota.jpg, T39): cuerpo redondo
+    (buoy_a, naranja), aro flotador (buoy_b, blanco), gorro en punta ladeado a su izquierda (hat, azul marino) y la
+    cara mirando a proa (+X): ojos grandes blancos con pupila y sonrisa ancha (face, tinta). La comparten ship.py
+    y los estilos de ship_styles.py; cada estilo pone sus materiales.
     """
     out = []
-    R, segs = 0.16, 12
-    zs = [0.0, 0.13, 0.29, 0.40]
     roles = ["buoy_a", "buoy_b", "hat", "face"]
     ri = {r: i for i, r in enumerate(roles)}
+    a, h, cz = 0.165, 0.17, 0.215
     bm = bmesh.new()
-    rings = [[bm.verts.new((R * math.cos(2 * math.pi * k / segs), R * math.sin(2 * math.pi * k / segs), z))
-              for k in range(segs)] for z in zs]
-    band_role = ["buoy_a", "buoy_b", "buoy_a"]
-    for i in range(len(zs) - 1):
-        for k in range(segs):
-            f = bm.faces.new((rings[i][k], rings[i][(k + 1) % segs], rings[i + 1][(k + 1) % segs], rings[i + 1][k]))
-            f.material_index = ri[band_role[i]]
-    dome = bm.verts.new((0, 0, 0.45))
-    for k in range(segs):
-        f = bm.faces.new((rings[-1][k], rings[-1][(k + 1) % segs], dome))
-        f.material_index = ri["buoy_a"]
-    f = bm.faces.new(list(reversed(rings[0])))
-    f.material_index = ri["buoy_a"]
-    # Gorro de fiesta, algo ladeado.
-    hat = bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=0.085, radius2=0.0, depth=0.17,
-                                matrix=Matrix.Translation((0.0, 0.02, 0.52)) @ Matrix.Rotation(math.radians(12), 4, "X"))
-    for f in faces_of(hat["verts"]):
-        f.material_index = ri["hat"]
+    _ellipsoid(bm, (0.0, 0.0, cz), a, a, h, segs=18, rings=10, idx=ri["buoy_a"])
+    _torus(bm, (0.0, 0.0, 0.075), 0.15, 0.035, idx=ri["buoy_b"])
+    # gorro: de lo alto de la cabeza, un poco a su izquierda (+Y), hacia arriba y a la izquierda
+    _cone(bm, (-0.01, 0.07, cz + 0.13), (-0.02, 0.2, cz + 0.33), 0.085, idx=ri["hat"])
     out.append(("passenger", bm, roles, True))
 
-    # Cara mirando a proa (+X): dos ojos y una sonrisa de puntos. Sin contorno.
+    # Cara: ojos blancos con pupila de tinta y una sonrisa de puntos, sobre la superficie que mira a +X. Sin contorno.
     bm = bmesh.new()
-    for side in (-1, 1):
-        a = side * 0.34
-        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.03,
-                                   matrix=Matrix.Translation((R * math.cos(a), R * math.sin(a), 0.225)) @
-                                   Matrix.Rotation(a, 4, "Z") @ Matrix.Diagonal((0.45, 1.0, 1.25, 1.0)))
+    froles = ["buoy_b", "face"]
+
+    def on_body(az, lat, lift):
+        x = a * math.cos(lat) * math.cos(az)
+        y = a * math.cos(lat) * math.sin(az)
+        z = cz + h * math.sin(lat)
+        n = Vector((x / (a * a), y / (a * a), (z - cz) / (h * h))).normalized()
+        return Vector((x, y, z)) + n * lift, n
+
+    for az in (-0.38, 0.30):
+        p, n = on_body(az, 0.32, 0.0)
+        m = Matrix.Translation(p) @ n.to_track_quat("Z", "Y").to_matrix().to_4x4()
+        _ellipsoid(bm, (0, 0, 0), 0.042, 0.055, 0.018, segs=10, rings=6, idx=0, matrix=m)
+        p, n = on_body(az + 0.05, 0.30, 0.016)
+        _ellipsoid(bm, tuple(p), 0.021, 0.021, 0.021, segs=8, rings=5, idx=1)
     for k in range(7):
-        phi = math.radians(-150 + 20 * k)
-        y, z = 0.058 * math.cos(phi), 0.19 + 0.045 * math.sin(phi)
-        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.014,
-                                   matrix=Matrix.Translation((math.sqrt(R * R - y * y) + 0.004, y, z)))
-    out.append(("passenger_face", bm, ["face"], False))
+        az = -0.42 + 0.12 * k
+        lat = -0.12 - 0.12 * math.sin(math.pi * k / 6)
+        p, _ = on_body(az, lat, 0.004)
+        _ellipsoid(bm, tuple(p), 0.017, 0.017, 0.017, segs=8, rings=5, idx=1)
+    out.append(("passenger_face", bm, froles, False))
+    # Algo más grande que el modelo base: redonda y baja, tiene que asomar por encima de la carga en las 8
+    # direcciones de todos los estilos (check.py: MIN_PASSENGER_PX). Los pies siguen en la cubierta (z = 0).
+    for _, b, _, _ in out:
+        for v in b.verts:
+            v.co *= PASSENGER_BODY_K
     return out
 
 

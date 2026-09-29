@@ -1,7 +1,7 @@
 {
   "id": "barco",
   "kind": "ship",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "muestra",
   "license": "muestra interna",
   "style": "low-poly",
@@ -11,9 +11,10 @@
       "tools/blender/styles/03_low_poly.py",
       "tools/blender/ship.py",
       "tools/blender/ship_styles.py",
+      "tools/blender/ship_skins.py",
       "tools/blender/render.py"
     ],
-    "sources_sha256": "ceebeb818076577ecf05e7b9edd8410f0734c30a53f98f5883e8b82e539ffa52",
+    "sources_sha256": "cac0806e9f79e5e7868a9af7c4fe1b44cdc7cc331ed88bd6662acb2c1aae4647",
     "blender": "5.2.2 LTS",
     "engine": "BLENDER_EEVEE",
     "samples": 16,
@@ -46,7 +47,9 @@
     "bow": "roda a la altura del agua; bow - wake_origin da el rumbo del casco en pantalla"
   },
   "skins": [
-    "base"
+    "base",
+    "noche",
+    "fiesta"
   ],
   "direction_order": [
     "S",
@@ -654,6 +657,230 @@
           234.6
         ]
       }
+    },
+    {
+      "file": "noche/S.png",
+      "skin": "noche",
+      "direction": "S",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/SW.png",
+      "skin": "noche",
+      "direction": "SW",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/W.png",
+      "skin": "noche",
+      "direction": "W",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/NW.png",
+      "skin": "noche",
+      "direction": "NW",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/N.png",
+      "skin": "noche",
+      "direction": "N",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/NE.png",
+      "skin": "noche",
+      "direction": "NE",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/E.png",
+      "skin": "noche",
+      "direction": "E",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/SE.png",
+      "skin": "noche",
+      "direction": "SE",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "noche/S_p.png",
+      "skin": "noche",
+      "direction": "S",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "noche/SW_p.png",
+      "skin": "noche",
+      "direction": "SW",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "noche/W_p.png",
+      "skin": "noche",
+      "direction": "W",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "noche/NW_p.png",
+      "skin": "noche",
+      "direction": "NW",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "noche/N_p.png",
+      "skin": "noche",
+      "direction": "N",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "noche/NE_p.png",
+      "skin": "noche",
+      "direction": "NE",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "noche/E_p.png",
+      "skin": "noche",
+      "direction": "E",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "noche/SE_p.png",
+      "skin": "noche",
+      "direction": "SE",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/S.png",
+      "skin": "fiesta",
+      "direction": "S",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/SW.png",
+      "skin": "fiesta",
+      "direction": "SW",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/W.png",
+      "skin": "fiesta",
+      "direction": "W",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/NW.png",
+      "skin": "fiesta",
+      "direction": "NW",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/N.png",
+      "skin": "fiesta",
+      "direction": "N",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/NE.png",
+      "skin": "fiesta",
+      "direction": "NE",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/E.png",
+      "skin": "fiesta",
+      "direction": "E",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/SE.png",
+      "skin": "fiesta",
+      "direction": "SE",
+      "frame": 0,
+      "passenger": false
+    },
+    {
+      "file": "fiesta/S_p.png",
+      "skin": "fiesta",
+      "direction": "S",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/SW_p.png",
+      "skin": "fiesta",
+      "direction": "SW",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/W_p.png",
+      "skin": "fiesta",
+      "direction": "W",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/NW_p.png",
+      "skin": "fiesta",
+      "direction": "NW",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/N_p.png",
+      "skin": "fiesta",
+      "direction": "N",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/NE_p.png",
+      "skin": "fiesta",
+      "direction": "NE",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/E_p.png",
+      "skin": "fiesta",
+      "direction": "E",
+      "frame": 0,
+      "passenger": true
+    },
+    {
+      "file": "fiesta/SE_p.png",
+      "skin": "fiesta",
+      "direction": "SE",
+      "frame": 0,
+      "passenger": true
     }
   ]
 }

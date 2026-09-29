@@ -10,7 +10,7 @@
   "properties": {
     "id": {"$ref": "#/$defs/slug"},
     "kind": {"const": "place"},
-    "category": {"enum": ["puerto", "isla", "encuentro", "marvivo", "circuito", "minijuego", "costa"]},
+    "category": {"enum": ["puerto", "isla", "encuentro", "marvivo", "circuito", "minijuego", "costa", "personaje", "secreto"]},
     "world": {"$ref": "#/$defs/slug"},
     "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
     "status": {"enum": ["muestra", "pendiente", "aprobado"]},

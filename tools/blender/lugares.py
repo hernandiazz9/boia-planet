@@ -68,5 +68,6 @@ def instances(M, entry):
 
 
 def by_id(cat=None):
+    """Lugares y extras (arte con formato de lugar que el motor aún no dibuja como lugar propio) por id."""
     cat = cat or load_catalog()
-    return {e["id"]: e for e in cat["lugares"]}
+    return {e["id"]: e for e in cat["lugares"] + cat.get("extras", [])}

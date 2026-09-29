@@ -11,14 +11,15 @@
 
 Salida (en --out, por defecto art/), una carpeta por recurso:
     barco/          <skin>/<dir>.png, <skin>/<dir>_p.png (con pasajera), base/S_bob_<n>.png
-                    estilos/<estilo>/ el mismo juego sólo con la skin base, en cada estilo de
-                    exploración (ship_styles.py), con su manifest.json; el raíz los lista en style_variants
+                    estilos/<estilo>/ el mismo juego (skins base, noche y fiesta; ship_skins.skins_for) en cada
+                    estilo de exploración (ship_styles.py), con su manifest.json; el raíz los lista en style_variants
     isla-evento/, isla-pequena/, roca-a/, roca-b/    base.png
     boia-tutorial/  idle_<n>.png (bucle de reposo)
     costa/          izquierda.png, derecha.png (losas que se repiten en vertical)
     planeta/        globo.png, nubes.png, banda-mar.png, isla.png (capas de la entrada)
     mundos/<mundo>/<lugar>/   el arte de cada lugar del mapa compartido en cada mundo de WORLDS
-                    (mundos_arte.py, mundo_<id>.py; ids de lugar en lugares.json)
+                    (mundos_arte.py, mundo_<id>.py; ids de lugar y extras en lugares.json): también las boias
+                    con la mascota de BOIA (boias/, mascota.py) y el marcador de secreto (secreto/)
 y manifest.json en cada una. Los tiempos van a tools/blender/out/render_stats.json.
 """
 import argparse
@@ -34,6 +35,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import rig    # noqa: E402
 import ship   # noqa: E402
+import ship_skins  # noqa: E402
 import ship_styles  # noqa: E402
 import mundos_arte  # noqa: E402
 import style  # noqa: E402
@@ -51,7 +53,7 @@ COMMAND = "Blender -b -P tools/blender/render.py -- --all"
 LICENSE = "muestra interna"
 STYLES_SUBDIR = "estilos"           # art/barco/estilos/<id>/: el barco en los estilos de exploración (T11)
 STYLE_LABEL = "Toon (actual)"
-STUDY_VERSION = "0.1.0"
+STUDY_VERSION = "0.2.0"             # T39: skins noche y fiesta y la mascota de pasajera
 
 
 def rel(path):
@@ -216,11 +218,18 @@ def render_ship(skins, out_dir, stats, full, style_name):
 
 
 def render_ship_study(sid, out_dir, stats):
-    """El barco de un estilo de exploración: skin base, mismos fotogramas y anclajes, su manifiesto."""
-    scene, cam, s, render_fn = ship_styles.build(sid)
-    images, directions = render_frames(scene, cam, s, [BOB_SKIN], lambda skin: None, out_dir, stats, render_fn)
+    """El barco de un estilo de exploración en sus skins (T39: base, noche y fiesta salvo ship_skins.HELD): mismos
+    fotogramas y anclajes, su manifiesto.
+    Cada skin es otra paleta del mismo script (ship_skins.py): una escena por skin; los anclajes, de la base."""
+    images, directions = [], None
+    skins = ship_skins.skins_for(sid)
+    for skin in skins:
+        scene, cam, s, render_fn = ship_styles.build(sid, skin)
+        imgs, dirs = render_frames(scene, cam, s, [skin], lambda _: None, out_dir, stats, render_fn)
+        images += imgs
+        directions = directions or dirs
     scripts = ["tools/blender/rig.py", ship_styles.script_path(sid), "tools/blender/ship.py",
-               "tools/blender/ship_styles.py", "tools/blender/render.py"]
+               "tools/blender/ship_styles.py", "tools/blender/ship_skins.py", "tools/blender/render.py"]
     gen = {
         "scripts": scripts,
         "sources_sha256": sources_sha256(scripts),
@@ -229,7 +238,7 @@ def render_ship_study(sid, out_dir, stats):
         "samples": scene.eevee.taa_render_samples,
         "command": COMMAND,
     }
-    write_manifest(out_dir, ship_manifest(sid, [BOB_SKIN], directions, images, gen, STUDY_VERSION))
+    write_manifest(out_dir, ship_manifest(sid, skins, directions, images, gen, STUDY_VERSION))
     return len(images)
 
 

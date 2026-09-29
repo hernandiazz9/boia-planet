@@ -23,5 +23,10 @@
     {"id": "costa_oeste", "categoria": "costa", "ref": "costas/costa_oeste", "pos": "costas/costa_oeste/linea/0", "isla_evento": false},
     {"id": "costa_este", "categoria": "costa", "ref": "costas/costa_este", "pos": "costas/costa_este/linea/0", "isla_evento": false},
     {"id": "costa_sur", "categoria": "costa", "ref": "costas/costa_sur", "pos": "costas/costa_sur/linea/0", "isla_evento": false}
+  ],
+  "nota_extras": "Arte con el mismo formato y las mismas comprobaciones que un lugar, pero que el motor todavía no dibuja como lugar propio del mapa (T39): las boias con la mascota de BOIA (la primera, las cinco informativas y la de WhatsApp; la Boia Fiestera va en `fiestera`) y el marcador de los secretos (uno por mundo, en cada punto de mapa.json/secretos). Cuando el motor los dibuje (T45), pasan a `lugares`.",
+  "extras": [
+    {"id": "boias", "categoria": "personaje", "ref": "zonas/puerto/lugares/boia", "pos": "zonas/puerto/lugares/boia", "isla_evento": false},
+    {"id": "secreto", "categoria": "secreto", "ref": "secretos", "pos": "secretos/cueva", "instancias": "secretos", "isla_evento": false}
   ]
 }

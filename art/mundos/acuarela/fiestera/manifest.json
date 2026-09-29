@@ -28,9 +28,9 @@
       "mundos/acuarela/piezas.py",
       "mundos/acuarela/lugares.json",
       "mundos/acuarela/zonas/fiestera.py",
-      "mundos/arcilla/zonas/fiestera.py"
+      "tools/blender/mascota.py"
     ],
-    "sources_sha256": "443d4f96f6bdf90fc2648c861259eff1cab9c8b88b4a9cb76b71c85c90452f56",
+    "sources_sha256": "0dbfa0d9314416cd23b2e6ad8754af9c3048e8cefa6fcce806c21dff925180c6",
     "blender": "5.2.2 LTS",
     "engine": "BLENDER_EEVEE",
     "samples": 16,
@@ -76,26 +76,26 @@
         0.0,
         0.0
       ],
-      "doc": "la Boia Fiestera pidiendo ayuda, con su ristra de farolillos; al rescatarla pasa al slot TRIPULANTE (pieza tripulante)",
+      "doc": "la Boia Fiestera (la mascota de BOIA con aro de fiesta, guirnalda, pompón y globos) pidiendo ayuda; al rescatarla pasa al slot TRIPULANTE (pieza tripulante)",
       "image": {
-        "width": 224,
-        "height": 240,
+        "width": 272,
+        "height": 304,
         "format": "png",
         "mode": "RGBA",
         "transparent_border_px": 4
       },
       "pivot_px": [
-        112.0,
-        179.0
+        113.0,
+        247.0
       ],
       "anchors": {
         "pivot": [
-          112.0,
-          179.0
+          113.0,
+          247.0
         ],
         "tope": [
-          112.0,
-          46.72
+          113.0,
+          141.66
         ]
       },
       "anchors_on_art": [
@@ -105,100 +105,100 @@
         "shape": "polygon",
         "points_px": [
           [
-            154.37,
-            179.0
+            155.37,
+            247.0
           ],
           [
-            152.93,
-            184.49
+            153.93,
+            252.49
           ],
           [
-            148.7,
-            189.6
+            149.7,
+            257.6
           ],
           [
-            141.96,
-            193.98
+            142.96,
+            261.98
           ],
           [
-            133.19,
-            197.35
+            134.19,
+            265.35
           ],
           [
-            122.97,
-            199.47
+            123.97,
+            267.47
           ],
           [
-            112.0,
-            200.19
+            113.0,
+            268.19
           ],
           [
-            101.03,
-            199.47
+            102.03,
+            267.47
           ],
           [
-            90.81,
-            197.35
+            91.81,
+            265.35
           ],
           [
-            82.04,
-            193.98
+            83.04,
+            261.98
           ],
           [
-            75.3,
-            189.6
+            76.3,
+            257.6
           ],
           [
-            71.07,
-            184.49
+            72.07,
+            252.49
           ],
           [
-            69.63,
-            179.0
+            70.63,
+            247.0
           ],
           [
-            71.07,
-            173.52
+            72.07,
+            241.52
           ],
           [
-            75.3,
-            168.41
+            76.3,
+            236.41
           ],
           [
-            82.04,
-            164.02
+            83.04,
+            232.02
           ],
           [
-            90.81,
-            160.65
+            91.81,
+            228.65
           ],
           [
-            101.03,
-            158.54
+            102.03,
+            226.54
           ],
           [
-            112.0,
-            157.82
+            113.0,
+            225.82
           ],
           [
-            122.97,
-            158.54
+            123.97,
+            226.54
           ],
           [
-            133.19,
-            160.65
+            134.19,
+            228.65
           ],
           [
-            141.96,
-            164.02
+            142.96,
+            232.02
           ],
           [
-            148.7,
-            168.41
+            149.7,
+            236.41
           ],
           [
-            152.93,
-            173.52
+            153.93,
+            241.52
           ]
         ],
         "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
@@ -206,8 +206,8 @@
       "hitbox_hint": {
         "shape": "circle",
         "center_px": [
-          112.0,
-          179.0
+          113.0,
+          247.0
         ],
         "radius_px": 42.37,
         "radius_units": 0.48
@@ -215,8 +215,8 @@
       "proximity_hint": {
         "shape": "circle",
         "center_px": [
-          112.0,
-          179.0
+          113.0,
+          247.0
         ],
         "radius_px": 229.52,
         "radius_units": 2.6
@@ -1622,7 +1622,7 @@
         "anchor": "slot_passenger",
         "doc": "slot TRIPULANTE (REQ-AVE-007): el pivote va sobre slot_passenger de la dirección que se dibuja, por encima del barco (sus imágenes base, sin la pasajera _p)"
       },
-      "doc": "la Boia Fiestera a bordo, a escala del barco B02, mirando a cámara",
+      "doc": "la Boia Fiestera a bordo (la mascota de BOIA con sus detalles de fiesta), a escala del barco B02, mirando a cámara, bailando y cantando",
       "image": {
         "width": 64,
         "height": 80,
@@ -1631,17 +1631,17 @@
         "transparent_border_px": 4
       },
       "pivot_px": [
-        32.0,
-        56.0
+        34.0,
+        54.0
       ],
       "anchors": {
         "pivot": [
-          32.0,
-          56.0
+          34.0,
+          54.0
         ],
         "tope": [
-          32.0,
-          16.52
+          34.0,
+          18.24
         ]
       },
       "anchors_on_art": [

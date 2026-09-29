@@ -1,0 +1,1507 @@
+{
+  "id": "boias",
+  "kind": "place",
+  "category": "personaje",
+  "world": "arcilla",
+  "version": "0.1.0",
+  "status": "muestra",
+  "license": "muestra interna",
+  "style": "arcilla",
+  "ship": "B05",
+  "generator": {
+    "scripts": [
+      "tools/blender/rig.py",
+      "tools/blender/world.py",
+      "tools/blender/lugares.py",
+      "tools/blender/lugares.json",
+      "tools/blender/mundos_arte.py",
+      "tools/blender/mundo_arcilla.py",
+      "tools/blender/render.py",
+      "tools/blender/styles/05_arcilla_maqueta.py",
+      "mundos/temas.py",
+      "mundos/arcilla/escena.py",
+      "mundos/arcilla/piezas.py",
+      "mundos/arcilla/herramientas/mapa.py",
+      "mundos/arcilla/mapa.json",
+      "tools/blender/mascota.py"
+    ],
+    "sources_sha256": "909c7e0a8fd00f5cfd615a3ac2e353c23509e1b54041d7e04da88f0a0591e32d",
+    "blender": "5.2.2 LTS",
+    "engine": "BLENDER_EEVEE",
+    "samples": 64,
+    "command": "Blender -b -P tools/blender/render.py -- --all"
+  },
+  "projection": {
+    "type": "dimetric-2:1",
+    "camera_elevation_deg": 30.0,
+    "camera_azimuth_deg": 45.0,
+    "pixels_per_unit": 88.2759
+  },
+  "scale": {
+    "pixels_per_unit": 88.2759,
+    "reference": "barco",
+    "doc": "misma cámara y densidad que los sprites del barco (D-13, D-15): una unidad de la maqueta mide pixels_per_unit px en horizontal y la mitad en vertical sobre el agua. Tamaños a 1:1 con el barco; las posiciones del mapa las escala el motor (mapa.json, ritmo.factor_juego)"
+  },
+  "coordinates": "píxeles continuos; (0,0) = esquina superior izquierda, y crece hacia abajo; el centro del píxel (i,j) está en (i+0.5, j+0.5). map_pos y offset_units en unidades del mapa (u_maq, ejes de mapa.json: x a la derecha, y hacia el espectador); offset_units = map_pos - place.pos. En los círculos sobre el agua radius_px es el semieje horizontal; el vertical mide la mitad",
+  "place": {
+    "ref": "zonas/puerto/lugares/boia",
+    "pos": [
+      0.0,
+      20.4
+    ],
+    "event_island": false,
+    "name": "Las boias",
+    "shared_name": true,
+    "catalog": "tools/blender/lugares.json"
+  },
+  "anchors_doc": {
+    "pivot": "punto del mapa a ras de agua que da map_pos: centro de la isla u objeto; fijo en todas las imágenes",
+    "tope": "encima de la cabeza o la punta: bocadillos y reacciones"
+  },
+  "parts": [
+    {
+      "id": "primera",
+      "role": "personaje",
+      "collision": "bloquear",
+      "map_pos": [
+        0,
+        20.4
+      ],
+      "offset_units": [
+        0.0,
+        0.0
+      ],
+      "doc": "la primera boia (la de la entrada): la mascota de BOIA tal cual, con su aro flotador; reposo y habla para sus bocadillos",
+      "image": {
+        "width": 144,
+        "height": 128,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        72.0,
+        86.0
+      ],
+      "anchors": {
+        "pivot": [
+          72.0,
+          86.0
+        ],
+        "tope": [
+          72.0,
+          11.77
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            120.55,
+            86.0
+          ],
+          [
+            118.9,
+            92.28
+          ],
+          [
+            114.05,
+            98.14
+          ],
+          [
+            106.33,
+            103.17
+          ],
+          [
+            96.28,
+            107.03
+          ],
+          [
+            84.57,
+            109.45
+          ],
+          [
+            72.0,
+            110.28
+          ],
+          [
+            59.43,
+            109.45
+          ],
+          [
+            47.72,
+            107.03
+          ],
+          [
+            37.67,
+            103.17
+          ],
+          [
+            29.95,
+            98.14
+          ],
+          [
+            25.1,
+            92.28
+          ],
+          [
+            23.45,
+            86.0
+          ],
+          [
+            25.1,
+            79.72
+          ],
+          [
+            29.95,
+            73.86
+          ],
+          [
+            37.67,
+            68.84
+          ],
+          [
+            47.72,
+            64.98
+          ],
+          [
+            59.43,
+            62.55
+          ],
+          [
+            72.0,
+            61.73
+          ],
+          [
+            84.57,
+            62.55
+          ],
+          [
+            96.28,
+            64.98
+          ],
+          [
+            106.33,
+            68.84
+          ],
+          [
+            114.05,
+            73.86
+          ],
+          [
+            118.9,
+            79.72
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          72.0,
+          86.0
+        ],
+        "radius_px": 48.55,
+        "radius_units": 0.55
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          72.0,
+          86.0
+        ],
+        "radius_px": 282.48,
+        "radius_units": 3.2
+      },
+      "animations": {
+        "idle": {
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        "habla": {
+          "frames": 2,
+          "fps": 6,
+          "loop": true
+        }
+      },
+      "images": [
+        {
+          "file": "primera_idle_0.png",
+          "frame": 0,
+          "animation": "idle"
+        },
+        {
+          "file": "primera_idle_1.png",
+          "frame": 1,
+          "animation": "idle"
+        },
+        {
+          "file": "primera_idle_2.png",
+          "frame": 2,
+          "animation": "idle"
+        },
+        {
+          "file": "primera_idle_3.png",
+          "frame": 3,
+          "animation": "idle"
+        },
+        {
+          "file": "primera_idle_4.png",
+          "frame": 4,
+          "animation": "idle"
+        },
+        {
+          "file": "primera_idle_5.png",
+          "frame": 5,
+          "animation": "idle"
+        },
+        {
+          "file": "primera_habla_0.png",
+          "frame": 0,
+          "animation": "habla"
+        },
+        {
+          "file": "primera_habla_1.png",
+          "frame": 1,
+          "animation": "habla"
+        }
+      ]
+    },
+    {
+      "id": "whatsapp",
+      "role": "personaje",
+      "collision": "bloquear",
+      "map_pos": [
+        -4.8,
+        21.4
+      ],
+      "offset_units": [
+        -4.8,
+        1.0
+      ],
+      "doc": "la boia de WhatsApp: la mascota con un bocadillo verde de chat en un mástil (sin logo de marca)",
+      "image": {
+        "width": 128,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        64.0,
+        105.0
+      ],
+      "anchors": {
+        "pivot": [
+          64.0,
+          105.0
+        ],
+        "tope": [
+          64.0,
+          21.43
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            101.08,
+            105.0
+          ],
+          [
+            99.81,
+            109.8
+          ],
+          [
+            96.11,
+            114.27
+          ],
+          [
+            90.22,
+            118.11
+          ],
+          [
+            82.54,
+            121.06
+          ],
+          [
+            73.6,
+            122.91
+          ],
+          [
+            64.0,
+            123.54
+          ],
+          [
+            54.4,
+            122.91
+          ],
+          [
+            45.46,
+            121.06
+          ],
+          [
+            37.78,
+            118.11
+          ],
+          [
+            31.89,
+            114.27
+          ],
+          [
+            28.19,
+            109.8
+          ],
+          [
+            26.92,
+            105.0
+          ],
+          [
+            28.19,
+            100.2
+          ],
+          [
+            31.89,
+            95.73
+          ],
+          [
+            37.78,
+            91.89
+          ],
+          [
+            45.46,
+            88.95
+          ],
+          [
+            54.4,
+            87.1
+          ],
+          [
+            64.0,
+            86.46
+          ],
+          [
+            73.6,
+            87.1
+          ],
+          [
+            82.54,
+            88.95
+          ],
+          [
+            90.22,
+            91.89
+          ],
+          [
+            96.11,
+            95.73
+          ],
+          [
+            99.81,
+            100.2
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          105.0
+        ],
+        "radius_px": 37.08,
+        "radius_units": 0.42
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          105.0
+        ],
+        "radius_px": 141.24,
+        "radius_units": 1.6
+      },
+      "animations": {
+        "idle": {
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        "habla": {
+          "frames": 2,
+          "fps": 6,
+          "loop": true
+        }
+      },
+      "images": [
+        {
+          "file": "whatsapp_idle_0.png",
+          "frame": 0,
+          "animation": "idle"
+        },
+        {
+          "file": "whatsapp_idle_1.png",
+          "frame": 1,
+          "animation": "idle"
+        },
+        {
+          "file": "whatsapp_idle_2.png",
+          "frame": 2,
+          "animation": "idle"
+        },
+        {
+          "file": "whatsapp_idle_3.png",
+          "frame": 3,
+          "animation": "idle"
+        },
+        {
+          "file": "whatsapp_idle_4.png",
+          "frame": 4,
+          "animation": "idle"
+        },
+        {
+          "file": "whatsapp_idle_5.png",
+          "frame": 5,
+          "animation": "idle"
+        },
+        {
+          "file": "whatsapp_habla_0.png",
+          "frame": 0,
+          "animation": "habla"
+        },
+        {
+          "file": "whatsapp_habla_1.png",
+          "frame": 1,
+          "animation": "habla"
+        }
+      ]
+    },
+    {
+      "id": "info_1",
+      "role": "personaje",
+      "collision": "bloquear",
+      "doc": "boia informativa 1 de 5 (O12): la mascota con un cartel «i» y un gallardete de color propio; sin sitio en mapa.json todavía, el motor la pone en la ruta (T45)",
+      "image": {
+        "width": 128,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        64.0,
+        107.0
+      ],
+      "anchors": {
+        "pivot": [
+          64.0,
+          107.0
+        ],
+        "tope": [
+          64.0,
+          17.19
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            105.49,
+            107.0
+          ],
+          [
+            104.08,
+            112.37
+          ],
+          [
+            99.93,
+            117.37
+          ],
+          [
+            93.34,
+            121.67
+          ],
+          [
+            84.74,
+            124.97
+          ],
+          [
+            74.74,
+            127.04
+          ],
+          [
+            64.0,
+            127.75
+          ],
+          [
+            53.26,
+            127.04
+          ],
+          [
+            43.26,
+            124.97
+          ],
+          [
+            34.66,
+            121.67
+          ],
+          [
+            28.07,
+            117.37
+          ],
+          [
+            23.92,
+            112.37
+          ],
+          [
+            22.51,
+            107.0
+          ],
+          [
+            23.92,
+            101.63
+          ],
+          [
+            28.07,
+            96.63
+          ],
+          [
+            34.66,
+            92.33
+          ],
+          [
+            43.26,
+            89.04
+          ],
+          [
+            53.26,
+            86.96
+          ],
+          [
+            64.0,
+            86.26
+          ],
+          [
+            74.74,
+            86.96
+          ],
+          [
+            84.74,
+            89.04
+          ],
+          [
+            93.34,
+            92.33
+          ],
+          [
+            99.93,
+            96.63
+          ],
+          [
+            104.08,
+            101.63
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 41.49,
+        "radius_units": 0.47
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 211.86,
+        "radius_units": 2.4
+      },
+      "animations": {
+        "idle": {
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        "habla": {
+          "frames": 2,
+          "fps": 6,
+          "loop": true
+        }
+      },
+      "images": [
+        {
+          "file": "info_1_idle_0.png",
+          "frame": 0,
+          "animation": "idle"
+        },
+        {
+          "file": "info_1_idle_1.png",
+          "frame": 1,
+          "animation": "idle"
+        },
+        {
+          "file": "info_1_idle_2.png",
+          "frame": 2,
+          "animation": "idle"
+        },
+        {
+          "file": "info_1_idle_3.png",
+          "frame": 3,
+          "animation": "idle"
+        },
+        {
+          "file": "info_1_idle_4.png",
+          "frame": 4,
+          "animation": "idle"
+        },
+        {
+          "file": "info_1_idle_5.png",
+          "frame": 5,
+          "animation": "idle"
+        },
+        {
+          "file": "info_1_habla_0.png",
+          "frame": 0,
+          "animation": "habla"
+        },
+        {
+          "file": "info_1_habla_1.png",
+          "frame": 1,
+          "animation": "habla"
+        }
+      ]
+    },
+    {
+      "id": "info_2",
+      "role": "personaje",
+      "collision": "bloquear",
+      "doc": "boia informativa 2 de 5 (O12): la mascota con un cartel «i» y un gallardete de color propio; sin sitio en mapa.json todavía, el motor la pone en la ruta (T45)",
+      "image": {
+        "width": 128,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        64.0,
+        107.0
+      ],
+      "anchors": {
+        "pivot": [
+          64.0,
+          107.0
+        ],
+        "tope": [
+          64.0,
+          17.19
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            105.49,
+            107.0
+          ],
+          [
+            104.08,
+            112.37
+          ],
+          [
+            99.93,
+            117.37
+          ],
+          [
+            93.34,
+            121.67
+          ],
+          [
+            84.74,
+            124.97
+          ],
+          [
+            74.74,
+            127.04
+          ],
+          [
+            64.0,
+            127.75
+          ],
+          [
+            53.26,
+            127.04
+          ],
+          [
+            43.26,
+            124.97
+          ],
+          [
+            34.66,
+            121.67
+          ],
+          [
+            28.07,
+            117.37
+          ],
+          [
+            23.92,
+            112.37
+          ],
+          [
+            22.51,
+            107.0
+          ],
+          [
+            23.92,
+            101.63
+          ],
+          [
+            28.07,
+            96.63
+          ],
+          [
+            34.66,
+            92.33
+          ],
+          [
+            43.26,
+            89.04
+          ],
+          [
+            53.26,
+            86.96
+          ],
+          [
+            64.0,
+            86.26
+          ],
+          [
+            74.74,
+            86.96
+          ],
+          [
+            84.74,
+            89.04
+          ],
+          [
+            93.34,
+            92.33
+          ],
+          [
+            99.93,
+            96.63
+          ],
+          [
+            104.08,
+            101.63
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 41.49,
+        "radius_units": 0.47
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 211.86,
+        "radius_units": 2.4
+      },
+      "animations": {
+        "idle": {
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        "habla": {
+          "frames": 2,
+          "fps": 6,
+          "loop": true
+        }
+      },
+      "images": [
+        {
+          "file": "info_2_idle_0.png",
+          "frame": 0,
+          "animation": "idle"
+        },
+        {
+          "file": "info_2_idle_1.png",
+          "frame": 1,
+          "animation": "idle"
+        },
+        {
+          "file": "info_2_idle_2.png",
+          "frame": 2,
+          "animation": "idle"
+        },
+        {
+          "file": "info_2_idle_3.png",
+          "frame": 3,
+          "animation": "idle"
+        },
+        {
+          "file": "info_2_idle_4.png",
+          "frame": 4,
+          "animation": "idle"
+        },
+        {
+          "file": "info_2_idle_5.png",
+          "frame": 5,
+          "animation": "idle"
+        },
+        {
+          "file": "info_2_habla_0.png",
+          "frame": 0,
+          "animation": "habla"
+        },
+        {
+          "file": "info_2_habla_1.png",
+          "frame": 1,
+          "animation": "habla"
+        }
+      ]
+    },
+    {
+      "id": "info_3",
+      "role": "personaje",
+      "collision": "bloquear",
+      "doc": "boia informativa 3 de 5 (O12): la mascota con un cartel «i» y un gallardete de color propio; sin sitio en mapa.json todavía, el motor la pone en la ruta (T45)",
+      "image": {
+        "width": 128,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        64.0,
+        107.0
+      ],
+      "anchors": {
+        "pivot": [
+          64.0,
+          107.0
+        ],
+        "tope": [
+          64.0,
+          17.19
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            105.49,
+            107.0
+          ],
+          [
+            104.08,
+            112.37
+          ],
+          [
+            99.93,
+            117.37
+          ],
+          [
+            93.34,
+            121.67
+          ],
+          [
+            84.74,
+            124.97
+          ],
+          [
+            74.74,
+            127.04
+          ],
+          [
+            64.0,
+            127.75
+          ],
+          [
+            53.26,
+            127.04
+          ],
+          [
+            43.26,
+            124.97
+          ],
+          [
+            34.66,
+            121.67
+          ],
+          [
+            28.07,
+            117.37
+          ],
+          [
+            23.92,
+            112.37
+          ],
+          [
+            22.51,
+            107.0
+          ],
+          [
+            23.92,
+            101.63
+          ],
+          [
+            28.07,
+            96.63
+          ],
+          [
+            34.66,
+            92.33
+          ],
+          [
+            43.26,
+            89.04
+          ],
+          [
+            53.26,
+            86.96
+          ],
+          [
+            64.0,
+            86.26
+          ],
+          [
+            74.74,
+            86.96
+          ],
+          [
+            84.74,
+            89.04
+          ],
+          [
+            93.34,
+            92.33
+          ],
+          [
+            99.93,
+            96.63
+          ],
+          [
+            104.08,
+            101.63
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 41.49,
+        "radius_units": 0.47
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 211.86,
+        "radius_units": 2.4
+      },
+      "animations": {
+        "idle": {
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        "habla": {
+          "frames": 2,
+          "fps": 6,
+          "loop": true
+        }
+      },
+      "images": [
+        {
+          "file": "info_3_idle_0.png",
+          "frame": 0,
+          "animation": "idle"
+        },
+        {
+          "file": "info_3_idle_1.png",
+          "frame": 1,
+          "animation": "idle"
+        },
+        {
+          "file": "info_3_idle_2.png",
+          "frame": 2,
+          "animation": "idle"
+        },
+        {
+          "file": "info_3_idle_3.png",
+          "frame": 3,
+          "animation": "idle"
+        },
+        {
+          "file": "info_3_idle_4.png",
+          "frame": 4,
+          "animation": "idle"
+        },
+        {
+          "file": "info_3_idle_5.png",
+          "frame": 5,
+          "animation": "idle"
+        },
+        {
+          "file": "info_3_habla_0.png",
+          "frame": 0,
+          "animation": "habla"
+        },
+        {
+          "file": "info_3_habla_1.png",
+          "frame": 1,
+          "animation": "habla"
+        }
+      ]
+    },
+    {
+      "id": "info_4",
+      "role": "personaje",
+      "collision": "bloquear",
+      "doc": "boia informativa 4 de 5 (O12): la mascota con un cartel «i» y un gallardete de color propio; sin sitio en mapa.json todavía, el motor la pone en la ruta (T45)",
+      "image": {
+        "width": 128,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        64.0,
+        107.0
+      ],
+      "anchors": {
+        "pivot": [
+          64.0,
+          107.0
+        ],
+        "tope": [
+          64.0,
+          17.19
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            105.49,
+            107.0
+          ],
+          [
+            104.08,
+            112.37
+          ],
+          [
+            99.93,
+            117.37
+          ],
+          [
+            93.34,
+            121.67
+          ],
+          [
+            84.74,
+            124.97
+          ],
+          [
+            74.74,
+            127.04
+          ],
+          [
+            64.0,
+            127.75
+          ],
+          [
+            53.26,
+            127.04
+          ],
+          [
+            43.26,
+            124.97
+          ],
+          [
+            34.66,
+            121.67
+          ],
+          [
+            28.07,
+            117.37
+          ],
+          [
+            23.92,
+            112.37
+          ],
+          [
+            22.51,
+            107.0
+          ],
+          [
+            23.92,
+            101.63
+          ],
+          [
+            28.07,
+            96.63
+          ],
+          [
+            34.66,
+            92.33
+          ],
+          [
+            43.26,
+            89.04
+          ],
+          [
+            53.26,
+            86.96
+          ],
+          [
+            64.0,
+            86.26
+          ],
+          [
+            74.74,
+            86.96
+          ],
+          [
+            84.74,
+            89.04
+          ],
+          [
+            93.34,
+            92.33
+          ],
+          [
+            99.93,
+            96.63
+          ],
+          [
+            104.08,
+            101.63
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 41.49,
+        "radius_units": 0.47
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 211.86,
+        "radius_units": 2.4
+      },
+      "animations": {
+        "idle": {
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        "habla": {
+          "frames": 2,
+          "fps": 6,
+          "loop": true
+        }
+      },
+      "images": [
+        {
+          "file": "info_4_idle_0.png",
+          "frame": 0,
+          "animation": "idle"
+        },
+        {
+          "file": "info_4_idle_1.png",
+          "frame": 1,
+          "animation": "idle"
+        },
+        {
+          "file": "info_4_idle_2.png",
+          "frame": 2,
+          "animation": "idle"
+        },
+        {
+          "file": "info_4_idle_3.png",
+          "frame": 3,
+          "animation": "idle"
+        },
+        {
+          "file": "info_4_idle_4.png",
+          "frame": 4,
+          "animation": "idle"
+        },
+        {
+          "file": "info_4_idle_5.png",
+          "frame": 5,
+          "animation": "idle"
+        },
+        {
+          "file": "info_4_habla_0.png",
+          "frame": 0,
+          "animation": "habla"
+        },
+        {
+          "file": "info_4_habla_1.png",
+          "frame": 1,
+          "animation": "habla"
+        }
+      ]
+    },
+    {
+      "id": "info_5",
+      "role": "personaje",
+      "collision": "bloquear",
+      "doc": "boia informativa 5 de 5 (O12): la mascota con un cartel «i» y un gallardete de color propio; sin sitio en mapa.json todavía, el motor la pone en la ruta (T45)",
+      "image": {
+        "width": 128,
+        "height": 144,
+        "format": "png",
+        "mode": "RGBA",
+        "transparent_border_px": 4
+      },
+      "pivot_px": [
+        64.0,
+        107.0
+      ],
+      "anchors": {
+        "pivot": [
+          64.0,
+          107.0
+        ],
+        "tope": [
+          64.0,
+          17.19
+        ]
+      },
+      "anchors_on_art": [
+        "pivot"
+      ],
+      "footprint": {
+        "shape": "polygon",
+        "points_px": [
+          [
+            105.49,
+            107.0
+          ],
+          [
+            104.08,
+            112.37
+          ],
+          [
+            99.93,
+            117.37
+          ],
+          [
+            93.34,
+            121.67
+          ],
+          [
+            84.74,
+            124.97
+          ],
+          [
+            74.74,
+            127.04
+          ],
+          [
+            64.0,
+            127.75
+          ],
+          [
+            53.26,
+            127.04
+          ],
+          [
+            43.26,
+            124.97
+          ],
+          [
+            34.66,
+            121.67
+          ],
+          [
+            28.07,
+            117.37
+          ],
+          [
+            23.92,
+            112.37
+          ],
+          [
+            22.51,
+            107.0
+          ],
+          [
+            23.92,
+            101.63
+          ],
+          [
+            28.07,
+            96.63
+          ],
+          [
+            34.66,
+            92.33
+          ],
+          [
+            43.26,
+            89.04
+          ],
+          [
+            53.26,
+            86.96
+          ],
+          [
+            64.0,
+            86.26
+          ],
+          [
+            74.74,
+            86.96
+          ],
+          [
+            84.74,
+            89.04
+          ],
+          [
+            93.34,
+            92.33
+          ],
+          [
+            99.93,
+            96.63
+          ],
+          [
+            104.08,
+            101.63
+          ]
+        ],
+        "doc": "contorno a ras de agua en px de la imagen: lo que el barco no puede cruzar (o, en decoración, lo que ocupa)"
+      },
+      "hitbox_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 41.49,
+        "radius_units": 0.47
+      },
+      "proximity_hint": {
+        "shape": "circle",
+        "center_px": [
+          64.0,
+          107.0
+        ],
+        "radius_px": 211.86,
+        "radius_units": 2.4
+      },
+      "animations": {
+        "idle": {
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        "habla": {
+          "frames": 2,
+          "fps": 6,
+          "loop": true
+        }
+      },
+      "images": [
+        {
+          "file": "info_5_idle_0.png",
+          "frame": 0,
+          "animation": "idle"
+        },
+        {
+          "file": "info_5_idle_1.png",
+          "frame": 1,
+          "animation": "idle"
+        },
+        {
+          "file": "info_5_idle_2.png",
+          "frame": 2,
+          "animation": "idle"
+        },
+        {
+          "file": "info_5_idle_3.png",
+          "frame": 3,
+          "animation": "idle"
+        },
+        {
+          "file": "info_5_idle_4.png",
+          "frame": 4,
+          "animation": "idle"
+        },
+        {
+          "file": "info_5_idle_5.png",
+          "frame": 5,
+          "animation": "idle"
+        },
+        {
+          "file": "info_5_habla_0.png",
+          "frame": 0,
+          "animation": "habla"
+        },
+        {
+          "file": "info_5_habla_1.png",
+          "frame": 1,
+          "animation": "habla"
+        }
+      ]
+    }
+  ]
+}

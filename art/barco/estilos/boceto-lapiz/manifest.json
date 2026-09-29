@@ -1,7 +1,7 @@
 {
   "id": "barco",
   "kind": "ship",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "muestra",
   "license": "muestra interna",
   "style": "boceto-lapiz",
@@ -11,9 +11,10 @@
       "tools/blender/styles/01_boceto_lapiz.py",
       "tools/blender/ship.py",
       "tools/blender/ship_styles.py",
+      "tools/blender/ship_skins.py",
       "tools/blender/render.py"
     ],
-    "sources_sha256": "7481c1df5b841a094e945bc307573909d2b536e0c3cd6fad877a457a06e49b54",
+    "sources_sha256": "e42dfa570293fa6c91e9f5426e3c84e2e9ba96e9f1e64d8c40ad9686d58cf0f0",
     "blender": "5.2.2 LTS",
     "engine": "BLENDER_EEVEE",
     "samples": 16,

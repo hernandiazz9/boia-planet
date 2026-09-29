@@ -13,7 +13,7 @@
       "tools/blender/ship.py",
       "tools/blender/render.py"
     ],
-    "sources_sha256": "e22218079937634412dd172c4f73a2b618592beecb3db79fdd99643037fd0462",
+    "sources_sha256": "4d00a49fe7821e2e760c986a9c40f783daab3982f7521b1cd963eecb8af18928",
     "blender": "5.2.2 LTS",
     "engine": "BLENDER_EEVEE",
     "samples": 16,

@@ -1,7 +1,7 @@
 {
  "status": "muestra",
- "nota": "Generado por tools/blender/export_barcos_glb.py desde los scripts de estilo. No editar.",
- "unidades": "Blender: proa a +X, flotación en y = 0 (glTF, y arriba)",
+ "nota": "Generado por tools/blender/export_barcos_glb.py desde los scripts de estilo (barcos, con sus skins: ship_skins.py) y desde tools/blender/mascota.py (boias y secreto). No editar.",
+ "unidades": "Blender: proa (o cara) a +X, flotación en y = 0 (glTF, y arriba); 1 unidad = 1 u del mapa",
  "barcos": [
   {
    "id": "boceto-lapiz",
@@ -11,7 +11,10 @@
    "slot": [
     0.36,
     -0.28
-   ]
+   ],
+   "skins": {
+    "base": "boceto-lapiz.glb"
+   }
   },
   {
    "id": "acuarela",
@@ -21,7 +24,12 @@
    "slot": [
     0.44,
     0.1
-   ]
+   ],
+   "skins": {
+    "base": "acuarela.glb",
+    "noche": "acuarela-noche.glb",
+    "fiesta": "acuarela-fiesta.glb"
+   }
   },
   {
    "id": "low-poly",
@@ -31,7 +39,12 @@
    "slot": [
     0.62,
     -0.1
-   ]
+   ],
+   "skins": {
+    "base": "low-poly.glb",
+    "noche": "low-poly-noche.glb",
+    "fiesta": "low-poly-fiesta.glb"
+   }
   },
   {
    "id": "semi-realista",
@@ -41,7 +54,12 @@
    "slot": [
     0.52,
     -0.32
-   ]
+   ],
+   "skins": {
+    "base": "semi-realista.glb",
+    "noche": "semi-realista-noche.glb",
+    "fiesta": "semi-realista-fiesta.glb"
+   }
   },
   {
    "id": "arcilla",
@@ -51,7 +69,12 @@
    "slot": [
     0.36,
     -0.2
-   ]
+   ],
+   "skins": {
+    "base": "arcilla.glb",
+    "noche": "arcilla-noche.glb",
+    "fiesta": "arcilla-fiesta.glb"
+   }
   },
   {
    "id": "cartoon-30",
@@ -61,7 +84,12 @@
    "slot": [
     0.4,
     -0.2
-   ]
+   ],
+   "skins": {
+    "base": "cartoon-30.glb",
+    "noche": "cartoon-30-noche.glb",
+    "fiesta": "cartoon-30-fiesta.glb"
+   }
   },
   {
    "id": "cel-shaded",
@@ -71,7 +99,12 @@
    "slot": [
     0.5,
     -0.2
-   ]
+   ],
+   "skins": {
+    "base": "cel-shaded.glb",
+    "noche": "cel-shaded-noche.glb",
+    "fiesta": "cel-shaded-fiesta.glb"
+   }
   },
   {
    "id": "pixel-art",
@@ -81,7 +114,45 @@
    "slot": [
     0.48,
     -0.3
-   ]
+   ],
+   "skins": {
+    "base": "pixel-art.glb",
+    "noche": "pixel-art-noche.glb",
+    "fiesta": "pixel-art-fiesta.glb"
+   }
+  }
+ ],
+ "boias": [
+  {
+   "id": "boia-mascota",
+   "file": "boia-mascota.glb",
+   "variant": "primera",
+   "doc": "la primera boia: la mascota de BOIA tal cual"
+  },
+  {
+   "id": "boia-info",
+   "file": "boia-info.glb",
+   "variant": "info",
+   "doc": "boia informativa (cartel «i» y gallardete; el color del gallardete lo puede cambiar /mar)"
+  },
+  {
+   "id": "boia-whatsapp",
+   "file": "boia-whatsapp.glb",
+   "variant": "whatsapp",
+   "doc": "boia de WhatsApp: la mascota con el bocadillo verde de chat"
+  },
+  {
+   "id": "boia-fiestera",
+   "file": "boia-fiestera.glb",
+   "variant": "fiestera",
+   "doc": "la Boia Fiestera: aro de fiesta, guirnalda, pompón y globos"
+  }
+ ],
+ "secretos": [
+  {
+   "id": "secreto",
+   "file": "secreto.glb",
+   "doc": "marcador de secreto: destello dorado sobre un remolino de espuma (el mismo en cada punto de mapa.json/secretos)"
   }
  ]
 }

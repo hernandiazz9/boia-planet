@@ -7,10 +7,17 @@ material: el color base del Principled, el de la emisión o el tono iluminado de
 la rampa. Los contornos de casco invertido se quitan (en el mar 3D no hacen
 falta). Proa a +X y flotación en y = 0, como en Blender.
 
+Cada barco sale en sus skins (T39, ship_skins.skins_for): <id>.glb (base),
+<id>-noche.glb y <id>-fiesta.glb; el manifiesto las lista en `skins`. Además,
+las boias con la mascota de BOIA (mascota.py: boia-mascota, boia-info,
+boia-whatsapp y boia-fiestera) y el marcador de secreto (secreto.glb), con un
+color plano por papel (la paleta del tema de arcilla).
+
     /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/export_barcos_glb.py
     ... -- --only arcilla acuarela
+    ... -- --no-boias
 
-Salida: art/barco/3d/<id>.glb y art/barco/3d/manifest.json (muestra).
+Salida: art/barco/3d/*.glb y art/barco/3d/manifest.json (muestra).
 """
 import argparse
 import json
@@ -22,6 +29,7 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import rig  # noqa: E402
+import ship_skins  # noqa: E402
 import ship_styles  # noqa: E402
 
 # Tope de triángulos por barco: en el móvil el barco se ve pequeño. muestra
@@ -175,12 +183,19 @@ def is_outline(obj, mat):
     return "outline" in n or "contorno" in n
 
 
-def export(sid):
+def glb_name(sid, skin):
+    return sid + (".glb" if skin == "base" else "-%s.glb" % skin)
+
+
+def export(sid, skin="base"):
     rig.reset_scene()
     mod = ship_styles.load(sid)
+    ship_skins.apply(sid, mod, skin)
     built = mod.build_ship()
     # Unos estudios devuelven (raíz, piezas); otros, sólo la raíz.
     root = built[0] if isinstance(built, tuple) else built
+    # Mallas en orden fijo (como los sprites): el .glb sale igual byte a byte en cada corrida.
+    ship_styles.canonical_order(bpy.context.scene)
     # Los modificadores de contorno (Solidify con normales invertidas) fuera.
     for obj in [o for o in bpy.data.objects if o.type == "MESH"]:
         for mod_ in list(obj.modifiers):
@@ -206,8 +221,12 @@ def export(sid):
                     color = _hex_lin(h)
                 else:
                     unmatched.add(key)
+                tint = ship_skins.tint_for(sid, skin, key)          # lápiz: el tinte de la skin sobre su gris
+                if tint:
+                    color = tuple(a * b for a, b in zip(color[:3], _hex_lin(tint)[:3])) + (1.0,)
                 cache[key] = simple_material(key, color, emissive)
             s.material = cache[key]
+    ship_skins.apply(sid, mod, "base")
     # Mallas densas (superelipsoides, tornos) a dieta si el barco pasa del tope.
     meshes = [o for o in bpy.data.objects if o.type == "MESH"]
     total = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes)
@@ -228,8 +247,16 @@ def export(sid):
             if o.type == "MESH":
                 ev = o.evaluated_get(bpy.context.evaluated_depsgraph_get())
                 tris += sum(len(p.vertices) - 2 for p in ev.data.polygons)
+    name = glb_name(sid, skin)
+    path = write_glb(name)
+    print("[glb] %s: %d triángulos aprox., %d kB; sin hoja: %s"
+          % (name, tris, os.path.getsize(path) // 1024, ", ".join(sorted(unmatched)) or "-"))
+    return name
+
+
+def write_glb(name):
     os.makedirs(OUT, exist_ok=True)
-    path = os.path.join(OUT, sid + ".glb")
+    path = os.path.join(OUT, name)
     bpy.ops.export_scene.gltf(
         filepath=path,
         export_format="GLB",
@@ -242,31 +269,92 @@ def export(sid):
         export_lights=False,
         export_cameras=False,
     )
-    print("[glb] %s: %d triángulos aprox., %d kB; sin hoja: %s"
-          % (sid, tris, os.path.getsize(path) // 1024, ", ".join(sorted(unmatched)) or "-"))
-    return {"id": sid, "file": sid + ".glb", "barco": ship_styles.BY_ID[sid]["barco"],
-            "label": ship_styles.BY_ID[sid]["label"], "slot": ship_styles.BY_ID[sid]["slot"]}
+    return path
+
+
+def ship_entry(sid, files):
+    return {"id": sid, "file": files["base"], "barco": ship_styles.BY_ID[sid]["barco"],
+            "label": ship_styles.BY_ID[sid]["label"], "slot": ship_styles.BY_ID[sid]["slot"], "skins": files}
+
+
+# --- Las boias con la mascota de BOIA y el marcador de secreto (T39) ---------------------------------
+# Mismas piezas que el arte 2D (mascota.py, con el Builder de los mundos); cada papel, un color plano (la paleta del
+# tema de arcilla, la de los mundos por defecto). Cara a +X y flotación en y = 0.
+BOIAS = [("boia-mascota", "primera", "la primera boia: la mascota de BOIA tal cual"),
+         ("boia-info", "info", "boia informativa (cartel «i» y gallardete; el color del gallardete lo puede cambiar /mar)"),
+         ("boia-whatsapp", "whatsapp", "boia de WhatsApp: la mascota con el bocadillo verde de chat"),
+         ("boia-fiestera", "fiestera", "la Boia Fiestera: aro de fiesta, guirnalda, pompón y globos")]
+
+
+def _flat_theme():
+    import mundo_arcilla as ARC          # rutas de mundos/, Builder con malla canónica y papeles de la mascota
+    T = ARC.temas
+
+    class Plano(T.Tema):
+        def make(self, role):
+            if role in T.Arcilla.GLOW:
+                return simple_material(role, _hex_lin(T.Arcilla.GLOW[role][0]), True)
+            return simple_material(role, _hex_lin(T.Arcilla.HEX[role]), False)
+    return ARC, Plano()
+
+
+def export_boia(name, variant=None):
+    """Una boia con la mascota (variant) o el marcador de secreto (variant None) como glTF."""
+    import mascota as MASC
+    rig.reset_scene()
+    ARC, tema = _flat_theme()
+    root = bpy.data.objects.new(name, None)
+    bpy.context.scene.collection.objects.link(root)
+    B = ARC.escena.Builder(tema, ARC.temas.A, ARC.M, root)
+    with B.zona("mascota"), B.pieza(name):
+        if variant:
+            MASC.mascota(B, (0.0, 0.0, 0.0), k=1.0, g=45.0, variant=variant, mouth="sonrisa")
+        else:
+            MASC.secreto(B, (0.0, 0.0, 0.0), k=1.0, f=0)
+    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+    total = sum(len(p.vertices) - 2 for o in meshes for p in o.data.polygons)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in [root] + meshes:
+        o.select_set(True)
+    path = write_glb(name + ".glb")
+    print("[glb] %s: %d triángulos, %d kB" % (name, total, os.path.getsize(path) // 1024))
+    return name + ".glb"
 
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser()
-    ap.add_argument("--only", nargs="*")
+    ap.add_argument("--only", nargs="*", help="sólo estos barcos (ids de estilo)")
+    ap.add_argument("--no-boias", action="store_true", help="sin las boias ni el secreto")
     a = ap.parse_args(argv)
-    done = [export(sid) for sid in (a.only or ship_styles.IDS)]
+    done = []
+    for sid in (a.only or ship_styles.IDS):
+        files = {skin: export(sid, skin) for skin in ship_skins.skins_for(sid)}
+        done.append(ship_entry(sid, files))
     man = os.path.join(OUT, "manifest.json")
-    prev = {}
+    prev, prev_doc = {}, {}
     if os.path.exists(man):
         with open(man, encoding="utf-8") as f:
-            prev = {s["id"]: s for s in json.load(f).get("barcos", [])}
+            prev_doc = json.load(f)
+            prev = {s["id"]: s for s in prev_doc.get("barcos", [])}
     for d in done:
         prev[d["id"]] = d
+    boias = prev_doc.get("boias", [])
+    secretos = prev_doc.get("secretos", [])
+    if not a.no_boias:
+        boias = [{"id": name, "file": export_boia(name, variant), "variant": variant, "doc": doc}
+                 for name, variant, doc in BOIAS]
+        secretos = [{"id": "secreto", "file": export_boia("secreto"), "doc": "marcador de secreto: destello dorado "
+                     "sobre un remolino de espuma (el mismo en cada punto de mapa.json/secretos)"}]
     with open(man, "w", encoding="utf-8") as f:
         json.dump({
             "status": "muestra",
-            "nota": "Generado por tools/blender/export_barcos_glb.py desde los scripts de estilo. No editar.",
-            "unidades": "Blender: proa a +X, flotación en y = 0 (glTF, y arriba)",
+            "nota": "Generado por tools/blender/export_barcos_glb.py desde los scripts de estilo (barcos, con sus "
+                    "skins: ship_skins.py) y desde tools/blender/mascota.py (boias y secreto). No editar.",
+            "unidades": "Blender: proa (o cara) a +X, flotación en y = 0 (glTF, y arriba); 1 unidad = 1 u del mapa",
             "barcos": [prev[k] for k in ship_styles.IDS if k in prev],
+            "boias": boias,
+            "secretos": secretos,
         }, f, ensure_ascii=False, indent=1)
 
 

@@ -13,7 +13,10 @@ Lo que se añade a cada estudio, sin tocar su script:
     agua, `mast_top` en el punto más alto, `slot_passenger` en la cubierta.
 
 Son muestras para comparar estilos con Álvaro en el juego (T11); no son arte
-aprobado. Las skins noche/fiesta sólo existen en el estilo actual (`muestra`).
+aprobado. Cada estudio sale en las tres skins (base, noche y fiesta, T39): la
+skin es otra paleta del mismo script (ship_skins.py), aplicada antes de
+construir el barco. La pasajera es la Boia Fiestera (la mascota de BOIA en
+pequeño, ship.passenger_meshes) y no cambia con la skin.
 """
 import importlib.util
 import json
@@ -27,6 +30,7 @@ from mathutils.bvhtree import BVHTree
 
 import rig
 import ship
+import ship_skins
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STYLES_DIR = os.path.join(HERE, "styles")
@@ -66,7 +70,7 @@ IDS = [s["id"] for s in STUDIES]
 WATERLINE_Z = 0.15          # vértices por debajo de esto: extremos del casco en el agua
 MAST_TOP_DROP = 0.03        # el ancla queda un pelo bajo la punta: en 64 px de arte la punta puede no verse
 
-# Colores de la pasajera: los de ship.py (Boia Fiestera de muestra).
+# Colores de la pasajera: los de ship.py (la mascota de BOIA: naranja, blanco, azul marino y tinta).
 PC = {r: (v if isinstance(v, str) else v["hex"]) for r, v in ship.PASSENGER_COLORS.items()}
 
 _modules = {}
@@ -211,9 +215,13 @@ class _CartoonMats(dict):
 
 
 def _pax_cartoon(mod, ctx):
-    # Paleta de tres colores del estilo: la pasajera va en rojo y crema, con gorro de madera.
-    M = _CartoonMats(buoy_a=mod.toon_material("pax_buoy_a", "red"), buoy_b=mod.toon_material("pax_buoy_b", "cream"),
-                     hat=mod.toon_material("pax_hat", "wood"), face=mod.toon_material("pax_face", mod.INK, flat=True))
+    # Paleta de tres colores del estilo: la pasajera va en rojo y crema con el gorro negro, los tonos de fábrica
+    # (no cambian con la skin del barco).
+    T0 = ship_skins.original("cartoon-30", mod, "TONES")
+    mod.TONES.update({"pax_body": T0["red"], "pax_white": T0["cream"], "pax_cap": T0["black"]})
+    M = _CartoonMats(buoy_a=mod.toon_material("pax_buoy_a", "pax_body"),
+                     buoy_b=mod.toon_material("pax_buoy_b", "pax_white"),
+                     hat=mod.toon_material("pax_hat", "pax_cap"), face=mod.toon_material("pax_face", mod.INK, flat=True))
     M.outline = mod.outline_material()
     return lambda name, bm, roles, parent, outline: mod.link_object(name, bm, roles, parent, M,
                                                                     outline=mod.OUTLINE_W_SMALL if outline else 0)
@@ -229,9 +237,9 @@ def _pax_cel(mod, ctx):
 
 
 def _pax_pixel(mod, ctx):
-    # Paleta fija de 16: rojo, blanco, farol y contorno.
-    mod.MATS.update({"pax_buoy_a": mod.MATS["red"], "pax_buoy_b": mod.MATS["white"],
-                     "pax_hat": mod.MATS["lamp"], "pax_face": (0, 0, 0)})
+    # Paleta fija de 16 (sombra, medio, luz): cuerpo naranja de farol, aro blanco, gorro azul de cristal y contorno.
+    # Índices fijos: no cambian con la skin del barco.
+    mod.MATS.update({"pax_buoy_a": (2, 12, 12), "pax_buoy_b": (5, 7, 7), "pax_hat": (0, 14, 14), "pax_face": (0, 0, 0)})
 
     def link(name, bm, roles, parent, outline):
         parts = ctx.setdefault("pixel_parts", mod.Parts(parent))
@@ -308,8 +316,8 @@ def canonical_order(scene):
         bm.free()
 
 
-def build(sid):
-    """Escena nueva con cámara, luz y el barco del estilo `sid`.
+def build(sid, skin="base"):
+    """Escena nueva con cámara, luz y el barco del estilo `sid` en la skin `skin` (ship_skins.SKINS).
 
     Devuelve (scene, cam, ship_dict, render_fn); ship_dict tiene la forma de
     ship.build_ship() (root, bob, passenger, anchors) para usar set_direction,
@@ -321,6 +329,7 @@ def build(sid):
     rig.setup_render(scene)
     cam = rig.add_camera(scene)
     setup(mod, scene)
+    ship_skins.apply(sid, mod, skin)
     built = mod.build_ship()
     root = built[0] if isinstance(built, tuple) else built
     root.rotation_euler = (0.0, 0.0, 0.0)
@@ -353,6 +362,7 @@ def build(sid):
         "bow": _empty("bow", bob, (max(low), 0, 0)),
     }
     canonical_order(scene)
+    ship_skins.post_build(sid, skin)
     if after:
         after(mod, scene)
     render_fn = render_wrap(mod) if render_wrap else _plain_render

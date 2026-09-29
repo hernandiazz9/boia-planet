@@ -4,6 +4,36 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T39: arte: la mascota de BOIA en todas las boias, skins de barco a la venta, secretos
+
+Arte `muestra` renderizado con el pipeline de Blender; el motor todavía no lo usa (lo cablean T40 y T45).
+
+Qué existe:
+- **La mascota como boia** (`tools/blender/mascota.py`): la mascota de `art/marca/boia-mascota.jpg` modelada como boya flotante (cuerpo naranja #F5501E, gorro azul marino #34288A en punta con agujero, ojos grandes, cejas, sonrisa ancha, aro flotador en la flotación), con el Builder de los mundos: cada pieza es un papel y el tema pone arcilla o acuarela (la acuarela lleva su contorno). Variantes: `primera`, `info` (cartel «i» y gallardete de 5 colores), `whatsapp` (bocadillo verde de chat, sin logo de marca), `fiestera` (aro de fiesta, guirnalda, pompón, coloretes y globos); boca `sonrisa` o `habla`.
+- `art/mundos/{arcilla,acuarela}/boias/` (nuevo, extra de `tools/blender/lugares.json`): piezas `primera` y `whatsapp` (en su sitio del puerto) e `info_1`…`info_5` (sin sitio: map_pos nulo, T45 las pone), cada una con `idle` (6 fotogramas, balanceo) y `habla` (2 fotogramas, boca abierta).
+- `art/mundos/{arcilla,acuarela}/fiestera/`: la Boia Fiestera es ahora la mascota con sus detalles de fiesta (`fiestera_pide_*`, habla mientras pide ayuda) y a bordo (`tripulante_baile_*`, canta y baila); mismos ids de pieza, fotogramas y anclajes que antes.
+- `art/mundos/{arcilla,acuarela}/secreto/` (nuevo, extra): destello dorado de cuatro puntas sobre un remolino de espuma, animación `brillo` de 4 fotogramas, con `instances` = los 4 puntos de `mapa.json/secretos`.
+- **Skins**: los estudios de barco salen en `base`, `noche` y `fiesta` (`tools/blender/ship_skins.py`: otra paleta del mismo script, aplicada antes de construir), 8 direcciones con y sin pasajera: acuarela, low-poly, semi-realista, arcilla, cartoon-30, cel-shaded y pixel-art (este con su paleta fija de 16). B01 boceto-lápiz queda sólo en base (`ship_skins.HELD`: su nota del registro no admite skins de color, y `ship-style.test.ts` espera un estilo sin skin temática); sus skins de lápiz están escritas y se activan quitando esa entrada.
+- **Pasajera**: la de todos los barcos (`ship.passenger_meshes`) es la mascota en pequeño; se re-renderizaron las imágenes `_p` del barco por defecto.
+- **glTF** (`tools/blender/export_barcos_glb.py` → `art/barco/3d/`): `<id>-noche.glb` y `<id>-fiesta.glb` de cada estilo con skins (el manifiesto las lista en `skins`), `boia-mascota`, `boia-info`, `boia-whatsapp`, `boia-fiestera` y `secreto.glb` (manifiesto: `boias`, `secretos`). Cara/proa a +X, flotación en y = 0.
+- `tools/blender/lugares.json` gana `extras` (boias y secreto): mismo formato y comprobaciones que un lugar; `check.py` exige sus carpetas. `place.schema.json`: categorías `personaje` y `secreto`.
+- Hojas: `docs/informes/img/p004-t39-skins.png` y `p004-t39-boias-mascota.png` (`tools/blender/contact_sheet_t39.py`).
+
+Comandos:
+```
+Blender -b -P tools/blender/render.py -- --only barco --mundo arcilla --mundo acuarela --lugar boias --lugar secreto --lugar fiestera   # exit 0; 704 imágenes (~4 min)
+... la misma con --out tools/blender/out/rerun                                                          # exit 0; 719 archivos (704 PNG + 15 manifiestos) idénticos byte a byte
+Blender -b -P tools/blender/export_barcos_glb.py                                                          # exit 0; 27 .glb
+python3 tools/blender/check.py                                                                            # exit 0; 59 manifiestos válidos, 848 imágenes; cada mundo 21 lugares
+pnpm test                                                                                                 # exit 0; 60 archivos, 585 pruebas
+```
+
+Pendiente / para otros encargos:
+- El motor sigue dibujando la boia y la de WhatsApp de `puerto` y el secreto como marcador: T45 (y quien toque `packages/world/src/worlds/place-art.ts`) debe apuntar a `boias#primera`, `boias#whatsapp`, `boias#info_N` y `secreto#secreto`, y pasar `boias` y `secreto` de `extras` a `lugares` en `lugares.json` (el test de acuarela compara el arte usado con `lugares`).
+- T40: `apps/web/lib/barco/catalog.ts` sigue filtrando skins por las notas de `docs/barcos/barcos.json` (B05 «sólo base», B06 sin fiesta): hay que quitar esas notas o reglas para vender las skins de B05.
+- Los manifiestos de lugares no re-renderizados (puerto, islas, costas…) y de los recursos del mundo de muestra llevan un `sources_sha256` viejo porque cambiaron `mundo_arcilla.py`, `render.py` y `lugares.json`; el arte es el mismo.
+- `arcilla*.glb` no sale igual byte a byte entre corridas (la dieta Decimate de Blender); el resto de .glb sí.
+
 ## 2026-09-29 — plan 004 T50: marca de BOIA (letras del wordmark, logo, colores y tipografía)
 
 La identidad de Álvaro (inventario §6.8) aplicada a la entrada, la landing y el Admin. `/mar` no se toca (plan 003).

@@ -6,8 +6,13 @@ B05). Cada zona se construye una vez en su propia escena y cada pieza del
 manifiesto es un subconjunto de sus objetos (por nombre «<zona>__<pieza>__<n>» y
 distancia en el mapa). Lo que no está en la maqueta se construye aquí con las
 mismas piezas: la Isla del Faro y la del Cañón (D-20), las losas de costa y sus
-esquinas, los fotogramas de los cocodrilos, del delfín y del remolino, y la
-Boia Fiestera a bordo (slot TRIPULANTE).
+esquinas, y los fotogramas de los cocodrilos, del delfín y del remolino.
+
+Todas las boias son la mascota de BOIA (T39, mascota.py) pintada con el tema del
+mundo: la Boia Fiestera (pidiendo ayuda y a bordo, slot TRIPULANTE) y, en los
+extras de lugares.json, `boias` (la primera, la de WhatsApp y las cinco
+informativas, con reposo y habla) y `secreto` (el marcador de los secretos).
+El mundo de acuarela reutiliza estas mismas piezas (mundo_acuarela.py).
 
 Ver mundos_arte.py para el contrato y tools/blender/lugares.json para los ids.
 """
@@ -21,6 +26,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 import lugares as LG
+import mascota as MASC
 import mundos_arte as MA
 import world
 
@@ -33,6 +39,8 @@ for _p in (os.path.join(REPO, "mundos"), ARC, os.path.join(ARC, "herramientas"))
 import mapa as MAPA  # noqa: E402
 import piezas as P  # noqa: E402
 import temas  # noqa: E402
+
+MASC.register(temas.Arcilla.HEX)          # papeles de la mascota de BOIA (naranja, gorro azul marino, verde de chat)
 
 
 def _load(name, path):
@@ -436,55 +444,175 @@ CROC_ANIMS = {"idle": {"frames": IDLE_FRAMES, "fps": 6, "loop": True},
               "emerger": {"frames": DIVE_FRAMES, "fps": 10, "loop": False, "reverse_of": "sumergirse"}}
 
 
+# --- La mascota de BOIA: todas las boias (T39) ------------------------------------------------
+def mascot_frame(ctx, key, pos, k, variant, mouth, f, n, info=0, balloons=True, water=True, motion=None):
+    """Construye la boia-mascota (mascota.py) para un fotograma: en `pos` del mapa (o en el origen si None),
+    con el balanceo del fotograma f de n (o `motion(base)`, una matriz) y, si `water`, su onda de flotación
+    quieta en el agua. Guarda la punta del gorro en ctx.data[key + '_tip']. Devuelve las mallas."""
+    B = ctx.B
+    base = MA.to_b(pos[0], pos[1], 0.0) if pos else Vector((0.0, 0.0, 0.0))
+    root = MA.fresh(ctx, key)
+    B.root = root
+    with B.zona("mascota"), B.pieza(key):
+        tip = MASC.mascota(B, base, k=k, g=90.0, variant=variant, mouth=mouth, info=info, with_balloons=balloons)
+    B.root = ctx.root
+    objs = MA.fresh_collect(ctx, key, root)
+    m = motion(base) if motion else MASC.bob_matrix(base, f, n, k)
+    root.matrix_world = m
+    ctx.data[key + "_tip"] = m @ tip
+    if water:
+        wroot = MA.fresh(ctx, key + "_agua")
+        B.root = wroot
+        with B.zona("mascota"), B.pieza(key + "_agua"):
+            R = 0.46 * k
+            for i in range(2):
+                rr = R * (1 + 0.35 * i) * (1.0 + 0.06 * math.sin(2 * math.pi * f / n + i))
+                B.torus("foam", 1.0, 0.022 * k / rr, Matrix.Translation(base + Vector((0, 0, 0.025))) @
+                        Matrix.Diagonal((rr, rr, rr * 0.5, 1)), nu=40, nv=6)
+        B.root = ctx.root
+        objs += MA.fresh_collect(ctx, key + "_agua", wroot)
+    bpy.context.view_layer.update()
+    return [o for o in objs if o.type == "MESH"]
+
+
+IDLE_N, TALK_N = 6, 2
+MASCOT_ANIMS = {"idle": {"frames": IDLE_N, "fps": 6, "loop": True},
+                "habla": {"frames": TALK_N, "fps": 6, "loop": True}}
+
+
+def mascot_images(key, pos, k, variant, info=0):
+    """Reposo (balanceo, sonrisa del logo) y habla (boca abierta, en dos fases del balanceo)."""
+    imgs = [{"file": "%s_idle_%d.png" % (key, f), "frame": f, "animation": "idle",
+             "setup": lambda ctx, f=f: mascot_frame(ctx, key, pos, k, variant, "sonrisa", f, IDLE_N, info=info)}
+            for f in range(IDLE_N)]
+    imgs += [{"file": "%s_habla_%d.png" % (key, h), "frame": h, "animation": "habla",
+              "setup": lambda ctx, h=h: mascot_frame(ctx, key, pos, k, variant, "habla", h * IDLE_N // TALK_N, IDLE_N,
+                                                     info=info)}
+             for h in range(TALK_N)]
+    return imgs
+
+
+def mascot_top(key, pos):
+    def f(ctx):
+        objs = [o for o in ctx.fresh[key] if o.type == "MESH"]
+        return {"tope": top_point(objs, pos or (0.0, 0.0))}
+    return f
+
+
+BOIAS_K = {"primera": 1.0, "whatsapp": 0.8, "info": 0.85}
+
+
+def p_boias(place_fn):
+    """Las boias con la mascota (extras de lugares.json): la primera y la de WhatsApp en su sitio del puerto y las
+    cinco informativas sin sitio todavía (T45 las pone en la ruta; su pivote es el punto del agua bajo ellas)."""
+    zid = "puerto"
+    bp, wp = tuple(lugar(zid, "boia")), tuple(lugar(zid, "whatsapp"))
+    g = "vacio"
+    parts = [part("primera", "personaje", "bloquear", g, bp, mascot_images("primera", bp, BOIAS_K["primera"], "primera"),
+                  animations=MASCOT_ANIMS, footprint=lambda ctx: circle(bp, 0.55), prox_units=prox(zid, "boia"),
+                  anchors=mascot_top("primera", bp),
+                  doc="la primera boia (la de la entrada): la mascota de BOIA tal cual, con su aro flotador; reposo "
+                      "y habla para sus bocadillos"),
+             part("whatsapp", "personaje", "bloquear", g, wp,
+                  mascot_images("whatsapp", wp, BOIAS_K["whatsapp"], "whatsapp"),
+                  animations=MASCOT_ANIMS, footprint=lambda ctx: circle(wp, 0.42), prox_units=prox(zid, "whatsapp"),
+                  anchors=mascot_top("whatsapp", wp),
+                  doc="la boia de WhatsApp: la mascota con un bocadillo verde de chat en un mástil (sin logo de marca)")]
+    for i in range(5):
+        key = "info_%d" % (i + 1)
+        parts.append(part(key, "personaje", "bloquear", g, None,
+                          mascot_images(key, None, BOIAS_K["info"], "info", info=i),
+                          animations=MASCOT_ANIMS, footprint=lambda ctx: circle((0.0, 0.0), 0.47), prox_units=2.4,
+                          anchors=mascot_top(key, None),
+                          doc="boia informativa %d de 5 (O12): la mascota con un cartel «i» y un gallardete de color "
+                              "propio; sin sitio en mapa.json todavía, el motor la pone en la ruta (T45)" % (i + 1)))
+    return place_fn("boias", parts, "Las boias")
+
+
+SECRET_N = 4
+SECRET_POS = tuple(LG.point(LG.resolve(M, ENTRY["secreto"]["pos"])))
+
+
+def secret_frame(ctx, f):
+    B = ctx.B
+    root = MA.fresh(ctx, "secreto")
+    B.root = root
+    with B.zona("secreto"), B.pieza("secreto"):
+        ctx.data["destello"] = MASC.secreto(B, MA.to_b(SECRET_POS[0], SECRET_POS[1], 0.0), k=1.0, f=f, n=SECRET_N)
+    B.root = ctx.root
+    return [o for o in MA.fresh_collect(ctx, "secreto", root) if o.type == "MESH"]
+
+
+def p_secreto(place_fn):
+    pos = SECRET_POS
+    pa = part("secreto", "objeto", "ninguna", "vacio", pos,
+              [{"file": "secreto_brillo_%d.png" % f, "frame": f, "animation": "brillo",
+                "setup": lambda ctx, f=f: secret_frame(ctx, f)} for f in range(SECRET_N)],
+              animations={"brillo": {"frames": SECRET_N, "fps": 6, "loop": True}},
+              footprint=lambda ctx: circle(pos, 0.3), prox_units=1.2,
+              anchors=lambda ctx: {"tope": ctx.data["destello"]},
+              doc="marcador de secreto: destello dorado sobre un remolino de espuma con burbujas; el mismo en cada "
+                  "punto de mapa.json/secretos (instances). Pequeño a propósito: se ve si se mira")
+    return place_fn("secreto", [pa], "Secreto")
+
+
+# La Boia Fiestera a bordo (slot TRIPULANTE): la mascota fiestera a escala del barco, sin globos, bailando y cantando.
 def tripulante_setup(f, n):
-    def setup(ctx):
-        key = "tripulante"
-        if key not in ctx.fresh:
-            B = ctx.B
-            root = MA.fresh(ctx, key)
-            B.root = root
-            with B.zona("tripulante"), B.pieza("fiestera"):
-                FIESTERA.fiestera(B, 0.0, 0.0, k=TRIP_K, g=90.0)
-            B.root = ctx.root
-            objs = MA.fresh_collect(ctx, key, root)
-            MA.rig_objects(ctx, key, objs, Vector((0, 0, 0)))
-        e = ctx.rigs[key][0]
+    def dance(base):
         ph = 2 * math.pi * f / n
-        e.matrix_world = (Matrix.Translation((0, 0, 0.035 * abs(math.sin(ph))))
-                          @ Matrix.Rotation(math.radians(9.0 * math.sin(ph)), 4, "Z")
-                          @ Matrix.Rotation(math.radians(5.0 * math.sin(ph + 0.8)), 4, MA.RIGHT))
-        return [o for o in ctx.fresh[key] if o.type == "MESH"]
+        return (Matrix.Translation((0, 0, 0.035 * abs(math.sin(ph))))
+                @ Matrix.Rotation(math.radians(9.0 * math.sin(ph)), 4, "Z")
+                @ Matrix.Rotation(math.radians(5.0 * math.sin(ph + 0.8)), 4, MA.RIGHT))
+
+    def setup(ctx):
+        return mascot_frame(ctx, "tripulante", None, TRIP_K, "fiestera", "habla" if f % 2 else "sonrisa", f, n,
+                            balloons=False, water=False, motion=dance)
     return setup
 
 
 TRIP_K = 0.42
 TRIP_FRAMES = 6
-FIESTERA = _load("arcilla_zona_fiestera", os.path.join(ARC, "zonas", "fiestera.py"))
+FIESTERA_K = 1.4
+
+
+def tripulante_part(ship_id, sprites):
+    return part("tripulante", "tripulante", "ninguna", "aire", None,
+                [{"file": "tripulante_baile_%d.png" % f, "frame": f, "animation": "baile",
+                  "setup": tripulante_setup(f, TRIP_FRAMES)} for f in range(TRIP_FRAMES)],
+                animations={"baile": {"frames": TRIP_FRAMES, "fps": 8, "loop": True}}, no_water=True,
+                anchors=lambda ctx: {"tope": top_point([o for o in ctx.fresh["tripulante"] if o.type == "MESH"],
+                                                       (0.0, 0.0))},
+                attach={"ship": ship_id, "sprites": sprites, "anchor": "slot_passenger",
+                        "doc": "slot TRIPULANTE (REQ-AVE-007): el pivote va sobre slot_passenger de la dirección "
+                               "que se dibuja, por encima del barco (sus imágenes base, sin la pasajera _p)"},
+                doc="la Boia Fiestera a bordo (la mascota de BOIA con sus detalles de fiesta), a escala del barco %s, "
+                    "mirando a cámara, bailando y cantando" % ship_id)
+
+
+def fiestera_part(zid, g, fx, fy, n_pide=6):
+    """La Boia Fiestera pidiendo ayuda: la mascota con sus detalles de fiesta y sus globos, balanceándose y hablando
+    (boca abierta salvo en dos fotogramas), con las ondas de la zona alrededor."""
+    def pide(f):
+        def setup(ctx):
+            objs = mascot_frame(ctx, "fiestera", (fx, fy), FIESTERA_K, "fiestera",
+                                "sonrisa" if f % 3 == 2 else "habla", f, n_pide, water=False)
+            return objs + pick(ctx, zid, {"ondas"}, near=(fx, fy), r=1.0)
+        return setup
+
+    return part("fiestera", "personaje", "bloquear", g, (fx, fy),
+                [{"file": "fiestera_pide_%d.png" % f, "frame": f, "animation": "pide", "setup": pide(f)}
+                 for f in range(n_pide)],
+                animations={"pide": {"frames": n_pide, "fps": 6, "loop": True}},
+                footprint=lambda ctx: circle((fx, fy), 0.48), prox_units=prox(zid, "rescate"),
+                anchors=lambda ctx: {"tope": MA.to_b(fx, fy, ctx.data["fiestera_tip"].z + 0.1)},
+                doc="la Boia Fiestera (la mascota de BOIA con aro de fiesta, guirnalda, pompón y globos) pidiendo "
+                    "ayuda; al rescatarla pasa al slot TRIPULANTE (pieza tripulante)")
 
 
 def p_fiestera():
     zid, g = "fiestera", "zona:fiestera"
     fx, fy = lugar(zid, "fiestera")
-    n_pide = 6
-
-    def pide(f):
-        def setup(ctx):
-            objs = pick(ctx, zid, {"fiestera", "globos"})
-            e = MA.rig_objects(ctx, "fiestera", objs, MA.to_b(fx, fy, 0.0))
-            ph = 2 * math.pi * f / n_pide
-            e.matrix_world = (Matrix.Translation(MA.to_b(fx, fy, 0.03 * math.sin(ph)))
-                              @ Matrix.Rotation(math.radians(3.0 * math.sin(ph + 1.0)), 4, MA.RIGHT))
-            return objs + pick(ctx, zid, {"ondas"}, near=(fx, fy), r=1.0)
-        return setup
-
-    parts = [part("fiestera", "personaje", "bloquear", g, (fx, fy),
-                  [{"file": "fiestera_pide_%d.png" % f, "frame": f, "animation": "pide", "setup": pide(f)}
-                   for f in range(n_pide)],
-                  animations={"pide": {"frames": n_pide, "fps": 6, "loop": True}},
-                  footprint=lambda ctx: circle((fx, fy), 0.48), prox_units=prox(zid, "rescate"),
-                  anchors=lambda ctx: {"tope": top_point(pick(ctx, zid, {"fiestera"}), (fx, fy))},
-                  doc="la Boia Fiestera pidiendo ayuda, con sus globos; al rescatarla pasa al slot TRIPULANTE (pieza "
-                      "tripulante)")]
+    parts = [fiestera_part(zid, g, fx, fy)]
     parts.append(part("posidonia", "decoracion", "ninguna", g, (fx, fy),
                       static(lambda ctx: pick(ctx, zid, {"posidonia"}, near=(fx, fy), r=3.2)),
                       doc="matas de posidonia flotante alrededor del corro; va debajo de los cocodrilos"))
@@ -501,17 +629,7 @@ def p_fiestera():
                           doc="ralentiza 60 %% durante 2 s; se sumerge (uno cada 0,4 s) cuando el barco entra a %.1f u "
                               "de la Fiestera (zonas/fiestera/proximidad/cocodrilos) y emerge al alejarse"
                               % prox(zid, "cocodrilos")))
-    parts.append(part("tripulante", "tripulante", "ninguna", "aire", None,
-                      [{"file": "tripulante_baile_%d.png" % f, "frame": f, "animation": "baile",
-                        "setup": tripulante_setup(f, TRIP_FRAMES)} for f in range(TRIP_FRAMES)],
-                      animations={"baile": {"frames": TRIP_FRAMES, "fps": 8, "loop": True}}, no_water=True,
-                      anchors=lambda ctx: {"tope": top_point([o for o in ctx.fresh["tripulante"] if o.type == "MESH"],
-                                                             (0.0, 0.0))},
-                      attach={"ship": SHIP, "sprites": "art/barco/estilos/arcilla/manifest.json",
-                              "anchor": "slot_passenger",
-                              "doc": "slot TRIPULANTE (REQ-AVE-007): el pivote va sobre slot_passenger de la dirección "
-                                     "que se dibuja, por encima del barco (sus imágenes base, sin la pasajera _p)"},
-                      doc="la Boia Fiestera a bordo, a escala del barco B05, mirando a cámara"))
+    parts.append(tripulante_part(SHIP, "art/barco/estilos/arcilla/manifest.json"))
     return place("fiestera", parts, name=Z[zid]["propuesta_nombre"])
 
 
@@ -1141,7 +1259,8 @@ def places():
            p_minijuego("faro", g_faro), p_minijuego("canon", g_canon),
            p_costa_lateral("costa_oeste"), p_costa_lateral("costa_este"), p_costa_sur()]
     _fills_for_corners(out)
-    return out
+    shared = lambda pid, parts, name: place(pid, parts, name=name, shared=True)
+    return out + [p_boias(shared), p_secreto(shared)]
 
 
 BASE_SCRIPTS = ["tools/blender/rig.py", "tools/blender/world.py", "tools/blender/lugares.py", "tools/blender/lugares.json",
@@ -1151,12 +1270,14 @@ BASE_SCRIPTS = ["tools/blender/rig.py", "tools/blender/world.py", "tools/blender
 ZONE_FILES = {"puerto": ["puerto"], "cala": ["cala"], "fiestera": ["fiestera"], "allday": ["allday"],
               "fotos": ["fotos"], "tienda": ["tienda"], "ultima": ["ultima"], "circuito": ["circuito"],
               "faro": ["puerto"], "canon": [], "costa_oeste": ["costas"], "costa_este": ["costas"],
-              "costa_sur": ["costas", "puerto"]}
+              "costa_sur": ["costas", "puerto"], "boias": [], "secreto": []}
+MASCOT_PLACES = ("boias", "secreto", "fiestera")      # la mascota de BOIA (T39): tools/blender/mascota.py
 
 
 def scripts(place):
     zs = ZONE_FILES.get(place["id"], ["marvivo"])
-    return BASE_SCRIPTS + ["mundos/arcilla/zonas/%s.py" % z for z in zs]
+    extra = ["tools/blender/mascota.py"] if place["id"] in MASCOT_PLACES else []
+    return BASE_SCRIPTS + ["mundos/arcilla/zonas/%s.py" % z for z in zs] + extra
 
 
 ANCHOR_DOC = {

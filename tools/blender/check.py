@@ -10,7 +10,7 @@ El barco (kind "ship") se valida con manifest.schema.json y sus reglas del
 encargo 01; el resto (sprite, tile, layers) con asset.schema.json y las reglas
 de check_world(). Tienen que existir todos los recursos que lista render.py.
 El arte de los mundos (art/mundos/<mundo>/<lugar>/, kind "place") se valida con
-place.schema.json: una carpeta por lugar de lugares.json en cada mundo de
+place.schema.json: una carpeta por lugar (y por extra) de lugares.json en cada mundo de
 WORLDS, referencias a mapa.json, la misma cámara y densidad que el barco del
 mundo, y por pieza anclajes, huella, pistas, animaciones, losas y esquinas.
 El título 3D de la entrada (art/intro/titulo/, kind "title-sheet") lo valida
@@ -386,12 +386,12 @@ def check_ship(ship_dir, diff_dir=None, skins=SKINS, skip_dirs=()):
 
 # --- El barco en los estilos de exploración (T11) ----------------------------
 STYLES_SUBDIR = "estilos"
-STYLE_SKINS = ["base"]
+import ship_skins  # noqa: E402  (T39: cada estilo en base, noche y fiesta, salvo los de ship_skins.HELD)
 
 
 def check_ship_styles(rid, ship_dir, diff_root=None):
     """Cada entrada de `style_variants` del manifiesto raíz: su carpeta estilos/<id>/ con un
-    manifiesto de barco completo (skin base) cuyo `style` es el id. No puede haber carpetas sin listar."""
+    manifiesto de barco completo (skins de ship_skins.skins_for) cuyo `style` es el id. No puede haber carpetas sin listar."""
     with open(os.path.join(ship_dir, "manifest.json"), encoding="utf-8") as f:
         root = json.load(f)
     variants = root.get("style_variants", [])
@@ -412,7 +412,7 @@ def check_ship_styles(rid, ship_dir, diff_root=None):
                             [], 0))
             continue
         diff = os.path.join(diff_root, STYLES_SUBDIR, sid) if diff_root else None
-        fails, info, n = check_ship(sdir, diff, skins=STYLE_SKINS)
+        fails, info, n = check_ship(sdir, diff, skins=ship_skins.skins_for(sid))
         with open(os.path.join(sdir, "manifest.json"), encoding="utf-8") as f:
             man = json.load(f)
         if man.get("style") != sid:

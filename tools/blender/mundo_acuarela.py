@@ -26,8 +26,8 @@ import random
 
 import bpy
 import numpy as np
-from mathutils import Matrix, Vector
 
+import mascota as MASC
 import mundo_arcilla as ARC          # malla canónica (parchea escena.Builder.mk), selección y piezas de lugar
 import mundos_arte as MA
 import world
@@ -47,6 +47,7 @@ def _load(name, path):
 
 
 TEMA = _load("acuarela_tema", os.path.join(ACU, "tema.py"))
+MASC.register(TEMA.HEX)              # papeles de la mascota de BOIA (naranja, gorro azul marino, verde de chat)
 AP = _load("acuarela_piezas", os.path.join(ACU, "piezas.py"))
 _ZONAS = {}
 
@@ -282,29 +283,12 @@ def skin(pl, docs=None):
 
 # --- Encuentro de la Boia Fiestera ---------------------------------------------------------
 def p_fiestera():
+    """La Boia Fiestera es la mascota de BOIA con sus detalles de fiesta (mundo_arcilla.fiestera_part, mascota.py),
+    pintada con el tema de acuarela; el resto del encuentro es el de la zona de acuarela."""
     zid, g = "fiestera", "zona:fiestera"
     fx, fy = lugar(zid, "fiestera")
-    n_pide = 6
     FZ = zona("fiestera")
-
-    def pide(f):
-        def setup(ctx):
-            objs = pick(ctx, zid, {"fiestera", "farolillos"})
-            e = MA.rig_objects(ctx, "fiestera", objs, MA.to_b(fx, fy, 0.0))
-            ph = 2 * math.pi * f / n_pide
-            e.matrix_world = (Matrix.Translation(MA.to_b(fx, fy, 0.03 * math.sin(ph)))
-                              @ Matrix.Rotation(math.radians(3.0 * math.sin(ph + 1.0)), 4, MA.RIGHT))
-            return objs + pick(ctx, zid, {"ondas"}, near=(fx, fy), r=1.0)
-        return setup
-
-    parts = [part("fiestera", "personaje", "bloquear", g, (fx, fy),
-                  [{"file": "fiestera_pide_%d.png" % f, "frame": f, "animation": "pide", "setup": pide(f)}
-                   for f in range(n_pide)],
-                  animations={"pide": {"frames": n_pide, "fps": 6, "loop": True}},
-                  footprint=lambda ctx: circle((fx, fy), 0.48), prox_units=prox(zid, "rescate"),
-                  anchors=lambda ctx: {"tope": top_point(pick(ctx, zid, {"fiestera"}), (fx, fy))},
-                  doc="la Boia Fiestera pidiendo ayuda, con su ristra de farolillos; al rescatarla pasa al slot "
-                      "TRIPULANTE (pieza tripulante)")]
+    parts = [ARC.fiestera_part(zid, g, fx, fy)]
     parts.append(part("posidonia", "decoracion", "ninguna", g, (fx, fy),
                       static(lambda ctx: pick(ctx, zid, {"posidonia"}, near=(fx, fy), r=3.2)),
                       doc="matas de posidonia flotante alrededor del corro; va debajo de los cocodrilos"))
@@ -323,16 +307,7 @@ def p_fiestera():
                           doc="ralentiza 60 %% durante 2 s; se sumerge (uno cada 0,4 s) cuando el barco entra a %.1f u "
                               "de la Fiestera (zonas/fiestera/proximidad/cocodrilos) y emerge al alejarse"
                               % prox(zid, "cocodrilos")))
-    parts.append(part("tripulante", "tripulante", "ninguna", "aire", None,
-                      [{"file": "tripulante_baile_%d.png" % f, "frame": f, "animation": "baile",
-                        "setup": ARC.tripulante_setup(f, ARC.TRIP_FRAMES)} for f in range(ARC.TRIP_FRAMES)],
-                      animations={"baile": {"frames": ARC.TRIP_FRAMES, "fps": 8, "loop": True}}, no_water=True,
-                      anchors=lambda ctx: {"tope": top_point([o for o in ctx.fresh["tripulante"] if o.type == "MESH"],
-                                                             (0.0, 0.0))},
-                      attach={"ship": SHIP, "sprites": SHIP_SPRITES, "anchor": "slot_passenger",
-                              "doc": "slot TRIPULANTE (REQ-AVE-007): el pivote va sobre slot_passenger de la dirección "
-                                     "que se dibuja, por encima del barco (sus imágenes base, sin la pasajera _p)"},
-                      doc="la Boia Fiestera a bordo, a escala del barco B02, mirando a cámara"))
+    parts.append(ARC.tripulante_part(SHIP, SHIP_SPRITES))
     return place("fiestera", parts)
 
 
@@ -410,7 +385,8 @@ def places():
            skin(ARC.p_minijuego("faro", None)), skin(ARC.p_minijuego("canon", None)),
            skin(ARC.p_costa_lateral("costa_oeste")), skin(ARC.p_costa_lateral("costa_este")), skin(ARC.p_costa_sur())]
     ARC._fills_for_corners(out)
-    return out
+    shared = lambda pid, parts, name: ARC.place(pid, parts, name=name, shared=True)
+    return out + [ARC.p_boias(shared), ARC.p_secreto(shared)]
 
 
 BASE_SCRIPTS = ["tools/blender/rig.py", "tools/blender/world.py", "tools/blender/lugares.py", "tools/blender/lugares.json",
@@ -422,17 +398,18 @@ BASE_SCRIPTS = ["tools/blender/rig.py", "tools/blender/world.py", "tools/blender
 ZONE_FILES = {"naufrago": ["marvivo"], "restos": ["marvivo"], "cofres": ["marvivo"], "botellas": ["marvivo"],
               "delfin": ["marvivo"], "remolino": ["marvivo"], "faro": ["minijuegos"], "canon": ["minijuegos"],
               "costa_oeste": ["costas"], "costa_este": ["costas"], "costa_sur": ["costas"], "fiestera": ["fiestera"],
-              "puerto": ["puerto"], "circuito": ["circuito"]}
+              "puerto": ["puerto"], "circuito": ["circuito"], "boias": [], "secreto": []}
 
 
-ARCILLA_FILES = {"fiestera": ["mundos/arcilla/zonas/fiestera.py"], "circuito": ["mundos/arcilla/zonas/circuito.py"],
+ARCILLA_FILES = {"circuito": ["mundos/arcilla/zonas/circuito.py"],
                  "costa_oeste": ["mundos/arcilla/zonas/costas.py"], "costa_este": ["mundos/arcilla/zonas/costas.py"]}
 
 
 def scripts(place):
     zs = ZONE_FILES.get(place["id"], [place["id"]])
     return (BASE_SCRIPTS + ["mundos/acuarela/zonas/%s.py" % z for z in zs]
-            + ARCILLA_FILES.get(place["id"], []))
+            + ARCILLA_FILES.get(place["id"], [])
+            + (["tools/blender/mascota.py"] if place["id"] in ARC.MASCOT_PLACES else []))
 
 
 ANCHOR_DOC = dict(ARC.ANCHOR_DOC)
