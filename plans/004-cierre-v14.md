@@ -37,7 +37,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: mascot boia in tools/blender/mascota.py (primera, info, WhatsApp, Fiestera with balloons; idle + talking) for Arcilla and Acuarela under `extras` in lugares.json, secret marker, noche/fiesta skins for 7 of 8 styles (B01 held base-only), mascot passenger on every ship, glTFs in art/barco/3d; 848 images, check.py green → e38c31a
 
 ## T40 — Ship economy: locked ships and skins, coins shop, points unlock
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T39, plan 003 finished
 - Goal: First make `apps/web/e2e/demo.spec.ts:197` «Barco» pass again on mobile and desktop (it fails on plan-004 since the plan 003 T36 / T39 changes to ships and skins, found by T42). Then inventory §1.1 and O5 (as amended by D-23: B03/B06 by coins, B04 by 1500 points, B07/B01/B08 by achievements, skins 150): every ship style and skin is locked except B05 Arcilla and B02 Acuarela (base). Coins buy ships and skins at the `muestra` prices of O5; B04 Semi-realista unlocks at 1500 points (threshold, points are never spent); the achievement-reward ship of D-22/T36 stays locked until claimed. A «Barco» shop in the /juego menu and the /mar ship picker: each ship with its price or unlock condition and «te faltan N monedas/puntos», buy with confirmation, equip, owned marked. Flag and wake cosmetics are drawn on the ship (a flag overlay on the mast slot, wake tint) in both views. Balances stay derived from the ledger; a purchase is one idempotent ledger debit; physics identical whatever the ship or cosmetic (REQ-IDE-032 test). Saved choice restores on reload; a store migration keeps whatever the visitor has already equipped as owned.
 - Context: inventory §1.1, §2 O2/O5, §3 Identidad; docs/spec/05-identidad-y-comunidad.md (REQ-IDE-027, 030…033); packages/store (cosmetics, buyCosmetic/equip, ledger, T36 reward types); apps/web/app/juego/menu/sections (Barco), apps/web/lib/barco/**, apps/web/app/mar/** (ship picker, ship-model.ts); packages/engine/src/ship-style.ts; art from T39.
@@ -180,6 +180,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-30: plan 003 finished; main merged into plan-004 (only ESTADO.md conflicted) and main fast-forwarded to plan-004 (Hernán: merge with main as soon as possible). From now on every integrated task is fast-forwarded into main right away (orchestrator)
 - 2026-09-30: new T51 gathers every /mar follow-up of T41–T47 and T50 (plan 003 owned /mar); T49 now depends on it (orchestrator)
 - 2026-09-30: T41 and T45 agents stalled (600 s watchdog) after committing their work clean; the machine had load ~57 (unit tests only failed by timeout). Integrated as orphans once load dropped: both merged green, then typecheck, lint and world:check pass (orchestrator)
 - 2026-09-29: main merged into plan-004 again (plan 003 T33, T34, its own «T50» compact /mar world); conflicts in ESTADO.md and engine ship/controller.test.ts (both sides added describe blocks) resolved by keeping both; tests, typecheck, lint green. Note: plan 003 also used the id T50, different from this plan's T50 (brand) (orchestrator)
@@ -250,3 +251,5 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 20:27 T41 launched · attempt 1 · agent aa35c1d521a60042d (/juego only)
 - 2026-09-29 22:17 PAUSED (usage limit). T45 (agent a0ef37ddb695c2396) and T41 (agent aa35c1d521a60042d) still finishing e2e reruns in their worktrees; on resume treat them as orphans (section 7): integrate with --status-file ESTADO.md and test 'pnpm test --testTimeout=30000'. Pending: T40 (after plan 003), T49 (last). Phone preview: next start :3450 + cloudflared tunnel
 - 2026-09-30 00:51 RESUMED · T41 orphan (stalled, committed clean) → aea4663 · T45 orphan (stalled, committed clean) → 89a974b
+- 2026-09-30 01:29 main merged into plan-004 and main fast-forwarded to 3260a84 (plan 003 done)
+- 2026-09-30 01:31 T40 launched · attempt 1 · agent affb177c6a5c72516
