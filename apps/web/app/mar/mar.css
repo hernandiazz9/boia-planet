@@ -1254,3 +1254,133 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ---------- Logros (T37) ---------- */
+
+/* El icono 🏆 cierra la barra de arriba, a la derecha: sobre el minimapa
+   (que empieza debajo de la barra) y lejos de «Entradas» (abajo). */
+.mar-logros-btn {
+  position: relative;
+  font-size: 1.2rem;
+}
+
+/* Con el icono al lado, los saldos no se parten en dos líneas (cede el rótulo). */
+.mar-top .mar-balances {
+  flex: none;
+  gap: 8px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.mar-logros-btn:not([data-por-reclamar='0']) {
+  border-color: var(--orange-2);
+  box-shadow:
+    0 0 0 3px rgb(242 106 27 / 0.35),
+    0 8px 24px rgb(10 6 40 / 0.28);
+}
+
+.mar-logros {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(10 6 40 / 0.45);
+}
+
+.mar-logros__sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100% - var(--safe-t) - 64px);
+  border-radius: 20px 20px 0 0;
+  background: #fffaf0;
+  color: var(--ink);
+  box-shadow: 0 -12px 36px rgb(10 6 40 / 0.4);
+  outline: none;
+  animation: mar-logros-up 0.28s cubic-bezier(0.2, 1, 0.4, 1);
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: pan-y;
+}
+
+.mar-logros__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 4px 18px;
+}
+
+.mar-logros__head h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.mar-logros__carnet {
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: rgb(18 35 63 / 0.08);
+  color: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mar-logros__x {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--ink) !important;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.mar-logros__body {
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 0 14px calc(var(--safe-b) + 18px);
+}
+
+@keyframes mar-logros-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (min-width: 760px) {
+  .mar-logros {
+    align-items: center;
+  }
+  .mar-logros__sheet {
+    width: 480px;
+    max-height: min(680px, calc(100% - 80px));
+    border-radius: 20px;
+  }
+}
+
+/* Barcos con candado en el menú. */
+.mar-chip.is-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.mar-menu__locks {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 3px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  opacity: 0.85;
+}

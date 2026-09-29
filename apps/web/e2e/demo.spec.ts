@@ -1,4 +1,5 @@
 import { minimapProjection } from '@boia/engine/ui';
+import { SAMPLE_COSMETICS } from '@boia/store';
 import { WORLD_REGISTRY } from '@boia/world';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -28,7 +29,11 @@ const shipRoot = JSON.parse(readFileSync(path.join(ROOT, 'art/barco/manifest.jso
   style_variants: { id: string }[];
 };
 const DEFAULT_STYLE = shipRoot.style;
-const OTHER_STYLE = shipRoot.style_variants.at(-1)!.id;
+// Otro estilo libre: los que se ganan con un logro (T36) van con candado en el menú.
+const LOCKED_STYLES = new Set(
+  SAMPLE_COSMETICS.filter((c) => c.slot === 'ship').map((c) => c.assetKey ?? c.id),
+);
+const OTHER_STYLE = shipRoot.style_variants.filter((v) => !LOCKED_STYLES.has(v.id)).at(-1)!.id;
 const THEMED_SKIN = shipRoot.skins.find((s) => s !== 'base')!;
 
 // El mundo por defecto (Arcilla desde T20) trae su barco y su isla de evento.

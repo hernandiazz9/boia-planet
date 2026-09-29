@@ -98,6 +98,26 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
         )}
       </section>
 
+      {/* Insignias de los logros reclamados (REQ-IDE-052, T37). */}
+      <section aria-label="Insignias">
+        <h4>Insignias</h4>
+        {carnet.badges.length === 0 ? (
+          <p className="juego-muted">
+            {carnet.isMine
+              ? 'Aún sin insignias. Algunos logros dan una al reclamarlos.'
+              : 'Aún sin insignias.'}
+          </p>
+        ) : (
+          <ul className="carnet-chips carnet-insignias" data-testid="carnet-insignias">
+            {carnet.badges.map((b) => (
+              <li key={b.key} data-testid={`carnet-insignia-${b.key}`}>
+                🎖️ {b.title}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section aria-label="Logros">
         <h4>Logros</h4>
         {carnet.achievements.length === 0 ? (

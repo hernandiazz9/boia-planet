@@ -1,0 +1,118 @@
+'use client';
+
+import type { AchievementProgress, BoiaRepository, ShipUnlock } from '@boia/store';
+import { useEffect, useRef, useState } from 'react';
+import { type AchievementFacts, achievementFacts } from '../../app/juego/achievements';
+import { useRepoData } from '../../app/juego/repo';
+import { type CosmeticNames, readyCount } from './model';
+
+/**
+ * Lo que el panel de logros lee del repositorio (T37), y se vuelve a leer con
+ * cada cambio (también de otra pestaña): el catálogo con su estado, lo
+ * contado para el progreso, los saldos, el rango y los nombres de los
+ * cosméticos que se ganan.
+ */
+export interface LogrosData {
+  list: AchievementProgress[];
+  facts: AchievementFacts;
+  balances: { points: number; coins: number };
+  rank: string | null;
+  names: CosmeticNames;
+}
+
+export async function readLogros(r: BoiaRepository): Promise<LogrosData> {
+  const [list, balances, facts, ranks, cosmetics] = await Promise.all([
+    r.progress.achievements(),
+    r.progress.balances(),
+    achievementFacts(r.progress),
+    r.content.list('ranks'),
+    r.content.list('cosmetics'),
+  ]);
+  const rank =
+    [...ranks]
+      .filter((k) => k.minPoints <= balances.points)
+      .sort((a, b) => b.minPoints - a.minPoints)[0] ?? null;
+  return {
+    list,
+    facts,
+    balances: { points: balances.points, coins: balances.coins },
+    rank: rank?.name ?? null,
+    names: Object.fromEntries(cosmetics.map((c) => [c.id, c.name])),
+  };
+}
+
+export function useLogros() {
+  return useRepoData(readLogros);
+}
+
+/** Cuántos logros esperan a que se reclamen (el número del icono), 0 mientras carga. */
+export function useReadyCount(): number {
+  const { data } = useRepoData((r) => r.progress.achievements());
+  return data ? readyCount(data) : 0;
+}
+
+/** Barcos de estilo bloqueables, con el título del logro que los da (selector de barco). */
+export interface ShipLock extends ShipUnlock {
+  achievementTitle: string | null;
+}
+
+export function useShipLocks(): ShipLock[] | undefined {
+  const { data } = useRepoData(async (r) => {
+    const [ships, list] = await Promise.all([r.progress.ships(), r.progress.achievements()]);
+    return ships.map((s) => {
+      const a = s.achievementId ? list.find((x) => x.definition.id === s.achievementId) : null;
+      // Un logro oculto sin completar no se chiva: «un logro oculto».
+      const title = a ? (a.hidden ? null : a.definition.title) : null;
+      return { ...s, achievementTitle: title };
+    });
+  });
+  return data;
+}
+
+/** El texto de un barco bloqueado. muestra */
+export function lockedShipText(
+  lock: Pick<ShipLock, 'achievementTitle' | 'achievementId' | 'priceCoins'>,
+): string {
+  if (lock.achievementTitle) return `Se gana con el logro «${lock.achievementTitle}»`;
+  if (lock.achievementId) return 'Se gana con un logro oculto';
+  if (lock.priceCoins !== null) return `En la tienda: ${lock.priceCoins} 🪙`;
+  return 'Bloqueado';
+}
+
+function reducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Un número que sube contando hasta `value` (saldos al reclamar). La primera
+ * vez y con movimiento reducido, sin animación.
+ */
+export function useCountUp(value: number, ms = 900, from?: number): number {
+  const [shown, setShown] = useState(from ?? value);
+  const current = useRef(from ?? value);
+  useEffect(() => {
+    const start = current.current;
+    if (start === value || reducedMotion()) {
+      current.current = value;
+      setShown(value);
+      return;
+    }
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / ms);
+      const eased = 1 - (1 - k) ** 3;
+      const v = Math.round(start + (value - start) * eased);
+      current.current = v;
+      setShown(v);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, ms]);
+  return shown;
+}

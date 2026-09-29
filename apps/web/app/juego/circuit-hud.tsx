@@ -8,8 +8,8 @@ import {
   type RaceEvent,
   type RaceView,
   circuitFromWorld,
-  circuitRecordId,
   formatRaceTime,
+  readRecord,
   submitRecord,
 } from '@boia/engine/circuit';
 import type { Notice } from '@boia/engine/ui';
@@ -117,7 +117,11 @@ export function useCircuit(
         if (e.type === 'countdown') setStartInfo(null);
         if (e.type === 'checkpoint') latest.current.onBoost?.();
         if (e.type === 'invalid') {
-          latest.current.notify({ id: `circuito:anulada:${Date.now()}`, kind: 'info', title: INVALID_TEXT[e.reason] });
+          latest.current.notify({
+            id: `circuito:anulada:${Date.now()}`,
+            kind: 'info',
+            title: INVALID_TEXT[e.reason],
+          });
         }
         if (e.type === 'finish' && spec) {
           const p = latest.current.progress();
@@ -163,7 +167,8 @@ export function useCircuit(
         if (x) apply([x]);
       } else if (e.type === 'proximity_enter' && e.objectId === startId && !r.active) {
         const p = latest.current.progress();
-        void p?.record(circuitRecordId(spec)).then((rec) =>
+        if (!p) return;
+        void readRecord(p, spec).then((rec) =>
           setStartInfo(
             rec
               ? `El Freu · récord ${formatRaceTime(rec.bestMs)} · pasa por el arco`
