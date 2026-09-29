@@ -58,6 +58,17 @@ import { fromScene, toScene } from './compress';
 import { buildDecor } from './decor';
 import { Clouds, Confetti, CourseMarker, RouteLine, Wake, glowPoints, whirlpool } from './effects';
 import {
+  FLIGHT,
+  FlightClouds,
+  type FlightPlan,
+  type FlightPose,
+  Sparks,
+  Splash,
+  Wings,
+  flightPlan,
+  flightPose,
+} from './flight';
+import {
   type IslandBuild,
   amphora,
   buildIsland,
@@ -134,6 +145,8 @@ export interface Stats {
   panned: boolean;
   /** Lugar al que va el viaje en turbo del botón «Entradas», o null. */
   voyage: string | null;
+  /** Fase del vuelo de «Entradas» (experimento), o null si no vuela. */
+  flight: FlightPose['phase'] | null;
 }
 
 /** Cómo terminó un viaje en turbo: llegó, tardó demasiado o el jugador tomó el timón. */
@@ -190,6 +203,23 @@ const VOYAGE_SPEED = 2.6;
 /** Tope de un viaje en turbo: si no llega (encajonado), se da por llegado. muestra */
 const VOYAGE_MAX_S = 20;
 const METERS_PER_U = 0.25;
+/** Zoom de la cámara mientras vuela: se aleja para ver el planeta pasar por debajo. muestra */
+const FLIGHT_ZOOM = 0.34;
+
+interface FlightState {
+  placeId: string;
+  t: number;
+  plan: FlightPlan;
+  x0: number;
+  y0: number;
+  dx: number;
+  dy: number;
+  h0: number;
+  h1: number;
+  pose: FlightPose;
+  /** El barco que ve el runtime mientras vuela: quieto donde despegó. */
+  ghost: ShipState;
+}
 
 interface View {
   id: string;
@@ -310,6 +340,11 @@ export class Mar3D {
   private inset = 0;
   private shake = 0;
   private fovKick = 0;
+  /**
+   * Giro de la cámara (rad; 0 = mirando al norte, como siempre). Sólo gira
+   * en el vuelo de «Entradas», para ir detrás del barco; al posarse vuelve.
+   */
+  private camYaw = 0;
 
   // Control.
   private readonly pointers = new Map<
@@ -325,6 +360,19 @@ export class Mar3D {
   private course: { x: number; y: number; placeId: string | null } | null = null;
   /** Viaje en turbo del botón «Entradas» (REQ-ENT-040): destino y s navegados. */
   private voyage: { placeId: string; t: number } | null = null;
+  /**
+   * Vuelo del botón «Entradas» (experimento): destino, s desde el despegue,
+   * de dónde sale y cuánto se desplaza (u de motor, por el camino corto),
+   * rumbo de salida y de llegada.
+   */
+  private flight: FlightState | null = null;
+  /** Altura del barco sobre el agua (escena) en este fotograma. */
+  private air = 0;
+  private readonly wings: Wings;
+  private readonly sparks = new Sparks();
+  private readonly splash = new Splash();
+  private readonly flightClouds = new FlightClouds();
+  private readonly tipsAt: [Vector3, Vector3] = [new Vector3(), new Vector3()];
   private moved = false;
   private turboLeft = 0;
   private turboCool = 0;
@@ -392,6 +440,9 @@ export class Mar3D {
     this.boat.body.scale.setScalar(SHIP_LENGTH / 3);
     this.scene.add(this.boat.group);
     this.scene.add(this.wake.mesh, this.marker.group, this.confetti.mesh);
+    this.wings = new Wings(SHIP_LENGTH / 3);
+    this.boat.group.add(this.wings.group);
+    this.scene.add(this.sparks.mesh, this.splash.group, this.flightClouds.group);
 
     const glows: Glows[] = [];
     const shores = this.buildPlaces(glows);
@@ -482,6 +533,8 @@ export class Mar3D {
    * viaje en turbo en curso termina como `cancelled`.
    */
   setCourse(target: { placeId: string } | { x: number; y: number } | null): void {
+    // En el aire no se cambia de rumbo (se puede «Saltar»).
+    if (this.flight) return;
     this.endVoyage('cancelled');
     if (!target) {
       this.clearCourse();
@@ -568,15 +621,118 @@ export class Mar3D {
     return true;
   }
 
-  /** Corta el viaje en turbo sin avisar (Saltar: quien llama ya sabe qué hacer). */
+  /** Corta el viaje (o el vuelo) sin avisar (Saltar: quien llama ya sabe qué hacer). */
   stopVoyage(): void {
+    if (this.flight) {
+      // Se posa ya en su destino.
+      this.finishFlight(false);
+      return;
+    }
     if (!this.voyage) return;
     this.voyage = null;
     this.clearCourse();
   }
 
   get voyaging(): string | null {
-    return this.voyage?.placeId ?? null;
+    return this.flight?.placeId ?? this.voyage?.placeId ?? null;
+  }
+
+  /**
+   * Vuelo del botón «Entradas» (experimento): el barco levita, despliega
+   * alas de nave, vuela sobre el planeta por el camino corto hasta la orilla
+   * del lugar y se posa en el agua. Al posarse avisa con `onVoyageEnd`
+   * ('arrived'). Mientras vuela no se gobierna (sólo «Saltar», que lo posa
+   * ya). Devuelve false si el lugar no existe.
+   */
+  startFlight(placeId: string): boolean {
+    if (this.flight) return this.flight.placeId === placeId;
+    this.endVoyage('cancelled');
+    this.clearCourse();
+    this.setCourse({ placeId });
+    const c = this.course;
+    if (c?.placeId !== placeId) return false;
+    // Se posa en agua libre (fuera también del decorado).
+    const land = this.freePoint(c.x, c.y);
+    c.x = land.x;
+    c.y = land.y;
+    this.marker.show(false);
+    const s = this.ship;
+    const { dx, dy } = this.runtime.delta(s.x, s.y, land.x, land.y);
+    const dist = Math.hypot(dx, dy);
+    const h1 = dist > 1 ? Math.atan2(dy, dx) : s.heading;
+    const plan = flightPlan(dist);
+    this.flight = {
+      placeId,
+      t: 0,
+      plan,
+      x0: s.x,
+      y0: s.y,
+      dx,
+      dy,
+      h0: s.heading,
+      h1,
+      pose: flightPose(0, plan),
+      ghost: { ...s, vx: 0, vy: 0 },
+    };
+    s.vx = 0;
+    s.vy = 0;
+    this.backToBoat();
+    this.lastBoatZoom = this.zoomGoal;
+    this.zoomGoal = FLIGHT_ZOOM;
+    this.splash.burst(this.boat.group.position.x, this.boat.group.position.z, 0.6);
+    return true;
+  }
+
+  /** Un paso del vuelo: el barco va por su curva; el runtime ve al barco quieto donde despegó. */
+  private stepFlight(dt: number): void {
+    const f = this.flight!;
+    const s = this.ship;
+    f.t += dt;
+    const was = f.pose;
+    const p = flightPose(f.t, f.plan);
+    f.pose = p;
+    const b = this.runtime.bounds;
+    const nx = wrapIn(f.x0 + f.dx * p.travel, b.left, b.right);
+    const ny = wrapIn(f.y0 + f.dy * p.travel, b.top, b.bottom);
+    s.vx = wrapD(nx - s.x, this.periodU.w) / dt;
+    s.vy = wrapD(ny - s.y, this.periodU.h) / dt;
+    s.x = nx;
+    s.y = ny;
+    const dh = Math.atan2(Math.sin(f.h1 - f.h0), Math.cos(f.h1 - f.h0));
+    s.heading = f.h0 + dh * p.turn;
+    if (was.phase === 'lift' && p.phase === 'cruise') this.fovKick = 1;
+    if (p.phase === 'cruise') this.fovKick = Math.max(this.fovKick, 0.55 * p.thrust);
+    // Al llegar encima, la cámara vuelve a acercarse mientras baja.
+    if (was.phase === 'cruise' && p.phase === 'land') this.zoomGoal = this.lastBoatZoom;
+    this.runtime.step(f.ghost, this.cfg, dt);
+    this.opts.onStep?.(f.ghost, dt);
+    if (p.phase === 'done') this.finishFlight(true);
+  }
+
+  /** Se posa en el destino; con `notify`, avisa de que llegó. */
+  private finishFlight(notify: boolean): void {
+    const f = this.flight;
+    if (!f) return;
+    const s = this.ship;
+    const b = this.runtime.bounds;
+    s.x = wrapIn(f.x0 + f.dx, b.left, b.right);
+    s.y = wrapIn(f.y0 + f.dy, b.top, b.bottom);
+    s.vx = Math.cos(f.h1) * 20;
+    s.vy = Math.sin(f.h1) * 20;
+    s.heading = f.h1;
+    Object.assign(this.prev, { x: s.x, y: s.y, heading: s.heading });
+    this.flight = null;
+    this.air = 0;
+    this.wings.set(0, 0, this.time);
+    this.zoomGoal = this.lastBoatZoom;
+    this.clearCourse();
+    this.shake = Math.max(this.shake, 0.35);
+    if (notify) {
+      // El chapoteo en la copia del barco que se ve.
+      this.placeShip(1);
+      this.splash.burst(this.boat.group.position.x, this.boat.group.position.z, 1);
+      this.opts.onVoyageEnd?.(f.placeId, 'arrived');
+    }
   }
 
   private endVoyage(how: VoyageEnd): void {
@@ -593,6 +749,7 @@ export class Mar3D {
 
   /** El jugador toma el timón: fuera rumbo y viaje. */
   private dropCourse(): void {
+    if (this.flight) return;
     this.endVoyage('cancelled');
     this.clearCourse();
   }
@@ -1559,6 +1716,10 @@ export class Mar3D {
     this.prev.x = s.x;
     this.prev.y = s.y;
     this.prev.heading = s.heading;
+    if (this.flight) {
+      this.stepFlight(dt);
+      return;
+    }
     const input = this.readInput();
     let cfg = this.runtime.shipConfig(this.cfg);
     if (this.turboLeft > 0 || this.voyage) {
@@ -1642,7 +1803,7 @@ export class Mar3D {
       this.prev.heading +
       Math.atan2(Math.sin(s.heading - this.prev.heading), Math.cos(s.heading - this.prev.heading)) *
         alpha;
-    this.boat.group.position.set(x, 0, z);
+    this.boat.group.position.set(x, this.air, z);
     this.boat.group.rotation.y = -h;
     return { x, z, h };
   }
@@ -1709,16 +1870,25 @@ export class Mar3D {
       oz = (Math.random() - 0.5) * this.shake * 0.5;
       this.shake = Math.max(0, this.shake - dt * 2.5);
     }
-    const camY = Math.sin(elev) * dist;
-    const camZ = this.look.z + Math.cos(elev) * dist;
-    this.camera.position.set(this.focus.x + ox, camY, camZ + oz);
+    // En vuelo la cámara sube con el barco.
+    const camY = Math.sin(elev) * dist + this.air * 0.85;
+    // En vuelo, la cámara se pone detrás del barco (mirando hacia donde va).
+    const fl = this.flight;
+    const yawGoal = fl ? Math.atan2(-Math.cos(fl.h1), -Math.sin(fl.h1)) : 0;
+    const dYaw = Math.atan2(Math.sin(yawGoal - this.camYaw), Math.cos(yawGoal - this.camYaw));
+    this.camYaw += dYaw * (snap ? 1 : 1 - Math.exp(-dt * 2.2));
+    if (!fl && Math.abs(this.camYaw) < 1e-4) this.camYaw = 0;
+    const back = Math.cos(elev) * dist;
+    const camX = this.look.x + Math.sin(this.camYaw) * back;
+    const camZ = this.look.z + Math.cos(this.camYaw) * back;
+    this.camera.position.set(camX + ox, camY, camZ + oz);
     // La curva: fuerte de cerca (horizonte y cielo), casi plana en el mapa.
     this.bend = lerp(BEND_NEAR, BEND_MAP, smooth(0.25, 0.9, z));
     planetUniforms.uBend.value = this.bend;
-    planetUniforms.uBendCenter.value.set(this.focus.x, camZ);
+    planetUniforms.uBendCenter.value.set(camX, camZ);
     planetUniforms.uPlanetFocus.value.set(this.focus.x, this.focus.z);
     // Se mira al foco ya curvado (baja un poco con la distancia).
-    this.look.y = -bendDrop(this.bend, camZ - this.look.z);
+    this.look.y = -bendDrop(this.bend, back) + this.air * 0.85;
     this.camera.lookAt(this.look);
     const fov = 40 + this.fovKick * 7;
     if (Math.abs(this.camera.fov - fov) > 0.01) this.camera.fov = fov;
@@ -1731,12 +1901,12 @@ export class Mar3D {
     this.camera.far = dist * 4 + 400;
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
-    this.water.mesh.position.set(this.focus.x, 0, camZ);
+    this.water.mesh.position.set(camX, 0, camZ);
     // Bajíos: los que se ven (hasta el horizonte y algo más; en el mapa, todos).
     this.water.update(
       this.focus,
       this.periodS,
-      { x: this.focus.x, z: camZ },
+      { x: camX, z: camZ },
       horizon + 30 + dist * smooth(0.25, 0.9, z) * 3,
     );
     // Sol: sigue al foco para que la luz sea la misma en todo el planeta.
@@ -1766,14 +1936,29 @@ export class Mar3D {
 
     // Barco (interpolado entre pasos, en la copia más cercana al foco).
     const s = this.ship;
+    const fl = this.flight;
+    this.air = fl ? fl.pose.alt : 0;
     const { x, z, h } = this.placeShip(alpha);
-    const speed = shipSpeed(s);
+    const speed = fl ? 0 : shipSpeed(s);
     const v01 = Math.min(1.4, speed / this.cfg.maxSpeed);
     const body = this.boat.body;
-    body.position.y = Math.sin(t * 1.9) * 0.07 + Math.sin(t * 3.3) * 0.03 + v01 * 0.08;
-    body.rotation.x =
-      Math.max(-0.35, Math.min(0.35, -this.turnRate * 0.14)) + Math.sin(t * 1.5) * 0.03;
-    body.rotation.z = v01 * 0.07 + Math.sin(t * 2.1) * 0.025;
+    if (fl) {
+      // En el aire: cabeceo del vuelo y un balanceo suave, sin oleaje.
+      const p = fl.pose;
+      body.position.y = Math.sin(t * 2.6) * 0.05;
+      body.rotation.x = Math.sin(t * 1.7) * 0.06 * p.wings;
+      body.rotation.z = p.pitch;
+    } else {
+      body.position.y = Math.sin(t * 1.9) * 0.07 + Math.sin(t * 3.3) * 0.03 + v01 * 0.08;
+      body.rotation.x =
+        Math.max(-0.35, Math.min(0.35, -this.turnRate * 0.14)) + Math.sin(t * 1.5) * 0.03;
+      body.rotation.z = v01 * 0.07 + Math.sin(t * 2.1) * 0.025;
+    }
+    this.wings.group.position.y = body.position.y;
+    this.wings.group.rotation.copy(body.rotation);
+    if (fl) this.flightEffects(fl, x, z, h, t, dt);
+    this.sparks.update(dt);
+    this.splash.update(dt);
     if (this.boat.sail) {
       this.boat.sail.rotation.y =
         Math.max(-0.5, Math.min(0.5, this.turnRate * 0.25)) + Math.sin(t * 0.9) * 0.05;
@@ -1783,7 +1968,9 @@ export class Mar3D {
     const sternX = x + Math.cos(h) * this.sternX;
     const sternZ = z + Math.sin(h) * this.sternX;
     const boost = this.turboLeft > 0 || this.voyage ? 1.4 : 1;
-    this.wake.update(dt, sternX, sternZ, h, Math.min(1, v01 * boost), t);
+    // Al levitar, sólo un rizo de espuma bajo el casco mientras está cerca del agua.
+    const hovering = fl ? Math.max(0, 1 - this.air / 1.2) * 0.5 : 0;
+    this.wake.update(dt, sternX, sternZ, h, fl ? hovering : Math.min(1, v01 * boost), t);
 
     this.updateCamera(dt);
 
@@ -1839,6 +2026,55 @@ export class Mar3D {
     this.placeOverlay();
   }
 
+  /** Alas, chispas y nubecillas del vuelo (escena), en la copia del barco que se ve. */
+  private flightEffects(
+    fl: FlightState,
+    x: number,
+    z: number,
+    h: number,
+    t: number,
+    dt: number,
+  ): void {
+    const p = fl.pose;
+    this.wings.set(p.wings, p.thrust, t, p.phase === 'cruise' ? 0.4 : 1);
+    this.boat.group.updateMatrixWorld(true);
+    const svx = toScene(this.ship.vx);
+    const svz = toScene(this.ship.vy);
+    // Estela: chispas en las puntas de las alas (con las alas abiertas) y del
+    // propulsor (con empuje). Salen casi quietas: se quedan atrás.
+    if (p.wings > 0.6) {
+      this.wings.tipsWorld(this.tipsAt);
+      const n = p.phase === 'cruise' ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        for (const tip of this.tipsAt)
+          this.sparks.emit(tip, svx * 0.05, -0.4, svz * 0.05, 0.9, 0.55);
+      }
+    }
+    if (p.thrust > 0.1) {
+      const back = -1.9 * (SHIP_LENGTH / 3);
+      tmpV.set(x + Math.cos(h) * back, this.air + 0.4, z + Math.sin(h) * back);
+      for (let i = 0; i < 3; i++) {
+        this.sparks.emit(tmpV, -Math.cos(h) * 6, 0, -Math.sin(h) * 6, 1.4, 0.45);
+      }
+    }
+    // Al levitar gotea agua del casco.
+    if (p.phase === 'lift' && Math.random() < dt * 30) {
+      tmpV.set(x + (Math.random() - 0.5) * 2.4, this.air, z + (Math.random() - 0.5) * 1.2);
+      this.sparks.emit(tmpV, 0, -3, 0, 0.6, 0.5);
+    }
+    // Nubecillas a lo largo del camino, a la altura del vuelo.
+    const k =
+      smooth(fl.plan.go - 0.2, fl.plan.go + 0.6, fl.t) *
+      (1 - smooth(fl.plan.arrive - 0.6, fl.plan.arrive + 0.3, fl.t));
+    const len = toScene(Math.hypot(fl.dx, fl.dy));
+    const dirX = len > 0 ? toScene(fl.dx) / len : 1;
+    const dirZ = len > 0 ? toScene(fl.dy) / len : 0;
+    // Desde donde despegó, en la copia del barco que se ve.
+    const fromX = x - dirX * len * p.travel;
+    const fromZ = z - dirZ * len * p.travel;
+    this.flightClouds.place(fromX, fromZ, dirX, dirZ, len, FLIGHT.cruise - 1.5, k);
+  }
+
   private project(
     x: number,
     y: number,
@@ -1881,14 +2117,18 @@ export class Mar3D {
     const W = this.opts.canvas.clientWidth;
     // El rótulo entero dentro de la pantalla.
     const m = Math.min(W / 2, halfWidth + 8);
-    const want = Math.atan2(dx, -dz);
+    // Ángulo respecto a hacia donde mira la cámara (el norte, salvo en vuelo).
+    const abs = Math.atan2(dx, -dz) + this.camYaw;
+    const want = Math.atan2(Math.sin(abs), Math.cos(abs));
     // Detrás de la cámara: no se ve.
     if (Math.abs(want) > Math.PI / 2) {
       out.on = false;
       return;
     }
-    const at = (a: number) =>
+    const at = (rel: number) => {
+      const a = rel - this.camYaw;
       this.project(cam.x + Math.sin(a) * rh, 1.5, cam.z - Math.cos(a) * rh, out);
+    };
     at(want);
     if (out.x >= m && out.x <= W - m) return;
     let lo = 0;
@@ -1992,7 +2232,7 @@ export class Mar3D {
       knots: Math.round(shipSpeed(this.ship) / 10),
       zoom: this.zoom,
       mapMode: this.zoomGoal >= MAP_ZOOM,
-      turbo: this.voyage ? 1 : Math.max(0, this.turboLeft / TURBO_S),
+      turbo: this.voyage || this.flight ? 1 : Math.max(0, this.turboLeft / TURBO_S),
       turboReady: 1 - Math.max(0, this.turboCool) / TURBO_COOLDOWN_S,
       course: c
         ? {
@@ -2003,7 +2243,8 @@ export class Mar3D {
           }
         : null,
       panned: this.pan.lengthSq() > 25,
-      voyage: this.voyage?.placeId ?? null,
+      voyage: this.flight?.placeId ?? this.voyage?.placeId ?? null,
+      flight: this.flight?.pose.phase ?? null,
     });
   }
 }

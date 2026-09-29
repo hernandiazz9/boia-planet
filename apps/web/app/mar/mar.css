@@ -1162,3 +1162,42 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* --- Vuelo de «Entradas» (experimento) ------------------------------------- */
+
+/* Líneas de velocidad desde el centro, sólo durante el crucero. */
+.mar-speedlines {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 46%,
+    rgb(255 255 255 / 0) 0deg 5deg,
+    rgb(255 255 255 / 0.2) 5.4deg 5.9deg,
+    rgb(255 255 255 / 0) 6.3deg 11deg
+  );
+  mask-image: radial-gradient(circle at 50% 46%, transparent 0 30%, #000 62%);
+  -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent 0 30%, #000 62%);
+  animation: mar-speedlines 0.35s linear infinite;
+}
+
+.mar[data-flight='cruise'] .mar-speedlines {
+  opacity: 1;
+}
+
+@keyframes mar-speedlines {
+  from {
+    transform: rotate(0deg) scale(1);
+  }
+  to {
+    transform: rotate(2.2deg) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mar-speedlines {
+    display: none;
+  }
+}
