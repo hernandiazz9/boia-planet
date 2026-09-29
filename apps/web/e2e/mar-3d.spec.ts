@@ -55,7 +55,8 @@ test('el mar 3D arranca, pasa a mapa y fija rumbo a la isla del evento', async (
   const errors = await openMar(page);
   await page.getByTestId('mar-mapa').click();
   await page.locator('[data-pin="allday"]').click();
-  await expect(page.getByTestId('mar-ficha')).toContainText('Navegar aquí');
+  await expect(page.getByTestId('mar-ficha')).toContainText('Navegar');
+  await expect(page.getByTestId('mar-volar')).toBeVisible();
   await page.getByTestId('mar-rumbo').click();
   await expect(page.getByTestId('mar-rumbo-activo')).toBeVisible();
   expect(errors).toEqual([]);

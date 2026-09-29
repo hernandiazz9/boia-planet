@@ -89,6 +89,7 @@ export function Sheet({
   object,
   onClose,
   onCourse,
+  onFly,
   onBuy,
   onSteerEvent,
   distance,
@@ -97,6 +98,8 @@ export function Sheet({
   object: WorldObject | undefined;
   onClose: () => void;
   onCourse: (placeId: string) => void;
+  /** Ir en nave (experimento); sin él, sólo se puede navegar. */
+  onFly?: (placeId: string) => void;
   onBuy: (eventId: string) => void;
   onSteerEvent: (eventId: string) => void;
   distance: number | null;
@@ -138,8 +141,18 @@ export function Sheet({
             data-testid="mar-rumbo"
             onClick={() => onCourse(state.placeId)}
           >
-            🧭 Navegar aquí
+            {onFly ? '⛵ Navegar' : '🧭 Navegar aquí'}
           </button>
+          {onFly ? (
+            <button
+              type="button"
+              className="mar-btn mar-btn--primary"
+              data-testid="mar-volar"
+              onClick={() => onFly(state.placeId)}
+            >
+              🛸 Ir en nave
+            </button>
+          ) : null}
           {e && EVENT_STATE_BEHAVIOR[e.state].purchasable ? (
             <button type="button" className="mar-btn" onClick={() => onBuy(e.id)}>
               🎟️ Entradas

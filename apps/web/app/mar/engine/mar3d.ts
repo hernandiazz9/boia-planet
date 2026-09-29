@@ -205,6 +205,8 @@ const VOYAGE_MAX_S = 20;
 const METERS_PER_U = 0.25;
 /** Zoom de la cámara mientras vuela: se aleja para ver el planeta pasar por debajo. muestra */
 const FLIGHT_ZOOM = 0.34;
+/** Zoom mientras levita y le salen las alas: algo más cerca que al navegar. muestra */
+const TRANSFORM_ZOOM = 0.15;
 
 interface FlightState {
   placeId: string;
@@ -638,11 +640,11 @@ export class Mar3D {
   }
 
   /**
-   * Vuelo del botón «Entradas» (experimento): el barco levita, despliega
-   * alas de nave, vuela sobre el planeta por el camino corto hasta la orilla
-   * del lugar y se posa en el agua. Al posarse avisa con `onVoyageEnd`
-   * ('arrived'). Mientras vuela no se gobierna (sólo «Saltar», que lo posa
-   * ya). Devuelve false si el lugar no existe.
+   * Ir en nave a un lugar (experimento; lo usan «Entradas» y la ficha): el
+   * barco levita, despliega alas de nave, vuela sobre el planeta por el
+   * camino corto hasta la orilla del lugar y se posa en el agua. Al posarse
+   * avisa con `onVoyageEnd` ('arrived'). Mientras vuela no se gobierna
+   * (sólo «Saltar», que lo posa ya). Devuelve false si el lugar no existe.
    */
   startFlight(placeId: string): boolean {
     if (this.flight) return this.flight.placeId === placeId;
@@ -678,7 +680,8 @@ export class Mar3D {
     s.vy = 0;
     this.backToBoat();
     this.lastBoatZoom = this.zoomGoal;
-    this.zoomGoal = FLIGHT_ZOOM;
+    // La transformación se ve de cerca; se aleja al arrancar a volar.
+    this.zoomGoal = Math.min(this.zoomGoal, TRANSFORM_ZOOM);
     this.splash.burst(this.boat.group.position.x, this.boat.group.position.z, 0.6);
     return true;
   }
@@ -700,7 +703,10 @@ export class Mar3D {
     s.y = ny;
     const dh = Math.atan2(Math.sin(f.h1 - f.h0), Math.cos(f.h1 - f.h0));
     s.heading = f.h0 + dh * p.turn;
-    if (was.phase === 'lift' && p.phase === 'cruise') this.fovKick = 1;
+    if (was.phase === 'lift' && p.phase === 'cruise') {
+      this.fovKick = 1;
+      this.zoomGoal = FLIGHT_ZOOM;
+    }
     if (p.phase === 'cruise') this.fovKick = Math.max(this.fovKick, 0.55 * p.thrust);
     // Al llegar encima, la cámara vuelve a acercarse mientras baja.
     if (was.phase === 'cruise' && p.phase === 'land') this.zoomGoal = this.lastBoatZoom;

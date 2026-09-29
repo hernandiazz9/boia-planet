@@ -5,8 +5,8 @@ describe('vuelo de «Entradas»', () => {
   it('el tramo que avanza crece con la distancia, dentro de sus límites', () => {
     const near = flightPlan(100);
     const far = flightPlan(1e6);
-    expect(near.arrive - near.go).toBe(FLIGHT.minTravel);
-    expect(far.arrive - far.go).toBe(FLIGHT.maxTravel);
+    expect(near.arrive - near.go).toBeCloseTo(FLIGHT.minTravel);
+    expect(far.arrive - far.go).toBeCloseTo(FLIGHT.maxTravel);
     const mid = flightPlan(1800);
     expect(mid.arrive - mid.go).toBeCloseTo(1800 / FLIGHT.uPerS);
     expect(mid.total).toBeLessThan(8);

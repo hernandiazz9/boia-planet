@@ -33,13 +33,13 @@ import { C } from './palette';
 /** Tiempos (s) y alturas (unidades de escena) del vuelo. muestra */
 export const FLIGHT = {
   /** Sube a levitar sobre el agua (s) y a qué altura. */
-  hoverUp: 0.7,
+  hoverUp: 1.0,
   hover: 1.4,
   /** Las alas salen entre estos dos instantes. */
-  wingsFrom: 0.45,
-  wingsTo: 1.15,
+  wingsFrom: 0.85,
+  wingsTo: 2.0,
   /** Empieza a avanzar. */
-  go: 1.15,
+  go: 2.3,
   /** Altura de crucero sobre el agua. */
   cruise: 9,
   /** u de motor por segundo de crucero y límites del tramo que avanza (s). */

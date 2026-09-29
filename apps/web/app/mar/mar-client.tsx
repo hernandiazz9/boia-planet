@@ -679,6 +679,19 @@ export function MarClient() {
     setSheet(null);
   };
 
+  /** Ir en nave a un lugar (experimento): despega, vuela y se posa en su orilla. */
+  const flyTo = (placeId: string) => {
+    const g = engineRef.current;
+    if (!g) return;
+    // Sin animaciones (o si no despega), navega como siempre.
+    if (prefersReducedMotion() || !g.startFlight(placeId)) {
+      courseTo(placeId);
+      return;
+    }
+    navigator.vibrate?.(20);
+    setSheet(null);
+  };
+
   const steerToEvent = (eventId: string) => {
     const w = worldRef.current;
     const o = w?.objects.find((x) => eventOfPlace(x) === eventId);
@@ -1024,6 +1037,7 @@ export function MarClient() {
           distance={distance}
           onClose={() => setSheet(null)}
           onCourse={courseTo}
+          onFly={flyTo}
           onBuy={(id) => setCheckoutFor(id)}
           onSteerEvent={steerToEvent}
         />
