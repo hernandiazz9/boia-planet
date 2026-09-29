@@ -16,21 +16,24 @@ import type { MissionHost } from '@boia/engine/mission';
 import type { WorldConfig } from '@boia/world';
 import type { Color, ShaderMaterial } from 'three';
 import {
+  Box3,
   BoxGeometry,
   ConeGeometry,
   CylinderGeometry,
   DirectionalLight,
   Fog,
+  Frustum,
   Group,
   HemisphereLight,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
   type Object3D,
   PerspectiveCamera,
-  Plane,
   Raycaster,
   Scene,
+  Sphere,
   SphereGeometry,
   TorusGeometry,
   Vector2,
@@ -51,8 +54,8 @@ import {
   debrisGeometry,
   litMaterial,
 } from './characters';
-import { type SceneRect, buildCoast } from './coast';
-import { toScene } from './compress';
+import { fromScene, toScene } from './compress';
+import { buildDecor, decorSpots } from './decor';
 import { Clouds, Confetti, CourseMarker, Wake, glowPoints, whirlpool } from './effects';
 import {
   type IslandBuild,
@@ -64,9 +67,31 @@ import {
 } from './islands';
 import { Kit, clamp01, lerp, rng, seedOf, smooth } from './kit';
 import { C, type Mood, type MoodId, cloneMood, mixMood, moods } from './palette';
-import { Glows, buoy, crag, crate, rock } from './props';
+import { Sky, curveMaterial, curveTree, planetUniforms } from './planet';
+import { Glows, buoy, crag, rock } from './props';
 import { type ShipModel, modelLength } from './ship-model';
 import { createWater } from './water';
+import {
+  type Circle,
+  type Period,
+  behindPlanet,
+  bendDrop,
+  periodOf,
+  planetRect,
+  pushOut,
+  rayOnPlanet,
+  steer,
+  wrapD,
+  wrapIn,
+} from './wrap';
+
+/** Rectángulo en unidades de escena. */
+interface SceneRect {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
 
 /**
  * El mar 3D: three.js sobre el mismo `WorldRuntime` que /juego. Aquí sólo
@@ -75,6 +100,13 @@ import { createWater } from './water';
  * rumbo por toque (piloto automático que esquiva islas), turbo y los tres
  * momentos del día. Lo que pasa en el mundo (premios, paneles, misión,
  * circuito) llega a la web por `onWorldEvent`, igual que en el 2D.
+ *
+ * Es un pequeño planeta de agua (D-22, REQ-MUN-038): sin costas, el mar da
+ * la vuelta (el runtime con `wrap`: quien sale por un lado vuelve por el
+ * opuesto y el piloto automático toma el camino más corto), la superficie se
+ * curva hacia el horizonte y encima está el cielo con estrellas, que gira
+ * despacio. Cada cosa se dibuja en su copia más cercana al foco de la
+ * cámara; el foco nunca salta, así que la vuelta no se nota.
  */
 
 export interface PinSpec {
@@ -133,6 +165,15 @@ export interface Mar3DOptions {
 /** A partir de este zoom el arrastre mueve el mapa en vez del barco. */
 export const MAP_ZOOM = 0.55;
 const BOAT_ZOOM = 0.2;
+/**
+ * Curva del planeta (1/unidad de escena) de cerca y en la vista de mapa: la
+ * superficie cae `bend · r²` con la distancia r a la cámara. De cerca se ve
+ * el horizonte curvo con cielo encima; en el mapa, casi plano. muestra
+ */
+const BEND_NEAR = 0.0045;
+/** Inclinación de la cámara de cerca (rad bajo la horizontal): deja ver el horizonte. muestra */
+const ELEV_NEAR = 0.64;
+const BEND_MAP = 0.00016;
 /** Eslora del barco en la escena (unidades): algo mayor que la del motor, para leerse en el móvil. */
 const SHIP_LENGTH = 3.9;
 const STEP = 1 / 60;
@@ -148,6 +189,12 @@ interface View {
   id: string;
   obj: Object3D;
   kind: string;
+  /** Sitio en el mapa (escena), para los que no se mueven solos. */
+  bx: number;
+  bz: number;
+  /** Radio y altura que ocupa (para ocultarlo tras el horizonte o fuera de la vista). */
+  radius: number;
+  top: number;
   /** Altura base (sobre el agua) y fase de balanceo. */
   y: number;
   phase: number;
@@ -167,9 +214,12 @@ interface View {
 interface PinView {
   spec: PinSpec;
   el: HTMLButtonElement;
+  /** Sitio en el mapa (escena) y, tras cada fotograma, su copia en pantalla (rx, rz). */
   x: number;
   z: number;
   y: number;
+  rx: number;
+  rz: number;
   vis: boolean;
 }
 
@@ -180,6 +230,9 @@ interface Anchor {
 }
 
 const tmpV = new Vector3();
+const tmpM = new Matrix4();
+const tmpV2 = new Vector2();
+const tmpSphere = new Sphere();
 
 export class Mar3D {
   readonly world: WorldConfig;
@@ -193,6 +246,7 @@ export class Mar3D {
   private readonly camera = new PerspectiveCamera(40, 1, 0.5, 5000);
   private readonly hemi = new HemisphereLight();
   private readonly sun = new DirectionalLight();
+  private readonly sky = new Sky();
   private readonly water;
   private readonly boat: Boat;
   private readonly faces: FaceTextures;
@@ -206,7 +260,18 @@ export class Mar3D {
   private readonly animated: ((t: number, glow: number) => void)[] = [];
   private readonly pins: PinView[] = [];
   private readonly anchors: Anchor[] = [];
+  /** El planeta: su rectángulo (escena) y su periodo en u de motor y en escena. */
   private readonly b: SceneRect;
+  private readonly periodU: Period;
+  private readonly periodS: Period;
+  /** Decorado propio de /mar que no se atraviesa (u de motor). */
+  private readonly decorSolids: Circle[] = [];
+  private readonly islandRadius = new Map<string, number>();
+  /** Curva actual y dónde está su centro (la cámara). */
+  private bend = BEND_NEAR;
+  /** Centro del mapa en la copia de la vista de mapa (se elige al alejarse). */
+  private readonly mapC = new Vector2();
+  private readonly frustum = new Frustum();
   // Radio de choque acorde con el barco que se ve (más grande que en el 2D).
   private readonly cfg: ShipConfig = { ...DEFAULT_SHIP_CONFIG, radius: 18 };
   private sternX = -1.3;
@@ -262,7 +327,6 @@ export class Mar3D {
   private dpr = 1;
   private readonly maxDpr: number;
   private readonly raycaster = new Raycaster();
-  private readonly waterPlane = new Plane(new Vector3(0, 1, 0), 0);
   private semaphore: MeshBasicMaterial[] = [];
   /** Sin control (un diálogo modal encima: la compra de prueba). */
   inputEnabled = true;
@@ -273,17 +337,24 @@ export class Mar3D {
   constructor(opts: Mar3DOptions) {
     this.opts = opts;
     this.world = opts.world;
-    this.runtime = new WorldRuntime(opts.world, opts.runtime);
+    // El planeta: el mapa con su margen da la vuelta (sólo en /mar; /juego conserva sus costas).
+    const rect = planetRect(opts.world.bounds);
+    this.runtime = new WorldRuntime(
+      { ...opts.world, bounds: rect },
+      { ...opts.runtime, wrap: true },
+    );
+    this.periodU = periodOf(rect);
     const spawn = opts.world.spawn ?? { x: 0, y: 0, heading: -Math.PI / 2 };
     this.ship = createShipState(spawn.x, spawn.y, spawn.heading);
     Object.assign(this.prev, { x: spawn.x, y: spawn.y, heading: spawn.heading });
-    const bounds = opts.world.bounds;
     this.b = {
-      left: toScene(bounds.left),
-      right: toScene(bounds.right),
-      top: toScene(bounds.top),
-      bottom: toScene(bounds.bottom),
+      left: toScene(rect.left),
+      right: toScene(rect.right),
+      top: toScene(rect.top),
+      bottom: toScene(rect.bottom),
     };
+    this.periodS = periodOf(this.b);
+    planetUniforms.uPlanetPeriod.value.set(this.periodS.w, this.periodS.h);
 
     this.maxDpr = Math.min(window.devicePixelRatio || 1, 2);
     this.dpr = Math.min(this.maxDpr, 1.5);
@@ -302,8 +373,9 @@ export class Mar3D {
 
     this.scene.fog = new Fog(this.mood.fog, 60, 400);
     this.scene.add(this.hemi, this.sun, this.sun.target);
+    this.scene.add(this.sky.mesh);
 
-    this.water = createWater(this.b);
+    this.water = createWater();
     this.scene.add(this.water.mesh);
 
     this.faces = createFaceTextures();
@@ -313,26 +385,18 @@ export class Mar3D {
     this.scene.add(this.wake.mesh, this.marker.group, this.confetti.mesh);
 
     const glows: Glows[] = [];
-    const cave = this.world.objects.find((o) => o.identity.id === 'secreto-cueva');
-    const coast = buildCoast(
-      this.b,
-      cave
-        ? {
-            z: toScene(cave.position.y),
-            side: toScene(cave.position.x) < (this.b.left + this.b.right) / 2 ? -1 : 1,
-          }
-        : null,
-    );
-    this.scene.add(coast.group);
-    glows.push(coast.glows);
-
     const shores = this.buildPlaces(glows);
+    shores.push(...this.buildDecor(glows));
     this.water.setShores(shores);
     this.glow = glowPoints(glows);
+    // Los resplandores no tienen sitio propio: cada uno va a su copia más cercana.
+    curveMaterial(this.glow.material as ShaderMaterial, true);
     this.scene.add(this.glow);
 
     this.clouds = new Clouds(this.b);
     this.scene.add(this.clouds.group);
+    // Todo lo demás se curva con el planeta (lo que ya está curvado se queda como está).
+    curveTree(this.scene);
 
     this.missionHost = {
       moveObject: (id, x, y, z) => this.runtime.moveObject(id, x, y, z),
@@ -415,12 +479,13 @@ export class Mar3D {
         Math.max(o.geometry.collision?.radius ?? 0, o.geometry.activation?.radius ?? 0) +
         this.cfg.radius +
         40;
-      const dx = this.ship.x - px;
-      const dy = this.ship.y - py;
+      // Hasta la orilla del lado por el que se llega (dando la vuelta si es más corto).
+      const { dx, dy } = this.runtime.delta(px, py, this.ship.x, this.ship.y);
       const d = Math.hypot(dx, dy) || 1;
-      this.course = { x: px + (dx / d) * reach, y: py + (dy / d) * reach, placeId: o.identity.id };
+      const p = this.inPlanet(px + (dx / d) * reach, py + (dy / d) * reach);
+      this.course = { x: p.x, y: p.y, placeId: o.identity.id };
     } else {
-      const p = this.runtime.safePoint(target.x, target.y, this.cfg.radius + 6);
+      const p = this.freePoint(target.x, target.y);
       this.course = { x: p.x, y: p.y, placeId: null };
     }
     this.marker.show(true);
@@ -435,11 +500,39 @@ export class Mar3D {
       o.geometry.activation?.radius ?? 0,
       o.geometry.collision?.radius ?? 0,
     );
-    const p = this.runtime.safePoint(o.position.x, o.position.y + reach + 90, this.cfg.radius);
+    const p = this.freePoint(o.position.x, o.position.y + reach + 90);
     Object.assign(this.ship, { x: p.x, y: p.y, vx: 0, vy: 0, heading: -Math.PI / 2 });
     Object.assign(this.prev, { x: p.x, y: p.y, heading: -Math.PI / 2 });
     this.updateCamera(0, true);
     return true;
+  }
+
+  /** Un punto dentro del periodo del planeta (u de motor). */
+  private inPlanet(x: number, y: number): { x: number; y: number } {
+    const b = this.runtime.bounds;
+    return { x: wrapIn(x, b.left, b.right), y: wrapIn(y, b.top, b.bottom) };
+  }
+
+  /** Agua libre más cercana, fuera también del decorado propio (castillo, Explanada…). */
+  private freePoint(x: number, y: number, extra = 6): { x: number; y: number } {
+    const r = this.cfg.radius + extra;
+    const p = this.runtime.safePoint(x, y, r);
+    const q = { ...p, vx: 0, vy: 0 };
+    if (pushOut(q, this.decorSolids, r + 4, this.periodU)) {
+      const again = this.runtime.safePoint(q.x, q.y, r);
+      return this.inPlanet(again.x, again.y);
+    }
+    return p;
+  }
+
+  /** El rectángulo del planeta (u de motor): lo que da la vuelta. Para el minimapa. */
+  get planetBounds(): { left: number; right: number; top: number; bottom: number } {
+    return { ...this.runtime.bounds };
+  }
+
+  /** Cuánto ha girado el planeta por su cuenta (rad). Para el minimapa redondo. */
+  get planetSpin(): number {
+    return this.sky.spin;
   }
 
   /**
@@ -513,6 +606,7 @@ export class Mar3D {
     m.object.scale.setScalar(k);
     m.object.position.set(-((minX + maxX) / 2) * k, 0, 0);
     body.add(m.object);
+    curveTree(m.object);
     this.boat.crewSlot.position.set(m.slot.x * k + m.object.position.x, m.slot.y * k, m.slot.z * k);
     this.sternX = -SHIP_LENGTH / 2;
   }
@@ -520,6 +614,7 @@ export class Mar3D {
   setPassenger(on: boolean): void {
     if (on && !this.crew) {
       this.crew = createMascot(this.faces.pink, { cap: 'party', band: C.yellow, scale: 0.32 });
+      curveTree(this.crew);
       this.boat.crewSlot.add(this.crew);
     } else if (!on && this.crew) {
       this.boat.crewSlot.remove(this.crew);
@@ -530,8 +625,8 @@ export class Mar3D {
   /** Confeti sobre un lugar (la entrega de la Fiestera, una meta). */
   celebrate(placeId: string | null): void {
     const v = placeId ? this.views.get(placeId) : null;
-    const x = v ? v.obj.position.x : toScene(this.ship.x);
-    const z = v ? v.obj.position.z : toScene(this.ship.y);
+    const x = v ? v.obj.position.x : this.boat.group.position.x;
+    const z = v ? v.obj.position.z : this.boat.group.position.z;
     this.confetti.burst(x, (v?.labelY ?? 3) * 0.6, z);
   }
 
@@ -568,9 +663,11 @@ export class Mar3D {
       this.pins.push({
         spec,
         el,
-        x: v.obj.position.x,
-        z: v.obj.position.z,
+        x: v.bx,
+        z: v.bz,
         y: v.labelY,
+        rx: v.obj.position.x,
+        rz: v.obj.position.z,
         vis: false,
       });
     }
@@ -614,9 +711,73 @@ export class Mar3D {
 
   // --- Mundo ----------------------------------------------------------------
 
-  private addView(v: Omit<View, 'shown'>): void {
-    this.views.set(v.id, { ...v, shown: 1 });
+  private addView(v: Omit<View, 'shown' | 'bx' | 'bz' | 'radius' | 'top'>): void {
+    const box = new Box3().setFromObject(v.obj);
+    const p = v.obj.position;
+    const radius = box.isEmpty()
+      ? 3
+      : Math.max(
+          Math.abs(box.max.x - p.x),
+          Math.abs(box.min.x - p.x),
+          Math.abs(box.max.z - p.z),
+          Math.abs(box.min.z - p.z),
+        ) + 3;
+    const top = box.isEmpty() ? v.labelY : Math.max(box.max.y, v.labelY);
+    this.views.set(v.id, { ...v, bx: p.x, bz: p.z, radius, top, shown: 1 });
     this.scene.add(v.obj);
+  }
+
+  /**
+   * El decorado propio del planeta (castillo, Explanada, islote de la cueva):
+   * vistas sin lugar del mapa, sólidas para el barco. Devuelve sus orillas.
+   */
+  private buildDecor(glows: Glows[]): { x: number; z: number; r: number; w: number }[] {
+    const shores: { x: number; z: number; r: number; w: number }[] = [];
+    const sp = this.world.spawn ?? { x: 0, y: 0 };
+    const cave = this.world.objects.find((o) => o.identity.id === 'secreto-cueva');
+    const lit = litMaterial();
+    const spots = decorSpots(
+      { x: toScene(sp.x), z: toScene(sp.y) },
+      cave ? { x: toScene(cave.position.x), z: toScene(cave.position.y) } : null,
+    );
+    for (const spot of spots) {
+      const build = buildDecor(spot.kind);
+      const g = new Group();
+      g.position.set(spot.x, 0, spot.z);
+      g.add(new Mesh(build.parts.lit.build(), lit));
+      for (const a of build.animated) g.add(a);
+      const gl = build.parts.glows;
+      for (let i = 0; i < gl.pos.length; i += 3) {
+        gl.pos[i] = gl.pos[i]! + spot.x;
+        gl.pos[i + 2] = gl.pos[i + 2]! + spot.z;
+      }
+      glows.push(gl);
+      build.solids.forEach((c, i) => {
+        this.decorSolids.push({
+          x: fromScene(spot.x + c.dx),
+          y: fromScene(spot.z + c.dz),
+          radius: fromScene(c.r),
+        });
+        // Bajíos: uno de cada dos círculos basta (se solapan) y el agua hace menos cuentas.
+        if (i % 2 === 0) {
+          shores.push({
+            x: spot.x + c.dx,
+            z: spot.z + c.dz,
+            r: c.r,
+            w: Math.min(9, 3 + c.r * 0.6),
+          });
+        }
+      });
+      this.addView({
+        id: `decorado:${spot.kind}`,
+        obj: g,
+        kind: 'decorado',
+        y: 0,
+        phase: 0,
+        labelY: build.labelY,
+      });
+    }
+    return shores;
   }
 
   /** Construye cada lugar; devuelve las orillas para el agua. */
@@ -657,6 +818,7 @@ export class Mar3D {
         }
         glows.push(gl);
         this.islands.push({ x, z, R, build });
+        this.islandRadius.set(id, R);
         shores.push({ x, z, r: R, w: Math.min(11, 3 + R * 0.7) });
         this.addView({ id, obj: g, kind: cat, y: 0, phase, labelY: build.labelY });
         continue;
@@ -946,13 +1108,16 @@ export class Mar3D {
           } else if (id.includes('semaforo')) {
             statics.add(new CylinderGeometry(0.1, 0.12, 4.2, 6), C.iron, { p: [x, 2.1, z] });
             statics.add(new BoxGeometry(0.7, 2, 0.5), C.speaker, { p: [x, 4.4, z] });
+            const g = new Group();
             for (let i = 0; i < 3; i++) {
               const mat = new MeshBasicMaterial({ color: '#333' });
               const lamp = new Mesh(new SphereGeometry(0.24, 10, 8), mat);
-              lamp.position.set(x, 5.05 - i * 0.62, z + 0.26);
-              this.scene.add(lamp);
+              lamp.position.set(0, 5.05 - i * 0.62, 0.26);
+              g.add(lamp);
               this.semaphore.push(mat);
             }
+            g.position.set(x, 0, z);
+            this.addView({ id, obj: g, kind: 'decorado', y: 0, phase, labelY: 6 });
             this.setSemaphore('off');
           }
           break;
@@ -1005,8 +1170,11 @@ export class Mar3D {
               new MeshLambertMaterial({ map: tex }),
               new MeshLambertMaterial({ map: tex }),
             ]);
-            sign.position.set(x, 2.3, z);
-            this.scene.add(sign);
+            const g = new Group();
+            sign.position.set(0, 2.3, 0);
+            g.add(sign);
+            g.position.set(x, 0, z);
+            this.addView({ id, obj: g, kind: 'obstaculo', y: 0, phase, labelY: 3 });
           } else {
             const big = r > 1.2;
             if (big) {
@@ -1023,11 +1191,13 @@ export class Mar3D {
           break;
       }
     }
-    // Restos del puerto (cajas en el muelle) para vestir la salida.
-    const sp = this.world.spawn;
-    if (sp) crate(statics, toScene(sp.x) + 9, 0.7, toScene(sp.y) + 7, 0.9, 0.3);
-
-    if (!statics.empty) this.scene.add(new Mesh(statics.build(), lit));
+    if (!statics.empty) {
+      // Piezas fusionadas sin sitio propio: cada vértice va a su copia más cercana.
+      const m = new Mesh(statics.build(), litMaterial());
+      curveMaterial(m.material, true);
+      m.frustumCulled = false;
+      this.scene.add(m);
+    }
     return shores;
   }
 
@@ -1230,12 +1400,15 @@ export class Mar3D {
     const r = this.opts.canvas.getBoundingClientRect();
     const ndc = new Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
-    const hit = this.raycaster.ray.intersectPlane(this.waterPlane, tmpV);
-    if (!hit) return;
+    // El agua curvada; un toque en el cielo pone rumbo hacia el horizonte en esa dirección.
+    const ray = this.raycaster.ray;
+    const cam = ray.origin;
+    const on = rayOnPlanet(cam.y, ray.direction.x, ray.direction.y, ray.direction.z, this.bend);
+    const hit = tmpV.copy(ray.direction).multiplyScalar(on.t).add(cam);
     // ¿Cerca de un lugar con rótulo? Rumbo a él.
     let best: { id: string; d: number } | null = null;
     for (const p of this.pins) {
-      const d = Math.hypot(p.x - hit.x, p.z - hit.z);
+      const d = Math.hypot(p.rx - hit.x, p.rz - hit.z);
       const v = this.views.get(p.spec.id);
       const reach =
         v && (v.kind === 'isla' || v.kind === 'naufrago') ? this.islandR(p.spec.id) + 2 : 3;
@@ -1245,13 +1418,12 @@ export class Mar3D {
       this.opts.onPin?.(best.id);
       return;
     }
-    this.setCourse({ x: hit.x * 16, y: hit.z * 16 });
+    // De la copia que se ve al mapa (el runtime lo lleva dentro del periodo).
+    this.setCourse({ x: fromScene(hit.x), y: fromScene(hit.z) });
   }
 
   private islandR(id: string): number {
-    const v = this.views.get(id);
-    if (!v) return 0;
-    return this.islands.find((i) => i.x === v.obj.position.x && i.z === v.obj.position.z)?.R ?? 0;
+    return this.islandRadius.get(id) ?? 0;
   }
 
   private worldPerPixel(): number {
@@ -1291,39 +1463,20 @@ export class Mar3D {
     return IDLE_INPUT;
   }
 
-  /** Rumbo al destino, apartándose de lo sólido que hay delante. */
+  /** Rumbo al destino por el camino más corto del planeta, apartándose de lo sólido. */
   private autopilot(): ShipInput {
-    const c = this.course!;
-    const s = this.ship;
-    let dx = c.x - s.x;
-    let dy = c.y - s.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 34) {
+    const r = steer(
+      this.ship,
+      this.course!,
+      [...this.runtime.solidObstacles(), ...this.decorSolids],
+      { shipRadius: this.cfg.radius, period: this.periodU },
+    );
+    if (r.arrived) {
       this.clearCourse();
       this.endVoyage('arrived');
       return IDLE_INPUT;
     }
-    dx /= dist;
-    dy /= dist;
-    const look = Math.min(dist, 420);
-    let sx = 0;
-    let sy = 0;
-    for (const o of this.runtime.solidObstacles()) {
-      const ox = o.x - s.x;
-      const oy = o.y - s.y;
-      const proj = ox * dx + oy * dy;
-      if (proj < -o.radius || proj > look + o.radius) continue;
-      const lat = ox * -dy + oy * dx;
-      const clear = o.radius + this.cfg.radius + 36;
-      if (Math.abs(lat) >= clear) continue;
-      const push =
-        ((clear - Math.abs(lat)) / clear) * (1 - (Math.max(0, proj) / (look + clear)) * 0.6);
-      const side = lat > 0 ? -1 : 1;
-      sx += -dy * side * push * 1.8;
-      sy += dx * side * push * 1.8;
-    }
-    const throttle = Math.max(0.35, Math.min(1, dist / 260));
-    return { dirX: dx + sx, dirY: dy + sy, throttle, drift: false };
+    return { dirX: r.dirX, dirY: r.dirY, throttle: r.throttle, drift: false };
   }
 
   // --- Bucle ------------------------------------------------------------------
@@ -1338,7 +1491,8 @@ export class Mar3D {
     const t = Math.tan((this.camera.fov * Math.PI) / 360);
     const W = this.b.right - this.b.left;
     const H = this.b.bottom - this.b.top;
-    this.dFar = Math.max((H * 0.62) / t, (W * 0.58) / (t * this.camera.aspect));
+    // La vista de mapa enseña el planeta entero una vez (el periodo), sin repetir.
+    this.dFar = Math.max((H * 0.56) / t, (W * 0.54) / (t * this.camera.aspect));
     const gm = this.glow.material as ShaderMaterial;
     gm.uniforms.uScale!.value = ((h * this.dpr) / (2 * t)) * 0.5;
   };
@@ -1387,6 +1541,11 @@ export class Mar3D {
     const before = shipSpeed(s);
     stepShip(s, input, cfg, dt);
     this.runtime.step(s, this.cfg, dt);
+    if (pushOut(s, this.decorSolids, this.cfg.radius, this.periodU)) {
+      const b = this.runtime.bounds;
+      s.x = wrapIn(s.x, b.left, b.right);
+      s.y = wrapIn(s.y, b.top, b.bottom);
+    }
     const after = shipSpeed(s);
     if (before - after > 60) this.shake = Math.min(1, this.shake + (before - after) / 250);
     const dh = Math.atan2(
@@ -1410,6 +1569,15 @@ export class Mar3D {
     this.sun.intensity = m.sunI;
     this.scene.background = m.fog;
     (this.scene.fog as Fog).color.copy(m.fog);
+    this.sky.setMood({
+      horizon: m.fog,
+      sky: m.sky,
+      zenith: m.zenith,
+      stars: m.stars,
+      sunDir: m.sunDir,
+      sun: m.sun,
+      glow: m.glow,
+    });
     const u = this.water.material.uniforms;
     (u.uDeep!.value as Color).copy(m.deep);
     (u.uShallow!.value as Color).copy(m.shallow);
@@ -1418,6 +1586,34 @@ export class Mar3D {
     (this.glow.material as ShaderMaterial).uniforms.uGlow!.value = 0.25 + m.glow * 0.95;
   }
 
+  /**
+   * El barco en la escena: su sitio interpolado entre pasos, en la copia más
+   * cercana al foco (cuando da la vuelta al planeta, no salta). Guarda
+   * también su sitio en el mapa (escena), para los rumbos.
+   */
+  private placeShip(alpha: number): { x: number; z: number; h: number } {
+    const s = this.ship;
+    // El paso anterior, del mismo lado del borde que el actual.
+    const px = s.x - wrapD(s.x - this.prev.x, this.periodU.w);
+    const py = s.y - wrapD(s.y - this.prev.y, this.periodU.h);
+    const cx = toScene(lerp(px, s.x, alpha));
+    const cz = toScene(lerp(py, s.y, alpha));
+    const x = this.focus.x + wrapD(cx - this.focus.x, this.periodS.w);
+    const z = this.focus.z + wrapD(cz - this.focus.z, this.periodS.h);
+    this.shipCanon.set(cx, cz);
+    const h =
+      this.prev.heading +
+      Math.atan2(Math.sin(s.heading - this.prev.heading), Math.cos(s.heading - this.prev.heading)) *
+        alpha;
+    this.boat.group.position.set(x, 0, z);
+    this.boat.group.rotation.y = -h;
+    return { x, z, h };
+  }
+
+  private readonly shipCanon = new Vector2();
+  /** Hacia dónde mira la cámara por delante del barco (suave; al principio, el norte). */
+  private readonly aheadDir = new Vector2(0, -1);
+
   private updateCamera(dt: number, snap = false): void {
     const k = snap ? 1 : 1 - Math.exp(-dt * 6);
     this.zoom += (this.zoomGoal - this.zoom) * k;
@@ -1425,23 +1621,44 @@ export class Mar3D {
     const z = this.zoom;
     const dNear = 17;
     const dist = dNear * Math.pow(this.dFar / dNear, z);
-    const elev = lerp(0.6, 1.28, smooth(0, 1, z));
-    const sx = toScene(this.ship.x);
-    const sz = toScene(this.ship.y);
+    const elev = lerp(ELEV_NEAR, 1.28, smooth(0, 1, z));
+    if (snap) {
+      // Sin foco previo: el barco en su sitio del mapa.
+      this.focus.set(toScene(this.ship.x), 0, toScene(this.ship.y));
+      this.placeShip(1);
+    }
+    const ship = this.boat.group.position;
     const lead = 0.28 * (1 - smooth(0, 0.4, z));
     const w = smooth(0.4, 0.95, z);
-    // El barco va en el tercio de abajo: se ve más mar por delante (al norte).
+    // Se ve más mar hacia donde va el barco (al principio, al norte: el barco en
+    // el tercio de abajo). En el planeta se puede ir hacia el sur y dar la vuelta.
+    const sp = shipSpeed(this.ship);
+    if (sp > this.cfg.maxSpeed * 0.3) {
+      const kk = snap ? 1 : 1 - Math.exp(-dt * 1.2);
+      this.aheadDir.lerp(tmpV2.set(this.ship.vx / sp, this.ship.vy / sp), kk);
+    }
     const ahead = dist * 0.2 * (1 - w);
-    const bx = sx + toScene(this.ship.vx) * lead;
-    const bz = sz + toScene(this.ship.vy) * lead - ahead;
+    const bx = ship.x + toScene(this.ship.vx) * lead + this.aheadDir.x * ahead;
+    const bz = ship.z + toScene(this.ship.vy) * lead + this.aheadDir.y * ahead;
+    // El centro del mapa, en la copia de alrededor del barco; al alejarse se queda fijo
+    // (la vista de mapa es una carta: el barco da la vuelta por sus bordes).
     const cx = (this.b.left + this.b.right) / 2;
     const cz = (this.b.top + this.b.bottom) / 2;
+    const P = this.periodS;
+    if (w < 1e-3 || snap) {
+      this.mapC.set(ship.x + wrapD(cx - ship.x, P.w), ship.z + wrapD(cz - ship.z, P.h));
+    } else {
+      if (Math.abs(ship.x - this.mapC.x) > P.w * 0.75)
+        this.mapC.x += Math.round((ship.x - this.mapC.x) / P.w) * P.w;
+      if (Math.abs(ship.z - this.mapC.y) > P.h * 0.75)
+        this.mapC.y += Math.round((ship.z - this.mapC.y) / P.h) * P.h;
+    }
     this.inset += (this.insetGoal - this.inset) * (snap ? 1 : 1 - Math.exp(-dt * 5));
     const h = this.opts.canvas.clientHeight || 1;
     const perPx = (2 * dist * Math.tan((this.camera.fov * Math.PI) / 360)) / h;
     const lift = this.inset * 0.5 * perPx * (1 - w);
-    const fx = lerp(bx, cx, w) + this.pan.x;
-    const fz = lerp(bz, cz, w) + this.pan.y + lift;
+    const fx = lerp(bx, this.mapC.x, w) + this.pan.x;
+    const fz = lerp(bz, this.mapC.y, w) + this.pan.y + lift;
     if (snap) this.focus.set(fx, 0, fz);
     else this.focus.lerp(tmpV.set(fx, 0, fz), 1 - Math.exp(-dt * 8));
     this.look.copy(this.focus);
@@ -1452,27 +1669,48 @@ export class Mar3D {
       oz = (Math.random() - 0.5) * this.shake * 0.5;
       this.shake = Math.max(0, this.shake - dt * 2.5);
     }
-    this.camera.position.set(
-      this.focus.x + ox,
-      Math.sin(elev) * dist,
-      this.focus.z + Math.cos(elev) * dist + oz,
-    );
+    const camY = Math.sin(elev) * dist;
+    const camZ = this.focus.z + Math.cos(elev) * dist;
+    this.camera.position.set(this.focus.x + ox, camY, camZ + oz);
+    // La curva: fuerte de cerca (horizonte y cielo), casi plana en el mapa.
+    this.bend = lerp(BEND_NEAR, BEND_MAP, smooth(0.25, 0.9, z));
+    planetUniforms.uBend.value = this.bend;
+    planetUniforms.uBendCenter.value.set(this.focus.x, camZ);
+    planetUniforms.uPlanetFocus.value.set(this.focus.x, this.focus.z);
+    // Se mira al foco ya curvado (baja un poco con la distancia).
+    this.look.y = -bendDrop(this.bend, camZ - this.focus.z);
     this.camera.lookAt(this.look);
     const fov = 40 + this.fovKick * 7;
-    if (Math.abs(this.camera.fov - fov) > 0.01) {
-      this.camera.fov = fov;
-      this.camera.updateProjectionMatrix();
-    }
+    if (Math.abs(this.camera.fov - fov) > 0.01) this.camera.fov = fov;
     this.fovKick = Math.max(0, this.fovKick - dt * 0.5);
+    // Horizonte: dónde deja de verse el agua; la niebla lo funde con el cielo.
+    const horizon = Math.sqrt(camY / this.bend);
     const fog = this.scene.fog as Fog;
-    fog.near = dist * 1.1;
-    fog.far = dist * 3.4 + 80;
+    fog.near = Math.min(dist * 1.1, horizon * 0.45);
+    fog.far = Math.min(dist * 3.4 + 80, horizon * 1.25 + dist);
     this.camera.far = dist * 4 + 400;
     this.camera.updateProjectionMatrix();
-    // Sol: sigue al foco para que la luz sea la misma en todo el mapa.
+    this.camera.updateMatrixWorld();
+    this.water.mesh.position.set(this.focus.x, 0, camZ);
+    // Bajíos: los que se ven (hasta el horizonte y algo más; en el mapa, todos).
+    this.water.update(
+      this.focus,
+      this.periodS,
+      { x: this.focus.x, z: camZ },
+      horizon + 30 + dist * smooth(0.25, 0.9, z) * 3,
+    );
+    // Sol: sigue al foco para que la luz sea la misma en todo el planeta.
     const d = this.mood.sunDir;
     this.sun.position.set(this.focus.x + d[0] * 100, d[1] * 100, this.focus.z + d[2] * 100);
     this.sun.target.position.copy(this.focus);
+    // Cuánto baja el horizonte bajo la horizontal (para el degradado del cielo).
+    const a = Math.atan(2 * Math.sqrt(this.bend * camY));
+    this.sky.update(this.camera, this.time, dt, Math.sin(a));
+    // Sin cielo a la vista (el mapa, mirando al mar), ni se dibuja.
+    this.sky.mesh.visible = [-1, 0, 1].some((nx) => {
+      const d = tmpV.set(nx, 1, 0.5).unproject(this.camera).sub(this.camera.position).normalize();
+      return !rayOnPlanet(camY, d.x, d.y, d.z, this.bend).hit;
+    });
   }
 
   private render(dt: number, alpha: number): void {
@@ -1486,19 +1724,11 @@ export class Mar3D {
     this.water.material.uniforms.uTime!.value = t;
     (this.glow.material as ShaderMaterial).uniforms.uTime!.value = t;
 
-    // Barco (interpolado entre pasos).
+    // Barco (interpolado entre pasos, en la copia más cercana al foco).
     const s = this.ship;
-    const x = toScene(lerp(this.prev.x, s.x, alpha));
-    const z = toScene(lerp(this.prev.y, s.y, alpha));
-    const h =
-      this.prev.heading +
-      Math.atan2(Math.sin(s.heading - this.prev.heading), Math.cos(s.heading - this.prev.heading)) *
-        alpha;
+    const { x, z, h } = this.placeShip(alpha);
     const speed = shipSpeed(s);
     const v01 = Math.min(1.4, speed / this.cfg.maxSpeed);
-    const bg = this.boat.group;
-    bg.position.set(x, 0, z);
-    bg.rotation.y = -h;
     const body = this.boat.body;
     body.position.y = Math.sin(t * 1.9) * 0.07 + Math.sin(t * 3.3) * 0.03 + v01 * 0.08;
     body.rotation.x =
@@ -1515,29 +1745,53 @@ export class Mar3D {
     const boost = this.turboLeft > 0 || this.voyage ? 1.4 : 1;
     this.wake.update(dt, sternX, sternZ, h, Math.min(1, v01 * boost), t);
 
-    // Lugares.
+    this.updateCamera(dt);
+
+    // Lugares: cada uno en su copia más cercana al foco; lo que queda tras el
+    // horizonte o fuera de la vista no se pinta.
+    const fx = this.focus.x;
+    const fz = this.focus.z;
+    const P = this.periodS;
+    const cam = this.camera.position;
+    const bend = this.bend;
+    this.frustum.setFromProjectionMatrix(
+      tmpM.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse),
+    );
     for (const v of this.views.values()) {
-      if (!v.update) continue;
       const st = this.runtime.objectState(v.id);
-      const px = st ? toScene(st.x) : v.obj.position.x;
-      const pz = st ? toScene(st.y) : v.obj.position.z;
-      const pzUp = st?.z ? toScene(st.z) : 0;
-      const ground = v.kind === 'encuentro' ? Math.max(this.groundAt(px, pz), pzUp) : 0;
-      v.update(v, t, dt, st ? st.present : true, px, pz, ground);
+      const cxs = st ? toScene(st.x) : v.bx;
+      const czs = st ? toScene(st.y) : v.bz;
+      const px = fx + wrapD(cxs - fx, P.w);
+      const pz = fz + wrapD(czs - fz, P.h);
+      v.obj.position.x = px;
+      v.obj.position.z = pz;
+      v.obj.visible = true;
+      if (v.update) {
+        const pzUp = st?.z ? toScene(st.z) : 0;
+        const ground = v.kind === 'encuentro' ? Math.max(this.groundAt(cxs, czs), pzUp) : 0;
+        v.update(v, t, dt, st ? st.present : true, px, pz, ground);
+      }
+      if (!v.obj.visible) continue;
+      const r = Math.hypot(px - cam.x, pz - cam.z);
+      const drop = bendDrop(bend, r);
+      tmpSphere.center.set(px, v.top / 2 - drop, pz);
+      tmpSphere.radius = Math.hypot(v.radius, v.top / 2);
+      if (
+        !this.frustum.intersectsSphere(tmpSphere) ||
+        behindPlanet(cam.y, Math.max(0, r - v.radius), v.top - drop, bend)
+      ) {
+        v.obj.visible = false;
+      }
     }
     for (const a of this.animated) a(t, glow);
     this.confetti.update(dt);
-
-    this.updateCamera(dt);
-    this.clouds.update(dt, this.camera.position.y, this.b);
+    this.clouds.update(dt, cam.y, { x: fx, z: fz }, P);
 
     if (this.course) {
-      this.marker.update(
-        { x, z },
-        { x: toScene(this.course.x), z: toScene(this.course.y) },
-        t,
-        1 + this.zoom * 8,
-      );
+      // El destino, en la copia del lado por el que va el barco.
+      const tx = x + wrapD(toScene(this.course.x) - this.shipCanon.x, P.w);
+      const tz = z + wrapD(toScene(this.course.y) - this.shipCanon.y, P.h);
+      this.marker.update({ x, z }, { x: tx, z: tz }, t, 1 + this.zoom * 8);
     }
 
     this.renderer.render(this.scene, this.camera);
@@ -1550,7 +1804,10 @@ export class Mar3D {
     z: number,
     out: { x: number; y: number; on: boolean },
   ): void {
-    tmpV.set(x, y, z).project(this.camera);
+    // La curva del planeta también para lo que se pone encima en HTML.
+    const cam = this.camera.position;
+    const r = Math.hypot(x - cam.x, z - cam.z);
+    tmpV.set(x, y - bendDrop(this.bend, r), z).project(this.camera);
     const w = this.opts.canvas.clientWidth;
     const h = this.opts.canvas.clientHeight;
     out.x = (tmpV.x * 0.5 + 0.5) * w;
@@ -1560,14 +1817,80 @@ export class Mar3D {
 
   private readonly scr = { x: 0, y: 0, on: false };
 
+  /** ¿Lo tapa el planeta? (un rótulo a altura `y` sobre el agua en `x, z`). */
+  private hidden(x: number, y: number, z: number): boolean {
+    const cam = this.camera.position;
+    const r = Math.hypot(x - cam.x, z - cam.z);
+    return behindPlanet(cam.y, r, y - bendDrop(this.bend, r), this.bend);
+  }
+
+  /**
+   * Un rótulo tras el horizonte, asomado en su dirección (dx, dz desde la
+   * cámara); si esa dirección cae fuera de la pantalla, en el punto del
+   * horizonte más cercano a ella que aún se ve (pegado al borde).
+   */
+  private horizonPoint(
+    dx: number,
+    dz: number,
+    halfWidth: number,
+    out: { x: number; y: number; on: boolean },
+  ): void {
+    const cam = this.camera.position;
+    const rh = Math.sqrt(cam.y / this.bend);
+    const W = this.opts.canvas.clientWidth;
+    // El rótulo entero dentro de la pantalla.
+    const m = Math.min(W / 2, halfWidth + 8);
+    const want = Math.atan2(dx, -dz);
+    // Detrás de la cámara: no se ve.
+    if (Math.abs(want) > Math.PI / 2) {
+      out.on = false;
+      return;
+    }
+    const at = (a: number) =>
+      this.project(cam.x + Math.sin(a) * rh, 1.5, cam.z - Math.cos(a) * rh, out);
+    at(want);
+    if (out.x >= m && out.x <= W - m) return;
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2;
+      at(want * mid);
+      if (out.x >= m && out.x <= W - m) lo = mid;
+      else hi = mid;
+    }
+    at(want * lo);
+  }
+
   private placeOverlay(): void {
     const bx = this.boat.group.position.x;
     const bz = this.boat.group.position.z;
     const far = this.zoom > 0.28;
+    const cam = this.camera.position;
     for (const p of this.pins) {
-      const near = Math.hypot(p.x - bx, p.z - bz) < 70;
+      const v = this.views.get(p.spec.id);
+      if (v) {
+        p.rx = v.obj.position.x;
+        p.rz = v.obj.position.z;
+      }
+      const near = Math.hypot(p.rx - bx, p.rz - bz) < 70;
       const want = far || near || !!p.spec.always;
-      this.project(p.x, p.y, p.z, this.scr);
+      const x = p.rx;
+      const y = p.y;
+      const z = p.rz;
+      let atHorizon = false;
+      if (this.hidden(x, y, z)) {
+        if (!p.spec.always) {
+          if (p.vis) {
+            p.vis = false;
+            p.el.classList.remove('is-on');
+          }
+          continue;
+        }
+        // Lo que vende se queda asomado al horizonte, en su dirección.
+        atHorizon = true;
+      }
+      if (atHorizon) this.horizonPoint(x - cam.x, z - cam.z, p.el.offsetWidth / 2, this.scr);
+      else this.project(x, y, z, this.scr);
       const vis = want && this.scr.on;
       if (vis !== p.vis) {
         p.vis = vis;
@@ -1633,7 +1956,9 @@ export class Mar3D {
       course: c
         ? {
             placeId: c.placeId,
-            meters: Math.round(Math.hypot(c.x - this.ship.x, c.y - this.ship.y) * METERS_PER_U),
+            meters: Math.round(
+              this.runtime.distance(this.ship.x, this.ship.y, c.x, c.y) * METERS_PER_U,
+            ),
           }
         : null,
       panned: this.pan.lengthSq() > 25,

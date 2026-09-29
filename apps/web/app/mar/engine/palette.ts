@@ -49,9 +49,13 @@ export const C = {
   bulb: '#ffd98a',
 } as const;
 
-/** Un momento del día: luces, niebla y agua. */
+/** Un momento del día: luces, niebla, cielo y agua. */
 export interface Mood {
+  /** Cielo a media altura; abajo se funde con la niebla (el horizonte), arriba con `zenith`. */
   sky: Color;
+  zenith: Color;
+  /** 0..1: cuántas estrellas se ven (muchas de noche, apenas de día). */
+  stars: number;
   fog: Color;
   hemiSky: Color;
   hemiGround: Color;
@@ -69,6 +73,8 @@ export interface Mood {
 
 function mood(m: {
   sky: string;
+  zenith: string;
+  stars: number;
   fog: string;
   hemiSky: string;
   hemiGround: string;
@@ -84,6 +90,7 @@ function mood(m: {
   return {
     ...m,
     sky: new Color(m.sky),
+    zenith: new Color(m.zenith),
     fog: new Color(m.fog),
     hemiSky: new Color(m.hemiSky),
     hemiGround: new Color(m.hemiGround),
@@ -108,8 +115,10 @@ export const MOOD_LABEL: Record<MoodId, string> = {
 export function moods(sea?: { base: string; wave: string; crest: string }): Record<MoodId, Mood> {
   return {
     dia: mood({
-      sky: '#bfe7f2',
-      fog: '#a9dbe8',
+      sky: '#8fd0ea',
+      zenith: '#3f9bd6',
+      stars: 0.08,
+      fog: '#bfe6ef',
       hemiSky: '#fff6e8',
       hemiGround: '#5a7fa0',
       hemi: 1.55,
@@ -122,8 +131,10 @@ export function moods(sea?: { base: string; wave: string; crest: string }): Reco
       glow: 0.12,
     }),
     tarde: mood({
-      sky: '#ffc38f',
-      fog: '#e9a88a',
+      sky: '#f09a8a',
+      zenith: '#5b4aa8',
+      stars: 0.45,
+      fog: '#ffc08f',
       hemiSky: '#ffd3a8',
       hemiGround: '#4a3f8c',
       hemi: 1.35,
@@ -136,8 +147,10 @@ export function moods(sea?: { base: string; wave: string; crest: string }): Reco
       glow: 0.55,
     }),
     noche: mood({
-      sky: '#231a5c',
-      fog: '#2a1f66',
+      sky: '#1d1650',
+      zenith: '#07061c',
+      stars: 1,
+      fog: '#2e2470',
       hemiSky: '#7a6ae0',
       hemiGround: '#140f38',
       hemi: 1.05,
@@ -155,6 +168,8 @@ export function moods(sea?: { base: string; wave: string; crest: string }): Reco
 /** Mezcla dos momentos en `out` (transición suave al cambiar). */
 export function mixMood(out: Mood, a: Mood, b: Mood, t: number): Mood {
   out.sky.lerpColors(a.sky, b.sky, t);
+  out.zenith.lerpColors(a.zenith, b.zenith, t);
+  out.stars = a.stars + (b.stars - a.stars) * t;
   out.fog.lerpColors(a.fog, b.fog, t);
   out.hemiSky.lerpColors(a.hemiSky, b.hemiSky, t);
   out.hemiGround.lerpColors(a.hemiGround, b.hemiGround, t);
@@ -173,6 +188,7 @@ export function cloneMood(m: Mood): Mood {
   return {
     ...m,
     sky: m.sky.clone(),
+    zenith: m.zenith.clone(),
     fog: m.fog.clone(),
     hemiSky: m.hemiSky.clone(),
     hemiGround: m.hemiGround.clone(),

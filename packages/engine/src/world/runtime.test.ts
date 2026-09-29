@@ -526,3 +526,53 @@ describe('CHECKPOINT, TELETRANSPORTE, SPAWN, DECORATIVO, INICIAR_MINIJUEGO', () 
     expect(shipSpeed({ x: 0, y: 0, vx: 3, vy: 4, heading: 0, drifting: false })).toBe(5);
   });
 });
+
+describe('mundo que da la vuelta (wrap, /mar)', () => {
+  // bounds de `world()`: x 0..4000, y −20000..4000.
+  const W = 4000;
+
+  it('proximidad y recompensa se disparan a través del borde, por el camino más corto', () => {
+    const w = world(
+      obj('isla', 60, 1000, { proximityRadius: 300 }, [{ type: 'proximity' }]),
+      obj('moneda', 30, 1000, { activation: circle(20) }, [
+        { type: 'collectible' },
+        { type: 'reward', params: { kind: 'coins', amount: 1 } },
+      ]),
+    );
+    const east: ShipInput = { dirX: 1, dirY: 0, throttle: 1, drift: false };
+    const wrapped = simulate(w, {
+      seconds: 5,
+      start: { x: W - 400, y: 1000, heading: 0 },
+      input: () => east,
+      wrap: true,
+    });
+    expect(ofType(wrapped.events, 'proximity_enter').map((e) => e.objectId)).toEqual(['isla']);
+    expect(ofType(wrapped.events, 'collected').map((e) => e.objectId)).toEqual(['moneda']);
+    expect(ofType(wrapped.events, 'reward')).toHaveLength(1);
+    expect(wrapped.trace.every((s) => s.x >= 0 && s.x < W)).toBe(true);
+    // Sin wrap, la costa este lo para y el otro lado queda a 4 km.
+    const walled = simulate(w, {
+      seconds: 5,
+      start: { x: W - 400, y: 1000, heading: 0 },
+      input: () => east,
+    });
+    expect(ofType(walled.events, 'proximity_enter')).toHaveLength(0);
+    expect(walled.trace.every((s) => s.x <= W - cfg.radius)).toBe(true);
+  });
+
+  it('distance y delta miden por el lado más corto sólo con wrap', () => {
+    const on = new WorldRuntime(world(), { wrap: true });
+    const off = new WorldRuntime(world());
+    expect(on.distance(3990, 0, 10, 0)).toBeCloseTo(20);
+    expect(off.distance(3990, 0, 10, 0)).toBeCloseTo(3980);
+    expect(on.delta(3990, 0, 10, 0).dx).toBeCloseTo(20);
+    expect(on.delta(0, -19990, 0, 3990).dy).toBeCloseTo(-20);
+  });
+
+  it('safePoint da la vuelta en vez de pegar el punto a la costa', () => {
+    const on = new WorldRuntime(world(), { wrap: true });
+    const off = new WorldRuntime(world());
+    expect(on.safePoint(-100, 1000, cfg.radius).x).toBeCloseTo(W - 100);
+    expect(off.safePoint(-100, 1000, cfg.radius).x).toBeCloseTo(cfg.radius);
+  });
+});

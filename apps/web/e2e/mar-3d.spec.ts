@@ -2,6 +2,8 @@ import { canBuy } from '@boia/contracts';
 import { READABLE_MIN_MS } from '@boia/engine/ui';
 import { WORLD_REGISTRY } from '@boia/world';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { compressWorld } from '../app/mar/engine/compress';
+import { periodOf, planetRect, shortest } from '../app/mar/engine/wrap';
 import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 
 /**
@@ -9,7 +11,8 @@ import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
  * de la isla del evento abre su ficha y «Navegar aquí» fija el rumbo. Y la
  * landing lo enlaza junto a EXPLORAR. El botón «Entradas» siempre a la vista
  * (REQ-ENT-040) y los bocadillos que se leen y se cierran (REQ-AVE-002).
- * Móvil y escritorio.
+ * El mar es un planeta que da la vuelta (D-22, REQ-MUN-038). Móvil y
+ * escritorio.
  */
 
 const world = WORLD_REGISTRY.get(WORLD_REGISTRY.defaultId).config;
@@ -155,5 +158,46 @@ test('un bocadillo tiene botón de cerrar y sigue a la vista pasados 2,5 s', asy
   await expect(bubble).not.toContainText(firstLine);
   await close.click();
   await expect(bubble).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('el planeta da la vuelta: desde la cueva del oeste, El Freu (al este) queda a un paso', async ({
+  page,
+}) => {
+  // Las posiciones del mar 3D salen del mapa compartido, como en el motor.
+  const sea = compressWorld(world);
+  const at = (id: string) => sea.objects.find((o) => o.identity.id === id)!;
+  const cave = at('secreto-cueva');
+  const freu = at('circuito');
+  const reach = Math.max(
+    cave.geometry.proximityRadius ?? 0,
+    cave.geometry.activation?.radius ?? 0,
+    cave.geometry.collision?.radius ?? 0,
+  );
+  // `?cerca=` deja el barco al sur del lugar (Mar3D.startNear).
+  const start = { x: cave.position.x, y: cave.position.y + reach + 90 };
+  const flat = Math.hypot(freu.position.x - start.x, freu.position.y - start.y) * 0.25;
+  const { dx, dy } = shortest(start, freu.position, periodOf(planetRect(sea.bounds)));
+  const around = Math.hypot(dx, dy) * 0.25;
+  expect(around, 'dando la vuelta está mucho más cerca').toBeLessThan(flat / 2);
+
+  const errors = await openMar(page, '?cerca=secreto-cueva');
+  await page.getByTestId('mar-mapa').click();
+  // En el móvil el rótulo de El Freu queda bajo la barra del zoom: el toque va al rótulo.
+  await page.locator('[data-pin="circuito"]').dispatchEvent('click');
+  const ficha = page.getByTestId('mar-ficha');
+  await expect(ficha).toContainText(' m');
+  const meters = Number(
+    ((await ficha.locator('.mar-sheet__kicker').textContent()) ?? '').match(/(\d+) m/)?.[1],
+  );
+  expect(meters).toBeGreaterThan(around * 0.8);
+  expect(meters).toBeLessThan(around * 1.2);
+  // Y el rumbo va por ahí: la distancia que queda es la corta.
+  await page.getByTestId('mar-rumbo').click();
+  await expect(page.getByTestId('mar-rumbo-activo')).toBeVisible();
+  const left = Number(
+    ((await page.getByTestId('mar-rumbo-activo').textContent()) ?? '').match(/(\d+) m/)?.[1],
+  );
+  expect(left).toBeLessThan(flat / 2);
   expect(errors).toEqual([]);
 });

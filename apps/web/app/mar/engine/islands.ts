@@ -66,7 +66,7 @@ interface Ring {
 }
 
 /** El terreno de una isla: anillos con la orilla irregular y caras de barro pintado. */
-function terrain(
+export function terrain(
   k: Kit,
   R: number,
   rings: Ring[],
@@ -134,7 +134,7 @@ function terrain(
   };
 }
 
-const sandy = (H: number, top: string = C.grass): Ring[] => [
+export const sandy = (H: number, top: string = C.grass): Ring[] => [
   { f: 1.22, y: -1.4, c: C.sandWet },
   { f: 1.0, y: 0.12, c: C.sandWet },
   { f: 0.86, y: H * 0.3, c: C.sand },
@@ -144,7 +144,7 @@ const sandy = (H: number, top: string = C.grass): Ring[] => [
   { f: 0, y: H * 1.02, c: top },
 ];
 
-const rocky = (H: number): Ring[] => [
+export const rocky = (H: number): Ring[] => [
   { f: 1.2, y: -1.6, c: C.rockDark },
   { f: 1.0, y: 0.2, c: C.rockDark },
   { f: 0.9, y: H * 0.55, c: C.rock },
@@ -153,7 +153,13 @@ const rocky = (H: number): Ring[] => [
   { f: 0, y: H * 1.04, c: C.grass },
 ];
 
-function shoreRocks(k: Kit, R: number, count: number, rnd: () => number, skipAngle?: number): void {
+export function shoreRocks(
+  k: Kit,
+  R: number,
+  count: number,
+  rnd: () => number,
+  skipAngle?: number,
+): void {
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + rnd() * 0.4;
     if (
@@ -217,7 +223,7 @@ export function textTexture(
   return t;
 }
 
-const newParts = (): Parts => ({ lit: new Kit(), glow: new Kit(), glows: new Glows() });
+export const newParts = (): Parts => ({ lit: new Kit(), glow: new Kit(), glows: new Glows() });
 
 // --- All Day BOIA: el escenario --------------------------------------------
 

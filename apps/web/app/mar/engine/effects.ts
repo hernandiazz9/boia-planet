@@ -23,6 +23,7 @@ import {
 } from 'three';
 import { rng, wobble } from './kit';
 import type { Glows } from './props';
+import { wrapD } from './wrap';
 
 /**
  * Efectos del mar 3D, todos baratos: la estela (una cinta que se ensancha y
@@ -101,6 +102,16 @@ export class Wake {
   /** Avanza la estela: `x, z` la popa, `heading` el rumbo, `speed01` 0..1 (más con turbo). */
   update(dt: number, x: number, z: number, heading: number, speed01: number, time: number): void {
     (this.mesh.material as ShaderMaterial).uniforms.uTime!.value = time;
+    // El barco pasó a otra copia del planeta (vista de mapa): la estela va con él.
+    const head = this.pts[0];
+    if (head && Math.hypot(x - head.x, z - head.z) > 20) {
+      const dx = x - head.x;
+      const dz = z - head.z;
+      for (const p of this.pts) {
+        p.x += dx;
+        p.z += dz;
+      }
+    }
     for (const p of this.pts) p.age += dt;
     this.acc += dt;
     if (this.acc > 0.045) {
@@ -370,24 +381,33 @@ export class Clouds {
         m.scale.set(1, 0.55, 0.8);
         c.add(m);
       }
-      c.position.set(
-        b.left + rnd() * (b.right - b.left),
-        70 + rnd() * 40,
-        b.top + rnd() * (b.bottom - b.top),
-      );
+      c.userData.x = b.left + rnd() * (b.right - b.left);
+      c.userData.z = b.top + rnd() * (b.bottom - b.top);
+      c.position.y = 70 + rnd() * 40;
       c.userData.speed = 1 + rnd() * 1.5;
       this.group.add(c);
     }
   }
 
-  update(dt: number, camHeight: number, b: { left: number; right: number }): void {
-    // Aparecen cuando la cámara sube por encima de ellas.
+  /**
+   * Aparecen cuando la cámara sube por encima de ellas; derivan hacia el
+   * este dando la vuelta al planeta, cada una en su copia más cercana a
+   * `focus` (el mar no se acaba).
+   */
+  update(
+    dt: number,
+    camHeight: number,
+    focus: { x: number; z: number },
+    period: { w: number; h: number },
+  ): void {
     const k = Math.max(0, Math.min(1, (camHeight - 120) / 200));
     for (const m of this.mats) m.opacity = k * 0.75;
     this.group.visible = k > 0.01;
     for (const c of this.group.children) {
-      c.position.x += (c.userData.speed as number) * dt;
-      if (c.position.x > b.right + 80) c.position.x = b.left - 80;
+      const u = c.userData as { x: number; z: number; speed: number };
+      u.x += u.speed * dt;
+      c.position.x = focus.x + wrapD(u.x - focus.x, period.w);
+      c.position.z = focus.z + wrapD(u.z - focus.z, period.h);
     }
   }
 }

@@ -673,11 +673,14 @@ export function MarClient() {
     return world.objects.find((o) => o.identity.id === sheet.placeId);
   }, [sheet, world]);
 
-  const ship = engineRef.current?.ship;
+  const engine = engineRef.current;
+  const ship = engine?.ship;
+  // Por el camino más corto: el planeta da la vuelta (D-22).
   const distance =
-    sheet && sheet.kind === 'preview' && sheetObject && ship
+    sheet && sheet.kind === 'preview' && sheetObject && ship && engine
       ? Math.round(
-          Math.hypot(sheetObject.position.x - ship.x, sheetObject.position.y - ship.y) * 0.25,
+          engine.runtime.distance(ship.x, ship.y, sheetObject.position.x, sheetObject.position.y) *
+            0.25,
         )
       : null;
 
