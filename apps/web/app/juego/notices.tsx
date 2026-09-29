@@ -4,14 +4,18 @@ import { type Notice, NoticeQueue, type Rect, type ShownNotice } from '@boia/eng
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * Cola de avisos en React: la lógica es `NoticeQueue` (uno a la vez, 4 s);
- * aquí sólo hay un temporizador al próximo cambio y el pintado del visible.
+ * Cola de avisos en React: la lógica es `NoticeQueue` (uno a la vez; con
+ * `readable`, el tiempo de lectura de D-22, si no 4 s); aquí sólo hay un
+ * temporizador al próximo cambio y el pintado del visible.
  */
-export function useNoticeQueue(onShow: (n: Notice) => void) {
+export function useNoticeQueue(onShow: (n: Notice) => void, opts: { readable?: boolean } = {}) {
   const onShowRef = useRef(onShow);
   onShowRef.current = onShow;
   const queueRef = useRef<NoticeQueue | null>(null);
-  queueRef.current ??= new NoticeQueue({ onShow: (n) => onShowRef.current(n) });
+  queueRef.current ??= new NoticeQueue({
+    readable: opts.readable ?? false,
+    onShow: (n) => onShowRef.current(n),
+  });
   const [current, setCurrent] = useState<ShownNotice | null>(null);
   const timer = useRef<number | undefined>(undefined);
 
@@ -50,7 +54,10 @@ const KIND_LABEL: Record<Notice['kind'], string> = {
   info: 'Aviso',
 };
 
-/** El aviso visible: arriba, azul marino y naranja (REQ-IDE-026). Tocarlo lo cierra. */
+/**
+ * El aviso visible: arriba, azul marino y naranja (REQ-IDE-026). Tocarlo o
+ * su × lo cierran (D-22).
+ */
 export function NoticeToast({
   shown,
   rect,
@@ -83,6 +90,17 @@ export function NoticeToast({
           {shown.notice.body ? (
             <span className="juego-notice-body">{shown.notice.body}</span>
           ) : null}
+        </button>
+      ) : null}
+      {shown ? (
+        <button
+          type="button"
+          className="juego-notice-x"
+          data-testid="aviso-cerrar"
+          aria-label="Cerrar aviso"
+          onClick={onDismiss}
+        >
+          ×
         </button>
       ) : null}
     </div>

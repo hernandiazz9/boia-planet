@@ -4,6 +4,31 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 003 T35: «Entradas» siempre a mano con viaje en turbo, y diálogos que se leen
+
+Botón «Entradas» fijo en `/mar` (REQ-ENT-040) y tiempo de lectura con botón de cerrar para bocadillos y avisos en `/mar` y `/juego` (REQ-AVE-002, REQ-IDE-026, D-22). Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `/mar`, botón «🎟️ Entradas» abajo en el centro (`data-testid="mar-entradas"`), a cualquier zoom y en el mapa; con la ficha abierta se sube encima de ella (`--lift`, medido con `ResizeObserver`) y va por encima del bocadillo y del joystick (z-index 7). Al tocarlo: la isla del evento vigente (`currentEventTrip` en `apps/web/app/mar/sheet.tsx`: islas cuyo TICKET/CONTENIDO de evento, ya re-ligado por el Admin, apunta a un evento a la venta; primero el destacado de la landing, luego el más próximo) → `Mar3D.startVoyage(placeId)`: rumbo con piloto automático, turbo sostenido (2,6× la velocidad máxima, estela a tope, `fovKick`), cámara de vuelta al barco siguiéndolo; al llegar se abre `SandboxCheckout` de ese evento. «Saltar ›» (`mar-entradas-saltar`) o tocar otra vez el botón lo abren ya; con `prefers-reduced-motion` se abre directo; sin evento vigente lleva a `/#tickets`. Si el jugador toma el timón (arrastrar, flechas, tocar el mar, quitar rumbo) el viaje se cancela; tope de 20 s (si no llega, se abre el checkout igual).
+- Tiempo de lectura: `readableDurationMs(text)` en `packages/engine/src/ui/notifications.ts` = máx(3 s, 3 s + 60 ms por carácter desde el 50), tope 8 s. `NoticeQueue({ readable: true })` lo usa por aviso (título + cuerpo); `WorldRuntime({ readableDialogue: true })` hace durar cada línea (y la reacción) máx(intervalo, lectura) con tope 8 s. Sin las opciones, todo como antes (1,5 s y 4 s de D-07). `/mar` y `/juego` encienden las dos (`useNoticeQueue(..., { readable: true })`, `runtime.readableDialogue`). El intervalo de DIÁLOGO admite ahora hasta 8 s (antes 5).
+- Cerrar: `/mar` bocadillo con × («Cerrar diálogo», `mar-bocadillo-cerrar`) y el texto sigue avanzando al tocarlo; avisos de `/mar` y `/juego` con × («Cerrar aviso»). `/juego`: × dibujado en la esquina del bocadillo de Pixi (`bubble.ts`, cierra como «Saltar») y un botón oculto «Cerrar diálogo» para el lector de pantalla (`bocadillo-cerrar`).
+- Pruebas: unitarias de la regla, la cola con `readable`, cerrar y la pausa (`notifications.test.ts`) y de las líneas del runtime (`runtime.test.ts`); e2e en `mar-3d.spec.ts` (botón encima de todo de cerca, en mapa y con ficha; turbo + «Saltar»; otro toque; llegada del viaje; movimiento reducido; bocadillo con × visible a los 2,5 s).
+- Capturas 390×844: `docs/informes/img/p003-t35-entradas.png` (viaje con estela), `p003-t35-dialogo.png` (bocadillo con ×), `p003-t35-entradas-mapa.png` (mapa con ficha, el botón encima).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 60 archivos, 591 pruebas
+E2E_PORT=3187 pnpm e2e --workers=2            # exit 0; 101 pasadas, 19 omitidas (7,3 min)
+```
+
+Desviaciones:
+- Retoques de CSS fuera de los archivos nombrados: `apps/web/app/juego/hud.css` (× del aviso y botón oculto) y `packages/engine/src/world/bubble.ts` (el × del bocadillo de `/juego` vive en el lienzo); `game-canvas.tsx` sólo enciende las opciones y pinta el botón oculto.
+- El viaje va a 2,6× (el turbo normal 1,6×): a 1,6× tardaba ~17 s desde la salida; ahora ~11 s.
+
+Sin probar:
+- Móvil real (iOS Safari) y el × del bocadillo de `/juego` con el dedo (sin e2e: está en el lienzo).
+- El viaje desde todos los puntos del mapa (sólo desde la salida y cerca de la isla).
+
 ## 2026-09-29 — plan 002 T30: última pasada de la demo y preparación del despliegue
 
 La versión de prueba entera, repasada de punta a punta en móvil, y lo que Hernán necesita para desplegarla él mismo en Vercel. No se ha desplegado nada.

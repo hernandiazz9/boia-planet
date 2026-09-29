@@ -8,10 +8,13 @@ const TAIL = 10;
 const MARGIN = 8;
 const SKIP_W = 64;
 const SKIP_H = 30;
+/** Radio del × de cerrar (D-22), en la esquina de arriba a la derecha. */
+const CLOSE_R = 13;
 
 /**
  * Bocadillo del diálogo en coordenadas de pantalla, encima del anclaje del
- * objeto que habla. Tocar el bocadillo avanza; tocar «Saltar» lo cierra.
+ * objeto que habla. Tocar el bocadillo avanza; tocar «Saltar» o el × de la
+ * esquina (D-22) lo cierran.
  * No es modal: el resto de la pantalla sigue siendo el joystick (§7).
  */
 export class BubbleView {
@@ -19,7 +22,9 @@ export class BubbleView {
   private readonly bg = new Graphics();
   private readonly text: Text;
   private readonly skip = new Container();
+  private readonly close = new Container();
   private box = { x: 0, y: 0, w: 0, h: 0 };
+  private closeAt = { x: 0, y: 0 };
   private skipBox = { x: 0, y: 0, w: SKIP_W, h: SKIP_H };
   private current: string | null = null;
 
@@ -51,7 +56,18 @@ export class BubbleView {
     skipText.anchor.set(0.5);
     skipText.position.set(SKIP_W / 2, SKIP_H / 2);
     this.skip.addChild(skipBg, skipText);
-    this.view.addChild(this.bg, this.text, this.skip);
+    const closeBg = new Graphics()
+      .circle(0, 0, CLOSE_R)
+      .fill({ color: BOIA_NAVY })
+      .stroke({ width: 2, color: 0xfffaf0 });
+    const cross = new Graphics()
+      .moveTo(-4.5, -4.5)
+      .lineTo(4.5, 4.5)
+      .moveTo(4.5, -4.5)
+      .lineTo(-4.5, 4.5)
+      .stroke({ width: 2.4, color: 0xffffff, cap: 'round' });
+    this.close.addChild(closeBg, cross);
+    this.view.addChild(this.bg, this.text, this.skip, this.close);
     this.view.visible = false;
   }
 
@@ -95,12 +111,16 @@ export class BubbleView {
     this.skipBox = { x: sx, y: sy, w: SKIP_W, h: SKIP_H };
     this.skip.position.set(sx, sy);
     this.skip.visible = !d.reaction && d.index < d.count - 1;
+    // × en la esquina de arriba a la derecha, siempre (también en la última línea).
+    this.closeAt = { x: x + w - 4, y: Math.max(CLOSE_R + 2, y + 4) };
+    this.close.position.set(this.closeAt.x, this.closeAt.y);
     this.view.visible = true;
   }
 
-  /** Qué hay bajo el punto (px de pantalla): avanzar, saltar o nada. */
+  /** Qué hay bajo el punto (px de pantalla): avanzar, saltar (o el ×) o nada. */
   hit(px: number, py: number): 'advance' | 'skip' | null {
     if (!this.view.visible) return null;
+    if (Math.hypot(px - this.closeAt.x, py - this.closeAt.y) <= CLOSE_R + 8) return 'skip';
     const inside = (b: { x: number; y: number; w: number; h: number }, pad: number) =>
       px >= b.x - pad && px <= b.x + b.w + pad && py >= b.y - pad && py <= b.y + b.h + pad;
     if (this.skip.visible && inside(this.skipBox, 6)) return 'skip';

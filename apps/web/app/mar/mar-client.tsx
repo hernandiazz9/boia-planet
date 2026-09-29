@@ -46,10 +46,17 @@ import {
   persistWorldEvent,
 } from '../juego/world-progress';
 import { compressWorld } from './engine/compress';
-import type { CourseInfo, Mar3D, PinSpec, Stats } from './engine/mar3d';
+import type { CourseInfo, Mar3D, PinSpec, Stats, VoyageEnd } from './engine/mar3d';
 import { MOOD_IDS, MOOD_LABEL, type MoodId } from './engine/palette';
 import { type ShipModelEntry, loadShipManifest, loadShipModel } from './engine/ship-model';
-import { Sheet, type SheetState, eventOfPlace, findEvent } from './sheet';
+import {
+  type EventTrip,
+  Sheet,
+  type SheetState,
+  currentEventTrip,
+  eventOfPlace,
+  findEvent,
+} from './sheet';
 import './mar.css';
 
 /**
@@ -69,6 +76,14 @@ const ticketAvailable = (id: string) => {
   const e = findEvent(id);
   return !!e && EVENT_STATE_BEHAVIOR[e.state].purchasable;
 };
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
 
 function readPref(key: string): string | null {
   try {
@@ -131,7 +146,7 @@ type Status = 'loading' | 'ready' | 'error';
 export function MarClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const bubbleRef = useRef<HTMLButtonElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Mar3D | null>(null);
   const worldRef = useRef<WorldConfig | null>(null);
   const liveRef = useRef<ComposedWorld | null>(null);
@@ -148,6 +163,11 @@ export function MarClient() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [sheet, setSheet] = useState<SheetState | null>(null);
   const [checkoutFor, setCheckoutFor] = useState<string | null>(null);
+  // Viaje en turbo del botón «Entradas» (REQ-ENT-040) y lo que sube la ficha abierta.
+  const [trip, setTrip] = useState<EventTrip | null>(null);
+  const tripRef = useRef<EventTrip | null>(null);
+  tripRef.current = trip;
+  const [sheetLift, setSheetLift] = useState(0);
   const [minigameOffer, setMinigameOffer] = useState<MinigameOffer | null>(null);
   const [minigameOpen, setMinigameOpen] = useState(false);
   const [mood, setMood] = useState<MoodId>('tarde');
@@ -173,9 +193,13 @@ export function MarClient() {
   );
   const { data: balances } = useRepoData((r) => r.progress.balances());
 
-  const notices = useNoticeQueue((n) => {
-    if (n.kind === 'reward' || n.kind === 'achievement') chime();
-  });
+  // Avisos con tiempo de lectura (D-22): al menos 3 s, más si el texto es largo.
+  const notices = useNoticeQueue(
+    (n) => {
+      if (n.kind === 'reward' || n.kind === 'achievement') chime();
+    },
+    { readable: true },
+  );
   const push = notices.push;
 
   const persist = useCallback(
@@ -410,8 +434,52 @@ export function MarClient() {
     setSheet((s) => (s?.kind === 'discount' ? s : { kind: 'preview', placeId: id }));
   };
 
-  const handlers = useRef({ onWorldEvent, onStep, onStats, onPin });
-  handlers.current = { onWorldEvent, onStep, onStats, onPin };
+  // --- Botón «Entradas» (REQ-ENT-040) -----------------------------------------
+
+  /** Abre la compra de prueba del evento, cortando el viaje si lo había. */
+  const openCheckout = (eventId: string) => {
+    engineRef.current?.stopVoyage();
+    setTrip(null);
+    setSheet((s) => (s?.kind === 'discount' ? s : null));
+    setCheckoutFor(eventId);
+  };
+
+  const onVoyageEnd = (placeId: string, how: VoyageEnd) => {
+    const t = tripRef.current;
+    if (!t || t.placeId !== placeId) return;
+    if (how === 'cancelled') setTrip(null);
+    else openCheckout(t.eventId);
+  };
+
+  /**
+   * Primer toque: turbo hasta la isla del evento vigente y, al llegar, su
+   * checkout. Otro toque (o «Saltar») lo abre ya; con movimiento reducido se
+   * abre directo; sin evento vigente, a las entradas de la landing.
+   */
+  const onTickets = () => {
+    const current = tripRef.current;
+    if (current) {
+      openCheckout(current.eventId);
+      return;
+    }
+    const w = worldRef.current;
+    const next = w ? currentEventTrip(w) : null;
+    if (!next) {
+      window.location.assign('/#tickets');
+      return;
+    }
+    const g = engineRef.current;
+    if (prefersReducedMotion() || !g || !g.startVoyage(next.placeId)) {
+      openCheckout(next.eventId);
+      return;
+    }
+    navigator.vibrate?.(20);
+    setSheet((s) => (s?.kind === 'discount' ? s : null));
+    setTrip(next);
+  };
+
+  const handlers = useRef({ onWorldEvent, onStep, onStats, onPin, onVoyageEnd });
+  handlers.current = { onWorldEvent, onStep, onStats, onPin, onVoyageEnd };
 
   // --- Arranque ---------------------------------------------------------------
 
@@ -474,12 +542,15 @@ export function MarClient() {
           minigames: MINIGAME_REGISTRY,
           sessionId,
           seasonId: live.id,
+          // Bocadillos con tiempo de lectura (D-22), como en /juego.
+          readableDialogue: true,
           seed: (Date.now() % 2147483646) + 1,
         },
         onWorldEvent: (e) => handlers.current.onWorldEvent(e),
         onStep: (s, dt) => handlers.current.onStep(s, dt),
         onStats: (s) => handlers.current.onStats(s),
         onPin: (id) => handlers.current.onPin(id),
+        onVoyageEnd: (id, how) => handlers.current.onVoyageEnd(id, how),
         onFirstMove: () => {
           setHelp(false);
           writePref(HELP_KEY, 'visto');
@@ -533,13 +604,22 @@ export function MarClient() {
     return () => window.clearInterval(t);
   }, [status, pushAll]);
 
-  // La ficha tapa la parte de abajo en el móvil: la cámara sube el barco.
+  // La ficha tapa la parte de abajo en el móvil: la cámara sube el barco y
+  // el botón «Entradas» se pone encima de ella (nunca queda tapado).
   useEffect(() => {
     const g = engineRef.current;
     if (!g) return;
     const el = document.querySelector<HTMLElement>('.mar-sheet, .mar .juego-panel');
-    const narrow = window.innerWidth < 760;
-    g.setBottomInset(el && narrow ? el.offsetHeight + 10 : 0);
+    const measure = () => {
+      const narrow = window.innerWidth < 760;
+      g.setBottomInset(el && narrow ? el.offsetHeight + 10 : 0);
+      setSheetLift(el ? el.offsetHeight : 0);
+    };
+    measure();
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [sheet, minigameOffer, status]);
 
   // Encima del mar hay un diálogo modal o un minijuego: sin control (y sin pintar).
@@ -727,6 +807,17 @@ export function MarClient() {
             {notices.current.notice.body ? <span>{notices.current.notice.body}</span> : null}
           </button>
         ) : null}
+        {notices.current ? (
+          <button
+            type="button"
+            className="mar-x mar-notices__x"
+            data-testid="mar-aviso-cerrar"
+            aria-label="Cerrar aviso"
+            onClick={notices.dismiss}
+          >
+            ×
+          </button>
+        ) : null}
       </div>
 
       {/* Rumbo, circuito y misión */}
@@ -836,19 +927,62 @@ export function MarClient() {
       ) : null}
 
       {dialogue ? (
-        <button
-          ref={bubbleRef}
-          type="button"
-          className="mar-bubble"
-          data-testid="mar-bocadillo"
-          onClick={() => {
-            engineRef.current?.runtime.advanceDialogue();
-            window.setTimeout(syncDialogue, 0);
-          }}
+        <div ref={bubbleRef} className="mar-bubble" data-testid="mar-bocadillo">
+          <button
+            type="button"
+            className="mar-bubble__text"
+            onClick={() => {
+              engineRef.current?.runtime.advanceDialogue();
+              window.setTimeout(syncDialogue, 0);
+            }}
+          >
+            <span>{dialogue.text}</span>
+            {!dialogue.last ? <small>Toca para seguir ▸</small> : null}
+          </button>
+          <button
+            type="button"
+            className="mar-x mar-bubble__x"
+            data-testid="mar-bocadillo-cerrar"
+            aria-label="Cerrar diálogo"
+            onClick={() => {
+              engineRef.current?.runtime.skipDialogue();
+              window.setTimeout(syncDialogue, 0);
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
+      {status === 'ready' ? (
+        <div
+          className={`mar-tickets${trip ? ' is-sailing' : ''}`}
+          style={{ '--lift': `${sheetLift}px` } as CSSProperties}
         >
-          <span>{dialogue.text}</span>
-          {!dialogue.last ? <small>Toca para seguir ▸</small> : null}
-        </button>
+          {trip ? (
+            <button
+              type="button"
+              className="mar-tickets__skip"
+              data-testid="mar-entradas-saltar"
+              onClick={() => openCheckout(trip.eventId)}
+            >
+              Saltar ›
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="mar-tickets__btn"
+            data-testid="mar-entradas"
+            aria-label={
+              trip ? `Entradas: rumbo a ${trip.placeName}. Toca para comprar ya` : 'Entradas'
+            }
+            onClick={onTickets}
+          >
+            <span aria-hidden="true">🎟️</span>
+            <strong>Entradas</strong>
+            {trip ? <small>Rumbo a {trip.placeName}…</small> : null}
+          </button>
+        </div>
       ) : null}
 
       {sheet ? (

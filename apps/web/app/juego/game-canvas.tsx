@@ -176,7 +176,10 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [achievements, setAchievements] = useState<readonly Notice[]>([]);
   const notified = useRef(new Set<string>());
-  const notices = useNoticeQueue(() => chime());
+  // Avisos y bocadillos con tiempo de lectura (D-22): al menos 3 s, más si el texto es largo.
+  const notices = useNoticeQueue(() => chime(), { readable: true });
+  // Hay bocadillo: su × vive en el lienzo; este botón es el mismo cierre para el lector de pantalla.
+  const [talking, setTalking] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuInitial, setMenuInitial] = useState<string | undefined>(undefined);
   const [mapOpen, setMapOpen] = useState(false);
@@ -306,6 +309,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       default:
         break;
     }
+    if (e.type === 'dialogue_line' || e.type === 'dialogue_reaction') setTalking(true);
+    else if (e.type === 'dialogue_end') setTalking(false);
     switch (e.type) {
       case 'dialogue_line':
         plop();
@@ -517,6 +522,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           ticketAvailable,
           minigames: MINIGAME_REGISTRY,
           sessionId,
+          readableDialogue: true,
           // Restos y cofres reaparecen en otro sitio en cada visita (REQ-AVE-016).
           seed: (Date.now() % 2147483646) + 1,
         },
@@ -867,6 +873,17 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             onZoneChange={setMinimapZone}
           />
           <NoticeToast shown={notices.current} rect={layout.notice} onDismiss={notices.dismiss} />
+          {talking ? (
+            <button
+              type="button"
+              className="juego-sr-only"
+              data-testid="bocadillo-cerrar"
+              aria-label="Cerrar diálogo"
+              onClick={() => gameRef.current?.skipDialogue()}
+            >
+              ×
+            </button>
+          ) : null}
           <CircuitTimer
             state={circuit.state}
             rect={{ x: layout.home.x, y: layout.home.y + layout.home.h + 6 }}

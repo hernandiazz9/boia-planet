@@ -84,13 +84,17 @@ export const DialogueLine = z
   .transform((l) => (typeof l === 'string' ? { text: l } : l));
 export type DialogueLine = z.output<typeof DialogueLine>;
 
-/** 1,5 s por bocadillo (D-07, REQ-AVE-002). */
+/**
+ * 1,5 s por bocadillo (D-07). Con el tiempo de lectura de D-22 (la opción
+ * `readableDialogue` del motor, que encienden `/mar` y `/juego`) cada línea
+ * dura al menos 3 s y hasta 8 s; por eso el intervalo admite hasta 8 s.
+ */
 export const DIALOGUE_INTERVAL = 1.5;
 
 export const DialogueParams = z.object({
   lines: z.array(DialogueLine).max(30).default([]),
   /** s entre bocadillos. */
-  interval: z.number().finite().min(0.5).max(5).default(DIALOGUE_INTERVAL),
+  interval: z.number().finite().min(0.5).max(8).default(DIALOGUE_INTERVAL),
   /** Reacción juguetona si el barco se aleja con el diálogo a medias (§7). */
   leaveReaction: lineText.default('¡Eh, que no había terminado! Bueno… ya me buscarás.'),
   /** Si, terminado o saltado, no vuelve a sonar al volver a acercarse. */

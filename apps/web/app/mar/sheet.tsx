@@ -2,7 +2,7 @@
 
 import { type BoiaEvent, EVENT_STATE_BEHAVIOR } from '@boia/contracts';
 import type { FoundDiscount } from '@boia/store';
-import type { WorldObject } from '@boia/world';
+import type { WorldConfig, WorldObject } from '@boia/world';
 import Link from 'next/link';
 import { type CSSProperties, type ReactNode, useEffect, useState } from 'react';
 import { islandMemories } from '../../lib/admin/world';
@@ -50,6 +50,38 @@ export function eventOfPlace(o: WorldObject | undefined): string | undefined {
     if (b.type === 'content' && b.params.target === 'event') return b.params.ref;
   }
   return undefined;
+}
+
+/** Adónde lleva el botón «Entradas»: la isla del evento vigente y ese evento. */
+export interface EventTrip {
+  placeId: string;
+  placeName: string;
+  eventId: string;
+}
+
+/**
+ * El evento vigente del mar (REQ-ENT-040): de las islas que abren un evento a
+ * la venta (su TICKET o CONTENIDO de evento, ya re-ligado por el Admin), la
+ * del evento destacado de la landing y, si no, la del más próximo. Sin
+ * ninguno, null (el botón lleva a la sección de entradas de la landing).
+ */
+export function currentEventTrip(world: WorldConfig): EventTrip | null {
+  const pb = block('priority_event');
+  const priority = pb?.type === 'priority_event' ? pb.eventId : undefined;
+  const trips: Array<EventTrip & { ev: BoiaEvent }> = [];
+  for (const o of world.objects) {
+    if (!o.identity.active) continue;
+    const ev = findEvent(eventOfPlace(o));
+    if (!ev || !EVENT_STATE_BEHAVIOR[ev.state].purchasable) continue;
+    trips.push({ placeId: o.identity.id, placeName: o.identity.name, eventId: ev.id, ev });
+  }
+  trips.sort(
+    (a, b) =>
+      Number(b.ev.id === priority) - Number(a.ev.id === priority) ||
+      a.ev.startsAt.localeCompare(b.ev.startsAt),
+  );
+  const best = trips[0];
+  return best ? { placeId: best.placeId, placeName: best.placeName, eventId: best.eventId } : null;
 }
 
 export function Sheet({

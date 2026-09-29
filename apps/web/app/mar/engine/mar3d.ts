@@ -99,7 +99,12 @@ export interface Stats {
   course: CourseInfo | null;
   /** Barco lejos del centro de la vista (vista de mapa desplazada). */
   panned: boolean;
+  /** Lugar al que va el viaje en turbo del botón «Entradas», o null. */
+  voyage: string | null;
 }
+
+/** Cómo terminó un viaje en turbo: llegó, tardó demasiado o el jugador tomó el timón. */
+export type VoyageEnd = 'arrived' | 'timeout' | 'cancelled';
 
 export interface CourseInfo {
   placeId: string | null;
@@ -121,6 +126,8 @@ export interface Mar3DOptions {
   onStats?(s: Stats): void;
   /** El barco empezó a moverse por primera vez (para quitar la ayuda). */
   onFirstMove?(): void;
+  /** Terminó el viaje en turbo de `startVoyage` (REQ-ENT-040). */
+  onVoyageEnd?(placeId: string, how: VoyageEnd): void;
 }
 
 /** A partir de este zoom el arrastre mueve el mapa en vez del barco. */
@@ -131,6 +138,10 @@ const SHIP_LENGTH = 3.9;
 const STEP = 1 / 60;
 const TURBO_S = 2.4;
 const TURBO_COOLDOWN_S = 7;
+/** Velocidad del viaje en turbo de «Entradas» (× la máxima): más que el turbo, que llegue pronto. muestra */
+const VOYAGE_SPEED = 2.6;
+/** Tope de un viaje en turbo: si no llega (encajonado), se da por llegado. muestra */
+const VOYAGE_MAX_S = 20;
 const METERS_PER_U = 0.25;
 
 interface View {
@@ -238,6 +249,8 @@ export class Mar3D {
   private readonly stickEl: HTMLDivElement;
   private readonly knobEl: HTMLDivElement;
   private course: { x: number; y: number; placeId: string | null } | null = null;
+  /** Viaje en turbo del botón «Entradas» (REQ-ENT-040): destino y s navegados. */
+  private voyage: { placeId: string; t: number } | null = null;
   private moved = false;
   private turboLeft = 0;
   private turboCool = 0;
@@ -382,11 +395,14 @@ export class Mar3D {
     this.pan.set(0, 0);
   }
 
-  /** Fija rumbo a un lugar (hasta su orilla) o a un punto; null lo quita. */
+  /**
+   * Fija rumbo a un lugar (hasta su orilla) o a un punto; null lo quita. Un
+   * viaje en turbo en curso termina como `cancelled`.
+   */
   setCourse(target: { placeId: string } | { x: number; y: number } | null): void {
+    this.endVoyage('cancelled');
     if (!target) {
-      this.course = null;
-      this.marker.show(false);
+      this.clearCourse();
       return;
     }
     if ('placeId' in target) {
@@ -424,6 +440,50 @@ export class Mar3D {
     Object.assign(this.prev, { x: p.x, y: p.y, heading: -Math.PI / 2 });
     this.updateCamera(0, true);
     return true;
+  }
+
+  /**
+   * Viaje del botón «Entradas» (REQ-ENT-040): rumbo al lugar, turbo sostenido
+   * con estela y la cámara de vuelta al barco, siguiéndolo. Al llegar (o al
+   * tope de tiempo) avisa con `onVoyageEnd`; si el jugador toma el timón,
+   * termina como `cancelled`. Devuelve false si el lugar no existe.
+   */
+  startVoyage(placeId: string): boolean {
+    this.setCourse({ placeId });
+    if (this.course?.placeId !== placeId) return false;
+    this.voyage = { placeId, t: 0 };
+    this.fovKick = 1;
+    this.backToBoat();
+    return true;
+  }
+
+  /** Corta el viaje en turbo sin avisar (Saltar: quien llama ya sabe qué hacer). */
+  stopVoyage(): void {
+    if (!this.voyage) return;
+    this.voyage = null;
+    this.clearCourse();
+  }
+
+  get voyaging(): string | null {
+    return this.voyage?.placeId ?? null;
+  }
+
+  private endVoyage(how: VoyageEnd): void {
+    const v = this.voyage;
+    if (!v) return;
+    this.voyage = null;
+    this.opts.onVoyageEnd?.(v.placeId, how);
+  }
+
+  private clearCourse(): void {
+    this.course = null;
+    this.marker.show(false);
+  }
+
+  /** El jugador toma el timón: fuera rumbo y viaje. */
+  private dropCourse(): void {
+    this.endVoyage('cancelled');
+    this.clearCourse();
   }
 
   turbo(): boolean {
@@ -1084,8 +1144,7 @@ export class Mar3D {
       } else {
         this.mode = 'stick';
         this.stick = { ox: p.sx, oy: p.sy, dx: 0, dy: 0 };
-        this.course = null;
-        this.marker.show(false);
+        this.dropCourse();
         this.stickEl.classList.add('is-on');
       }
     }
@@ -1134,8 +1193,7 @@ export class Mar3D {
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k)) {
       e.preventDefault();
       this.keys.add(k);
-      this.course = null;
-      this.marker.show(false);
+      this.dropCourse();
     } else if (k === '+' || k === '=') this.zoomBy(-0.12);
     else if (k === '-' || k === '_') this.zoomBy(0.12);
     else if (k === 'm') this.toggleMap();
@@ -1241,8 +1299,8 @@ export class Mar3D {
     let dy = c.y - s.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 34) {
-      this.course = null;
-      this.marker.show(false);
+      this.clearCourse();
+      this.endVoyage('arrived');
       return IDLE_INPUT;
     }
     dx /= dist;
@@ -1312,9 +1370,18 @@ export class Mar3D {
     this.prev.heading = s.heading;
     const input = this.readInput();
     let cfg = this.runtime.shipConfig(this.cfg);
-    if (this.turboLeft > 0) {
-      cfg = { ...cfg, maxSpeed: cfg.maxSpeed * 1.6, acceleration: cfg.acceleration * 2.4 };
-      this.turboLeft -= dt;
+    if (this.turboLeft > 0 || this.voyage) {
+      const k = this.voyage ? VOYAGE_SPEED : 1.6;
+      cfg = { ...cfg, maxSpeed: cfg.maxSpeed * k, acceleration: cfg.acceleration * 2.4 };
+    }
+    if (this.turboLeft > 0) this.turboLeft -= dt;
+    if (this.voyage) {
+      this.voyage.t += dt;
+      this.fovKick = Math.max(this.fovKick, 0.6);
+      if (this.voyage.t > VOYAGE_MAX_S) {
+        this.clearCourse();
+        this.endVoyage('timeout');
+      }
     }
     if (this.turboCool > 0) this.turboCool -= dt;
     const before = shipSpeed(s);
@@ -1445,7 +1512,8 @@ export class Mar3D {
     if (this.crew) this.crew.position.y = Math.abs(Math.sin(t * 5)) * 0.08;
     const sternX = x + Math.cos(h) * this.sternX;
     const sternZ = z + Math.sin(h) * this.sternX;
-    this.wake.update(dt, sternX, sternZ, h, Math.min(1, v01 * (this.turboLeft > 0 ? 1.4 : 1)), t);
+    const boost = this.turboLeft > 0 || this.voyage ? 1.4 : 1;
+    this.wake.update(dt, sternX, sternZ, h, Math.min(1, v01 * boost), t);
 
     // Lugares.
     for (const v of this.views.values()) {
@@ -1560,7 +1628,7 @@ export class Mar3D {
       knots: Math.round(shipSpeed(this.ship) / 10),
       zoom: this.zoom,
       mapMode: this.zoomGoal >= MAP_ZOOM,
-      turbo: Math.max(0, this.turboLeft / TURBO_S),
+      turbo: this.voyage ? 1 : Math.max(0, this.turboLeft / TURBO_S),
       turboReady: 1 - Math.max(0, this.turboCool) / TURBO_COOLDOWN_S,
       course: c
         ? {
@@ -1569,6 +1637,7 @@ export class Mar3D {
           }
         : null,
       panned: this.pan.lengthSq() > 25,
+      voyage: this.voyage?.placeId ?? null,
     });
   }
 }
