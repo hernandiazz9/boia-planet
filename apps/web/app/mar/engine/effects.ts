@@ -21,13 +21,15 @@ import {
   ShaderMaterial,
   Vector3,
 } from 'three';
-import { rng, wobble } from './kit';
+import { rng, smooth, wobble } from './kit';
 import type { Glows } from './props';
+import { wrapD } from './wrap';
 
 /**
  * Efectos del mar 3D, todos baratos: la estela (una cinta que se ensancha y
  * se desvanece), los resplandores (un solo `Points` aditivo), la marca de
- * destino y la ruta, el confeti, las nubes y el remolino.
+ * destino y la ruta, la línea de la ruta de boyas en el mapa, el confeti,
+ * las nubes y el remolino.
  */
 
 // --- Estela -----------------------------------------------------------------
@@ -101,6 +103,16 @@ export class Wake {
   /** Avanza la estela: `x, z` la popa, `heading` el rumbo, `speed01` 0..1 (más con turbo). */
   update(dt: number, x: number, z: number, heading: number, speed01: number, time: number): void {
     (this.mesh.material as ShaderMaterial).uniforms.uTime!.value = time;
+    // El barco pasó a otra copia del planeta (vista de mapa): la estela va con él.
+    const head = this.pts[0];
+    if (head && Math.hypot(x - head.x, z - head.z) > 20) {
+      const dx = x - head.x;
+      const dz = z - head.z;
+      for (const p of this.pts) {
+        p.x += dx;
+        p.z += dz;
+      }
+    }
     for (const p of this.pts) p.age += dt;
     this.acc += dt;
     if (this.acc > 0.045) {
@@ -268,6 +280,58 @@ export class CourseMarker {
   }
 }
 
+// --- La ruta de boyas en el mapa (T50) -------------------------------------------
+
+/**
+ * La ruta de boyas vista de lejos: trazos amarillos sobre el agua, que
+ * aparecen al alejarse (de cerca se ven las boyas) y engordan en el mapa
+ * para leerse en un móvil. Un solo `InstancedMesh`; quien lo usa lo curva
+ * con el planeta (cada vértice en su copia más cercana).
+ */
+export class RouteLine {
+  readonly mesh: InstancedMesh;
+  private readonly mat: MeshBasicMaterial;
+  private readonly o = new Object3D();
+  private k = -1;
+
+  constructor(private readonly dashes: readonly { x: number; z: number; angle: number }[]) {
+    this.mat = new MeshBasicMaterial({
+      color: '#ffd23f',
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    this.mesh = new InstancedMesh(
+      new PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      this.mat,
+      Math.max(1, dashes.length),
+    );
+    this.mesh.count = dashes.length;
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 1;
+    this.mesh.visible = false;
+  }
+
+  /** `zoom` 0 (barco) … 1 (mapa). */
+  update(zoom: number): void {
+    const a = smooth(0.3, 0.6, zoom);
+    this.mat.opacity = a * 0.95;
+    this.mesh.visible = a > 0.01 && this.dashes.length > 0;
+    if (!this.mesh.visible) return;
+    const k = 1 + smooth(0.3, 1, zoom) * 1.2;
+    if (Math.abs(k - this.k) < 0.01) return;
+    this.k = k;
+    this.dashes.forEach((d, i) => {
+      this.o.position.set(d.x, 0.15, d.z);
+      this.o.rotation.set(0, -d.angle, 0);
+      this.o.scale.set(1.45 * k, 1, 0.8 * k);
+      this.o.updateMatrix();
+      this.mesh.setMatrixAt(i, this.o.matrix);
+    });
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+}
+
 // --- Confeti -------------------------------------------------------------------
 
 export class Confetti {
@@ -370,24 +434,33 @@ export class Clouds {
         m.scale.set(1, 0.55, 0.8);
         c.add(m);
       }
-      c.position.set(
-        b.left + rnd() * (b.right - b.left),
-        70 + rnd() * 40,
-        b.top + rnd() * (b.bottom - b.top),
-      );
+      c.userData.x = b.left + rnd() * (b.right - b.left);
+      c.userData.z = b.top + rnd() * (b.bottom - b.top);
+      c.position.y = 70 + rnd() * 40;
       c.userData.speed = 1 + rnd() * 1.5;
       this.group.add(c);
     }
   }
 
-  update(dt: number, camHeight: number, b: { left: number; right: number }): void {
-    // Aparecen cuando la cámara sube por encima de ellas.
+  /**
+   * Aparecen cuando la cámara sube por encima de ellas; derivan hacia el
+   * este dando la vuelta al planeta, cada una en su copia más cercana a
+   * `focus` (el mar no se acaba).
+   */
+  update(
+    dt: number,
+    camHeight: number,
+    focus: { x: number; z: number },
+    period: { w: number; h: number },
+  ): void {
     const k = Math.max(0, Math.min(1, (camHeight - 120) / 200));
     for (const m of this.mats) m.opacity = k * 0.75;
     this.group.visible = k > 0.01;
     for (const c of this.group.children) {
-      c.position.x += (c.userData.speed as number) * dt;
-      if (c.position.x > b.right + 80) c.position.x = b.left - 80;
+      const u = c.userData as { x: number; z: number; speed: number };
+      u.x += u.speed * dt;
+      c.position.x = focus.x + wrapD(u.x - focus.x, period.w);
+      c.position.z = focus.z + wrapD(u.z - focus.z, period.h);
     }
   }
 }

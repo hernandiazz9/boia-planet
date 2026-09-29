@@ -229,6 +229,66 @@ python3 tools/spec/check.py        # exit 0; 294 requisitos, 0 duplicados, centi
 python3 tools/spec/test_check.py   # exit 0; 18 pruebas
 ```
 
+## 2026-09-29 — plan 003 T50: un /mar compacto con ruta de boyas
+
+`/mar` es ahora un mundo compacto: las islas a la mitad de distancia que en T33, casi sin mar vacío al dar la vuelta, y una ruta de boyas con farolillo que une las islas en el orden de la historia y vuelve al puerto. Sólo `/mar`: las posiciones del mapa compartido (`packages/world`) y `/juego` no cambian. Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `apps/web/app/mar/engine/compress.ts`: `MAR3D_SCALE.compact = 0.5` acerca otra vez las zonas (multiplica a `spread`; `compressWorld(world, { compact: 1 })` da el mar de T33). Las composiciones locales (puerto, remanso, semáforo) siguen 1:1 y las huellas, colisiones y radios de disparo no cambian de tamaño. Si dos islas quedan con sus radios de proximidad pisándose se apartan lo justo (`islandGap`, 40 u): sólo el Cañón y el Faro, 13 u. Arreglado de paso: los sitios de reaparición de restos y cofres (`spawn.positions`) no cambiaban de escala y aparecían en coordenadas del 2D.
+- `apps/web/app/mar/engine/compact.ts` (sin three.js), `marWorld(shared)`: el mundo que usa todo `/mar` (runtime, rótulos, piloto, viaje de «Entradas», misión, circuito, premios por id). Sus `bounds` se ajustan a lo que ocupa el mar (`contentBounds`: lugares con su huella, anillo y decorado) y `PLANET_MARGIN` baja a 150 u por lado (antes 300/300/600 sobre los límites del 2D): el planeta pasa de ~5000×9400 u a ~2600×4400 u.
+- Ruta de boyas (`seaRoute`): El Varadero (sale recta por la bocana) → Cala del Alfar → remanso de la Boia Fiestera → isla del evento (`allday`) → Puerto de Fotos → isla tienda → Cañón → Faro → Isla del Amanecer (`ultima`) → vuelta al puerto, que por el camino corto es cruzando el borde norte (unos 620 u). Cada tramo va por el camino más corto del planeta y rodea las islas que no son parada y el decorado. El orden encaja con la misión de la Fiestera (se rescata en la 3.ª parada y su destino es la última isla): no hubo que cambiarlo. 50 boyas (amarillo y morado, con luz) cada 125 u, nunca encima de nada sólido; en el mapa, una línea amarilla a trazos (`RouteLine` en `effects.ts`) que aparece al alejarse. Sólo decorado: ni choques, ni premios, ni lugares nuevos.
+- Mar vivo junto a la ruta (`pullToRoute`): náufrago, restos, cofres, delfín y remolino quedan a ≤ 240 u de la línea, sin amontonarse (≥ 110 u entre ellos) y fuera de islas, decorado y rocas; lo que choca o gira, apartado de las boyas. Se mueven con sus reapariciones y el rastro del delfín.
+- Decorado (`DECOR_OFFSET`, `DECOR_SOLIDS` en `compact.ts`; `decor.ts` dibuja con esas medidas): el castillo al oeste y la Explanada al este del puerto, un poco al norte, flanqueando la bocana sin pisar la ruta; el islote de la cueva sigue junto a su secreto.
+- Vista de mapa: la carta sube 48 px (`MAP_LIFT_PX`, sin mover su centro) para que el puerto y el cierre de la ruta queden sobre la barra de abajo. El lienzo lleva `data-route-buoys` (número de boyas) para las pruebas.
+- Tiempos a velocidad normal (sin turbo, piloto automático; simulación del motor en `compact.test.ts`): del puerto a la isla del evento 7,9 s; parada a parada 6,0 / 8,5 / 9,2 / 3,7 / 6,2 / 7,5 / 3,7 / 5,2 s. Medido en el navegador (build de producción, 390×844, Chromium con GPU, «Navegar aquí» a la isla del evento desde el anillo, 288 m): 8,4 / 8,6 / 8,9 s hasta llegar. En T33 el mismo viaje era de unas 3300 u (~15 s, estimado).
+- Pruebas: `compact.test.ts` (mitad de la distancia mediana a la isla vecina frente a T33, todos los ids y geometrías iguales, huellas y proximidades sin pisarse, planeta ajustado, orden de la ruta y cierre en el puerto, la Fiestera sube antes y baja en la última parada, tramos por el camino corto, boyas en el agua, mar vivo cerca y sin amontonarse, tiempos); `compress.test.ts` al día (compacto + reapariciones a escala); `wrap.test.ts` sobre `marWorld`. e2e nuevo en `mar-3d.spec.ts`: el lienzo pinta tantas boyas como la ruta, el rumbo a la isla del evento da la distancia del mundo compacto y el barco llega solo.
+- Capturas 390×844: `docs/informes/img/p003-t50-ruta-cubierta.png` (salida del puerto con las boyas delante) y `p003-t50-ruta-mapa.png` (el mapa con la ruta entera).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 64 archivos, 665 pruebas
+E2E_PORT=3261 pnpm e2e --workers=2            # exit 0; 105 pasadas, 19 omitidas (7,9 min)
+```
+
+Desviaciones:
+- El circuito de El Freu no se ha movido: es una composición (carriles, rocas, arcos) y al este no cabe más cerca sin pisar la isla tienda. Su arco más cercano (la meta) queda a ~370 u de la ruta, la salida a ~630 u (2-3 s).
+- «Faro y Cañón» son dos paradas: primero el Cañón y luego el Faro (de camino desde la tienda).
+- El secreto de la cueva y el de la campana siguen lejos de la ruta a propósito (son secretos).
+- `mar3d.ts`: `MAP_LIFT_PX` en la cámara del mapa (fuera de lo pedido, para que se vea la ruta entera con la barra de abajo).
+
+Sin probar:
+- Móvil real. Con la Fiestera a bordo, la vuelta entera siguiendo la ruta (la entrega en la última isla sólo se ha comprobado por datos: su destino es la última parada).
+- El logro «Rayo del Freu» (43,6 s) se midió en `/juego`; en `/mar` el circuito compacto es la mitad de largo y la vuelta rápida es más fácil (ya lo era en T33 a su escala).
+
+## 2026-09-29 — plan 003 T33: /mar como planeta de agua con cielo y estrellas
+
+`/mar` es ahora un pequeño planeta de agua (D-22 punto 2, REQ-MUN-038): sin costas, el mar da la vuelta, el horizonte se curva y encima hay cielo con estrellas que gira despacio. `/juego` no cambia (sus costas y límites siguen igual). Todo `muestra`, pendiente de Álvaro (P14).
+
+Qué existe:
+- Vuelta al mundo: `collideShip` (`packages/engine/src/ship/controller.ts`) acepta `wrap` en su entorno y `WorldRuntime` (`runtime.ts`) la opción `wrap`; las dos vienen apagadas (así las usa `/juego`). Con `wrap`, `bounds` es el periodo: sin costas ni corriente del norte, el barco sale por un lado y entra por el opuesto, y contacto, proximidad, recogida, remolinos, diálogos, obstáculos y `safePoint` se miden por el camino más corto (`runtime.delta` / `runtime.distance`, `wrapDelta` / `wrapInto`). Premios, disparadores y rótulos siguen atados al id del lugar (REQ-AVE-011); las posiciones del mapa compartido no cambian.
+- El periodo es el mapa del mar 3D con un margen de agua (`PLANET_MARGIN` en `apps/web/app/mar/engine/wrap.ts`: 300 u a los lados y al norte, 600 u al sur), para que salir del puerto hacia el sur no te deje de golpe junto a la última isla. En `wrap.ts` también: el piloto automático puro (`steer`, camino más corto y esquiva obstáculos también al otro lado del borde), la curva (`bendDrop`, `rayOnPlanet`, `behindPlanet`) y `pushOut`.
+- Vista (`apps/web/app/mar/engine/`): `planet.ts` curva en el vertex shader todo lo que se pinta (la superficie cae `bend·r²` con la distancia a la cámara: 0,0045 de cerca, casi plana en el mapa) y dibuja cada cosa en su copia más cercana al foco de la cámara; el foco nunca salta, así que cruzar el borde no se nota. En la vista de mapa el centro queda fijo (una carta: el barco da la vuelta por sus bordes). El agua (`water.ts`) es una malla en anillos que sigue a la cámara, con los bajíos de las islas en su copia más cercana (sólo los que se ven). La cámara mira por delante hacia donde va el barco (ahora se puede ir al sur). Tocar el agua curvada pone rumbo; tocar el cielo, rumbo hacia el horizonte en esa dirección. Los rótulos se curvan con el planeta; lo que queda tras el horizonte se oculta, salvo los «siempre visibles» (isla del evento, Fiestera), que se quedan asomados al horizonte en su dirección.
+- Cielo (`Sky` en `planet.ts`): cúpula con el degradado del momento del día (`palette.ts`: `fog` en el horizonte, `sky` y el nuevo `zenith`), estrellas (`stars`: 1 de noche, 0,45 al atardecer, 0,08 de día), nubes bajas y una estrella fugaz de vez en cuando; gira despacio (`SPIN_RATE`, una vuelta cada ~17 min) sin mover el barco. `Mar3D.planetSpin` y `Mar3D.planetBounds` quedan para el minimapa redondo (T34).
+- Decorado propio (`decor.ts`, sin id ni comportamientos, fuera del runtime y sólido para el barco y el piloto): el castillo en su monte al oeste y la Explanada con su mosaico de olas al este de la salida del puerto, y un islote con la boca de la cueva junto al secreto que en el 2D está en el acantilado oeste. `coast.ts` (acantilados, pueblo, islotes lejanos) ya no existe.
+- Pruebas: unitarias de la vuelta en el controlador (cada lado, obstáculo al otro lado del borde, sin `wrap` igual que siempre) y en el runtime (proximidad y recogida a través del borde, `distance`/`delta`, `safePoint`), y de `wrap.ts` (el piloto elige la vuelta corta en los dos ejes y desde el puerto a cada isla, esquiva al otro lado del borde, decorado sólido, curva). e2e nuevo en `mar-3d.spec.ts`: desde la cueva del oeste, El Freu (al este) está a un paso dando la vuelta, en la ficha y en el rumbo.
+- Capturas 390×844: `docs/informes/img/p003-t33-horizonte-dia.png` y `p003-t33-horizonte-noche.png` (horizonte curvo, cielo, estrellas), `p003-t33-salida.png` (el castillo y la Explanada a la salida del puerto), `p003-t33-mapa.png` (vista de mapa).
+- Rendimiento (build de producción, `?cerca=tienda` navegando 8 s, Chromium con la GPU del Mac y la CPU 4× más lenta por CDP, 390×844 a 2×): mediana 16,7 ms por fotograma (60 fps, el tope del refresco), p95 16,8 ms, de día y de noche; igual que main. En Chromium sin GPU (SwiftShader, el de las e2e, 1280×720) va más rápido que main: 50 ms frente a 113 ms por fotograma (el agua ya no pinta lo que queda tras el horizonte y sólo mira los bajíos que se ven).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 61 archivos, 609 pruebas
+E2E_PORT=3187 pnpm e2e --workers=2            # exit 0; 103 pasadas, 19 omitidas (7,0 min)
+```
+
+Desviaciones:
+- `mar-client.tsx`: la distancia de la ficha usa `runtime.distance` (el camino corto).
+- Con el mundo que da la vuelta, las islas del norte (la del evento, la Última, el Faro) quedan más cerca yendo al sur desde el puerto: el piloto y el viaje de «Entradas» salen hacia el sur (con media vuelta al zarpar). Es lo que pide «el camino más corto»; si se prefiere que desde el puerto se vaya al norte, basta con un margen sur mayor en `PLANET_MARGIN`.
+- La cámara sigue mirando al norte (el joystick depende de eso); sólo se adelanta hacia donde navega el barco.
+
+Sin probar:
+- Móvil real (iOS Safari): la curva, las estrellas y los 60 fps sólo se han medido en Chromium de escritorio.
+- Vuelta completa con la Fiestera a bordo cruzando el borde (la misión mide sus distancias en línea recta, pero sus zonas quedan lejos de los bordes).
+
 ## 2026-09-29 — plan 003 T36: logros que se reclaman: almacén, catálogo y señales
 
 Los logros ya no se conceden al cumplirse: se completan (listos para reclamar) y el premio llega al reclamarlos, una vez, igual en `/juego` y en `/mar`. Sin interfaz nueva (el panel con «Reclamar» es T37): hasta entonces nadie puede reclamar desde la web, y los logros completados salen como conseguidos en el panel viejo de `/juego`.

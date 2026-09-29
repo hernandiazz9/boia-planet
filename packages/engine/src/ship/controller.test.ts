@@ -9,6 +9,8 @@ import {
   createShipState,
   shipSpeed,
   stepShip,
+  wrapDelta,
+  wrapInto,
 } from './controller';
 
 const DT = 1 / 60;
@@ -163,5 +165,96 @@ describe('golpe y sensibilidad', () => {
     expect(turned(1)).toBeCloseTo(base, 12);
     expect(turned(1.5)).toBeCloseTo(base * 1.5, 9);
     expect(turned(0.5)).toBeCloseTo(base * 0.5, 9);
+  });
+});
+
+describe('mundo que da la vuelta (wrap, /mar)', () => {
+  const W = bounds.right - bounds.left;
+  const H = bounds.bottom - bounds.top;
+  const wrapped: ShipEnvironment = { bounds, obstacles: [], wrap: true };
+  const sides: { name: string; start: [number, number]; input: ShipInput }[] = [
+    { name: 'oeste', start: [60, 1000], input: { dirX: -1, dirY: 0, throttle: 1, drift: false } },
+    { name: 'este', start: [940, 1000], input: { dirX: 1, dirY: 0, throttle: 1, drift: false } },
+    { name: 'norte', start: [500, 60], input: { dirX: 0, dirY: -1, throttle: 1, drift: false } },
+    { name: 'sur', start: [500, 1940], input: { dirX: 0, dirY: 1, throttle: 1, drift: false } },
+  ];
+
+  for (const side of sides) {
+    it(`quien sale por el ${side.name} vuelve por el lado opuesto, sin frenar`, () => {
+      const [x0, y0] = side.start;
+      const s = createShipState(x0, y0, Math.atan2(side.input.dirY, side.input.dirX));
+      s.vx = side.input.dirX * cfg.maxSpeed;
+      s.vy = side.input.dirY * cfg.maxSpeed;
+      let crossed = false;
+      for (let i = 0; i < 60; i++) {
+        const px = s.x;
+        const py = s.y;
+        stepShip(s, side.input, cfg, DT);
+        collideShip(s, wrapped, cfg, DT);
+        // Siempre dentro del periodo.
+        expect(s.x).toBeGreaterThanOrEqual(bounds.left);
+        expect(s.x).toBeLessThan(bounds.right);
+        expect(s.y).toBeGreaterThanOrEqual(bounds.top);
+        expect(s.y).toBeLessThan(bounds.bottom);
+        // El salto de un paso es de un periodo: aparece en el borde opuesto.
+        if (Math.abs(s.x - px) > W / 2 || Math.abs(s.y - py) > H / 2) {
+          crossed = true;
+          if (side.input.dirX < 0) expect(s.x).toBeGreaterThan(bounds.right - 20);
+          if (side.input.dirX > 0) expect(s.x).toBeLessThan(bounds.left + 20);
+          if (side.input.dirY < 0) expect(s.y).toBeGreaterThan(bounds.bottom - 20);
+          if (side.input.dirY > 0) expect(s.y).toBeLessThan(bounds.top + 20);
+        }
+      }
+      expect(crossed).toBe(true);
+      expect(shipSpeed(s)).toBeCloseTo(cfg.maxSpeed, 3);
+    });
+  }
+
+  it('un obstáculo al otro lado del borde bloquea por el camino más corto', () => {
+    const rock = { x: 10, y: 1000, radius: 40 };
+    const env: ShipEnvironment = { bounds, obstacles: [rock], wrap: true };
+    const east: ShipInput = { dirX: 1, dirY: 0, throttle: 1, drift: false };
+    const s = createShipState(900, 1000, 0);
+    for (let i = 0; i < 60 * 3; i++) {
+      stepShip(s, east, cfg, DT);
+      collideShip(s, env, cfg, DT);
+      const dx = wrapDelta(s.x - rock.x, W);
+      expect(Math.hypot(dx, s.y - rock.y)).toBeGreaterThanOrEqual(rock.radius + cfg.radius - 1e-6);
+    }
+  });
+
+  it('wrapDelta da el camino más corto y wrapInto lleva dentro del periodo', () => {
+    expect(wrapDelta(900, W)).toBeCloseTo(-100);
+    expect(wrapDelta(-900, W)).toBeCloseTo(100);
+    expect(wrapDelta(300, W)).toBeCloseTo(300);
+    expect(wrapDelta(1700, H)).toBeCloseTo(-300);
+    expect(wrapInto(-10, bounds.left, bounds.right)).toBeCloseTo(W - 10);
+    expect(wrapInto(W + 5, bounds.left, bounds.right)).toBeCloseTo(5);
+    expect(wrapInto(250, bounds.left, bounds.right)).toBe(250);
+  });
+
+  it('sin wrap (lo de /juego) el choque con los bordes es el de siempre', () => {
+    const cases: [number, number, number, number][] = [
+      [5, 1000, -50, 0],
+      [995, 1000, 50, 0],
+      [500, 1995, 0, 60],
+      [500, -30, 0, -60],
+    ];
+    for (const [x, y, vx, vy] of cases) {
+      const a = { ...createShipState(x, y, 0), vx, vy };
+      const b = { ...createShipState(x, y, 0), vx, vy };
+      const hitA = collideShip(a, { bounds, obstacles: [] }, cfg, DT);
+      const hitB = collideShip(b, { bounds, obstacles: [], wrap: false }, cfg, DT);
+      expect(b).toEqual(a);
+      expect(hitB).toBe(hitA);
+    }
+    // Y la regla de siempre: costa lateral con rebote suave, abajo también.
+    const w = { ...createShipState(5, 1000, 0), vx: -50, vy: 0 };
+    collideShip(w, { bounds, obstacles: [] }, cfg, DT);
+    expect(w.x).toBe(bounds.left + cfg.radius);
+    expect(w.vx).toBeCloseTo(50 * cfg.wallRestitution);
+    const south = { ...createShipState(500, 1995, 0), vx: 0, vy: 60 };
+    collideShip(south, { bounds, obstacles: [] }, cfg, DT);
+    expect(south.y).toBe(bounds.bottom - cfg.radius);
   });
 });

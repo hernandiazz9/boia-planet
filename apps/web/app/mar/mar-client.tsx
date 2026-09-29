@@ -45,7 +45,7 @@ import {
   grantEncounter,
   persistWorldEvent,
 } from '../juego/world-progress';
-import { compressWorld } from './engine/compress';
+import { marWorld } from './engine/compact';
 import type { CourseInfo, Mar3D, PinSpec, Stats, VoyageEnd } from './engine/mar3d';
 import { MOOD_IDS, MOOD_LABEL, type MoodId } from './engine/palette';
 import { type ShipModelEntry, loadShipManifest, loadShipModel } from './engine/ship-model';
@@ -497,7 +497,8 @@ export function MarClient() {
     (async () => {
       const chosen = currentWorld(window.location.search, await adminWorldId());
       const live = await liveWorld(gameRepository(), worlds, chosen);
-      const world = compressWorld(live.config);
+      // El mundo compacto de /mar (T50): el mapa compartido a escala, sin tocarlo.
+      const world = marWorld(live.config);
       // three.js, el mar y el barco llegan aparte: la página pinta su pantalla de carga antes.
       const [{ Mar3D }, shipList] = await Promise.all([
         import('./engine/mar3d'),
@@ -673,11 +674,14 @@ export function MarClient() {
     return world.objects.find((o) => o.identity.id === sheet.placeId);
   }, [sheet, world]);
 
-  const ship = engineRef.current?.ship;
+  const engine = engineRef.current;
+  const ship = engine?.ship;
+  // Por el camino más corto: el planeta da la vuelta (D-22).
   const distance =
-    sheet && sheet.kind === 'preview' && sheetObject && ship
+    sheet && sheet.kind === 'preview' && sheetObject && ship && engine
       ? Math.round(
-          Math.hypot(sheetObject.position.x - ship.x, sheetObject.position.y - ship.y) * 0.25,
+          engine.runtime.distance(ship.x, ship.y, sheetObject.position.x, sheetObject.position.y) *
+            0.25,
         )
       : null;
 

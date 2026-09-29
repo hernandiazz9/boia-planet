@@ -5,6 +5,8 @@ import { MAR3D_SCALE, compressWorld } from './compress';
 
 const original = WORLD_REGISTRY.get('arcilla').config;
 const world = compressWorld(original);
+/** Escala de las posiciones fuera de las composiciones locales. */
+const k = MAR3D_SCALE.compact / MAR3D_SCALE.spread;
 const byId = (w: typeof world, id: string) => w.objects.find((o) => o.identity.id === id)!;
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y);
@@ -21,9 +23,14 @@ describe('el mapa compartido en el mar 3D', () => {
   });
 
   it('acorta el agua entre zonas y deja el puerto a 1:1', () => {
+    // (Sin compactar, el mar de T33: `compact: 1`.)
+    expect(byId(compressWorld(original, { compact: 1 }), 'allday').position.y).toBeCloseTo(
+      byId(original, 'allday').position.y / MAR3D_SCALE.spread,
+      1,
+    );
     const a = byId(world, 'allday').position;
     const a0 = byId(original, 'allday').position;
-    expect(a.y).toBeCloseTo(a0.y / MAR3D_SCALE.spread, 1);
+    expect(a.y).toBeCloseTo(a0.y * k, 1);
     // La boia de la entrada queda a la misma distancia del anillo que en el 2D.
     const d = dist(byId(world, 'puerto-boia').position, world.spawn!);
     const d0 = dist(byId(original, 'puerto-boia').position, original.spawn!);
@@ -74,6 +81,19 @@ describe('el mapa compartido en el mar 3D', () => {
         points: { x: number; y: number }[];
       }
     ).points;
-    expect(pts[0]!.x).toBeCloseTo(pts0[0]!.x / MAR3D_SCALE.spread, 1);
+    expect(pts[0]!.x).toBeCloseTo(pts0[0]!.x * k, 1);
+  });
+
+  it('los sitios donde reaparecen restos y cofres cambian de escala con ellos', () => {
+    for (const o of world.objects.filter((x) => x.behaviors.some((b) => b.type === 'spawn'))) {
+      const b = o.behaviors.find((x) => x.type === 'spawn');
+      const b0 = byId(original, o.identity.id).behaviors.find((x) => x.type === 'spawn');
+      if (b?.type !== 'spawn' || b0?.type !== 'spawn') continue;
+      (b.params.positions ?? []).forEach((p, i) => {
+        const p0 = b0.params.positions![i]!;
+        expect(p.x, o.identity.id).toBeCloseTo(p0.x * k, 1);
+        expect(p.y, o.identity.id).toBeCloseTo(p0.y * k, 1);
+      });
+    }
   });
 });

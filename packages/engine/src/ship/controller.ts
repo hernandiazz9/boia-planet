@@ -46,6 +46,30 @@ export interface CircleObstacle {
 export interface ShipEnvironment {
   bounds: Rect;
   obstacles: readonly CircleObstacle[];
+  /**
+   * Mundo que da la vuelta (el planeta de agua de `/mar`, D-22): sin costas
+   * ni corriente; quien sale por un lado vuelve por el opuesto y los
+   * obstáculos se miden por el camino más corto. Sin ella (por defecto,
+   * `/juego`), costas y límites como siempre (REQ-MUN-011).
+   */
+  wrap?: boolean;
+}
+
+/**
+ * Diferencia `d` llevada al camino más corto en un mundo de periodo `period`
+ * (resultado en [-period/2, period/2)). Con periodo no positivo, `d` tal cual.
+ */
+export function wrapDelta(d: number, period: number): number {
+  if (!(period > 0)) return d;
+  return d - period * Math.floor(d / period + 0.5);
+}
+
+/** Lleva `v` a [min, max) dando la vuelta (mundo que da la vuelta). */
+export function wrapInto(v: number, min: number, max: number): number {
+  const period = max - min;
+  if (!(period > 0)) return v;
+  const r = (v - min) % period;
+  return (r < 0 ? r + period : r) + min;
 }
 
 export function createShipState(x: number, y: number, heading = -Math.PI / 2): ShipState {
@@ -135,6 +159,7 @@ export function collideShip(
 ): boolean {
   const r = cfg.radius;
   const b = env.bounds;
+  if (env.wrap) return collideWrapped(s, env, cfg);
   let hit = false;
   let impact = s.impact ?? 0;
 
@@ -193,5 +218,36 @@ export function collideShip(
     hit = true;
   }
   s.impact = impact;
+  return hit;
+}
+
+/** `collideShip` en un mundo que da la vuelta: sin bordes, obstáculos por el lado más cerca. */
+function collideWrapped(s: ShipState, env: ShipEnvironment, cfg: ShipConfig): boolean {
+  const b = env.bounds;
+  const w = b.right - b.left;
+  const h = b.bottom - b.top;
+  const r = cfg.radius;
+  let hit = false;
+  for (const o of env.obstacles) {
+    const dx = wrapDelta(s.x - o.x, w);
+    const dy = wrapDelta(s.y - o.y, h);
+    const minDist = o.radius + r;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= minDist * minDist) continue;
+    const d = Math.sqrt(d2);
+    const nx = d > 1e-6 ? dx / d : 0;
+    const ny = d > 1e-6 ? dy / d : 1;
+    s.x += nx * minDist - dx;
+    s.y += ny * minDist - dy;
+    const vn = s.vx * nx + s.vy * ny;
+    if (vn < 0) {
+      const e = o.restitution ?? cfg.obstacleRestitution;
+      s.vx -= (1 + e) * vn * nx;
+      s.vy -= (1 + e) * vn * ny;
+    }
+    hit = true;
+  }
+  s.x = wrapInto(s.x, b.left, b.right);
+  s.y = wrapInto(s.y, b.top, b.bottom);
   return hit;
 }

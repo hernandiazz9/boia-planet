@@ -1,31 +1,42 @@
 import {
+  BufferAttribute,
+  BufferGeometry,
   Color,
   Mesh,
-  PlaneGeometry,
   ShaderMaterial,
   UniformsLib,
   UniformsUtils,
   Vector4,
 } from 'three';
-import type { SceneRect } from './coast';
+import { PLANET_PARS, planetUniforms } from './planet';
+import { wrapD } from './wrap';
 
 /**
- * El agua del mar 3D: un plano con un shader propio, sin texturas ni
- * geometría de olas (en móvil, lo que cuenta es el píxel). Bajíos turquesa
- * alrededor de cada isla y de la costa, espuma que late en la orilla, bandas
- * de ola y destellos que se apagan de lejos para no hacer ruido. Niebla de
- * three.js para que el horizonte se funda.
+ * El agua del planeta de `/mar` (D-22): una malla en anillos alrededor de la
+ * cámara (densa cerca, rala lejos) que se curva hacia el horizonte con el
+ * resto del planeta, con un shader propio, sin texturas ni geometría de olas
+ * (en móvil, lo que cuenta es el píxel). Bajíos turquesa alrededor de cada
+ * isla (en su copia más cercana: el mar da la vuelta), espuma que late en la
+ * orilla, bandas de ola y destellos que se apagan de lejos. Sin costas: el
+ * mar no se acaba. Niebla de three.js para que el horizonte se funda.
  */
 
-export const MAX_SHORES = 24;
+export const MAX_SHORES = 32;
+
+/** Radio de la malla del agua (unidades de escena): cubre también la vista de mapa. */
+const WATER_RADIUS = 2600;
+const RINGS = 56;
+const SEGMENTS = 128;
 
 const vertex = /* glsl */ `
   #include <fog_pars_vertex>
+  ${PLANET_PARS}
   varying vec3 vWorld;
   void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);
     vWorld = world.xyz;
-    vec4 mvPosition = viewMatrix * world;
+    vec3 bent = planetCurve(world.xyz);
+    vec4 mvPosition = viewMatrix * vec4(bent, 1.0);
     gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>
   }
@@ -39,7 +50,6 @@ const fragment = /* glsl */ `
   uniform vec3 uFoam;
   uniform vec4 uShores[${MAX_SHORES}];
   uniform int uShoreCount;
-  uniform vec4 uBounds;
   uniform float uSparkle;
   varying vec3 vWorld;
 
@@ -60,14 +70,12 @@ const fragment = /* glsl */ `
     float dn = 1e4;
     for (int i = 0; i < ${MAX_SHORES}; i++) {
       if (i >= uShoreCount) break;
+      // Ya en su copia más cercana y sólo las que se ven (Water.update).
       vec4 s = uShores[i];
       float di = length(p - s.xy) - s.z;
       d = min(d, di);
       dn = min(dn, di / s.w);
     }
-    float dc = min(min(p.x - uBounds.x, uBounds.y - p.x), uBounds.w - p.y);
-    d = min(d, dc);
-    dn = min(dn, dc / 10.0);
 
     float n = noise(p * 0.35 + uTime * 0.05);
     float dd = d + (n - 0.5) * 1.4;
@@ -116,11 +124,50 @@ const fragment = /* glsl */ `
 export interface Water {
   mesh: Mesh;
   material: ShaderMaterial;
-  /** Orillas: centro, radio y ancho del bajío. */
+  /** Orillas: centro (en el mapa), radio y ancho del bajío. */
   setShores(shores: readonly { x: number; z: number; r: number; w?: number }[]): void;
+  /**
+   * Cada fotograma: cada orilla en su copia más cercana a `focus` (el mar da
+   * la vuelta) y sólo las que quedan a menos de `reach` de `eye`, las más
+   * cercanas primero: el agua hace menos cuentas por píxel.
+   */
+  update(
+    focus: { x: number; z: number },
+    period: { w: number; h: number },
+    eye: { x: number; z: number },
+    reach: number,
+  ): void;
 }
 
-export function createWater(b: SceneRect): Water {
+/** Anillos alrededor del origen, cada vez más separados: la curva es suave cerca y barata lejos. */
+function ringGrid(): BufferGeometry {
+  const pos: number[] = [0, 0, 0];
+  const r0 = 0.6;
+  const k = Math.pow(WATER_RADIUS / r0, 1 / (RINGS - 1));
+  for (let i = 0; i < RINGS; i++) {
+    const r = r0 * Math.pow(k, i);
+    for (let j = 0; j < SEGMENTS; j++) {
+      const a = (j / SEGMENTS) * Math.PI * 2;
+      pos.push(Math.cos(a) * r, 0, Math.sin(a) * r);
+    }
+  }
+  const idx: number[] = [];
+  for (let j = 0; j < SEGMENTS; j++) idx.push(0, 1 + ((j + 1) % SEGMENTS), 1 + j);
+  for (let i = 0; i < RINGS - 1; i++) {
+    const a = 1 + i * SEGMENTS;
+    const b = a + SEGMENTS;
+    for (let j = 0; j < SEGMENTS; j++) {
+      const j1 = (j + 1) % SEGMENTS;
+      idx.push(a + j, a + j1, b + j, a + j1, b + j1, b + j);
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  g.setIndex(idx);
+  return g;
+}
+
+export function createWater(): Water {
   const shores = Array.from({ length: MAX_SHORES }, () => new Vector4(0, 0, 0, 0));
   const material = new ShaderMaterial({
     vertexShader: vertex,
@@ -135,27 +182,38 @@ export function createWater(b: SceneRect): Water {
         uFoam: { value: new Color('#f4efe6') },
         uShores: { value: shores },
         uShoreCount: { value: 0 },
-        uBounds: { value: new Vector4(b.left, b.right, b.top, b.bottom) },
         uSparkle: { value: 0.9 },
       },
     ]),
   });
-  // UniformsUtils.merge clona: se vuelve a poner el array para editarlo en sitio.
+  // UniformsUtils.merge clona: se vuelven a poner el array y los del planeta para editarlos en sitio.
   material.uniforms.uShores!.value = shores;
-  const w = b.right - b.left + 900;
-  const h = b.bottom - b.top + 900;
-  const mesh = new Mesh(new PlaneGeometry(w, h, 1, 1), material);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set((b.left + b.right) / 2, 0, (b.top + b.bottom) / 2);
+  Object.assign(material.uniforms, planetUniforms);
+  material.userData.planet = 'skip';
+  // La malla sigue a la cámara (Mar3D la mueve): el dibujo del agua va en coordenadas del mundo.
+  const mesh = new Mesh(ringGrid(), material);
   mesh.frustumCulled = false;
+  let all: { x: number; z: number; r: number; w: number }[] = [];
+  const near: { x: number; z: number; r: number; w: number; d: number }[] = [];
   return {
     mesh,
     material,
     setShores(list) {
-      const n = Math.min(list.length, MAX_SHORES);
+      all = list.map((s) => ({ x: s.x, z: s.z, r: s.r, w: s.w ?? 10 }));
+    },
+    update(focus, period, eye, reach) {
+      near.length = 0;
+      for (const s of all) {
+        const x = focus.x + wrapD(s.x - focus.x, period.w);
+        const z = focus.z + wrapD(s.z - focus.z, period.h);
+        const d = Math.hypot(x - eye.x, z - eye.z) - s.r - s.w;
+        if (d < reach) near.push({ x, z, r: s.r, w: s.w, d });
+      }
+      near.sort((a, b) => a.d - b.d);
+      const n = Math.min(near.length, MAX_SHORES);
       for (let i = 0; i < n; i++) {
-        const s = list[i]!;
-        shores[i]!.set(s.x, s.z, s.r, s.w ?? 10);
+        const s = near[i]!;
+        shores[i]!.set(s.x, s.z, s.r, s.w);
       }
       material.uniforms.uShoreCount!.value = n;
     },

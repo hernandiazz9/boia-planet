@@ -9,7 +9,13 @@ import {
   type WorldObject,
 } from '@boia/world';
 import type { ShipConfig } from '../ship/config';
-import { type CircleObstacle, type ShipState, collideShip } from '../ship/controller';
+import {
+  type CircleObstacle,
+  type ShipState,
+  collideShip,
+  wrapDelta,
+  wrapInto,
+} from '../ship/controller';
 import { READABLE_MAX_MS, readableDurationMs } from '../ui/notifications';
 import type { WorldEvent } from './events';
 import { MemoryRewardStore, type RewardStore, rewardKey } from './rewards';
@@ -51,6 +57,13 @@ export interface RuntimeOptions {
    * encienden.
    */
   readableDialogue?: boolean;
+  /**
+   * Mundo que da la vuelta (el planeta de agua de `/mar`, D-22): `bounds` es
+   * el periodo; el barco sale por un lado y vuelve por el opuesto, y
+   * contacto, proximidad, recogida, remolinos y diálogos se miden por el
+   * camino más corto. Sin ella (por defecto, `/juego`), costas y límites.
+   */
+  wrap?: boolean;
 }
 
 /** u extra para dar por terminado un contacto (evita parpadeo en el borde). */
@@ -257,6 +270,8 @@ export class WorldRuntime {
   private readonly ticketAvailable: (eventId: string) => boolean;
   private readonly minigames: ReadonlyMap<string, unknown>;
   private readonly readableDialogue: boolean;
+  /** Mundo que da la vuelta (`RuntimeOptions.wrap`). */
+  readonly wrap: boolean;
   private seed: number;
   private shipRadius = 0;
   /** s simulados. */
@@ -269,6 +284,7 @@ export class WorldRuntime {
     this.ticketAvailable = opts.ticketAvailable ?? (() => true);
     this.minigames = opts.minigames ?? MINIGAMES;
     this.readableDialogue = opts.readableDialogue ?? false;
+    this.wrap = opts.wrap ?? false;
     this.seed = (opts.seed ?? 1) >>> 0 || 1;
 
     for (const o of world.objects) {
@@ -461,12 +477,17 @@ export class WorldRuntime {
     this.tickDialogue(ship, dt);
 
     this.applySwirls(ship, dt);
-    collideShip(ship, { bounds: this.bounds, obstacles: this.solidObstacles() }, cfg, dt);
+    collideShip(
+      ship,
+      { bounds: this.bounds, obstacles: this.solidObstacles(), wrap: this.wrap },
+      cfg,
+      dt,
+    );
 
     const r = cfg.radius;
     for (const o of this.objs) {
       if (!o.present || o.inert) continue;
-      const d = Math.hypot(ship.x - o.x, ship.y - o.y);
+      const d = this.distance(ship.x, ship.y, o.x, o.y);
 
       if (o.touchRadius !== null) {
         const reach = o.touchRadius + r + CONTACT_SLOP;
@@ -508,12 +529,30 @@ export class WorldRuntime {
     this.queue.push(e);
   }
 
+  /**
+   * De (ax, ay) a (bx, by): la diferencia b − a, por el camino más corto si
+   * el mundo da la vuelta.
+   */
+  delta(ax: number, ay: number, bx: number, by: number): { dx: number; dy: number } {
+    const dx = bx - ax;
+    const dy = by - ay;
+    if (!this.wrap) return { dx, dy };
+    const b = this.bounds;
+    return { dx: wrapDelta(dx, b.right - b.left), dy: wrapDelta(dy, b.bottom - b.top) };
+  }
+
+  /** Distancia entre dos puntos (por el camino más corto si el mundo da la vuelta). */
+  distance(ax: number, ay: number, bx: number, by: number): number {
+    if (!this.wrap) return Math.hypot(bx - ax, by - ay);
+    const { dx, dy } = this.delta(ax, ay, bx, by);
+    return Math.hypot(dx, dy);
+  }
+
   /** Remolinos: giro alrededor del centro, más fuerte cuanto más dentro. */
   private applySwirls(ship: ShipState, dt: number): void {
     for (const o of this.objs) {
       if (!o.swirl || !o.present || o.inert || o.proximityRadius === null) continue;
-      const dx = ship.x - o.x;
-      const dy = ship.y - o.y;
+      const { dx, dy } = this.delta(o.x, o.y, ship.x, ship.y);
       const d = Math.hypot(dx, dy);
       if (d >= o.proximityRadius || d < 1e-6) continue;
       const k = 1 - d / o.proximityRadius;
@@ -783,25 +822,29 @@ export class WorldRuntime {
     const r = shipRadius;
     const b = this.bounds;
     const obstacles = this.solidObstacles();
-    const clampX = (v: number) => Math.min(Math.max(v, b.left + r), b.right - r);
-    const clampY = (v: number) => Math.min(Math.max(v, b.top + r), b.bottom - r);
+    // Con el mundo que da la vuelta no hay costa: el punto se lleva dentro del periodo.
+    const clampX = this.wrap
+      ? (v: number) => wrapInto(v, b.left, b.right)
+      : (v: number) => Math.min(Math.max(v, b.left + r), b.right - r);
+    const clampY = this.wrap
+      ? (v: number) => wrapInto(v, b.top, b.bottom)
+      : (v: number) => Math.min(Math.max(v, b.top + r), b.bottom - r);
     const free = (px: number, py: number) =>
       px === clampX(px) &&
       py === clampY(py) &&
-      obstacles.every((o) => Math.hypot(px - o.x, py - o.y) >= o.radius + r);
+      obstacles.every((o) => this.distance(px, py, o.x, o.y) >= o.radius + r);
     let px = clampX(x);
     let py = clampY(y);
     for (let pass = 0; pass < 8 && !free(px, py); pass++) {
       for (const o of obstacles) {
-        const dx = px - o.x;
-        const dy = py - o.y;
+        const { dx, dy } = this.delta(o.x, o.y, px, py);
         const d = Math.hypot(dx, dy);
         const min = o.radius + r + CONTACT_SLOP;
         if (d >= min) continue;
         const nx = d > 1e-6 ? dx / d : 0;
         const ny = d > 1e-6 ? dy / d : 1;
-        px = o.x + nx * min;
-        py = o.y + ny * min;
+        px += nx * min - dx;
+        py += ny * min - dy;
       }
       px = clampX(px);
       py = clampY(py);
@@ -870,7 +913,7 @@ export class WorldRuntime {
         o.proximityRadius !== null
           ? o.proximityRadius + o.hysteresis
           : (o.touchRadius ?? 0) + this.shipRadius + DIALOGUE_LEAVE_MARGIN;
-      if (Math.hypot(ship.x - o.x, ship.y - o.y) > leave) {
+      if (this.distance(ship.x, ship.y, o.x, o.y) > leave) {
         a.reaction = a.params.leaveReaction;
         a.timer = 0;
         this.emit({ type: 'dialogue_reaction', objectId: o.id, text: a.reaction });
