@@ -108,3 +108,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29 16:20 catalog approved by Hernán (with changes) · T36 unblocked
 - 2026-09-29 16:25 T36 launched · attempt 1 · agent a6f8af0b570ae4e6f
 - 2026-09-29 16:12 T35 launched · attempt 1 · agent a59df3f3514ff4527
+- 2026-09-29 16:34 T35 done · branch worktree-agent-a59df3f3514ff4527 → 5859481
+- 2026-09-29 16:35 T33 launched · attempt 1 · agent ab0436509d1f02be6
