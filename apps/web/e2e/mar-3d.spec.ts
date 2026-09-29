@@ -3,11 +3,13 @@ import { READABLE_MIN_MS } from '@boia/engine/ui';
 import { WORLD_REGISTRY } from '@boia/world';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { marWorld, seaRoute } from '../app/mar/engine/compact';
+import { startZoom } from '../app/mar/engine/framing';
 import { periodOf, planetRect, shortest } from '../app/mar/engine/wrap';
 import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 
 /**
- * El mar 3D (/mar): arranca sin errores, pasa a la vista de mapa, el rótulo
+ * El mar 3D (/mar): arranca sin errores, pasa a la vista de mapa tocando el
+ * minimapa redondo (el planeta girando, T34), el rótulo
  * de la isla del evento abre su ficha y «Navegar aquí» fija el rumbo. Y la
  * landing lo enlaza junto a EXPLORAR. El botón «Entradas» siempre a la vista
  * (REQ-ENT-040) y los bocadillos que se leen y se cierran (REQ-AVE-002).
@@ -51,9 +53,15 @@ async function expectOnTop(el: Locator) {
 
 const checkoutEvent = (page: Page) => page.getByTestId('checkout').getByTestId('checkout-evento');
 
-test('el mar 3D arranca, pasa a mapa y fija rumbo a la isla del evento', async ({ page }) => {
+/** El minimapa redondo: tocarlo abre el mapa grande (y lo cierra). */
+const minimap = (page: Page) => page.getByTestId('mar-minimapa');
+
+test('el mar 3D arranca, pasa a mapa por el minimapa y fija rumbo a la isla del evento', async ({
+  page,
+}) => {
   const errors = await openMar(page);
-  await page.getByTestId('mar-mapa').click();
+  await minimap(page).click();
+  await expect(minimap(page)).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-pin="allday"]').click();
   await expect(page.getByTestId('mar-ficha')).toContainText('Navegar');
   await expect(page.getByTestId('mar-volar')).toBeVisible();
@@ -88,14 +96,15 @@ test('la landing enlaza el mar 3D', async ({ page }) => {
 test('«Entradas» se ve de cerca, en el mapa y con la ficha; «Saltar» abre el checkout', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   expect(islandEvent, 'hay un evento a la venta con isla').toBeDefined();
   const errors = await openMar(page);
   const button = page.getByTestId('mar-entradas');
 
   // De cerca (cubierta), en el mapa y con la ficha de una isla abierta.
   await expectOnTop(button);
-  await page.getByTestId('mar-mapa').click();
-  await expect(page.getByTestId('mar-mapa')).toContainText('Barco');
+  await minimap(page).click();
+  await expect(minimap(page)).toHaveAttribute('aria-pressed', 'true');
   await expectOnTop(button);
   await page.locator('[data-pin="allday"]').click();
   await expect(page.getByTestId('mar-ficha')).toBeVisible();
@@ -107,7 +116,7 @@ test('«Entradas» se ve de cerca, en el mapa y con la ficha; «Saltar» abre el
   await expect(page.locator('main.mar')).toHaveAttribute('data-flight', /lift|cruise/);
   await expect(page.getByTestId('mar-rumbo-activo')).toContainText(islandName);
   await expect(page.getByTestId('mar-turbo')).toHaveClass(/is-on/);
-  await expect(page.getByTestId('mar-mapa')).toContainText('Mapa');
+  await expect(minimap(page)).toHaveAttribute('aria-pressed', 'false');
   await expectOnTop(button);
 
   // «Saltar»: el checkout del evento vigente al momento.
@@ -198,7 +207,7 @@ test('el planeta da la vuelta: desde la cueva del oeste, El Freu (al este) queda
   expect(around, 'dando la vuelta está mucho más cerca').toBeLessThan(flat / 2);
 
   const errors = await openMar(page, '?cerca=secreto-cueva');
-  await page.getByTestId('mar-mapa').click();
+  await minimap(page).click();
   // En el móvil el rótulo de El Freu queda bajo la barra del zoom: el toque va al rótulo.
   await page.locator('[data-pin="circuito"]').dispatchEvent('click');
   const ficha = page.getByTestId('mar-ficha');
@@ -241,7 +250,7 @@ test('el mundo compacto: boyas en el agua y la isla del evento a unos segundos d
     18 +
     40;
   const expected = (Math.hypot(dx, dy) - reach) * 0.25;
-  await page.getByTestId('mar-mapa').click();
+  await minimap(page).click();
   await page.locator('[data-pin="allday"]').click();
   await page.getByTestId('mar-rumbo').click();
   const chip = page.getByTestId('mar-rumbo-activo');
@@ -252,4 +261,111 @@ test('el mundo compacto: boyas en el agua y la isla del evento a unos segundos d
   // Y llega sola, a velocidad normal (sin turbo), en unos segundos.
   await expect(chip).toHaveCount(0, { timeout: 45_000 });
   expect(errors).toEqual([]);
+});
+
+test('el minimapa: redondo, girando con el planeta y sin tapar «Entradas»', async ({ page }) => {
+  const errors = await openMar(page);
+  const map = minimap(page);
+  const canvas = map.locator('canvas');
+  await expectOnTop(map);
+
+  // Redondo y semitransparente, con el lienzo del globo dentro.
+  const shape = await map.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    const c = getComputedStyle(el.querySelector('canvas')!);
+    return { w: r.width, h: r.height, radius: cs.borderRadius, canvasRadius: c.borderRadius };
+  });
+  expect(shape.w).toBeGreaterThanOrEqual(72);
+  expect(shape.h).toBe(shape.w);
+  expect(shape.radius).toBe('50%');
+  expect(shape.canvasRadius).toBe('50%');
+
+  // No tapa «Entradas» (ni a la inversa).
+  const a = (await map.boundingBox())!;
+  const b = (await page.getByTestId('mar-entradas').boundingBox())!;
+  const apart =
+    a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+  expect(apart, 'el minimapa y «Entradas» no se pisan').toBe(true);
+  await expectOnTop(page.getByTestId('mar-entradas'));
+
+  // Se repinta a ritmo bajo con las islas del mar y la del evento destacada.
+  const frames = async () => Number((await canvas.getAttribute('data-frames')) ?? 0);
+  const first = await frames();
+  await expect.poll(frames).toBeGreaterThan(first + 2);
+  expect(Number(await canvas.getAttribute('data-pins'))).toBeGreaterThan(5);
+  await expect(canvas).toHaveAttribute('data-accent', islandEvent.islandId!);
+  expect(errors).toEqual([]);
+});
+
+test('el minimapa abre el mapa grande; «Cerrar», tocarlo otra vez y la M lo cierran', async ({
+  page,
+  hasTouch,
+}) => {
+  // La vista de mapa es lo más lento de pintar en el Chromium sin GPU de las e2e.
+  test.setTimeout(60_000);
+  const errors = await openMar(page);
+  const map = minimap(page);
+
+  // Tocarlo (con el dedo en el móvil) abre el mapa grande; «Cerrar» vuelve a cubierta.
+  if (hasTouch) await map.tap();
+  else await map.click();
+  await expect(map).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.mar-maphint')).toBeVisible();
+  await expectOnTop(page.getByTestId('mar-entradas'));
+  await page.getByTestId('mar-mapa-cerrar').click();
+  await expect(map).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('mar-mapa-cerrar')).toHaveCount(0);
+
+  // La tecla M sigue abriéndolo; tocar el minimapa otra vez también cierra.
+  await page.keyboard.press('m');
+  await expect(map).toHaveAttribute('aria-pressed', 'true');
+  await map.click();
+  await expect(map).toHaveAttribute('aria-pressed', 'false');
+  expect(errors).toEqual([]);
+});
+
+test.describe('la cámara en un móvil en vertical (390×844)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('el barco va en el centro de lo que se ve, también navegando, y sale con su zoom', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    const errors = await openMar(page);
+    const canvas = page.getByTestId('mar-canvas');
+    // Lo que se ve del mar: entre la barra de arriba y «Entradas».
+    const offCentre = async () => {
+      const top = (await page.locator('.mar-top').boundingBox())!;
+      const tickets = (await page.getByTestId('mar-entradas').boundingBox())!;
+      const width = page.viewportSize()!.width;
+      const [x, y] = ((await canvas.getAttribute('data-ship-screen')) ?? 'NaN,NaN')
+        .split(',')
+        .map(Number) as [number, number];
+      const from = top.y + top.height;
+      return {
+        dx: Math.abs(x - width / 2) / width,
+        dy: Math.abs(y - (from + tickets.y) / 2) / (tickets.y - from),
+      };
+    };
+    await expect(canvas).toHaveAttribute('data-ship-screen', /\d+,\d+/);
+    const still = await offCentre();
+    expect(still.dx).toBeLessThan(0.1);
+    expect(still.dy).toBeLessThan(0.1);
+
+    // Zoom de salida del móvil en vertical (la barra del zoom lo enseña).
+    await expect(page.locator('.mar-zoom span')).toHaveAttribute(
+      'style',
+      `height: ${Math.round((1 - startZoom(390 / 844)) * 100)}%;`,
+    );
+
+    // Navegando (el viaje de «Entradas», rápido): sigue centrado.
+    await page.getByTestId('mar-entradas').click();
+    await expect(page.getByTestId('mar-entradas-saltar')).toBeVisible();
+    await page.waitForTimeout(1500);
+    const sailing = await offCentre();
+    expect(sailing.dx).toBeLessThan(0.1);
+    expect(sailing.dy).toBeLessThan(0.1);
+    expect(errors).toEqual([]);
+  });
 });

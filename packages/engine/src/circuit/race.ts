@@ -31,8 +31,21 @@ export interface CircuitSpec {
 export const CIRCUIT_COUNTDOWN_S = 3;
 export const CIRCUIT_MAX_DURATION_S = 300;
 
-/** Clave del récord local: circuito y versión (una versión nueva empieza de cero). */
+/**
+ * Clave del récord local: circuito y versión (una versión nueva empieza de
+ * cero). Es una clave estable del repositorio (minúsculas, cifras y `-_:./`):
+ * `circuito:el-freu:v1`.
+ */
 export function circuitRecordId(spec: Pick<CircuitSpec, 'id' | 'version'>): string {
+  return `circuito:${spec.id}:v${spec.version}`;
+}
+
+/**
+ * La clave de antes de T37 (`circuito:el-freu@v1`). El repositorio la
+ * rechazaba al guardar, pero se sigue leyendo por si algún navegador guardó
+ * un récord con ella.
+ */
+export function legacyCircuitRecordId(spec: Pick<CircuitSpec, 'id' | 'version'>): string {
   return `circuito:${spec.id}@v${spec.version}`;
 }
 
@@ -168,13 +181,34 @@ export interface RecordSink {
   submitTime(id: string, ms: number): Promise<{ best: boolean; record: { bestMs: number } }>;
 }
 
-/** Guarda una vuelta válida: devuelve si es récord y el mejor tiempo. */
+const readLegacy = (sink: Pick<RecordSink, 'record'>, spec: Pick<CircuitSpec, 'id' | 'version'>) =>
+  sink.record(legacyCircuitRecordId(spec)).catch(() => null);
+
+/** El récord del circuito (el mejor de la clave de ahora y la de antes), o null. */
+export async function readRecord(
+  sink: Pick<RecordSink, 'record'>,
+  spec: Pick<CircuitSpec, 'id' | 'version'>,
+): Promise<{ bestMs: number } | null> {
+  const [now, old] = await Promise.all([
+    sink.record(circuitRecordId(spec)),
+    readLegacy(sink, spec),
+  ]);
+  if (!now || !old) return now ?? old;
+  return now.bestMs <= old.bestMs ? now : old;
+}
+
+/**
+ * Guarda una vuelta válida: devuelve si es récord y el mejor tiempo (contando
+ * también un récord viejo guardado con `legacyCircuitRecordId`).
+ */
 export async function submitRecord(
   sink: RecordSink,
   spec: Pick<CircuitSpec, 'id' | 'version'>,
   ms: number,
 ): Promise<{ best: boolean; bestMs: number }> {
   const r = await sink.submitTime(circuitRecordId(spec), ms);
+  const old = await readLegacy(sink, spec);
+  if (old && old.bestMs <= r.record.bestMs) return { best: false, bestMs: old.bestMs };
   return { best: r.best, bestMs: r.record.bestMs };
 }
 
