@@ -74,7 +74,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: /eventos/<slug> and /fotos (in the landing group, no-JS OK), event state from dates with manual override (stateSource), format all_day|satelite, price/poster/activities/saleOpensAt in the contract, island panel state + «Próximos eventos» + «Ver fotos de la isla», BOIA Club · Halloween (satellite, 10 € muestra), photo selection on the home; store v3; 668 tests; landing 186.8 KB → 52656e7
 
 ## T43 — Discounts that lead to their island and show at checkout
-- Status: pending
+- Status: done
 - Depends on: T42
 - Goal: Inventory §1.5–1.6: every discount card (found notice, «Mis códigos» menu section, landing) has «Ir a la isla»: in /juego and /mar the ship sails there on autopilot (skippable, like the «Entradas» turbo of plan 003 T35; from the landing it opens the game at that island). Buying in that island (and from its event page) shows a visible banner «Tienes un código de descuento para este evento» with the code and the saving, applied in the sandbox checkout. «Mis códigos» lists found codes with state (activo, usado, caducado), copy in one tap. The Admin gets a Descuentos section (create, edit, expire, link to event or «tienda», priority) through the store overrides with audit. Shop discounts (O8) show «Ir a la tienda». `discount_found` and the purchase analytics events are emitted (REQ-ARQ-019).
 - Context: inventory §1.5–1.6, §2 O8, §3 Comercial; docs/spec/06-comercial.md (REQ-COM-020…022); apps/web/lib/ticketing/** (checkout, pricing, notices), apps/web/app/juego/** (DiscountCard, notices, menu), apps/web/app/mar/** (autopilot, sheet), packages/store (discounts, world-progress), apps/web/lib/analytics, apps/web/app/admin/**; plan 003 T35 Outcome (turbo sail).
@@ -83,10 +83,10 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: the banner appears only when a valid code for that event is owned; an expired code shows as such and is not applied; an Admin-created code is findable and audited
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; a spec finds the náufrago code, taps «Ir a la isla», arrives, sees the banner and buys with the discount, in /juego and /mar
   - Screenshots p004-t43-ir-a-la-isla.png and p004-t43-banner-descuento.png
-- Outcome:
+- Outcome: «Ir a la isla» on discount cards with a /juego autopilot (app/juego/autopilot.ts, skippable, reduced motion jumps), banner «Tienes un código de descuento para este evento» in the island panel and the shared checkout, «Mis códigos» with activo/usado/caducado, Admin Descuentos (create/edit/expire/hide at a place, audited), shop code TIENDA15, discount_found + purchase_confirmed emitted; store v4; 685 tests; /mar part pending → 75d9c55
 
 ## T44 — Landing that sails you: accesses, header, footer, Carnet invitations
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T42
 - Goal: From the landing, Tickets, Fotos and Tienda can open the world at their island with the ship arriving there (REQ-ENT-034, AVE-022), while the plain HTML paths stay for no-JS and «solo quiero las entradas». Header: Mi Carnet and a sound toggle (ENT-029). Footer: invitation to create the Carnet and to join WhatsApp, Instagram link (ENT-032, O13). Carnet invitations in the three contexts of REQ-IDE-008 (after a purchase, when closing the gallery, after 5 min or 3 achievements) with the pacing of REQ-IDE-009 (non-blocking, one per session, never twice after «Ahora no»). The ship position and heading are saved and restored on reload of /juego (REQ-IDE-004) and the local-progress notice explains its limits (IDE-007). Re-check that Tickets is visible without scroll at 360×640 with the 3D CTA.
 - Context: inventory §3 Accesos and Identidad; docs/spec/02-entrada-y-landing.md, 05-identidad-y-comunidad.md; apps/web/app/(landing)/**, apps/web/lib/world-handoff.ts, apps/web/app/juego/** (bootstrap at a place, `?cerca=`), apps/web/app/carnet/**; docs/propuestas/textos-zonas.md.
@@ -168,6 +168,9 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-29 T43: /juego autopilot in apps/web (moveShip at 2.6×, ≤12 s, jumps if stuck, cancelled by steering); a code is used once per visitor; discount gains scope/priority/hiddenAt, «Caducar» sets endsAt now; menu tab «Mis códigos» keeps id `descuentos`; /juego?evento=<id>&piloto=1 starts the autopilot; sandbox emits purchase_confirmed (agent)
+- 2026-09-29: T43 first integration hit a 5 s vitest timeout in lib/barco/catalog.test.ts under load (flaky, unrelated); reverted pair dropped and re-integrated green (orchestrator)
+- 2026-09-29: T43 and T44 start in parallel without /mar (plan 003 still there); /mar parts of T43 go to a follow-up after plan 003 (orchestrator)
 - 2026-09-29 T42: routes under app/(landing)/eventos and /fotos; stored state + stateSource dates|manual (Admin change → manual); no endsAt ⇒ ends 12 h after start; Halloween on_sale at 10 € muestra, 23:00 muestra; album.islandId links photos to islands; copy in lib/landing/eventos-copy.ts until T49; touched lib/ticketing/sandbox.ts outside scope (agent)
 - 2026-09-29: T42 integrated although the full e2e had 2 failures: demo.spec.ts:197 «Barco» fails on the untouched plan-004 base too; T40 fixes it first (orchestrator)
 - 2026-09-29: from T40 on, status sections go through .orchestrator/status/Txx.md (integrate.py --status-file ESTADO.md), agents run only covering tests while working and the full suite once at the end, and no watchdog timers (Hernán; skill updated) (orchestrator)
@@ -185,6 +188,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 T43: /mar follow-up after plan 003 — use place-panels DiscountCard in sheet.tsx with onGoToIsland → engineRef.current?.startVoyage(islandId), EventDiscountBanner above the island buy button, e2e mirroring descuentos.spec.ts; banner above the event page buy button (landing); lib/barco/catalog.test.ts palette test is slow (≈5.7 s) and flaky under load, raise its timeout
 - 2026-09-29 T42: /mar island sheet lacks state notice, «Ver fotos de la isla», memories and satellites, still links /#fotos (after plan 003); local.ts confirmSandbox checks stored state, not eventState; Admin › Fotos can't set `selection` or `album.islandId`; satellites' common location not configurable; Supabase event columns missing
 - 2026-09-29 T39: T45 must point place-art.ts at boias#… and secreto#secreto and move them out of `extras`; T40 must unhide B01/B05/B06 skins hidden by catalog.ts notes; stale sources_sha256 in untouched place manifests; arcilla*.glb export not byte-stable (Blender decimate)
 - 2026-09-29 T50: /mar brand colours (after plan 003); Admin title wordmark needs admin-app.tsx; themeColor in app/layout.tsx still #12233f; Act 0 boia in intro-stage.tsx is not the mascot yet; landing-budget.mjs ignores CSS-loaded assets
@@ -204,3 +208,6 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 17:30 main merged into plan-004 (plan 003 T35, T36) · tests pass
 - 2026-09-29 17:32 T42 launched · attempt 1 · agent a773af34a3e92e4bd
 - 2026-09-29 18:08 T42 done · branch worktree-agent-a773af34a3e92e4bd → 52656e7 (e2e: 2 pre-existing «Barco» failures, handed to T40)
+- 2026-09-29 18:12 T43 launched · attempt 1 · agent a21a8aec83ac19724 (no /mar)
+- 2026-09-29 18:12 T44 launched · attempt 1 · agent ad8707af4ade97d6a (no /mar)
+- 2026-09-29 18:42 T43 done · branch worktree-agent-a21a8aec83ac19724 → 75d9c55 (e2e: known «Barco» ×2, 2 load flakes pass alone)
