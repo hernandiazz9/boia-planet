@@ -29,7 +29,7 @@ import { STABLE_KEY, STABLE_KEY_MAX } from './ids';
  * Subir `SCHEMA_VERSION` exige añadir la migración en `migrations.ts` con su
  * prueba.
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 const iso = z.string().min(1);
 const stableKey = z.string().max(STABLE_KEY_MAX).regex(STABLE_KEY);
@@ -270,6 +270,41 @@ export const bottleReportSchema = z.object({
 export type BottleReport = z.infer<typeof bottleReportSchema>;
 
 // ---------------------------------------------------------------------------
+// Reportes y moderación de Carnets (REQ-ADM-040, D-23 O9; desde la v6)
+
+/** Máximo del motivo de un reporte de Carnet (el mismo que el de las botellas). */
+export const CARNET_REPORT_REASON_MAX = 280;
+
+export const carnetReportSchema = z.object({
+  id: z.string().min(1),
+  /** Carnet reportado (el de muestra o el de este navegador), por id de usuario. */
+  userId: z.string().min(1),
+  reporterId: z.string().min(1),
+  reason: z.string().nullable(),
+  createdAt: iso,
+  resolvedAt: iso.nullable(),
+  resolvedBy: z.string().nullable(),
+  resolution: z.string().nullable(),
+});
+export type CarnetReport = z.infer<typeof carnetReportSchema>;
+
+/**
+ * Lo que la moderación retiró de un Carnet, sin borrarlo (REQ-ADM-040). Cada
+ * retirada guarda el contenido que se retiró: si su dueño lo cambia, lo nuevo
+ * se ve (y se puede volver a reportar).
+ */
+export const carnetModerationSchema = z.object({
+  /** Respuesta retirada por id de pregunta: el texto que se retiró. */
+  answers: z.record(z.string(), z.string()).default({}),
+  /** Foto (o avatar) retirada: la huella de la que había. */
+  photo: z.string().nullable().default(null),
+  /** Apodo restablecido: el apodo que se retiró. */
+  nickname: z.string().nullable().default(null),
+  updatedAt: iso,
+});
+export type CarnetModeration = z.infer<typeof carnetModerationSchema>;
+
+// ---------------------------------------------------------------------------
 // Contenido: catálogos propios de la tienda de datos
 
 /** Definición de logro (tabla `achievements`, REQ-ADM-021). `id` es la clave estable. */
@@ -424,6 +459,8 @@ export const CONTENT_AREAS = [
   'skins',
   'texts',
   'activeWorld',
+  // Desde la v6 (T45): destinos de misión fijados por el Admin.
+  'missionDestinations',
 ] as const satisfies readonly string[];
 export type ContentArea = (typeof CONTENT_AREAS)[number];
 
@@ -487,6 +524,12 @@ export const contentOverridesSchema = z.object({
   /** Revisión publicada de la home y los eventos: sube con cada «Publicar». */
   revision: z.number().int().nonnegative(),
   settings: adminSettingsSchema,
+  /**
+   * Destino de las partidas nuevas de cada misión por mundo (REQ-AVE-010,
+   * REQ-AVE-011; desde la v6): mundo → misión → id de lugar. Sin entrada, el
+   * lugar del mapa con `params.missionDestination`.
+   */
+  missionDestinations: z.record(z.string(), z.record(z.string(), z.string())),
 });
 export type ContentOverrides = z.infer<typeof contentOverridesSchema>;
 
@@ -500,6 +543,7 @@ export function emptyOverrides(): ContentOverrides {
     drafts: emptyDrafts(),
     revision: 0,
     settings: { trashRetentionDays: TRASH_RETENTION_DEFAULT_DAYS },
+    missionDestinations: {},
   };
 }
 
@@ -527,6 +571,8 @@ export const auditEntrySchema = z.object({
     'settings',
     'purchase',
     'stamp',
+    // Desde la v6 (T45): migración de partidas empezadas (destino de una misión).
+    'migrate',
   ]),
   targetId: z.string().nullable(),
   before: z.unknown(),
@@ -548,6 +594,10 @@ export interface StoreDoc {
   bottles: Bottle[];
   bottleReads: BottleRead[];
   bottleReports: BottleReport[];
+  /** Reportes de Carnets (desde la v6). */
+  carnetReports: CarnetReport[];
+  /** Moderación de Carnets por id de usuario (desde la v6). */
+  carnetModeration: Record<string, CarnetModeration>;
   content: ContentOverrides;
   audit: AuditEntry[];
 }
@@ -563,6 +613,8 @@ export function emptyDoc(version: number = SCHEMA_VERSION): StoreDoc {
     bottles: [],
     bottleReads: [],
     bottleReports: [],
+    carnetReports: [],
+    carnetModeration: {},
     content: emptyOverrides(),
     audit: [],
   };
@@ -647,7 +699,12 @@ export function sanitizeDoc(
     settings: settings.success
       ? settings.data
       : { trashRetentionDays: TRASH_RETENTION_DEFAULT_DAYS },
+    missionDestinations: {},
   };
+  for (const [world, byMission] of Object.entries(objectOf(content.missionDestinations))) {
+    const ok = recordOf(stableKey, byMission, dropped);
+    if (Object.keys(ok).length > 0) overrides.missionDestinations[world] = ok;
+  }
   if (active.success && active.data !== undefined) overrides.activeWorldId = active.data;
   const doc: StoreDoc = {
     schemaVersion: version,
@@ -659,6 +716,8 @@ export function sanitizeDoc(
     bottles: arrayOf(bottleSchema, src.bottles, dropped),
     bottleReads: arrayOf(bottleReadSchema, src.bottleReads, dropped),
     bottleReports: arrayOf(bottleReportSchema, src.bottleReports, dropped),
+    carnetReports: arrayOf(carnetReportSchema, src.carnetReports, dropped),
+    carnetModeration: recordOf(carnetModerationSchema, src.carnetModeration, dropped),
     content: overrides,
     audit: arrayOf(auditEntrySchema, src.audit, dropped),
   };

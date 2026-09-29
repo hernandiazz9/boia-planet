@@ -1,0 +1,76 @@
+/* T45: ranking local del Menú de a bordo (REQ-IDE-053). */
+.juego-ranking-rotulo {
+  display: inline-block;
+  margin: 4px 0 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #12233f;
+  color: #fffaf0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.juego-ranking-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.juego-ranking-tab {
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 2px solid #12233f;
+  border-radius: 999px;
+  background: #fffaf0;
+  color: #12233f;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.juego-ranking-tab[aria-pressed='true'] {
+  background: #12233f;
+  color: #fffaf0;
+}
+.juego-ranking-mio {
+  margin: 6px 0;
+  font-weight: 700;
+}
+.juego-ranking-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.juego-ranking-tabla th {
+  padding: 4px 6px;
+  border-bottom: 2px solid #12233f;
+  text-align: left;
+  font-size: 12px;
+}
+.juego-ranking-tabla td {
+  padding: 6px;
+  border-bottom: 1px solid rgba(18, 35, 63, 0.15);
+}
+.juego-ranking-tabla a {
+  display: inline-block;
+  min-height: 28px;
+  color: #12233f;
+  font-weight: 700;
+}
+.juego-ranking-tabla tr.is-mine td {
+  background: #ffe2c9;
+}
+.juego-ranking-tabla tr.is-mine td:first-child {
+  box-shadow: inset 4px 0 0 #f26a1b;
+}
+.juego-ranking-puesto,
+.juego-ranking-puntos {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.juego-ranking-puntos {
+  text-align: right;
+}
+.juego-ranking-muestra {
+  color: #6b6255;
+  font-size: 12px;
+}

@@ -64,6 +64,11 @@ export interface WorldContent {
    * ese código. Sin ellos, los lugares entregan lo que nombra el mapa.
    */
   discounts?: readonly Discount[] | undefined;
+  /**
+   * Destino de las partidas nuevas de cada misión por mundo (REQ-AVE-011,
+   * T45): mundo → misión → id de lugar. Sin él, el del mapa.
+   */
+  missionDestinations?: Readonly<Record<string, Readonly<Record<string, string>>>> | undefined;
   now?: Date;
 }
 
@@ -307,6 +312,93 @@ export function hideDiscounts(map: SharedMap, discounts: readonly Discount[]): S
   };
 }
 
+// ---------------------------------------------------------------------------
+// Destino de las misiones (REQ-AVE-010, REQ-AVE-011; T45)
+
+/**
+ * Puede ser destino de una misión: una isla activa sin minijuego, con radio
+ * de llegada (la entrega salta al entrar en él). No un punto, una roca ni un
+ * lugar escondido.
+ */
+export function isDestinationPlace(
+  p: Pick<Place, 'category' | 'active' | 'behaviors' | 'geometry'>,
+): boolean {
+  if (!p.active || p.category !== 'isla') return false;
+  if (p.behaviors.some((b) => b.type === 'start_minigame')) return false;
+  return (
+    p.geometry.proximityRadius !== undefined || p.behaviors.some((b) => b.type === 'proximity')
+  );
+}
+
+/** Islas que pueden ser destino de una misión en el mapa (con los cambios del Admin). */
+export function destinationPlaces(map: SharedMap): Place[] {
+  return map.places.filter(isDestinationPlace);
+}
+
+/** El lugar que el mapa marca como destino de una misión (`params.missionDestination`). */
+export function mapMissionDestination(map: SharedMap, missionId: string): Place | undefined {
+  return map.places.find((p) => p.active && p.params?.missionDestination === missionId);
+}
+
+/** Misiones del mapa (los lugares con `params.mission`). */
+export function mapMissions(map: SharedMap): { missionId: string; place: Place }[] {
+  return map.places.flatMap((p) => {
+    const m = p.params?.mission;
+    return p.active && typeof m === 'string' && m ? [{ missionId: m, place: p }] : [];
+  });
+}
+
+/**
+ * El mapa de un mundo con el destino que fijó el Admin para las partidas
+ * nuevas de cada misión: la marca `missionDestination` pasa a ese lugar, que
+ * se lleva también el premio de la entrega y un sitio donde dejar al
+ * personaje (al sur de la isla, si no tiene uno propio). El destino anterior
+ * conserva su sitio y su premio: las partidas empezadas hacia él siguen
+ * igual (REQ-AVE-010). Un destino que ya no sirve (desactivado, borrado) no
+ * se aplica: la misión sigue con el del mapa, nunca sin destino.
+ */
+export function withMissionDestinations(
+  map: SharedMap,
+  byMission: Readonly<Record<string, string>>,
+): SharedMap {
+  let places = map.places;
+  for (const [missionId, placeId] of Object.entries(byMission)) {
+    const target = places.find((p) => p.id === placeId);
+    const current = places.find((p) => p.active && p.params?.missionDestination === missionId);
+    if (!target || !isDestinationPlace(target) || current?.id === placeId) continue;
+    const reward = current?.params?.missionReward;
+    places = places.map((p) => {
+      if (p.id === current?.id) {
+        const params = { ...(p.params ?? {}) };
+        delete params.missionDestination;
+        return { ...p, params };
+      }
+      if (p.id !== placeId) return p;
+      const edge = p.geometry.collision?.radius ?? 0;
+      return {
+        ...p,
+        params: {
+          ...(p.params ?? {}),
+          missionDestination: missionId,
+          ...(p.params?.missionDrop
+            ? {}
+            : {
+                missionDrop: {
+                  x: p.position.x,
+                  y: Math.round((p.position.y + edge + 8) * 100) / 100,
+                  z: 0,
+                },
+              }),
+          ...(reward !== undefined && p.params?.missionReward === undefined
+            ? { missionReward: reward }
+            : {}),
+        },
+      };
+    });
+  }
+  return places === map.places ? map : { ...map, places };
+}
+
 /** El mapa compartido con todos los cambios que no son de un mundo. */
 export function liveMap(registry: WorldRegistry, content: WorldContent): SharedMap {
   let map = applyPlacePatches(registry.map, content.places);
@@ -320,7 +412,10 @@ export function composeLiveWorld(
   worldId: string,
   content: WorldContent,
 ): ComposedWorld {
-  const map = liveMap(registry, content);
+  const map = withMissionDestinations(
+    liveMap(registry, content),
+    content.missionDestinations?.[worldId] ?? {},
+  );
   const skin = applySkinPatches(map, registry.skin(worldId), content.skins[worldId] ?? {});
   return composeWorld(map, skin);
 }

@@ -23,6 +23,11 @@ export interface SampleCrewMember {
     achievementIds: string[];
     stampEventIds: string[];
     cosmeticIds: string[];
+    /**
+     * Puntos de cada temporada (en la demo, cada mundo) para el ranking local
+     * de temporada (REQ-IDE-053). Sin entrada, 0 en esa temporada.
+     */
+    seasonPoints?: Record<string, number>;
   };
 }
 
@@ -51,6 +56,7 @@ export const SAMPLE_CREW: SampleCrewMember[] = [
     },
     showcase: {
       points: 240,
+      seasonPoints: { arcilla: 90, acuarela: 40 },
       achievementIds: ['primera-boia', 'islas-3', 'entrada'],
       stampEventIds: ['ev-finalizado'],
       cosmeticIds: ['bandera-boia'],
@@ -67,6 +73,7 @@ export const SAMPLE_CREW: SampleCrewMember[] = [
     },
     showcase: {
       points: 70,
+      seasonPoints: { arcilla: 70 },
       achievementIds: ['primera-boia'],
       stampEventIds: [],
       cosmeticIds: [],
@@ -86,6 +93,7 @@ export const SAMPLE_CREW: SampleCrewMember[] = [
     },
     showcase: {
       points: 610,
+      seasonPoints: { arcilla: 150, acuarela: 220 },
       achievementIds: ['primera-boia', 'carnet', 'islas-3', 'entrada', 'fiestera-entregada'],
       stampEventIds: ['ev-finalizado'],
       cosmeticIds: ['bandera-fiestera', 'estela-naranja'],

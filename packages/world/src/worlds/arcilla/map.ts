@@ -598,11 +598,13 @@ const MAR_VIVO: PlaceInput[] = [
     };
   }),
   {
-    // REQ-AVE-018: seguirlo tres saltos lleva a un premio (la lógica, en la web).
+    // REQ-AVE-018 (O15, T45): no se queda aquí; aparece junto al barco en mar abierto
+    // y guía hacia algo sin descubrir (la lógica, en la web). Este es su sitio de
+    // descanso: ni en el minimapa ni en la brújula.
     id: 'delfin',
     name: 'Delfín',
     category: 'delfin',
-    tags: TAGS,
+    tags: [...TAGS, 'oculto'],
     position: { ...at([-10.8, 8.6]), zone: 'marvivo' },
     geometry: { proximityRadius: proximity(2.0, 'isla') },
     behaviors: [prox(), deco('salto')],
@@ -864,7 +866,7 @@ const CIRCUIT: PlaceInput[] = [
   ...laneBuoys(),
 ];
 
-// --- Secretos (sin arte todavía: marcador) ----------------------------------------
+// --- Secretos (con el marcador de T39: `art:secreto#secreto`) --------------------
 
 const secret = (
   id: string,
@@ -902,6 +904,92 @@ const SECRETS: PlaceInput[] = [
   secret('circulo', 'El círculo de las boies dormidas', [-5.0, -27.0], 3, [coins(20), points(20)], 'ultima'),
 ];
 
+// --- Las cinco boies informativas (O12, D-23; T45) ----------------------------------
+
+/**
+ * Cinco boies que hablan por proximidad a lo largo de la ruta principal
+ * (`mapa.json` → `rutas.principal`), como la primera boia: con ella son seis
+ * y cuentan para los logros de las boies (`find_boia`). Ids y temas de
+ * `docs/propuestas/textos-zonas.md` (zona 23); cada mundo pone su nombre y
+ * sus dos bocadillos en su skin. mapa.json no las tiene: su sitio lo decide
+ * T45 junto a un punto de la ruta y dentro del sector de su tramo. Su arte es
+ * la mascota de BOIA (`art:boias#info_<n>`, T39). muestra
+ */
+export const INFO_BOIES: { id: string; name: string; at: Maq; zone: string; lines: string[] }[] = [
+  {
+    // Entre la bocana y la primera isla (ruta principal [1,5; 19,8]).
+    id: 'boia-espacio',
+    name: 'La boia del espacio',
+    at: [1.7, 19.6],
+    zone: 'puerto',
+    lines: [
+      '¡Plop! ¿Sabes por qué existe BOIA?',
+      'Para dar espacio a artistas nuevos y a gente con algo que contar.',
+    ],
+  },
+  {
+    // Entre la primera isla y el encuentro de la Fiestera ([2,2; 9,6] → [-0,9; 7,8]).
+    id: 'boia-descubrir',
+    name: 'La boia de descubrir',
+    at: [1.3, 9.0],
+    zone: 'fiestera',
+    lines: [
+      'Aquí nadie te pregunta qué música te gusta.',
+      'En BOIA suenan muchos géneros el mismo día.',
+    ],
+  },
+  {
+    // Entre la tienda y el Puerto de Fotos ([2,4; -2,6] → [-2,2; -5,4]).
+    id: 'boia-pertenecer',
+    name: 'La boia de pertenecer',
+    at: [-2.0, -5.1],
+    zone: 'allday',
+    lines: [
+      'No vienes simplemente a BOIA: formas parte.',
+      'Tu Carnet guarda tus sellos, tus respuestas y tu barco.',
+    ],
+  },
+  {
+    // Antes de la isla del escenario ([-3,2; -9,2] → [-0,2; -10,4]).
+    id: 'boia-allday',
+    name: 'La boia del All Day',
+    at: [-0.4, -11.2],
+    zone: 'allday',
+    lines: [
+      'Ahí delante está el escenario del All Day.',
+      'Un All Day es un día entero de música, comida y gente.',
+    ],
+  },
+  {
+    // Cerca de la salida del circuito, antes de la última isla.
+    id: 'boia-secretos',
+    name: 'La boia de los secretos',
+    at: [6.6, -24.4],
+    zone: 'ultima',
+    lines: ['Psst. No todo sale en el minimapa.', 'BOIA premia la curiosidad. Desvíate un poco.'],
+  },
+];
+
+const INFO: PlaceInput[] = INFO_BOIES.map((b, i) => ({
+  id: b.id,
+  name: b.name,
+  category: 'boia',
+  tags: TAGS,
+  position: { ...at(b.at), zone: b.zone },
+  geometry: {
+    // La huella de la mascota (`art:boias#info_<n>` → hitbox 0,47 u_maq).
+    collision: { shape: 'circle', radius: size(0.47) },
+    proximityRadius: proximity(3.2, 'encuentro'),
+  },
+  behaviors: [
+    bounce(0.3),
+    prox(),
+    talk(b.lines, true),
+    { type: 'achievement', params: { trigger: 'find_boia' } },
+  ],
+  source: [`art:boias#info_${i + 1}`],
+}));
+
 // --- Zonas como sectores ----------------------------------------------------------
 
 /** Rectángulo que envuelve el contorno de cada zona (`zonas[].contorno`). */
@@ -938,7 +1026,8 @@ export const ARCILLA_MAP: SharedMapInput = {
       bottom: clampY(id === 'puerto' ? ARCILLA_BOUNDS.bottom : at([0, y1]).y),
     },
   })),
-  places: [...PORT, ...ISLANDS, ...FIESTERA, ...MAR_VIVO, ...CIRCUIT, ...SECRETS],
+  // Las boies informativas van al final: así no cambia el orden de los demás lugares.
+  places: [...PORT, ...ISLANDS, ...FIESTERA, ...MAR_VIVO, ...CIRCUIT, ...SECRETS, ...INFO],
 };
 
 /** Las anclas de las composiciones locales, por prefijo de id (para las pruebas). */

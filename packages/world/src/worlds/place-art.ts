@@ -21,8 +21,14 @@ const PARTS: Record<string, [string, string?, string?]> = {
   'puerto-escollera_este': ['puerto', 'escollera_este'],
   'puerto-baliza_verde': ['puerto', 'baliza_verde'],
   'puerto-baliza_roja': ['puerto', 'baliza_roja'],
-  'puerto-boia': ['puerto', 'boia'],
-  'puerto-whatsapp': ['puerto', 'whatsapp'],
+  // Las boias son la mascota de BOIA (T39, D-23): la primera, la de WhatsApp y las informativas.
+  'puerto-boia': ['boias', 'primera'],
+  'puerto-whatsapp': ['boias', 'whatsapp'],
+  'boia-espacio': ['boias', 'info_1'],
+  'boia-descubrir': ['boias', 'info_2'],
+  'boia-pertenecer': ['boias', 'info_3'],
+  'boia-allday': ['boias', 'info_4'],
+  'boia-secretos': ['boias', 'info_5'],
   cala: ['cala'],
   allday: ['allday', 'allday', 'venta'],
   fotos: ['fotos'],
@@ -54,9 +60,9 @@ const RESTOS_VARIANTS = ['a', 'b', 'c'];
 
 /**
  * El asset de un lugar del mapa (`id`, en la posición `i` del mapa) en un
- * mundo. Los secretos no tienen arte en ningún mundo todavía: un marcador a
- * propósito. Un id que nadie conoce es un error: un lugar nuevo del mapa
- * tiene que decir aquí qué pieza lo dibuja.
+ * mundo. Los secretos llevan todos el mismo marcador brillante de T39
+ * (`secreto#secreto`). Un id que nadie conoce es un error: un lugar nuevo del
+ * mapa tiene que decir aquí qué pieza lo dibuja.
  */
 export function sharedPlaceAsset(worldId: string, id: string, i: number): string {
   const art = (place: string, part?: string, variant?: string) =>
@@ -69,7 +75,7 @@ export function sharedPlaceAsset(worldId: string, id: string, i: number): string
   if (m) return art('restos', 'restos', RESTOS_VARIANTS[Number(m[1]) % RESTOS_VARIANTS.length]);
   if (id.startsWith('cofre-')) return art('cofres', 'cofre');
   if (id.startsWith('circuito-carril-')) return art('circuito', 'boia_carril', i % 2 ? 'b' : 'a');
-  if (id.startsWith('secreto-')) return 'placeholder:secreto';
+  if (id.startsWith('secreto-')) return art('secreto', 'secreto');
   throw new Error(`${worldId}: lugar sin arte asignado: ${id}`);
 }
 

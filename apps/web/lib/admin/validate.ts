@@ -6,6 +6,7 @@ import {
   type WorldSkin,
   composeWorld,
 } from '@boia/world';
+import { missionDestination, rescueMissionOf } from '@boia/engine/mission';
 import {
   MAP_POINT_KEYS,
   MAP_POINT_LABELS,
@@ -279,6 +280,49 @@ export function missionProblem(world: WorldConfig): string | null {
   return null;
 }
 
+/**
+ * Por qué no se puede fijar `placeId` como destino de las partidas nuevas de
+ * `missionId` en `worldId` (REQ-AVE-010, REQ-AVE-011), o null. Se compone el
+ * mundo con el destino nuevo y la misión tiene que salir con él, igual que la
+ * juega el motor: una misión sin destino (o con uno que no existe, está
+ * desactivado, oculto en ese mundo o sin radio de llegada) no se publica.
+ */
+export function missionDestinationProblem(
+  registry: WorldRegistry,
+  content: WorldContent,
+  worldId: string,
+  missionId: string,
+  placeId: string | null,
+): string | null {
+  if (!registry.has(worldId)) return `no existe el mundo «${worldId}»`;
+  const byMission = { ...(content.missionDestinations?.[worldId] ?? {}) };
+  if (placeId === null) delete byMission[missionId];
+  else {
+    if (!registry.map.places.some((p) => p.id === placeId)) {
+      return `no existe el lugar «${placeId}» en el mapa: la misión se quedaría sin destino`;
+    }
+    byMission[missionId] = placeId;
+  }
+  let world: WorldConfig;
+  try {
+    world = composeLiveWorld(registry, worldId, {
+      ...content,
+      missionDestinations: { ...(content.missionDestinations ?? {}), [worldId]: byMission },
+    }).config;
+  } catch (err) {
+    return `el mundo «${worldId}» no sería válido: ${zodMessage(err)}`;
+  }
+  const spec = rescueMissionOf(world, missionId);
+  if (!spec) return `la misión «${missionId}» no tendría destino en «${worldId}»`;
+  if (placeId === null) return null;
+  const o = world.objects.find((x) => x.identity.id === placeId);
+  const name = o?.identity.name ?? placeId;
+  if (spec.destination !== placeId || !missionDestination(world, placeId)) {
+    return `«${name}» no puede ser destino: tiene que ser una isla activa, visible en «${worldId}» y con radio de llegada`;
+  }
+  return null;
+}
+
 /** Circuitos del mapa: los que nombran sus arcos o un lugar (`params.circuit`). */
 export function circuitIds(world: WorldConfig): string[] {
   const ids = new Set<string>();
@@ -365,12 +409,21 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
       if (!known.has(id)) return `no existe el lugar «${id}» en el mapa`;
     }
   }
-  // Esquema: cada mundo se compone sin errores.
+  // Esquema: cada mundo se compone sin errores, y cada misión que empieza en él
+  // tiene destino (REQ-AVE-010): p. ej. no se oculta su isla sólo en ese mundo.
   for (const id of registry.ids()) {
+    let composed: WorldConfig;
     try {
-      composeLiveWorld(registry, id, content);
+      composed = composeLiveWorld(registry, id, content).config;
     } catch (err) {
       return `el mundo «${id}» no sería válido: ${zodMessage(err)}`;
+    }
+    for (const o of composed.objects) {
+      const mission = str(o.params?.mission);
+      if (!mission || !o.identity.active) continue;
+      if (!rescueMissionOf(composed, mission)) {
+        return `la misión «${mission}» se quedaría sin destino en «${id}»`;
+      }
     }
   }
   // El mar: con todos los lugares a la vista (lo más estricto para cualquier mundo).

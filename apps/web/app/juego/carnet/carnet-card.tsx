@@ -13,6 +13,9 @@ import { Avatar } from './avatar';
  * - Sin artistas vistos ni valoraciones (REQ-IDE-019).
  */
 
+/** Lo que se ve si la moderación retiró la foto (textos-zonas, zona 18). muestra */
+export const MODERATED_PHOTO = 'Foto retirada por moderación.';
+
 export function memberSinceLabel(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -45,6 +48,11 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
             {carnet.nickname}
           </h3>
           {since ? <p className="carnet-since">Miembro de BOIA desde {since}</p> : null}
+          {carnet.moderated.photo ? (
+            <p className="carnet-moderated" data-testid="carnet-foto-retirada">
+              {MODERATED_PHOTO}
+            </p>
+          ) : null}
         </div>
       </header>
 
@@ -71,9 +79,11 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
         ) : (
           <ul className="carnet-answers" data-testid="carnet-respuestas">
             {carnet.answers.map((a) => (
-              <li key={a.questionId}>
+              <li key={a.questionId} data-moderada={a.moderated ? 'si' : undefined}>
                 <p className="carnet-question">{a.question}</p>
-                <p className="carnet-answer">{a.answer}</p>
+                <p className={a.moderated ? 'carnet-answer carnet-moderated' : 'carnet-answer'}>
+                  {a.answer}
+                </p>
               </li>
             ))}
           </ul>

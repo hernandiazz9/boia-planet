@@ -31,7 +31,6 @@ export const SAMPLE_ACHIEVEMENTS: AreaInput<'achievements'>[] = [
     sample: true,
   },
   {
-    // Se podrá completar cuando el plan 004 ponga sus boies en el mapa.
     id: 'boies-3',
     title: 'Coro de boies',
     description: 'Habla con 3 boies distintas.',
@@ -39,6 +38,17 @@ export const SAMPLE_ACHIEVEMENTS: AreaInput<'achievements'>[] = [
     triggerParams: { count: 3 },
     points: 30,
     coins: 10,
+    sample: true,
+  },
+  {
+    // Las seis boies del mapa compartido: la primera y las cinco informativas (O12, T45).
+    id: 'boies-6',
+    title: 'Las seis boies',
+    description: 'Habla con las 6 boies del mar.',
+    trigger: 'find_buoy',
+    triggerParams: { count: 6 },
+    points: 60,
+    coins: 20,
     sample: true,
   },
   {

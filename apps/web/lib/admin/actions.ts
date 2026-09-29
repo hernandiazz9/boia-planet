@@ -12,8 +12,10 @@ import {
   type AchievementDefinition,
   type AdminOptions,
   type BoiaRepository,
+  type CarnetModerationAction,
   type ContentArea,
   type EntityArea,
+  type MissionImpact,
   type MusicTrack,
   type PlacePatch,
   type SkinPatch,
@@ -28,7 +30,7 @@ import {
 import type { RenameScope, WorldRegistry } from '@boia/world';
 import { MINIGAMES, type TriggerChoices, triggerParamsProblem } from './achievements';
 import { type ReferenceData, danglingReferences, itemName, referencesTo } from './references';
-import { circuitIds, worldProblem } from './validate';
+import { circuitIds, missionDestinationProblem, worldProblem } from './validate';
 import {
   EMPTY_WORLD_CONTENT,
   MAP_POINTS,
@@ -143,6 +145,7 @@ export function createAdminActions(deps: AdminDeps) {
     places: await repo.content.places(),
     skins: await repo.content.skins(),
     events: await repo.content.events(),
+    missionDestinations: await repo.content.missionDestinations(),
     now: now(),
   });
 
@@ -157,6 +160,7 @@ export function createAdminActions(deps: AdminDeps) {
       places: next.places ?? c.places,
       skins: next.skins ?? c.skins,
       events: next.events ?? c.events,
+      missionDestinations: c.missionDestinations,
       now: c.now,
     });
     if (why) throw new AdminError(why);
@@ -800,6 +804,16 @@ export function createAdminActions(deps: AdminDeps) {
       if (!registry.map.places.some((p) => p.id === placeId)) {
         throw new AdminError(`no existe el lugar «${placeId}»`);
       }
+      if (hidden) {
+        // Ocultar el destino de una misión en un mundo la dejaría sin destino (REQ-AVE-010).
+        const skins = await repo.content.skins();
+        await checkWorld({
+          skins: {
+            ...skins,
+            [worldId]: { ...skins[worldId], [placeId]: { ...skins[worldId]?.[placeId], hidden } },
+          },
+        });
+      }
       await repo.admin.setSkin(worldId, placeId, { hidden }, opts(hidden ? 'ocultar' : 'mostrar'));
     },
 
@@ -828,6 +842,68 @@ export function createAdminActions(deps: AdminDeps) {
     async removeBottle(id: string, reason: string) {
       if (!reason.trim()) throw new AdminError('hace falta un motivo para retirar una botella');
       await repo.admin.removeBottle(id, opts(reason.trim()));
+    },
+
+    /**
+     * Retira una respuesta, la foto o el apodo de un Carnet reportado
+     * (REQ-ADM-040), sin borrarlo. El motivo queda en la auditoría.
+     */
+    async moderateCarnet(userId: string, action: CarnetModerationAction, reason: string) {
+      if (!reason.trim()) throw new AdminError('hace falta un motivo (queda en la auditoría)');
+      await repo.admin.moderateCarnet(userId, action, opts(reason.trim()));
+    },
+
+    /** Da por revisado un reporte de Carnet sin retirar nada. */
+    async dismissCarnetReport(reportId: string, reason?: string | null) {
+      await repo.admin.resolveCarnetReport(reportId, 'descartado', opts(reason?.trim() || null));
+    },
+
+    // --- Destino de las misiones (REQ-AVE-010, REQ-AVE-011) -----------------
+
+    /**
+     * Cuántas partidas tocaría el destino nuevo de una misión en un mundo:
+     * empezadas (y cuántas de ellas irían a otro sitio) y terminadas, que
+     * nunca cambian.
+     */
+    async missionDestinationPreview(
+      worldId: string,
+      missionId: string,
+      placeId: string | null,
+    ): Promise<MissionImpact> {
+      return repo.admin.missionImpact(worldId, missionId, placeId);
+    },
+
+    /**
+     * Fija el destino de las partidas nuevas de una misión en un mundo (null:
+     * el del mapa). No se publica una misión sin destino: el lugar tiene que
+     * existir en ese mundo y servir de llegada (REQ-AVE-010). Con `migrate`,
+     * las partidas empezadas pasan también al destino nuevo, cada una con su
+     * entrada en la auditoría y el motivo (REQ-AVE-011).
+     */
+    async setMissionDestination(
+      worldId: string,
+      missionId: string,
+      placeId: string | null,
+      o: { migrate?: boolean; reason?: string | null } = {},
+    ): Promise<MissionImpact> {
+      const c = await content();
+      const why = missionDestinationProblem(
+        registry,
+        { ...c, discounts: await repo.content.list('discounts') },
+        worldId,
+        missionId,
+        placeId,
+      );
+      if (why) throw new AdminError(why);
+      const impact = await repo.admin.missionImpact(worldId, missionId, placeId);
+      const reason = o.reason?.trim() || null;
+      if (o.migrate && impact.affected > 0 && !reason) {
+        throw new AdminError('para migrar partidas empezadas hace falta un motivo');
+      }
+      return repo.admin.setMissionDestination(worldId, missionId, placeId, {
+        migrate: !!o.migrate,
+        reason: reason ?? (placeId ? `destino: ${placeId}` : 'destino del mapa'),
+      });
     },
   };
   return api;

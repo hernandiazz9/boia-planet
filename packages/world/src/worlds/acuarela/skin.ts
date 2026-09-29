@@ -71,6 +71,37 @@ const SKIN_TEXT: Record<string, PlaceSkinInput> = {
       'Arrima el barco al banco de arena y subo de un salto.',
     ],
   },
+  // Las cinco boies informativas (O12, T45): textos-zonas.md, zona 23. muestra
+  'boia-espacio': {
+    lines: [
+      '¡Plop! La pintora deja siempre un hueco en blanco en cada página.',
+      'BOIA hace lo mismo: deja espacio a artistas nuevos y a lo que todavía no tiene sitio.',
+    ],
+  },
+  'boia-descubrir': {
+    lines: [
+      'En esta página caben todos los colores.',
+      'Con la música pasa igual: en BOIA se mezclan géneros como se mezclan aguadas. Lo bueno sale en los bordes.',
+    ],
+  },
+  'boia-pertenecer': {
+    lines: [
+      'En La Vila cada casa tiene su color para que la reconozcan desde el mar.',
+      'Tu Carnet BOIA es tu color: apodo, respuestas, sellos y barco. Así te reconocen los demás.',
+    ],
+  },
+  'boia-allday': {
+    lines: [
+      '¿Ves la barraca? Es la del All Day.',
+      'Un día entero de música, comida y gente, montado como las barracas de Hogueras.',
+    ],
+  },
+  'boia-secretos': {
+    lines: [
+      'La pintora esconde cosas en los márgenes.',
+      'Si ves algo raro, acércate: en BOIA la curiosidad tiene premio.',
+    ],
+  },
 };
 
 /**
@@ -92,6 +123,11 @@ export const ACUARELA_NAMES: Record<string, string> = {
   'circuito-dents': 'El Penyal',
   faro: "Cap de l'Horta",
   canon: "Torre de l'Illeta",
+  'boia-espacio': 'La boia del margen',
+  'boia-descubrir': 'La boia de la paleta',
+  'boia-pertenecer': 'La boia de las casas',
+  'boia-allday': 'La boia de la barraca',
+  'boia-secretos': 'La boia del borrón',
 };
 
 export const ACUARELA_SKIN: WorldSkinInput = {

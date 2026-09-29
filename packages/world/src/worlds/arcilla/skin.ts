@@ -64,6 +64,37 @@ const SKIN_TEXT: Record<string, PlaceSkinInput> = {
       'Arrima el barco al banco de arena y subo de un salto.',
     ],
   },
+  // Las cinco boies informativas (O12, T45): textos-zonas.md, zona 23. muestra
+  'boia-espacio': {
+    lines: [
+      '¡Plop! ¿Sabes por qué existe BOIA?',
+      'Para dar espacio: a artistas nuevos, a proyectos raros y a gente con algo que contar. Como este horno, que cuece de todo.',
+    ],
+  },
+  'boia-descubrir': {
+    lines: [
+      'Aquí nadie te pregunta qué música te gusta.',
+      'En BOIA suenan house, cumbia, techno o ambient en el mismo día. Vienes por uno y te vas con cinco.',
+    ],
+  },
+  'boia-pertenecer': {
+    lines: [
+      '¿Ves las huellas de dedos en el barro? Todo aquí lleva la marca de alguien.',
+      'No vienes simplemente a BOIA: formas parte. Tu Carnet guarda tus sellos, tus respuestas y tu barco.',
+    ],
+  },
+  'boia-allday': {
+    lines: [
+      'Ahí delante está el escenario del All Day.',
+      'Un All Day es un día entero: paella, música, juegos y alguna sorpresa. De la comida al amanecer.',
+    ],
+  },
+  'boia-secretos': {
+    lines: [
+      'Psst. No todo sale en el minimapa.',
+      'Una cueva, un ánfora, una campana… BOIA premia la curiosidad. Desvíate un poco.',
+    ],
+  },
 };
 
 /** Nombres propios de Arcilla (diseno.md → `propuesta_nombre`); las islas de evento no. */
@@ -74,6 +105,11 @@ const NAMES: Record<string, string> = {
   tienda: 'La Botiga',
   ultima: 'Isla del Amanecer',
   circuito: 'El Freu',
+  'boia-espacio': 'La boia del horno',
+  'boia-descubrir': 'La boia del chiringuito',
+  'boia-pertenecer': 'La boia de las huellas',
+  'boia-allday': 'La boia del escenario',
+  'boia-secretos': 'La boia chismosa',
 };
 
 export const ARCILLA_SKIN: WorldSkinInput = {

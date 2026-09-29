@@ -28,6 +28,7 @@ import type {
   AchievementView,
   AdminApi,
   AdminBottleView,
+  AdminCarnetView,
   AdminOptions,
   BadgeView,
   BoiaRepository,
@@ -36,6 +37,7 @@ import type {
   BottleView,
   CarnetApi,
   CarnetInput,
+  CarnetModerationAction,
   CarnetView,
   ChangeArea,
   DraftChange,
@@ -44,9 +46,12 @@ import type {
   FoundDiscount,
   GrantResult,
   IdentityApi,
+  MissionImpact,
   OwnedCosmetic,
   ProgressApi,
   PurchaseApi,
+  RankingRow,
+  RankingView,
   RepositoryChange,
   ShipUnlock,
   StampView,
@@ -55,6 +60,7 @@ import type {
 import { parseSample, type SampleData, type SampleInput } from './sample';
 import {
   AVATAR_IMAGE_MAX,
+  CARNET_REPORT_REASON_MAX,
   COSMETIC_SLOTS,
   CONTENT_AREAS,
   DRAFT_AREAS,
@@ -73,12 +79,14 @@ import {
   type AreaItem,
   type AuditEntry,
   type Bottle,
+  type CarnetModeration,
   type ContentArea,
   type DraftArea,
   type EntityArea,
   type Identity,
   type JsonValue,
   type LedgerEntry,
+  type MissionState,
   type PlacePatch,
   type PlayerState,
   type SkinPatch,
@@ -150,6 +158,32 @@ function finiteNumber(n: unknown, what: string): number {
 }
 
 /** Crea el repositorio local. En la app, mejor `browserRepository()` (uno por pestaña). */
+/** Lo que se ve en lugar de una respuesta retirada por moderación (textos-zonas, 18). muestra */
+export const CARNET_MODERATED_ANSWER = 'Respuesta retirada por moderación.';
+
+/**
+ * Apodo de un Carnet cuyo apodo restableció la moderación: «Miembro de BOIA
+ * <n>», con un número fijo por persona (textos-zonas, 18). muestra
+ */
+export function moderatedNickname(userId: string): string {
+  let h = 0;
+  for (const ch of userId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `Miembro de BOIA ${1000 + (h % 9000)}`;
+}
+
+/** Huella de la foto o el avatar de un Carnet: lo que se retira al ocultarla. */
+export function carnetPhotoKey(image: string | null, avatarKey: string | null): string | null {
+  if (image) return `foto:${image.length}:${image.slice(-40)}`;
+  return avatarKey ? `avatar:${avatarKey}` : null;
+}
+
+/** Cómo se llama en la auditoría y en los reportes cada retirada. */
+const MODERATION_LABEL: Record<CarnetModerationAction['kind'], string> = {
+  hide_answer: 'respuesta retirada',
+  hide_photo: 'foto retirada',
+  reset_nickname: 'apodo restablecido',
+};
+
 export function createLocalRepository(options: LocalRepositoryOptions = {}): BoiaRepository {
   return new LocalRepository(options);
 }
@@ -540,7 +574,38 @@ class LocalRepository implements BoiaRepository {
     });
   }
 
-  private carnetView(userId: string, doc: StoreDoc = this.doc): CarnetView | null {
+  /**
+   * El Carnet con lo que retiró la moderación ya aplicado (REQ-ADM-040);
+   * `raw` lo da tal cual está guardado (para la moderación).
+   */
+  private carnetView(
+    userId: string,
+    doc: StoreDoc = this.doc,
+    opts: { raw?: boolean } = {},
+  ): CarnetView | null {
+    const view = this.storedCarnetView(userId, doc);
+    if (!view || opts.raw) return view;
+    const mod = doc.carnetModeration[userId];
+    if (!mod) return view;
+    let answers = 0;
+    view.answers = view.answers.map((a) => {
+      if (mod.answers[a.questionId] !== a.answer) return a;
+      answers++;
+      return { ...a, answer: CARNET_MODERATED_ANSWER, moderated: true };
+    });
+    const photo =
+      mod.photo !== null && mod.photo === carnetPhotoKey(view.avatarImage, view.avatarKey);
+    if (photo) {
+      view.avatarImage = null;
+      view.avatarKey = null;
+    }
+    const nickname = mod.nickname !== null && mod.nickname === view.nickname;
+    if (nickname) view.nickname = moderatedNickname(userId);
+    view.moderated = { photo, nickname, answers };
+    return view;
+  }
+
+  private storedCarnetView(userId: string, doc: StoreDoc): CarnetView | null {
     const me = doc.identity?.id ?? null;
     const ranks = this.resolved('ranks', doc);
     const defs = this.resolved('achievements', doc);
@@ -585,6 +650,7 @@ class LocalRepository implements BoiaRepository {
         equipped: { ...(doc.players[userId]?.equipped ?? {}) },
         isMine: userId === me,
         isSample: false,
+        moderated: { photo: false, nickname: false, answers: 0 },
       };
     }
     const crew = this.sample.crew.find((c) => c.userId === userId);
@@ -641,6 +707,7 @@ class LocalRepository implements BoiaRepository {
       equipped: {},
       isMine: false,
       isSample: true,
+      moderated: { photo: false, nickname: false, answers: 0 },
     };
   }
 
@@ -705,6 +772,8 @@ class LocalRepository implements BoiaRepository {
             d.purchases = d.purchases.filter((p) => p.userId !== old);
             d.bottleReads = d.bottleReads.filter((r) => r.readerId !== old);
             d.bottleReports = d.bottleReports.filter((r) => r.reporterId !== old);
+            d.carnetReports = d.carnetReports.filter((r) => r.reporterId !== old);
+            delete d.carnetModeration[old];
             for (const b of d.bottles) {
               if (b.userId === old && b.status === 'active') {
                 b.status = 'retired';
@@ -777,6 +846,75 @@ class LocalRepository implements BoiaRepository {
           c.updatedAt = this.iso();
           return this.carnetView(me.id, d) as CarnetView;
         }),
+      report: async (userId, reason = null) => {
+        const why = reason === null ? null : String(reason).trim() || null;
+        if (why !== null && charLength(why) > CARNET_REPORT_REASON_MAX)
+          invalid(`reporte: hasta ${CARNET_REPORT_REASON_MAX} caracteres`);
+        return this.mutate(['identity', 'carnet'], (d, skip) => {
+          const had = d.identity !== null;
+          const me = this.ensureIdentity(d);
+          if (userId === me.id) throw new StoreError('forbidden', 'es tu Carnet');
+          if (!this.carnetView(userId, d)) throw new StoreError('not_found', `Carnet ${userId}`);
+          if (d.carnetReports.some((r) => r.userId === userId && r.reporterId === me.id)) {
+            if (had) skip();
+            return { first: false };
+          }
+          d.carnetReports.push({
+            id: newId(),
+            userId,
+            reporterId: me.id,
+            reason: why,
+            createdAt: this.iso(),
+            resolvedAt: null,
+            resolvedBy: null,
+            resolution: null,
+          });
+          return { first: true };
+        });
+      },
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Ranking local (REQ-IDE-053)
+
+  private rankingView(season: string | null, doc: StoreDoc = this.doc): RankingView {
+    const me = doc.identity?.id ?? null;
+    const b = me ? deriveBalances(doc.ledger, me) : null;
+    const hasCarnet = me !== null && !!doc.carnets[me];
+    const mine: Omit<RankingRow, 'position'> = {
+      userId: me ?? '',
+      nickname: hasCarnet ? (this.carnetView(me, doc)?.nickname ?? null) : null,
+      points: season ? (b?.seasonPoints[season] ?? 0) : (b?.points ?? 0),
+      isMine: true,
+      isSample: false,
+      hasCarnet,
+    };
+    const crew = this.sample.crew.map((c): Omit<RankingRow, 'position'> => ({
+      userId: c.userId,
+      nickname: this.carnetView(c.userId, doc)?.nickname ?? c.nickname,
+      points: season ? (c.showcase.seasonPoints?.[season] ?? 0) : c.showcase.points,
+      isMine: false,
+      isSample: true,
+      hasCarnet: true,
+    }));
+    // Más puntos arriba; en un empate, el visitante primero y luego por apodo.
+    const sorted = [mine, ...crew].sort(
+      (a, b) =>
+        b.points - a.points ||
+        Number(b.isMine) - Number(a.isMine) ||
+        (a.nickname ?? '').localeCompare(b.nickname ?? '', 'es'),
+    );
+    const rows: RankingRow[] = [];
+    sorted.forEach((r, i) => {
+      const prev = rows[i - 1];
+      rows.push({ ...r, position: prev && prev.points === r.points ? prev.position : i + 1 });
+    });
+    return {
+      scope: season ? 'season' : 'all',
+      seasonId: season,
+      rows,
+      mine: rows.find((r) => r.isMine)!,
     };
   }
 
@@ -819,6 +957,7 @@ class LocalRepository implements BoiaRepository {
     };
 
     return {
+      ranking: async (opts = {}) => this.rankingView(opts.season ?? null),
       balances: async () => {
         const id = myId();
         return deriveBalances(id ? this.doc.ledger : [], id ?? '');
@@ -1408,6 +1547,7 @@ class LocalRepository implements BoiaRepository {
       places: async () => clone(this.doc.content.places),
       skins: async () => clone(this.doc.content.skins),
       activeWorldId: async () => this.activeWorld(),
+      missionDestinations: async () => clone(this.doc.content.missionDestinations),
     };
   }
 
@@ -1831,6 +1971,9 @@ class LocalRepository implements BoiaRepository {
             } else if (a === 'activeWorld') {
               before = d.content.activeWorldId ?? null;
               delete d.content.activeWorldId;
+            } else if (a === 'missionDestinations') {
+              before = d.content.missionDestinations;
+              d.content.missionDestinations = {};
             } else {
               before = { items: d.content.items[a] ?? {}, order: d.content.order[a] ?? null };
               delete d.content.items[a];
@@ -1851,6 +1994,10 @@ class LocalRepository implements BoiaRepository {
           );
         if (area === 'texts') return Object.keys(c.texts);
         if (area === 'activeWorld') return c.activeWorldId !== undefined ? ['activeWorld'] : [];
+        if (area === 'missionDestinations')
+          return Object.entries(c.missionDestinations).flatMap(([w, byMission]) =>
+            Object.keys(byMission).map((m) => `${w}/${m}`),
+          );
         return Object.keys(c.items[area] ?? {});
       },
       audit: async (filter = {}) => {
@@ -1911,6 +2058,136 @@ class LocalRepository implements BoiaRepository {
             after: r,
           });
         }),
+      carnetReports: async () => {
+        const byUser = new Map<string, StoreDoc['carnetReports']>();
+        for (const r of this.doc.carnetReports) {
+          byUser.set(r.userId, [...(byUser.get(r.userId) ?? []), r]);
+        }
+        const out: AdminCarnetView[] = [];
+        for (const [userId, reports] of byUser) {
+          const carnet = this.carnetView(userId, this.doc, { raw: true });
+          if (!carnet) continue;
+          out.push({
+            userId,
+            carnet,
+            moderation: clone(this.doc.carnetModeration[userId] ?? null),
+            reports: clone(reports),
+            open: reports.filter((r) => r.resolvedAt === null).length,
+          });
+        }
+        const latest = (v: AdminCarnetView) => v.reports.at(-1)?.createdAt ?? '';
+        return out.sort((a, b) => b.open - a.open || latest(b).localeCompare(latest(a)));
+      },
+      moderateCarnet: async (userId, action, opts) =>
+        this.mutate(['carnet', 'audit'], (d) => {
+          const raw = this.carnetView(userId, d, { raw: true });
+          if (!raw) throw new StoreError('not_found', `Carnet ${userId}`);
+          const before: CarnetModeration | null = clone(d.carnetModeration[userId] ?? null);
+          const mod: CarnetModeration = before
+            ? clone(before)
+            : { answers: {}, photo: null, nickname: null, updatedAt: this.iso() };
+          let target = userId;
+          if (action.kind === 'hide_answer') {
+            const a = raw.answers.find((x) => x.questionId === action.questionId);
+            if (!a) throw new StoreError('not_found', `respuesta ${action.questionId}`);
+            mod.answers[a.questionId] = a.answer;
+            target = `${userId}/${a.questionId}`;
+          } else if (action.kind === 'hide_photo') {
+            const key = carnetPhotoKey(raw.avatarImage, raw.avatarKey);
+            if (!key) invalid('este Carnet no tiene foto');
+            mod.photo = key;
+          } else if (action.kind === 'reset_nickname') {
+            mod.nickname = raw.nickname;
+          } else {
+            invalid('moderación: acción');
+          }
+          const at = this.iso();
+          mod.updatedAt = at;
+          d.carnetModeration[userId] = mod;
+          for (const r of d.carnetReports) {
+            if (r.userId === userId && r.resolvedAt === null) {
+              r.resolvedAt = at;
+              r.resolvedBy = this.actor;
+              r.resolution = MODERATION_LABEL[action.kind];
+            }
+          }
+          this.audit(
+            d,
+            { area: 'carnets', action: 'moderate', targetId: target, before, after: mod },
+            opts,
+          );
+        }),
+      resolveCarnetReport: async (reportId, resolution, opts) =>
+        this.mutate(['carnet', 'audit'], (d) => {
+          const r = d.carnetReports.find((x) => x.id === reportId);
+          if (!r) throw new StoreError('not_found', `reporte ${reportId}`);
+          const before = clone(r);
+          r.resolvedAt = this.iso();
+          r.resolvedBy = this.actor;
+          r.resolution = resolution;
+          this.audit(
+            d,
+            { area: 'carnets', action: 'resolve_report', targetId: reportId, before, after: r },
+            opts,
+          );
+        }),
+      missionImpact: async (worldId, missionId, placeId) =>
+        missionImpactOf(this.doc, worldId, missionId, placeId),
+      setMissionDestination: async (worldId, missionId, placeId, opts = {}) => {
+        requireKey(worldId, 'mundo');
+        requireKey(missionId, 'misión');
+        if (placeId !== null) requireKey(placeId, 'lugar');
+        const migrateStarted = opts.migrate === true;
+        if (migrateStarted && placeId === null)
+          invalid('migración: hace falta un destino concreto');
+        const reason = opts.reason?.trim() || null;
+        const pending = missionImpactOf(this.doc, worldId, missionId, placeId);
+        if (migrateStarted && pending.affected > 0 && !reason)
+          invalid('migración: hace falta un motivo (queda en la auditoría)');
+        return this.mutate(['content', 'progress', 'audit'], (d) => {
+          const byMission = (d.content.missionDestinations[worldId] ??= {});
+          const before = byMission[missionId] ?? null;
+          if (placeId === null) delete byMission[missionId];
+          else byMission[missionId] = placeId;
+          if (Object.keys(byMission).length === 0) delete d.content.missionDestinations[worldId];
+          this.audit(
+            d,
+            {
+              area: 'missionDestinations',
+              action: 'set',
+              targetId: `${worldId}/${missionId}`,
+              before,
+              after: placeId,
+            },
+            { reason },
+          );
+          if (migrateStarted && placeId !== null) {
+            for (const [userId, p] of Object.entries(d.players)) {
+              const m = p.missions[missionId];
+              if (!m || !isStartedIn(m, worldId) || m.data.destination === placeId) continue;
+              const prev = clone(m);
+              m.data = {
+                ...m.data,
+                destination: placeId,
+                migratedFrom: prev.data.destination ?? null,
+              };
+              m.updatedAt = this.iso();
+              this.audit(
+                d,
+                {
+                  area: 'missions',
+                  action: 'migrate',
+                  targetId: `${userId}/${missionId}`,
+                  before: prev,
+                  after: m,
+                },
+                { reason },
+              );
+            }
+          }
+          return missionImpactOf(d, worldId, missionId, placeId);
+        });
+      },
       compensate: async (txId, reason) => {
         if (typeof reason !== 'string' || reason.trim() === '') invalid('compensación: motivo');
         return this.mutate(['progress', 'audit'], (d) => {
@@ -1939,6 +2216,51 @@ class LocalRepository implements BoiaRepository {
 }
 
 // ---------------------------------------------------------------------------
+
+/** El mundo (temporada) de una partida de misión: el suyo o el de sus datos. */
+function missionWorld(m: MissionState): string | null {
+  if (m.worldId) return m.worldId;
+  return typeof m.data.season === 'string' ? m.data.season : null;
+}
+
+/** Terminada: entregada o marcada como completa. Nunca cambia de destino. */
+function isCompleted(m: MissionState): boolean {
+  return m.completedAt !== null || m.step === 'delivered';
+}
+
+/** Empezada (con destino guardado) y sin terminar en ese mundo. */
+function isStartedIn(m: MissionState, worldId: string): boolean {
+  return missionWorld(m) === worldId && !isCompleted(m) && typeof m.data.destination === 'string';
+}
+
+/** Partidas de una misión en un mundo y cuántas movería un destino nuevo. */
+function missionImpactOf(
+  doc: StoreDoc,
+  worldId: string,
+  missionId: string,
+  placeId: string | null,
+): MissionImpact {
+  let started = 0;
+  let affected = 0;
+  let completed = 0;
+  for (const p of Object.values(doc.players)) {
+    const m = p.missions[missionId];
+    if (!m || missionWorld(m) !== worldId) continue;
+    if (isCompleted(m)) completed++;
+    else if (isStartedIn(m, worldId)) {
+      started++;
+      if (placeId !== null && m.data.destination !== placeId) affected++;
+    }
+  }
+  return {
+    worldId,
+    missionId,
+    current: doc.content.missionDestinations[worldId]?.[missionId] ?? null,
+    started,
+    affected,
+    completed,
+  };
+}
 
 let shared: BoiaRepository | null = null;
 

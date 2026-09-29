@@ -36,7 +36,15 @@ export interface PlacePanelState {
   objectId: string;
   target: PlaceTarget;
   ref?: string;
+  /**
+   * Visita posterior a una isla ya descubierta: el panel se abre recogido,
+   * con el acceso directo «Explorar la isla» (REQ-AVE-013).
+   */
+  revisit?: boolean;
 }
+
+/** «Explorar la isla» (textos-zonas, zona 11). muestra */
+export const ISLAND_EXPLORE = 'Explorar la isla';
 
 /** Bloques de la home con los cambios del Admin de la demo (T26). */
 const block = (type: string) => liveContent().blocks.find((b) => b.type === type);
@@ -224,6 +232,8 @@ export function PlacePanel({
   onSteer: (eventId: string) => boolean;
 }) {
   const name = object?.identity.name ?? '';
+  // En una visita posterior, la isla empieza recogida hasta «Explorar la isla».
+  const [explored, setExplored] = useState(!state.revisit);
   if (state.target === 'photos') {
     const photos = liveContent().photos.slice(0, 6);
     return (
@@ -295,9 +305,37 @@ export function PlacePanel({
       </section>
     );
   }
+  // Otra visita: sólo el nombre y el acceso directo a «Explorar la isla» (REQ-AVE-013).
+  if (!explored) {
+    return (
+      <section
+        className="juego-panel"
+        data-testid="panel-isla"
+        data-visita="otra"
+        aria-label={name}
+      >
+        <Close onClose={onClose} />
+        <p className="juego-panel-kicker">{textOf(object, 'kicker') ?? 'Isla'} · muestra</p>
+        <h2>{name}</h2>
+        <button
+          type="button"
+          className="juego-panel-cta"
+          data-testid="isla-explorar"
+          onClick={() => setExplored(true)}
+        >
+          {ISLAND_EXPLORE}
+        </button>
+      </section>
+    );
+  }
   // Una isla: su relato, sus recuerdos y los Próximos eventos (REQ-AVE-014).
   return (
-    <section className="juego-panel" data-testid="panel-isla" aria-label={name}>
+    <section
+      className="juego-panel"
+      data-testid="panel-isla"
+      data-visita={state.revisit ? 'otra' : 'primera'}
+      aria-label={name}
+    >
       <Close onClose={onClose} />
       <p className="juego-panel-kicker">{textOf(object, 'kicker') ?? 'Isla'} · muestra</p>
       <h2>{name}</h2>

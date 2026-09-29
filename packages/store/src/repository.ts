@@ -17,6 +17,8 @@ import type {
   AreaItem,
   AuditEntry,
   BottleReport,
+  CarnetModeration,
+  CarnetReport,
   ContentArea,
   Cosmetic,
   CosmeticSlot,
@@ -99,6 +101,8 @@ export interface CarnetAnswerView {
   question: string;
   questionVersion: number;
   answer: string;
+  /** Retirada por moderación: `answer` ya no es la respuesta, es el aviso (REQ-ADM-040). */
+  moderated?: boolean;
 }
 
 export interface AchievementView {
@@ -148,6 +152,8 @@ export interface CarnetView {
   isMine: boolean;
   /** Miembro ficticio de muestra. */
   isSample: boolean;
+  /** Lo que la moderación retiró de este Carnet (REQ-ADM-040), para avisarlo. */
+  moderated: { photo: boolean; nickname: boolean; answers: number };
 }
 
 export interface CarnetInput {
@@ -167,6 +173,36 @@ export interface CarnetApi {
   update(patch: Partial<CarnetInput>): Promise<CarnetView>;
   /** Contesta (o borra con null o vacío) una de las 5 preguntas. */
   answer(questionId: string, answer: string | null): Promise<CarnetView>;
+  /**
+   * Reporta el Carnet público de otra persona (REQ-ADM-040): una vez por
+   * persona y Carnet; `first: false` si ya lo había reportado. El propio no.
+   */
+  report(userId: string, reason?: string | null): Promise<{ first: boolean }>;
+}
+
+// ---------------------------------------------------------------------------
+
+/** Una fila del ranking local (REQ-IDE-053). */
+export interface RankingRow {
+  /** Puesto: los empatados comparten puesto (1, 2, 2, 4…). */
+  position: number;
+  userId: string;
+  /** Apodo del Carnet; null si el visitante aún no tiene Carnet. */
+  nickname: string | null;
+  points: number;
+  isMine: boolean;
+  isSample: boolean;
+  /** Tiene Carnet que abrir. */
+  hasCarnet: boolean;
+}
+
+export interface RankingView {
+  /** `all`: de siempre; `season`: la temporada (en la demo, el mundo) `seasonId`. */
+  scope: 'all' | 'season';
+  seasonId: string | null;
+  rows: RankingRow[];
+  /** La fila del visitante (siempre está, aunque tenga 0 puntos). */
+  mine: RankingRow;
 }
 
 // ---------------------------------------------------------------------------
@@ -293,6 +329,12 @@ export interface MissionInput {
 export interface ProgressApi {
   /** Puntos y monedas por separado, derivados del libro. Sólo lectura. */
   balances(): Promise<Balances>;
+  /**
+   * Ranking local de este navegador (REQ-IDE-053, D-23 punto 8): el visitante
+   * y los miembros de muestra, por puntos (nunca monedas), de siempre o de una
+   * temporada (`season`: id del mundo).
+   */
+  ranking(opts?: { season?: string | null }): Promise<RankingView>;
   ledger(): Promise<readonly LedgerEntry[]>;
   /** Recompensa del mundo, idempotente por (`sourceRef`, política). */
   grantWorldReward(input: WorldRewardInput): Promise<GrantResult>;
@@ -425,6 +467,8 @@ export interface ContentApi {
   skins(): Promise<Record<string, Record<string, SkinPatch>>>;
   /** Mundo activo; null: el que diga el registro de mundos. */
   activeWorldId(): Promise<string | null>;
+  /** Destinos de las partidas nuevas fijados por el Admin: mundo → misión → lugar. */
+  missionDestinations(): Promise<Record<string, Record<string, string>>>;
 }
 
 export interface AdminOptions {
@@ -463,6 +507,44 @@ export interface PublishResult {
 export interface AdminBottleView extends BottleView {
   reports: BottleReport[];
   moderationReason: string | null;
+}
+
+/** Un Carnet reportado, tal como lo ve la moderación (REQ-ADM-040). */
+export interface AdminCarnetView {
+  userId: string;
+  /** El Carnet con lo que hay guardado, sin lo que retiró la moderación. */
+  carnet: CarnetView;
+  /** Lo retirado hasta ahora. */
+  moderation: CarnetModeration | null;
+  reports: CarnetReport[];
+  /** Reportes sin revisar. */
+  open: number;
+}
+
+/** Qué se retira de un Carnet. */
+export type CarnetModerationAction =
+  { kind: 'hide_answer'; questionId: string } | { kind: 'hide_photo' } | { kind: 'reset_nickname' };
+
+/** Partidas de una misión a las que afectaría cambiar su destino en un mundo. */
+export interface MissionImpact {
+  worldId: string;
+  missionId: string;
+  /** Destino fijado ahora por el Admin para las nuevas (null: el del mapa). */
+  current: string | null;
+  /** Partidas empezadas y sin terminar en ese mundo. */
+  started: number;
+  /** De esas, las que llevan otro destino (las que movería la migración). */
+  affected: number;
+  /** Terminadas: nunca cambian (REQ-AVE-010). */
+  completed: number;
+}
+
+export interface MissionDestinationOptions extends AdminOptions {
+  /**
+   * Lleva también las partidas empezadas (y sin terminar) al destino nuevo,
+   * con su entrada de auditoría cada una (REQ-AVE-011). Pide motivo.
+   */
+  migrate?: boolean | undefined;
 }
 
 /**
@@ -550,4 +632,36 @@ export interface AdminApi {
   resolveReport(reportId: string, resolution: string): Promise<void>;
   /** Retira una recompensa con una compensación auditada (REQ-ADM-028). */
   compensate(txId: string, reason: string): Promise<LedgerEntry>;
+
+  // Moderación de Carnets (REQ-ADM-040).
+
+  /** Carnets con algún reporte, los que tienen reportes sin revisar primero. */
+  carnetReports(): Promise<AdminCarnetView[]>;
+  /**
+   * Retira una respuesta, la foto o el apodo de un Carnet sin borrarlo, con
+   * auditoría; da por revisados sus reportes abiertos.
+   */
+  moderateCarnet(
+    userId: string,
+    action: CarnetModerationAction,
+    opts?: AdminOptions,
+  ): Promise<void>;
+  /** Da por revisado un reporte de Carnet sin retirar nada. */
+  resolveCarnetReport(reportId: string, resolution: string, opts?: AdminOptions): Promise<void>;
+
+  // Destino de las misiones (REQ-AVE-010, REQ-AVE-011).
+
+  /** Cuántas partidas tocaría fijar `placeId` como destino de `missionId` en `worldId`. */
+  missionImpact(worldId: string, missionId: string, placeId: string | null): Promise<MissionImpact>;
+  /**
+   * Fija (o, con null, devuelve al del mapa) el destino de las partidas nuevas
+   * de una misión en un mundo; con `migrate`, también el de las empezadas. Quien
+   * llama comprueba antes que el lugar existe y sirve de destino.
+   */
+  setMissionDestination(
+    worldId: string,
+    missionId: string,
+    placeId: string | null,
+    opts?: MissionDestinationOptions,
+  ): Promise<MissionImpact>;
 }

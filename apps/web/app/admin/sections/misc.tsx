@@ -144,6 +144,9 @@ const AREA_LABELS: Partial<Record<string, string>> = {
   music: 'Música',
   settings: 'Ajustes',
   publish: 'Publicación',
+  missionDestinations: 'Destino de la Fiestera',
+  missions: 'Partidas (migración)',
+  carnets: 'Moderación de Carnets',
 };
 
 /**

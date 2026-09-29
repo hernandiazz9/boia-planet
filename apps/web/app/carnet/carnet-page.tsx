@@ -4,6 +4,7 @@ import Link from 'next/link';
 import '../juego/hud.css';
 import '../juego/carnet/carnet.css';
 import { CarnetCard } from '../juego/carnet/carnet-card';
+import { CarnetReport } from '../juego/carnet/carnet-report';
 import { LOCAL_ONLY_NOTICE } from '../juego/carnet/carnet-editor';
 import { INVITE_COPY } from '../../lib/landing/invitations';
 import { useCarnet } from '../juego/carnet/use-carnet';
@@ -37,7 +38,10 @@ export function CarnetPage({ userId }: { userId: string | null }) {
                   Editar mi Carnet
                 </Link>
               </div>
-            ) : null}
+            ) : (
+              // REQ-ADM-040 (O9): el Carnet público de otra persona se puede reportar.
+              <CarnetReport carnet={data.carnet} />
+            )}
           </>
         ) : userId ? (
           <>

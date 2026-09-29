@@ -378,6 +378,55 @@ export async function recordSignal(repo: Repo, signal: AchievementSignal): Promi
 }
 
 // ---------------------------------------------------------------------------
+// Las seis boies (O12, T45)
+
+/** Las boies de un mundo que cuentan para los logros de boies (las que dicen `find_boia`). */
+export function worldBuoys(world: Pick<WorldConfig, 'objects'>): string[] {
+  return world.objects
+    .filter(
+      (o) =>
+        o.identity.active &&
+        o.behaviors.some(
+          (b) =>
+            b.type === 'achievement' &&
+            (WORLD_TRIGGER_ALIASES[b.params.trigger] ?? b.params.trigger) === 'find_buoy',
+        ),
+    )
+    .map((o) => o.identity.id);
+}
+
+/** «Boia encontrada · {n} de 6» (textos-zonas, zona 23). muestra */
+export function buoyFoundTitle(n: number, total: number): string {
+  return `Boia encontrada · ${n} de ${total}`;
+}
+
+/**
+ * Una boia que habla por primera vez: apunta la señal (y los logros de boies
+ * que ya tocan) y, sólo la primera vez, el aviso «Boia encontrada · n de 6».
+ */
+export async function recordBuoy(
+  repo: Repo,
+  objectId: string,
+  world: Pick<WorldConfig, 'objects'>,
+): Promise<Notice[]> {
+  const key = `${KEY.buoy}${objectId}`;
+  const known = (await repo.progress.discoveries()).some((d) => d.key === key);
+  const notices = await recordSignal(repo, { trigger: 'find_buoy', objectId });
+  if (known) return notices;
+  const total = worldBuoys(world).length;
+  const n = (await achievementFacts(repo.progress)).buoys;
+  // Primero el logro (si lo hay), luego la cuenta de boies.
+  return [
+    ...notices,
+    {
+      id: `boia-encontrada:${objectId}`,
+      kind: 'info',
+      title: buoyFoundTitle(Math.min(n, total), total),
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Señales sueltas (botellas, Carnet, minijuegos…) desde sitios sin cola de avisos
 
 type NoticeListener = (notices: Notice[]) => void;

@@ -15,6 +15,7 @@ import {
   TrashSection,
   UsersSection,
 } from './sections/misc';
+import { MissionSection } from './sections/mission';
 import { ModerationSection } from './sections/moderation';
 import { PhotosSection } from './sections/photos';
 import { TextsSection } from './sections/texts';
@@ -27,6 +28,7 @@ const SECTIONS: { id: string; label: string; Component: ComponentType<{ ctx: Adm
   { id: 'eventos', label: 'Eventos', Component: EventsSection },
   { id: 'descuentos', label: 'Descuentos', Component: DiscountsSection },
   { id: 'mundo', label: 'Mundo', Component: WorldSection },
+  { id: 'mision', label: 'Destino de la Fiestera', Component: MissionSection },
   { id: 'artistas', label: 'Artistas', Component: ArtistsSection },
   { id: 'fotos', label: 'Fotos y vídeos', Component: PhotosSection },
   { id: 'logros', label: 'Logros y cosméticos', Component: AchievementsSection },

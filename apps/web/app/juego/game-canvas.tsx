@@ -63,6 +63,7 @@ import { useCarnetInvitations } from './use-invitations';
 import {
   TIME_PLAYED_TICK_S,
   onAchievementNotices,
+  recordBuoy,
   recordSignal,
   signalFromWorldEvent,
 } from './achievements';
@@ -80,7 +81,15 @@ import {
 import { BottleSheet, type BottleSheetMode } from './bottles/bottle-sheet';
 import { CarnetSheet } from './carnet/carnet-sheet';
 import { CircuitTimer, useCircuit } from './circuit-hud';
-import { type DolphinTrail, WhirlpoolTimer, findDolphin } from './encounters';
+import {
+  DOLPHIN_PARAM,
+  type DolphinAction,
+  type DolphinGuide,
+  WhirlpoolTimer,
+  findDolphinGuide,
+  inOpenSea,
+  undiscoveredTarget,
+} from './encounters';
 import { DiscountPanel, PlacePanel, type PlacePanelState } from './place-panels';
 import {
   type ProgressOutcome,
@@ -191,7 +200,15 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [discountPanel, setDiscountPanel] = useState<FoundDiscount | null>(null);
   const [sessionId] = useState(newSessionId);
   // Encuentros guionizados por la web (T20): el delfín y el remolino.
-  const dolphinRef = useRef<DolphinTrail | null>(null);
+  const dolphinRef = useRef<DolphinGuide | null>(null);
+  // El delfín guía (O15, T45): el motor en que se escondió y el reloj de sus pasos.
+  const dolphinRuntime = useRef<WorldRuntime | null>(null);
+  const dolphinClock = useRef(0);
+  const [dolphinOut, setDolphinOut] = useState(false);
+  // Lo que ya se encontró sin ser un objetivo de la brújula (secretos, cofres…): el delfín no guía ahí.
+  const foundObjectsRef = useRef(new Set<string>());
+  // Islas ya visitadas: su panel ofrece «Explorar la isla» (REQ-AVE-013).
+  const revisitRef = useRef(new Set<string>());
   const whirlpoolRef = useRef(new WhirlpoolTimer());
   // La misión de la Boia Fiestera (T21): la juega el motor en cada paso; aquí se guarda.
   const missionRef = useRef<RescueMission | null>(null);
@@ -343,7 +360,14 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     setSelectedId(next.selected?.id ?? null);
     setPanel(null);
     setPlacePanel(null);
-    dolphinRef.current = findDolphin(w.config.objects);
+    // `?delfin=<s>`: el delfín sale tras esos segundos de mar abierto (pruebas y demos).
+    const every = Number(new URLSearchParams(window.location.search).get(DOLPHIN_PARAM));
+    dolphinRef.current = findDolphinGuide(
+      w.config.objects,
+      every > 0 ? { tuning: { minInterval: every, maxInterval: every } } : undefined,
+    );
+    dolphinRuntime.current = null;
+    setDolphinOut(false);
   }, []);
 
   const isWhirlpool = (id: string) =>
@@ -356,28 +380,23 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     // Premios y logros avisan cuando el repositorio los concede (world-progress.ts,
     // achievements.ts): un logro ya obtenido no vuelve a avisar.
     if (e.type === 'achievement') {
+      foundObjectsRef.current.add(e.objectId);
       const signal = signalFromWorldEvent(e, world.config);
-      if (signal) notifyGranted(recordSignal(gameRepository(), signal));
+      // Una boia nueva avisa «Boia encontrada · n de 6» (O12, T45).
+      if (signal?.trigger === 'find_buoy') {
+        notifyGranted(recordBuoy(gameRepository(), signal.objectId, world.config));
+      } else if (signal) notifyGranted(recordSignal(gameRepository(), signal));
     }
+    if (e.type === 'reward') foundObjectsRef.current.add(e.objectId);
     circuit.onWorldEvent(e);
     const ctx = { sessionId, worldId: world.id };
     switch (e.type) {
       case 'reward':
         persist(persistWorldEvent(progressApi(), e, ctx));
         break;
-      case 'proximity_enter': {
-        const d = dolphinRef.current;
-        if (d && e.objectId === d.objectId) {
-          const step = d.reached();
-          gameRef.current?.runtime.moveObject(d.objectId, step.moveTo.x, step.moveTo.y);
-          plop();
-          if (step.reward) {
-            persist(grantEncounter(progressApi(), `lugar:${d.objectId}:seguir`, d.coins, 'daily'));
-          }
-        }
+      case 'proximity_enter':
         if (isWhirlpool(e.objectId)) whirlpoolRef.current.enter(performance.now());
         break;
-      }
       default:
         break;
     }
@@ -398,10 +417,13 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             objectId: e.objectId,
             target: e.target,
             ...(e.ref ? { ref: e.ref } : {}),
+            // Visitas posteriores: acceso directo a «Explorar la isla» (REQ-AVE-013).
+            ...(revisitRef.current.has(e.objectId) ? { revisit: true } : {}),
           });
         }
         break;
       case 'content_close':
+        revisitRef.current.add(e.objectId);
         setPanel((p) => (p?.objectId === e.objectId ? null : p));
         setPlacePanel((p) => (p?.objectId === e.objectId ? null : p));
         break;
@@ -463,6 +485,60 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     }
   };
 
+  /** Lo que hace el delfín guía (O15), aplicado al motor. */
+  const applyDolphin = (rt: WorldRuntime, d: DolphinGuide, actions: DolphinAction[]) => {
+    for (const a of actions) {
+      if (a.type === 'place') rt.moveObject(d.objectId, a.x, a.y);
+      else if (a.type === 'surface') {
+        rt.setObjectPresent(d.objectId, true);
+        setDolphinOut(true);
+        plop();
+      } else if (a.type === 'dive') rt.setObjectPresent(d.objectId, false);
+      else if (a.type === 'gone') {
+        setDolphinOut(false);
+        // Seguirlo hasta el final da su premio (una vez al día) y su logro.
+        if (a.followed) {
+          persist(grantEncounter(progressApi(), `lugar:${d.objectId}:seguir`, d.coins, 'daily'));
+        }
+      }
+    }
+  };
+
+  /**
+   * El delfín (O15, REQ-AVE-018): escondido en su sitio de descanso hasta que,
+   * tras 2–4 minutos de mar abierto (sin carrera, panel ni diálogo), aparece
+   * junto al barco y guía hacia lo más cercano sin descubrir.
+   */
+  const stepDolphin = (g: Game, ship: { x: number; y: number }, dt: number) => {
+    const d = dolphinRef.current;
+    if (!d) return;
+    const rt = g.runtime;
+    if (dolphinRuntime.current !== rt) {
+      dolphinRuntime.current = rt;
+      d.reset();
+      rt.setObjectPresent(d.objectId, false);
+      setDolphinOut(false);
+    }
+    dolphinClock.current += dt;
+    if (dolphinClock.current < 0.2) return;
+    const elapsed = dolphinClock.current;
+    dolphinClock.current = 0;
+    const objects = world.config.objects;
+    const calm =
+      !anyPanel &&
+      !talking &&
+      !minigameOffer &&
+      !voyageRef.current &&
+      circuit.state.phase === 'idle';
+    const found = {
+      has: (id: string) => foundRef.current.has(id) || foundObjectsRef.current.has(id),
+    };
+    const openSea = calm && !d.active && inOpenSea(objects, ship);
+    const target = d.active || openSea ? undiscoveredTarget(objects, found, ship) : null;
+    const heading = g.stats().heading;
+    applyDolphin(rt, d, d.step(elapsed, { ...ship, heading }, { openSea, target }));
+  };
+
   /** Cada paso fijo del motor: la misión mueve cocodrilos, Fiestera y tripulante. */
   const onStep = (ship: { x: number; y: number; impact?: number }, dt: number) => {
     // Golpe contra una costa o una roca: suena según lo fuerte que fue.
@@ -478,6 +554,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       gameRef.current?.moveShip(r.x, r.y, r.heading);
       if (r.kind === 'arrive') endVoyage();
     }
+    if (gameRef.current) stepDolphin(gameRef.current, ship, dt);
     const m = missionRef.current;
     const g = gameRef.current;
     if (!m || !g) return;
@@ -574,11 +651,25 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (fromEvent && trackerRef.current?.selectEvent(fromEvent)) {
       setSelectedId(trackerRef.current.selected?.id ?? null);
     }
-    // Lo descubierto en otras visitas (T20): la brújula no vuelve a señalarlo.
+    // Lo encontrado en otras visitas (secretos, cofres…): el delfín no guía hasta ahí.
+    void progressApi()
+      .discoveries()
+      .then((list) => {
+        for (const { key } of list) {
+          const m = /^objeto:[^:]+:(.+)$/.exec(key);
+          if (m) foundObjectsRef.current.add(m[1]!);
+        }
+      })
+      .catch((err: unknown) => console.warn('[boia] no se pudo leer lo encontrado', err));
+    // Lo descubierto en otras visitas (T20): la brújula no vuelve a señalarlo y
+    // sus islas ofrecen «Explorar la isla» (REQ-AVE-013).
     void discoveredPlaces(progressApi())
       .then((ids) => {
         if (cancelled || ids.length === 0) return;
-        for (const id of ids) foundRef.current.add(id);
+        for (const id of ids) {
+          foundRef.current.add(id);
+          revisitRef.current.add(id);
+        }
         const t = trackerRef.current!;
         const next = new DiscoveryTracker(t.targets, foundRef.current);
         next.select(t.selected?.id ?? null);
@@ -1165,6 +1256,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       data-ship-skin={shipLook?.skin}
       data-mundo={world.id}
       data-mision={missionPhase ?? undefined}
+      data-delfin={dolphinOut ? 'guiando' : undefined}
       data-tripulante={missionPhase === 'aboard' ? 'a-bordo' : undefined}
       // Dónde está el barco (u, redondeado) y a qué lugar llegó con `?ir=` (T44).
       data-barco={ship ? `${Math.round(ship.x)},${Math.round(ship.y)}` : undefined}
@@ -1338,6 +1430,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       )}
       {!panelEvent && placePanel ? (
         <PlacePanel
+          key={placePanel.objectId}
           state={placePanel}
           object={world.config.objects.find((o) => o.identity.id === placePanel.objectId)}
           onClose={() => setPlacePanel(null)}

@@ -254,6 +254,24 @@ function v4ToV5(doc: Record<string, unknown>): Record<string, unknown> {
   return { ...doc, content, audit };
 }
 
+/**
+ * v5 → v6 (T45): los Carnets se reportan y se moderan (REQ-ADM-040) y el
+ * Admin fija el destino de las partidas nuevas de cada misión por mundo
+ * (REQ-AVE-011). Se escriben explícitos los reportes vacíos, la moderación
+ * vacía y ningún destino fijado: las misiones empezadas o completadas no
+ * cambian (REQ-AVE-010).
+ */
+function v5ToV6(doc: Record<string, unknown>): Record<string, unknown> {
+  const content: Record<string, unknown> = isObject(doc.content) ? { ...doc.content } : {};
+  if (!isObject(content.missionDestinations)) content.missionDestinations = {};
+  return {
+    ...doc,
+    carnetReports: Array.isArray(doc.carnetReports) ? doc.carnetReports : [],
+    carnetModeration: isObject(doc.carnetModeration) ? doc.carnetModeration : {},
+    content,
+  };
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, name: 'logros que se reclaman (T36)', up: v1ToV2 },
   { from: 2, to: 3, name: 'eventos con formato, precio y estado por fechas (T42)', up: v2ToV3 },
@@ -263,6 +281,12 @@ export const MIGRATIONS: readonly Migration[] = [
     to: 5,
     name: 'borrador y publicación, papelera con plazo, compras y sellos auditados (T48)',
     up: v4ToV5,
+  },
+  {
+    from: 5,
+    to: 6,
+    name: 'reportes y moderación de Carnets, destino de misión por mundo (T45)',
+    up: v5ToV6,
   },
 ];
 

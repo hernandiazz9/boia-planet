@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { CarnetCard } from './carnet-card';
+import { CarnetReport } from './carnet-report';
 import { carnetPath } from './share';
 import { useCarnet } from './use-carnet';
 
@@ -40,6 +41,7 @@ export function CarnetSheet({ userId, onClose }: { userId: string; onClose: () =
         ) : data.carnet ? (
           <>
             <CarnetCard carnet={data.carnet} extras={data.extras} />
+            <CarnetReport carnet={data.carnet} />
             <p>
               <Link href={carnetPath(userId)} className="juego-link">
                 Ver a pantalla completa

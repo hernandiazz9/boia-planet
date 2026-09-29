@@ -294,3 +294,28 @@ a.juego-button {
   color: #c24f0c;
   font-weight: 700;
 }
+
+/* T45: reporte y moderación de Carnets (REQ-ADM-040). */
+.carnet-report {
+  margin: 10px 0 0;
+}
+.carnet-report.is-open label {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.carnet-report textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.carnet-report-done {
+  margin: 10px 0 0;
+  font-weight: 700;
+}
+.carnet-moderated {
+  color: #6b6255;
+  font-style: italic;
+}
