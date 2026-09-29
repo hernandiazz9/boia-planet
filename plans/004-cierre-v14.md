@@ -49,7 +49,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## T41 — World switch through a black hole
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: none
 - Goal: Inventory §1.4: switching world (menu «Mundos», Admin active world) plays a vortex: the sea and islands spiral into a black hole centred on the ship (~1 s), the screen goes dark, and the new world unfolds outwards from the same point (~1 s) with every place where it was; the ship keeps its position, progress, mission and open links. Only renders, names and dialogues change (the world is a skin). Works in /juego (Pixi: displacement/twirl filter or a shader on the stage) and /mar (three.js: post-process or camera+scene twist); reduced motion uses a 300 ms crossfade; input is locked during the transition and released after; no double world, no leaked textures (old world assets released).
 - Context: packages/engine/src/game.ts (setWorld), apps/web/app/juego/menu/sections/mundos.tsx, apps/web/app/juego/world-switch.test.ts, apps/web/app/mar/engine/mar3d.ts, apps/web/lib/admin (active world); D-20.7.
@@ -231,3 +231,5 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 20:04 T45 launched · attempt 1 · agent a0ef37ddb695c2396 (no /mar)
 - 2026-09-29 20:23 T46 done · branch worktree-agent-a34f3a8db29063fc6 → f211f41
 - 2026-09-29 20:24 main merged into plan-004 (plan 003 T33, T34, T50) · tests/typecheck/lint pass
+- 2026-09-29 20:27 T41 launched · attempt 1 · agent aa35c1d521a60042d (/juego only)
+- 2026-09-29 22:17 PAUSED (usage limit). T45 (agent a0ef37ddb695c2396) and T41 (agent aa35c1d521a60042d) still finishing e2e reruns in their worktrees; on resume treat them as orphans (section 7): integrate with --status-file ESTADO.md and test 'pnpm test --testTimeout=30000'. Pending: T40 (after plan 003), T49 (last). Phone preview: next start :3450 + cloudflared tunnel
