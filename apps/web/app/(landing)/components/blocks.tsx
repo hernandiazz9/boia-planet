@@ -31,13 +31,7 @@ export function HomeBlocks({
   return (
     <>
       {blocks.map((b) => (
-        <BlockView
-          key={b.id}
-          block={b}
-          artists={artists}
-          buyable={buyable}
-          heroScene={heroScene}
-        />
+        <BlockView key={b.id} block={b} artists={artists} buyable={buyable} heroScene={heroScene} />
       ))}
     </>
   );
@@ -80,6 +74,21 @@ export function BlockView({
                       ? 'hero.explore.withPromotions'
                       : 'hero.explore.withoutPromotions',
                   )}
+                </span>
+              </a>
+              <a
+                className="cta-3d"
+                href="/mar"
+                data-track="explore_start"
+                data-source="hero_3d"
+                data-testid="cta-3d"
+              >
+                <span className="cta-3d__badge" aria-hidden="true">
+                  3D
+                </span>
+                <span className="cta-3d__text">
+                  <span className="cta-3d__label">{t('hero.explore3d')}</span>
+                  <span className="cta-3d__sub">{t('hero.explore3d.sub')}</span>
                 </span>
               </a>
               <a className="button button--tickets" href="#tickets" data-tickets-open="hero">

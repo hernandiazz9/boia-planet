@@ -1,0 +1,1040 @@
+/* El mar 3D (/mar). Pensado para el móvil: todo a mano del pulgar, nada
+   tapa el centro del mar y la ficha de abajo no es modal. Cristal oscuro
+   con el naranja y el morado de BOIA. muestra */
+
+.mar {
+  --orange: #f26a1b;
+  --orange-2: #ff8a3d;
+  --indigo: #231a5c;
+  --purple: #3b2a8f;
+  --cream: #fff4e2;
+  --ink: #1b1440;
+  --glass: rgb(24 18 66 / 0.62);
+  --glass-strong: rgb(24 18 66 / 0.86);
+  --line: rgb(255 255 255 / 0.16);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--indigo);
+  color: #fff;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+.mar button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mar-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  outline: none;
+}
+
+.mar-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ---------- Cristal ---------- */
+
+.mar-round,
+.mar-brand,
+.mar-balances,
+.mar-map,
+.mar-speed,
+.mar-chip,
+.mar-menu,
+.mar-help,
+.mar-maphint {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  box-shadow: 0 8px 24px rgb(10 6 40 / 0.28);
+}
+
+.mar-round {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  color: #fff;
+}
+
+.mar-round:active,
+.mar-map:active {
+  transform: scale(0.94);
+}
+
+/* ---------- Arriba ---------- */
+
+.mar-top {
+  position: absolute;
+  top: calc(var(--safe-t) + 10px);
+  left: calc(var(--safe-l) + 10px);
+  right: calc(var(--safe-r) + 10px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+
+.mar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px 0 12px;
+  border-radius: 22px;
+  min-width: 0;
+}
+
+.mar-brand__logo {
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--orange-2);
+  font-size: 1.05rem;
+}
+
+.mar-brand__sub {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mar-balances {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  height: 44px;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 22px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mar-menu {
+  position: absolute;
+  top: calc(var(--safe-t) + 62px);
+  left: calc(var(--safe-l) + 10px);
+  width: min(330px, calc(100% - 20px));
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--glass-strong);
+  z-index: 6;
+  display: grid;
+  gap: 8px;
+  animation: mar-in 0.18s ease-out;
+}
+
+.mar-menu__label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.mar-menu__moods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.mar-menu__link {
+  display: block;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.mar-menu__help {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  opacity: 0.75;
+}
+
+/* ---------- Avisos y chips ---------- */
+
+.mar-notices {
+  position: absolute;
+  top: calc(var(--safe-t) + 62px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 20px));
+  z-index: 4;
+  pointer-events: none;
+}
+
+.mar-notice {
+  pointer-events: auto;
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border: 0;
+  border-left: 5px solid var(--orange);
+  border-radius: 14px;
+  background: var(--cream);
+  color: var(--ink) !important;
+  box-shadow: 0 12px 30px rgb(10 6 40 / 0.35);
+  animation: mar-drop 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.mar-notice strong {
+  font-size: 0.98rem;
+}
+
+.mar-notice span {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.mar-notice.is-achievement {
+  border-left-color: #8a6cff;
+}
+
+.mar-notice.is-discovery {
+  border-left-color: #2fb3c6;
+}
+
+.mar-chips {
+  position: absolute;
+  top: calc(var(--safe-t) + 132px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 3;
+  width: max-content;
+  max-width: calc(100% - 24px);
+}
+
+.mar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mar-chip.is-on {
+  background: var(--orange);
+  border-color: transparent;
+}
+
+.mar-chip__x {
+  border: 0;
+  background: rgb(255 255 255 / 0.14);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.mar-chip__sub {
+  opacity: 0.7;
+  font-size: 0.78rem;
+}
+
+.mar-chip--mission {
+  background: linear-gradient(135deg, #f2557a, #ff8a3d);
+  border-color: transparent;
+  animation: mar-glow 2.2s ease-in-out infinite;
+}
+
+.mar-chip--race {
+  background: var(--glass-strong);
+  font-size: 1rem;
+}
+
+.mar-countdown {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(5rem, 28vw, 9rem);
+  font-weight: 900;
+  color: var(--cream);
+  text-shadow:
+    0 8px 0 var(--orange),
+    0 18px 40px rgb(0 0 0 / 0.4);
+  pointer-events: none;
+  z-index: 7;
+  animation: mar-pop 0.9s ease-out both;
+}
+
+/* ---------- Derecha: zoom, mapa y turbo ---------- */
+
+.mar-rail {
+  position: absolute;
+  right: calc(var(--safe-r) + 12px);
+  bottom: calc(var(--safe-b) + 116px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 3;
+  transition: opacity 0.2s;
+}
+
+.mar-zoom {
+  width: 6px;
+  height: 52px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.18);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.mar-zoom span {
+  display: block;
+  width: 100%;
+  background: var(--cream);
+  border-radius: 3px;
+  transition: height 0.2s;
+}
+
+.mar-map {
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.mar-map span {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mar-map.is-on {
+  background: var(--orange);
+  border-color: transparent;
+}
+
+.mar-turbo {
+  position: absolute;
+  right: calc(var(--safe-r) + 12px);
+  bottom: calc(var(--safe-b) + 16px);
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0;
+  z-index: 3;
+  background:
+    radial-gradient(circle at 50% 38%, #ffae6b, var(--orange) 55%, #c9480f), var(--orange);
+  box-shadow:
+    0 0 0 5px rgb(24 18 66 / 0.5),
+    0 12px 30px rgb(242 106 27 / 0.45);
+  transition:
+    transform 0.12s,
+    filter 0.2s,
+    opacity 0.2s;
+  filter: grayscale(0.7) brightness(0.8);
+}
+
+.mar-turbo::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(var(--cream) calc(var(--p) * 360deg), transparent 0);
+  mask: radial-gradient(circle, transparent 42px, #000 43px);
+  -webkit-mask: radial-gradient(circle, transparent 42px, #000 43px);
+  opacity: 0.9;
+}
+
+.mar-turbo.is-ready {
+  filter: none;
+}
+
+.mar-turbo.is-ready::before {
+  opacity: 0;
+}
+
+.mar-turbo.is-on {
+  transform: scale(1.08);
+  animation: mar-glow 0.5s ease-in-out infinite;
+}
+
+.mar-turbo:active {
+  transform: scale(0.93);
+}
+
+.mar-turbo span {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.mar-turbo small {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mar-speed {
+  position: absolute;
+  left: calc(var(--safe-l) + 12px);
+  bottom: calc(var(--safe-b) + 16px);
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  z-index: 2;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.mar-speed strong {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.mar-speed small {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+.mar-maphint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 118px);
+  translate: -50% 0;
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: max-content;
+  max-width: calc(100% - 120px);
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+  animation: mar-in 0.3s ease-out;
+}
+
+/* ---------- Ayuda de la primera vez ---------- */
+
+.mar-help {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--safe-t) + 132px);
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px 12px 14px;
+  border-radius: 20px;
+  width: max-content;
+  max-width: calc(100% - 150px);
+  z-index: 2;
+  pointer-events: none;
+  animation: mar-in 0.4s ease-out 0.6s both;
+}
+
+.mar-help p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.mar-help__hand {
+  font-size: 1.8rem;
+  animation: mar-swipe 1.8s ease-in-out infinite;
+}
+
+/* ---------- Joystick y rótulos (los coloca el motor) ---------- */
+
+.mar-stick {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 128px;
+  height: 128px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 2px solid rgb(255 244 226 / 0.55);
+  background: radial-gradient(circle, rgb(255 244 226 / 0.1), rgb(255 244 226 / 0.02) 70%);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.mar-stick.is-on {
+  opacity: 1;
+}
+
+.mar-stick__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff, var(--cream) 60%, #e9d6b5);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.3);
+}
+
+.mar-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% calc(-100% - 8px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px 5px 7px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--cream);
+  color: var(--ink) !important;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgb(10 6 40 / 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s,
+    scale 0.25s;
+  scale: 0.85;
+  will-change: transform;
+}
+
+.mar-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  z-index: -1;
+}
+
+.mar-pin.is-on {
+  opacity: 1;
+  pointer-events: auto;
+  scale: 1;
+}
+
+.mar-pin.is-map {
+  font-size: 0.86rem;
+  padding: 7px 13px 7px 9px;
+}
+
+.mar-pin__icon {
+  font-size: 1.05em;
+}
+
+.mar-pin--accent {
+  background: var(--orange);
+  color: #fff !important;
+}
+
+.mar-pin--accent {
+  animation: mar-beacon 2s ease-out infinite;
+}
+
+.mar-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% calc(-100% - 12px);
+  max-width: min(260px, 72vw);
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink) !important;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 12px 30px rgb(10 6 40 / 0.35);
+  z-index: 4;
+  animation: mar-pop-small 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.mar-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  background: #fff;
+  transform: rotate(45deg);
+  border-radius: 3px;
+}
+
+.mar-bubble small {
+  color: var(--orange);
+  font-weight: 800;
+  font-size: 0.74rem;
+}
+
+/* ---------- Ficha ---------- */
+
+.mar-sheet,
+.mar .juego-panel {
+  position: absolute;
+  left: calc(var(--safe-l) + 10px);
+  right: calc(var(--safe-r) + 10px);
+  bottom: calc(var(--safe-b) + 10px);
+  max-height: min(58vh, 520px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 18px 18px 16px;
+  border-radius: 24px;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 0 -10px 40px rgb(10 6 40 / 0.35);
+  z-index: 6;
+  animation: mar-up 0.28s cubic-bezier(0.2, 1.2, 0.4, 1);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.mar-sheet p,
+.mar .juego-panel p {
+  margin: 0 0 10px;
+  line-height: 1.45;
+  font-size: 0.93rem;
+}
+
+.mar-sheet__close,
+.mar .juego-panel-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(27 20 64 / 0.08);
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--ink) !important;
+}
+
+.mar-sheet__kicker,
+.mar .juego-panel-kicker {
+  font-size: 0.74rem !important;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c9480f;
+  padding-right: 40px;
+}
+
+.mar-sheet__title,
+.mar .juego-panel h2 {
+  margin: 0 0 6px;
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  padding-right: 36px;
+}
+
+.mar-sheet__meta {
+  font-weight: 700;
+  color: var(--purple);
+}
+
+.mar-sheet__note {
+  font-size: 0.8rem !important;
+  opacity: 0.7;
+}
+
+.mar-sheet__block h3 {
+  margin: 12px 0 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.mar-sheet__block ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.mar-sheet__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mar-sheet__photos {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.mar-sheet__photos li {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: linear-gradient(
+    160deg,
+    hsl(calc(20 + var(--i) * 50) 85% 68%),
+    hsl(calc(290 + var(--i) * 20) 55% 38%)
+  );
+}
+
+.mar-btn,
+.mar .juego-panel-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 14px;
+  background: rgb(27 20 64 / 0.08);
+  color: var(--ink) !important;
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-decoration: none;
+  flex: 1 1 auto;
+}
+
+.mar-btn--primary,
+.mar .juego-panel-cta {
+  background: var(--orange);
+  color: #fff !important;
+  box-shadow: 0 8px 20px rgb(242 106 27 / 0.35);
+}
+
+.mar-btn--big {
+  min-height: 54px;
+  font-size: 1.05rem;
+}
+
+.mar-btn:disabled {
+  opacity: 0.5;
+}
+
+.mar-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #c9480f !important;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.mar-discount {
+  padding: 14px;
+  border-radius: 16px;
+  border: 2px dashed #c9480f;
+  background: #fff;
+  margin: 6px 0 10px;
+}
+
+.mar-discount__label {
+  font-weight: 800;
+}
+
+.mar-discount__code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mar-discount__code code {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--purple);
+}
+
+.mar-discount__status {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #d9f5e3;
+  color: #16643a;
+}
+
+.mar-discount__status.is-expired {
+  background: #fde0dc;
+  color: #9b2317;
+}
+
+.mar-discount__status.is-upcoming {
+  background: #fff1c9;
+  color: #7a5a00;
+}
+
+/* Con ficha abierta en el móvil, los mandos de abajo se apartan. */
+.mar:has(.mar-sheet, .juego-panel) .mar-rail,
+.mar:has(.mar-sheet, .juego-panel) .mar-turbo,
+.mar:has(.mar-sheet, .juego-panel) .mar-speed,
+.mar:has(.mar-sheet, .juego-panel) .mar-help {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- Carga ---------- */
+
+.mar-splash {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 40%, #3b2a8f, #1b1440 70%);
+}
+
+.mar-splash__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.mar-splash__boia {
+  position: relative;
+  width: 72px;
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 35%, #ffa46b, var(--orange) 60%, #c9480f);
+  animation: mar-bob 1.2s ease-in-out infinite;
+}
+
+.mar-splash__boia::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: -18px;
+  width: 44px;
+  height: 34px;
+  background: #3b2a8f;
+  border-radius: 60% 60% 10% 10%;
+  transform: rotate(-18deg);
+}
+
+.mar-splash__boia::after {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 34px;
+  width: 36px;
+  height: 14px;
+  border-radius: 0 0 20px 20px;
+  background: #fff;
+}
+
+.mar-minigame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.mar-minigame > * {
+  pointer-events: auto;
+}
+
+/* ---------- Escritorio ---------- */
+
+@media (min-width: 760px) {
+  .mar-sheet,
+  .mar .juego-panel {
+    left: calc(var(--safe-l) + 16px);
+    right: auto;
+    bottom: 16px;
+    width: 390px;
+    max-height: calc(100% - 110px);
+  }
+
+  .mar:has(.mar-sheet, .juego-panel) .mar-rail,
+  .mar:has(.mar-sheet, .juego-panel) .mar-turbo {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mar-notices {
+    width: 380px;
+  }
+}
+
+/* ---------- Animaciones ---------- */
+
+@keyframes mar-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes mar-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes mar-drop {
+  from {
+    transform: translateY(-16px) scale(0.96);
+    opacity: 0;
+  }
+}
+
+@keyframes mar-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes mar-pop-small {
+  from {
+    scale: 0.7;
+    opacity: 0;
+  }
+}
+
+@keyframes mar-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(4deg);
+  }
+}
+
+@keyframes mar-beacon {
+  0% {
+    box-shadow:
+      0 6px 16px rgb(10 6 40 / 0.35),
+      0 0 0 0 rgb(242 106 27 / 0.7);
+  }
+  100% {
+    box-shadow:
+      0 6px 16px rgb(10 6 40 / 0.35),
+      0 0 0 14px rgb(242 106 27 / 0);
+  }
+}
+
+@keyframes mar-glow {
+  0%,
+  100% {
+    box-shadow: 0 8px 20px rgb(242 106 27 / 0.35);
+  }
+  50% {
+    box-shadow: 0 8px 34px rgb(255 138 61 / 0.75);
+  }
+}
+
+@keyframes mar-swipe {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(10px, -10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mar *,
+  .mar *::before {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

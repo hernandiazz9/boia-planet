@@ -13,6 +13,7 @@
     "./bottles": "./src/bottles/index.ts",
     "./circuit": "./src/circuit/index.ts",
     "./mission": "./src/mission/index.ts",
+    "./headless": "./src/headless.ts",
     "./minigames": "./src/minigames/index.ts",
     "./minigames/testing": "./src/minigames/testing.ts"
   },

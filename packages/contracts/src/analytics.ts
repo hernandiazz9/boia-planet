@@ -16,7 +16,7 @@ export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 /** Propiedades de cada evento. Nunca datos personales. */
 export interface FunnelEventProps {
   landing_view: { intro: 'played' | 'skipped' | 'none' };
-  explore_start: { source: 'hero' | 'tickets_panel' | 'event' };
+  explore_start: { source: 'hero' | 'hero_3d' | 'tickets_panel' | 'event' };
   discount_found: { discountId: string; eventId?: string };
   tickets_panel_open: { source: 'hero' | 'header' | 'deep_link' | 'event' };
   ticket_click_out: {

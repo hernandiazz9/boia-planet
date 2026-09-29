@@ -13,6 +13,8 @@ const TYPES: Record<string, string> = {
   '.json': 'application/json',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  // Barcos del mar 3D (tools/blender/export_barcos_glb.py).
+  '.glb': 'model/gltf-binary',
 };
 
 export async function GET(req: Request, ctx: { params: Promise<{ path: string[] }> }) {

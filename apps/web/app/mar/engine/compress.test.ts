@@ -1,0 +1,79 @@
+import { WorldRuntime } from '@boia/engine/headless';
+import { WORLD_REGISTRY } from '@boia/world';
+import { describe, expect, it } from 'vitest';
+import { MAR3D_SCALE, compressWorld } from './compress';
+
+const original = WORLD_REGISTRY.get('arcilla').config;
+const world = compressWorld(original);
+const byId = (w: typeof world, id: string) => w.objects.find((o) => o.identity.id === id)!;
+const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+  Math.hypot(a.x - b.x, a.y - b.y);
+
+describe('el mapa compartido en el mar 3D', () => {
+  it('conserva todos los lugares, con sus ids y comportamientos', () => {
+    expect(world.objects.map((o) => o.identity.id)).toEqual(
+      original.objects.map((o) => o.identity.id),
+    );
+    for (const o of world.objects) {
+      const before = byId(original, o.identity.id);
+      expect(o.behaviors.map((b) => b.type)).toEqual(before.behaviors.map((b) => b.type));
+    }
+  });
+
+  it('acorta el agua entre zonas y deja el puerto a 1:1', () => {
+    const a = byId(world, 'allday').position;
+    const a0 = byId(original, 'allday').position;
+    expect(a.y).toBeCloseTo(a0.y / MAR3D_SCALE.spread, 1);
+    // La boia de la entrada queda a la misma distancia del anillo que en el 2D.
+    const d = dist(byId(world, 'puerto-boia').position, world.spawn!);
+    const d0 = dist(byId(original, 'puerto-boia').position, original.spawn!);
+    expect(d).toBeCloseTo(d0, 0);
+  });
+
+  it('agranda las islas y su proximidad sigue fuera del casco', () => {
+    for (const o of world.objects.filter((x) => x.identity.category === 'isla')) {
+      const before = byId(original, o.identity.id);
+      const r = o.geometry.collision!.radius;
+      expect(r).toBeCloseTo(before.geometry.collision!.radius * MAR3D_SCALE.islandGrow, 1);
+      expect(o.geometry.proximityRadius!).toBeGreaterThan(r + 60);
+    }
+  });
+
+  it('todo cae dentro del mar y nada ajeno queda dentro de una isla', () => {
+    const { left, right, top, bottom } = world.bounds;
+    expect(left).toBeLessThan(right);
+    expect(top).toBeLessThan(bottom);
+    const islands = world.objects.filter((o) => o.identity.category === 'isla');
+    for (const o of world.objects) {
+      if (o.identity.category === 'isla' || o.identity.id === 'puerto') continue;
+      expect(o.position.x, o.identity.id).toBeGreaterThanOrEqual(left);
+      expect(o.position.x, o.identity.id).toBeLessThanOrEqual(right);
+      expect(o.position.y, o.identity.id).toBeGreaterThanOrEqual(top);
+      for (const i of islands) {
+        if (o.position.zone === i.identity.id) continue;
+        expect(
+          dist(o.position, i.position),
+          `${o.identity.id} en ${i.identity.id}`,
+        ).toBeGreaterThan(i.geometry.collision!.radius);
+      }
+    }
+  });
+
+  it('el barco sale libre del anillo y el runtime acepta el mundo', () => {
+    const rt = new WorldRuntime(world);
+    const s = world.spawn!;
+    const safe = rt.safePoint(s.x, s.y, 13.5);
+    expect(dist(safe, s)).toBeLessThan(1);
+  });
+
+  it('los puntos de los parámetros (vaivén, rastro, entrega) cambian de escala', () => {
+    const croc = byId(world, 'circuito-cocodrilo');
+    const pts = (croc.params!.patrol as { points: { x: number; y: number }[] }).points;
+    const pts0 = (
+      byId(original, 'circuito-cocodrilo').params!.patrol as typeof croc.params & {
+        points: { x: number; y: number }[];
+      }
+    ).points;
+    expect(pts[0]!.x).toBeCloseTo(pts0[0]!.x / MAR3D_SCALE.spread, 1);
+  });
+});

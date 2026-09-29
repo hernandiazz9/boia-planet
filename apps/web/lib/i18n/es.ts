@@ -25,6 +25,8 @@ export const es = {
   'hero.explore': 'Explorar el universo',
   'hero.explore.withPromotions': 'Encuentra descuentos para tus entradas',
   'hero.explore.withoutPromotions': 'Descubre eventos y secretos navegando',
+  'hero.explore3d': 'Navegar en 3D',
+  'hero.explore3d.sub': 'Nuevo · zoom libre y mapa interactivo',
   'hero.tickets': 'Tickets',
 
   'event.state.coming_soon': 'Próximamente',

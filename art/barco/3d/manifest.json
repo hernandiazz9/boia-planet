@@ -1,0 +1,87 @@
+{
+ "status": "muestra",
+ "nota": "Generado por tools/blender/export_barcos_glb.py desde los scripts de estilo. No editar.",
+ "unidades": "Blender: proa a +X, flotación en y = 0 (glTF, y arriba)",
+ "barcos": [
+  {
+   "id": "boceto-lapiz",
+   "file": "boceto-lapiz.glb",
+   "barco": "B01",
+   "label": "Boceto a lápiz",
+   "slot": [
+    0.36,
+    -0.28
+   ]
+  },
+  {
+   "id": "acuarela",
+   "file": "acuarela.glb",
+   "barco": "B02",
+   "label": "Acuarela ilustrada",
+   "slot": [
+    0.44,
+    0.1
+   ]
+  },
+  {
+   "id": "low-poly",
+   "file": "low-poly.glb",
+   "barco": "B03",
+   "label": "Low-poly",
+   "slot": [
+    0.62,
+    -0.1
+   ]
+  },
+  {
+   "id": "semi-realista",
+   "file": "semi-realista.glb",
+   "barco": "B04",
+   "label": "Semi-realista",
+   "slot": [
+    0.52,
+    -0.32
+   ]
+  },
+  {
+   "id": "arcilla",
+   "file": "arcilla.glb",
+   "barco": "B05",
+   "label": "Arcilla, maqueta",
+   "slot": [
+    0.36,
+    -0.2
+   ]
+  },
+  {
+   "id": "cartoon-30",
+   "file": "cartoon-30.glb",
+   "barco": "B06",
+   "label": "Cartoon años 30",
+   "slot": [
+    0.4,
+    -0.2
+   ]
+  },
+  {
+   "id": "cel-shaded",
+   "file": "cel-shaded.glb",
+   "barco": "B07",
+   "label": "Cel-shaded cómic",
+   "slot": [
+    0.5,
+    -0.2
+   ]
+  },
+  {
+   "id": "pixel-art",
+   "file": "pixel-art.glb",
+   "barco": "B08",
+   "label": "Pixel art",
+   "slot": [
+    0.48,
+    -0.3
+   ]
+  }
+ ]
+}
