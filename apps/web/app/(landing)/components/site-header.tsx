@@ -1,4 +1,4 @@
-import { t, type MessageKey } from '../../../lib/i18n';
+import { t, type MessageKey } from '../../../lib/landing/texts';
 
 const SECONDARY: ReadonlyArray<[MessageKey, string]> = [
   ['nav.artists', '#artistas'],

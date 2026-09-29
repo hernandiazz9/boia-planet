@@ -1,7 +1,8 @@
 import type { HomeBlock, HomeContent } from '@boia/contracts';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { t } from '../../../lib/i18n';
+import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
+import { t } from '../../../lib/landing/texts';
 import { resolveBlock, type ResolvedBlock } from '../../../lib/landing/resolve';
 import { ArtistRotator } from './artist-rotator';
 import { EventCard } from './event-card';
@@ -343,6 +344,17 @@ function ResolvedBlockView({
               {/* Carga completa a propósito: la entrada la decide el script de arranque. */}
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a href="/?intro=1">{t('footer.replayIntro')}</a>
+            </p>
+            <p className="site-footer__small">
+              {/* Versión de prueba (D-20, REQ-ADM-039): el Admin sin login. */}
+              <Link
+                href={ADMIN_PATH}
+                prefetch={false}
+                data-testid="probar-admin"
+                title={ADMIN_COPY.tryAdminHint}
+              >
+                {ADMIN_COPY.tryAdmin}
+              </Link>
             </p>
             <p className="site-footer__small">{t('footer.copyright')}</p>
             <p className="site-footer__small">{t('site.sampleNotice')}</p>

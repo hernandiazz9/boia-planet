@@ -28,7 +28,8 @@ import { type ComposedWorld, type WorldObject, chooseWorld as chooseWorldIn } fr
 import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SKIN_LABELS, type ShipCatalog } from '../../lib/barco/catalog';
-import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
+import { liveWorld } from '../../lib/admin/live-world';
+import { liveContent } from '../../lib/landing/live-content';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
 import { claimWorld } from '../../lib/world-handoff';
@@ -66,8 +67,8 @@ import { EventPanel } from './world-ui';
 
 const MANIFEST_URL = '/api/art/barco/manifest.json?optional=1';
 
-/** Eventos de muestra (T02) hasta que haya capa de datos. */
-const findEvent = (id: string | undefined) => SAMPLE_CONTENT.events.find((e) => e.id === id);
+/** Eventos del repositorio, con los cambios del Admin de la demo (T26). */
+const findEvent = (id: string | undefined) => liveContent().events.find((e) => e.id === id);
 const ticketAvailable = (id: string) => {
   const e = findEvent(id);
   return !!e && EVENT_STATE_BEHAVIOR[e.state].purchasable;
@@ -318,8 +319,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
 
     const query = new URLSearchParams(window.location.search);
     // `?mundo=<id>`, el elegido en este navegador o el activo del Admin (T17).
-    const initial = currentWorld(window.location.search);
-    adoptWorld(initial);
+    const base = currentWorld(window.location.search);
+    adoptWorld(base);
     // `?evento=<id>`: al entrar desde un evento, la brújula señala su isla.
     // `?menu=<sección>` abre el Menú de a bordo en esa sección (p. ej. desde /carnet).
     const section = query.get('menu');
@@ -345,6 +346,13 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       .catch((err: unknown) => console.warn('[boia] no se pudo leer lo descubierto', err));
 
     (async () => {
+      // Con los cambios del Admin de la demo (T26): lugares, nombres, textos y eventos.
+      const initial = await liveWorld(gameRepository(), worlds, base);
+      if (cancelled) return;
+      adoptWorld(initial);
+      if (fromEvent && trackerRef.current?.selectEvent(fromEvent)) {
+        setSelectedId(trackerRef.current.selected?.id ?? null);
+      }
       const { createGame, loadShipStyle } = await import('@boia/engine');
       // `?barco=provisional` fuerza el barco dibujado por código, para comparar.
       const forceProvisional = query.get('barco') === 'provisional';
@@ -484,11 +492,16 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const chooseWorld = (id: string) => {
     const g = gameRef.current;
     if (!g || id === world.id) return;
-    const next = chooseWorldIn(worlds, visitorWorldChoice(), id);
-    if (!next) return;
+    const chosen = chooseWorldIn(worlds, visitorWorldChoice(), id);
+    if (!chosen) return;
     const request = ++worldRequest.current;
     setWorldPending(true);
-    g.setWorld(next.config, { sea: next.theme.sea })
+    let next = chosen;
+    liveWorld(gameRepository(), worlds, chosen)
+      .then((live) => {
+        next = live;
+        return g.setWorld(next.config, { sea: next.theme.sea });
+      })
       .then((ok) => {
         if (!ok || request !== worldRequest.current || gameRef.current !== g) return;
         adoptWorld(next);

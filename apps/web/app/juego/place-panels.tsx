@@ -5,7 +5,8 @@ import type { FoundDiscount } from '@boia/store';
 import type { WorldObject } from '@boia/world';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
+import { islandMemories } from '../../lib/admin/world';
+import { liveContent } from '../../lib/landing/live-content';
 import './place-panels.css';
 
 /**
@@ -25,10 +26,8 @@ export interface PlacePanelState {
   ref?: string;
 }
 
-const HOME = SAMPLE_CONTENT.blocks;
-const storeBlock = HOME.find((b) => b.type === 'store');
-const contactBlock = HOME.find((b) => b.type === 'contact');
-const priorityBlock = HOME.find((b) => b.type === 'priority_event');
+/** Bloques de la home con los cambios del Admin de la demo (T26). */
+const block = (type: string) => liveContent().blocks.find((b) => b.type === type);
 
 function formatDate(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat('es-ES', {
@@ -41,10 +40,11 @@ function formatDate(iso: string, timeZone: string): string {
 
 /** Próximos eventos: el de la isla primero, luego el prioritario y el resto por fecha. */
 export function upcomingEvents(islandEventId?: string, limit = 3): BoiaEvent[] {
+  const priorityBlock = block('priority_event');
   const priority = priorityBlock?.type === 'priority_event' ? priorityBlock.eventId : undefined;
   const rank = (e: BoiaEvent) => (e.id === islandEventId ? 0 : e.id === priority ? 1 : 2);
-  return SAMPLE_CONTENT.events
-    .filter((e) => EVENT_STATE_BEHAVIOR[e.state].listed && e.state !== 'finished')
+  return liveContent()
+    .events    .filter((e) => EVENT_STATE_BEHAVIOR[e.state].listed && e.state !== 'finished')
     .sort((a, b) => rank(a) - rank(b) || a.startsAt.localeCompare(b.startsAt))
     .slice(0, limit);
 }
@@ -83,6 +83,26 @@ function Upcoming({ onSteer }: { onSteer: (eventId: string) => boolean }) {
   );
 }
 
+/** Los eventos que ya pasaron por esta isla: la isla se queda con ellos (T26, REQ-COM-002). */
+function Memories({ placeId }: { placeId: string }) {
+  const memories = islandMemories(placeId, liveContent().events, new Date());
+  if (memories.length === 0) {
+    return <p className="juego-panel-pending">Fotos y recuerdos de esta isla: próximamente.</p>;
+  }
+  return (
+    <div className="juego-panel-block" data-testid="panel-recuerdos">
+      <h3>Recuerdos de esta isla</h3>
+      <ul>
+        {memories.map((e) => (
+          <li key={e.id}>
+            <strong>{e.name}</strong> · {formatDate(e.startsAt, e.timeZone)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function PlacePanel({
   state,
   object,
@@ -97,7 +117,7 @@ export function PlacePanel({
 }) {
   const name = object?.identity.name ?? '';
   if (state.target === 'photos') {
-    const photos = SAMPLE_CONTENT.photos.slice(0, 6);
+    const photos = liveContent().photos.slice(0, 6);
     return (
       <section className="juego-panel" data-testid="panel-fotos" aria-label={name}>
         <Close onClose={onClose} />
@@ -118,6 +138,7 @@ export function PlacePanel({
     );
   }
   if (state.target === 'store') {
+    const storeBlock = block('store');
     const url = storeBlock?.type === 'store' ? storeBlock.url : undefined;
     const products = storeBlock?.type === 'store' ? storeBlock.products : [];
     return (
@@ -142,6 +163,7 @@ export function PlacePanel({
     );
   }
   if (state.ref === 'whatsapp') {
+    const contactBlock = block('contact');
     const wa =
       contactBlock?.type === 'contact'
         ? contactBlock.links.find((l) => /whatsapp/i.test(l.label))
@@ -167,7 +189,7 @@ export function PlacePanel({
       <p className="juego-panel-kicker">{textOf(object, 'kicker') ?? 'Isla'} · muestra</p>
       <h2>{name}</h2>
       {textOf(object, 'body') ? <p>{textOf(object, 'body')}</p> : null}
-      <p className="juego-panel-pending">Fotos y recuerdos de esta isla: próximamente.</p>
+      <Memories placeId={state.objectId} />
       <Upcoming onSteer={onSteer} />
     </section>
   );
@@ -198,7 +220,7 @@ export function DiscountCard({ found, testId }: { found: FoundDiscount; testId?:
     const t = setTimeout(() => setCopied(null), 2000);
     return () => clearTimeout(t);
   }, [copied]);
-  const event = d.eventId ? SAMPLE_CONTENT.events.find((e) => e.id === d.eventId) : undefined;
+  const event = d.eventId ? liveContent().events.find((e) => e.id === d.eventId) : undefined;
   const expired = found.status === 'expired';
   return (
     <div className="juego-descuento" data-testid={testId} data-status={found.status}>

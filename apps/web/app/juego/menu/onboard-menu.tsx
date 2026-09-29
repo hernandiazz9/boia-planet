@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
 import { orderedSections } from './sections';
 import type { MenuContext } from './types';
 
@@ -78,6 +80,17 @@ export function OnboardMenu({ ctx, initial }: { ctx: MenuContext; initial?: stri
             </button>
           </header>
           <active.Component ctx={ctx} />
+          {/* Versión de prueba (D-20, REQ-ADM-039): el Admin sin login, también desde el menú. */}
+          <p style={{ margin: '20px 0 4px', fontSize: 13, opacity: 0.8 }}>
+            <Link
+              href={ADMIN_PATH}
+              prefetch={false}
+              data-testid="menu-probar-admin"
+              title={ADMIN_COPY.tryAdminHint}
+            >
+              {ADMIN_COPY.tryAdmin}
+            </Link>
+          </p>
         </div>
       </section>
     </div>

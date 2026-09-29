@@ -1,5 +1,5 @@
 import type { Artist } from '@boia/contracts/content';
-import { t } from '../../../lib/i18n';
+import { t } from '../../../lib/landing/texts';
 import { alphabeticalArtists } from '../../../lib/landing/resolve';
 import { ArtistCard } from './artist-card';
 

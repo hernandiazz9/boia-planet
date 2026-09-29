@@ -2,41 +2,25 @@ import { bootScript } from '@boia/engine/intro';
 import type { Metadata } from 'next';
 import { t } from '../../lib/i18n';
 import { introCss, loadIntroData, stillCss } from '../../lib/intro/load';
-import { resolveBlock, resolveTicketsPanel } from '../../lib/landing/resolve';
+import { resolveBlock } from '../../lib/landing/resolve';
 import { SAMPLE_CONTENT } from '../../lib/landing/sample-content';
-import { HomeBlocks } from './components/blocks';
 import { IntroStage } from './components/intro-stage';
 import { LandingClient } from './components/landing-client';
-import { SiteHeader } from './components/site-header';
-import { TicketsPanel } from './components/tickets-panel';
+import { LiveLanding } from './components/live-landing';
 
 export const metadata: Metadata = {
   title: t('site.title'),
   description: t('site.description'),
 };
 
-/** id de ancla de cada tipo de bloque, para enlazar sólo secciones que existen. */
-const ANCHORS: Partial<Record<string, string>> = {
-  artists: 'artistas',
-  philosophy: 'filosofia',
-  store: 'tienda',
-  photos: 'fotos',
-};
-
 export default function LandingPage() {
-  // Hasta T10 la home sale de datos de muestra; luego, de lo publicado en Supabase.
+  // El servidor pinta la muestra; en el navegador, `LiveLanding` pasa a leer el
+  // repositorio local con los cambios del Admin de la demo (T26, D-20). Con
+  // Supabase, lo publicado.
   const content = SAMPLE_CONTENT;
   const now = new Date();
 
   const main = content.blocks.filter((b) => b.type !== 'footer');
-  const footer = content.blocks.filter((b) => b.type === 'footer');
-  const sections = new Set(
-    main
-      .filter((b) => resolveBlock(b, content, now) !== null)
-      .map((b) => ANCHORS[b.type])
-      .filter((a): a is string => a !== undefined),
-  );
-  const tickets = resolveTicketsPanel(content, now);
   // Entrada «mini-mundo» (T14, D-19): configuración, arte de la ilustración
   // ligera y geometría del mundo, leídos al construir la página.
   const intro = loadIntroData();
@@ -60,21 +44,10 @@ export default function LandingPage() {
           <style dangerouslySetInnerHTML={{ __html: `${stillCss(intro)}\n${introCss(intro)}` }} />
         </>
       )}
-      <SiteHeader sections={sections} />
-      <main id="contenido" tabIndex={-1}>
-        <HomeBlocks
-          blocks={main}
-          content={content}
-          now={now}
-          heroScene={<IntroStage data={intro} skipLabel={t('intro.skip')} />}
-        />
-      </main>
-      <HomeBlocks blocks={footer} content={content} now={now} />
-      <TicketsPanel
-        featured={tickets.featured}
-        others={tickets.others}
-        onSale={tickets.onSale}
-        artists={content.artists}
+      <LiveLanding
+        initial={content}
+        nowIso={now.toISOString()}
+        heroScene={<IntroStage data={intro} skipLabel={t('intro.skip')} />}
       />
       <LandingClient />
     </>

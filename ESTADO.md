@@ -4,6 +4,38 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T26: Admin de la demo con el botón «Probar admin»
+
+`/admin` abre el Admin de la versión de prueba (D-20, REQ-ADM-039) sin login, con un aviso fijo arriba: es una demo y los cambios se quedan en este navegador. Se llega desde «Probar admin» en el pie de la landing y en el Menú de a bordo de `/juego`. Copy, números y arte, `muestra` [pendiente Álvaro].
+
+Qué existe:
+- Secciones de L1 (REQ-ADM-008), con ancla en la URL (`/admin#mundo`): Página principal (orden con ↑/↓, visible, programar desde/hasta, evento prioritario, titular y subtítulo, vista previa móvil y escritorio en un iframe de `/?intro=0`), Eventos (crear, editar, duplicar como borrador, los siete estados a mano con su nota, isla del evento, papelera y recuperar; «Islas y eventos» dice qué evento abre cada isla y sus recuerdos), Mundo (mapa compartido en miniatura con todos los lugares y los puntos del mapa; por lugar: posición, radio de proximidad, parámetros JSON y activo, «vale en todos los mundos»; por mundo: nombre con la pregunta «Solo en este mundo / En todos los mundos», textos del panel y oculto; salida, puerto y aterrizaje de la entrada), Artistas, Fotos y vídeos (fotos por URL y álbumes; vídeos, con Supabase), Logros y cosméticos (premios, activo, secreto, precios en monedas, umbrales de rango), Moderación (botellas con sus reportes, retirar con motivo, descartar reporte; retirar recompensas del libro con compensación), Textos y música (textos de la landing sin variables; música de cada mundo sólo lectura), Temporadas (mundo activo), Usuarios de administración e Integraciones (sólo lectura) y Auditoría y muestra (lista de la auditoría local, volver a la muestra por área o todo).
+- `apps/web/lib/admin/`: `world.ts` (mapa compartido + cambios del repositorio, puro: `applyPlacePatches`, `applySkinPatches`, `linkIslandEvents`, `composeLiveWorld`; puntos del mapa con ids reservados `mapa:salida`, `mapa:puerto`, `mapa:entrada`; `params.proximityRadius` va a la geometría), `validate.ts` (`worldProblem`: ids que existen, dentro del mapa, mundo válido en cada mundo, salida/puerto/aterrizaje y teletransportes en el agua, inundación desde la salida como las pruebas del mar de T09/T20: ninguna isla corta el paso), `actions.ts` (`createAdminActions`: cada cambio pasa por `repo.admin` y su auditoría con autor `admin-demo`; un rechazo es `AdminError` con el motivo), `live-world.ts` (el mundo de `/juego` con los cambios), `dates.ts`, `copy.ts`.
+- Evento ↔ isla: el evento lleva `islandId`; la isla abre el próximo evento vigente ligado a ella y vende sus entradas; sin evento vigente abre su panel de isla con sus recuerdos (eventos pasados o terminados), que ahora se listan en el panel de isla de `/juego`.
+- La landing lee el repositorio: `LiveLanding` (cabecera, bloques, pie y Tickets) pinta la muestra del servidor y, al montar y con el navegador libre, `gameRepository()` (eventos, bloques, artistas, fotos, textos); sigue escuchando cambios. `main[data-contenido]` dice `muestra` o `repositorio`. `/artistas` igual. `lib/landing/sample-content.ts` sale ahora de la muestra de `@boia/store` (la isla del evento de primavera pasa de `isla-primavera` a `allday`). Textos del Admin sobre la landing con `lib/landing/texts.ts`.
+- `/juego` juega el mundo con los cambios del Admin (`liveWorld` antes de arrancar el motor y al cambiar de mundo) y lee los eventos, bloques y fotos del repositorio (`liveContent()`), no de la muestra. El mundo activo del Admin se guarda también en `boia:mundo-activo`, la clave que ya lee `world-choice.ts` (T17).
+- Pruebas: `apps/web/lib/admin/admin.test.ts` (el mapa de muestra pasa la validación; cambios inválidos rechazados con su motivo sin tocar nada ni la auditoría: isla sobre la salida, isla encima de un recogible, fuera del mapa, id inexistente, salida en tierra, isla que no admite eventos; un cambio válido vale en todos los mundos; la isla abre su evento vigente y sin él su panel con recuerdos; cada cambio escribe una entrada de auditoría; volver a la muestra deja home, mundo, pieles, textos y temporada como la muestra; renombrar en un mundo o en todos). e2e `apps/web/e2e/admin.spec.ts`: «Probar admin» desde el pie, crear un evento en la isla de evento, subir los artistas en la home, mover la isla (antes, moverla sobre la salida se rechaza por «tierra»), retirar una botella reportada; en la landing el evento y el orden nuevos, en `/juego` la brújula lleva a la isla en su sitio nuevo (mapa ampliado) y su panel abre el evento creado; el Menú de a bordo enlaza al Admin. Móvil y escritorio.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint                      # exit 0; 51 archivos, 521 pruebas
+E2E_PORT=3187 pnpm e2e --workers=2 e2e/admin.spec.ts          # exit 0; 2 pasadas
+E2E_PORT=3193 pnpm e2e --workers=2                            # exit 0; 80 pasadas, 14 omitidas
+node apps/web/scripts/landing-budget.mjs                      # 201,3 kB de 1024 kB, OK
+```
+Como en T20, al terminar la suite Playwright esperaba a un `next-server` huérfano del `webServer`: se paró a mano (el del puerto de la prueba, de este worktree) cuando todas las pruebas tenían resultado.
+
+Desviaciones:
+- Fuera del alcance escrito, por necesidad para «verlo en el mundo»: en `apps/web/app/juego/` además del botón del menú (`menu/onboard-menu.tsx`), `game-canvas.tsx` (mundo con cambios del Admin y eventos del repositorio) y `place-panels.tsx` (contenido del repositorio y recuerdos de la isla). Cambios pequeños; T21 y T24 tocan los mismos archivos.
+- El reporte de la botella se siembra en `localStorage` en el e2e (reportar de verdad exige Carnet y navegar hasta la botella).
+- «En todos los mundos» deja el mismo nombre propio en cada mundo registrado (el repositorio no guarda nombres comunes del mapa); un mundo que se registre después no lo hereda.
+- La validación del mar replica en `lib/admin/validate.ts` los obstáculos sólidos del motor (`solidObstaclesOf`) y el radio del casco (13,5): `packages/engine` estaba fuera del alcance y su índice arrastra Pixi.
+- El editor visual (arrastrar y soltar) queda para después, como pide el encargo.
+
+Sin probar:
+- Móviles reales. El aterrizaje de la entrada se guarda y se valida, pero la entrada todavía usa el mundo de muestra (T28).
+- Ocultar el bloque del hero con la entrada en marcha: el script de arranque decide con la muestra del servidor.
+
 ## 2026-09-29 — plan 002 T20: el mundo Arcilla en el juego, con cada isla y encuentro
 
 `/juego` ya no abre el mundo de muestra de plan 001: abre Arcilla (B05) sobre el mapa compartido sacado de `mundos/arcilla/mapa.json`. Textos, radios, premios, descuentos y nombres son `muestra` [pendiente Álvaro].

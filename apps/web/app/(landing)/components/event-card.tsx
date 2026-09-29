@@ -1,6 +1,6 @@
 import { canBuy, type Artist, type BoiaEvent } from '@boia/contracts';
 import type { FunnelEventProps } from '@boia/contracts/analytics';
-import { formatEventDate, t, type MessageKey } from '../../../lib/i18n';
+import { formatEventDate, t, type MessageKey } from '../../../lib/landing/texts';
 import { BuyButton } from './buy-button';
 
 type Source = FunnelEventProps['ticket_click_out']['source'];

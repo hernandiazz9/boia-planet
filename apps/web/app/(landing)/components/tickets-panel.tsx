@@ -1,5 +1,5 @@
 import type { Artist, BoiaEvent } from '@boia/contracts';
-import { t } from '../../../lib/i18n';
+import { t } from '../../../lib/landing/texts';
 import { EventCard } from './event-card';
 
 /**
