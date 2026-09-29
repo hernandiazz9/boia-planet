@@ -105,7 +105,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: faro (daily) and cañón (season) in packages/engine/src/minigames, test route /juego?minijuego=faro|canon, non-modal «Jugar» panel near the island, seed-based minimum duration, rewards via gameRepository().progress, arcilla/acuarela styles; islands to be placed by T20 → e2c8abf
 
 ## T21 — Boia Fiestera mission, achievements, points and coins
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T20
 - Goal: REQ-AVE-005…011 in Arcilla: the Fiestera floats among 3–4 crocodiles that dive one by one as the ship nears; she boards with the notice «Nueva tripulante a bordo · Boia Fiestera rescatada · Destino: última isla»; she stays visible in the TRIPULANTE slot; she disembarks at the Isla del Amanecer with a celebration, achievement and big reward; the world stays open after. Destination stored by world/season id, never coordinates. Achievements system with the base list of REQ-IDE-025 (first boia, X/6 boies, islands, ticket, 5/20 minutes, Fiestera, circuit, secrets), notices one at a time 4 s (T05 queue), points and coins as separate balances from the T16 ledger, shown in the HUD/menu.
 - Context: docs/spec/04-aventura.md (REQ-AVE-005…011), 05-identidad-y-comunidad.md (REQ-IDE-024…028); T18 art (crocodiles, Fiestera on B05); packages/store (T16); packages/engine (dialogue, collectible, reward, achievement-trigger behaviors); apps/web/app/juego/** (menu, notices).
@@ -113,7 +113,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test` → exit 0; adds tests: the mission steps in order, reward granted once even after reload, destination survives a world switch, each base achievement fires once
   - `pnpm e2e` → exit 0; a spec rescues the Fiestera and lands her at the última isla on desktop
-- Outcome:
+- Outcome: Fiestera mission keyed on map data (params.mission, cocodrilo objects, params.missionDestination), one global mission surviving reloads/world switches, delivery reward 100 pts/100 coins (muestra); achievements notices only when the store grants; points/coins chip next to Inicio; Logros shows balances, rank and progress; 550 tests → 58bb656
 
 ## T27 — Intro: 3D «BOIA» letters rendered in Blender
 - Status: done
@@ -226,8 +226,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T19: Acuarela story = Sant Joan night; places not in real coastal order; --all rendered into tools/blender/out to avoid rewriting 35 stale sources_sha256 lines outside scope (agent)
 - 2026-09-29 T20: e2e start next to places with ?cerca=<place> because the Arcilla map is too big to sail in test time; default ship is the world's own (arcilla); touched outside scope: apps/web/lib/repo.ts, lib/intro/load.ts, engine intro scene/sphere-probe, e2e specs (agent)
 - 2026-09-29 T26: «en todos los mundos» writes the name into each registered world (later worlds don't inherit); sea check copied into lib/admin/validate.ts (engine index loads Pixi); spring event island now `allday`; also edited juego game-canvas/place-panels so admin changes show in the world (agent)
+- 2026-09-29 T21: Fiestera asks for help at the crocodile radius (4.0) and boards at 2.6; she waits in the última isla niche (missionDrop); map trigger find_boia = catalogue find_buoy; time played logged every 15 s while visible; mission built from the Admin-edited world (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T21: «Seis boies» achievement unreachable (map has one boia trigger) — add 5 more boies to the shared map; Admin screen for the Fiestera destination of new games + audited migration (REQ-AVE-011) not built
 - 2026-09-29 T26: landing critical path is now 201 kB, over the 192 kB intro budget — T29 must bring it back under
 - 2026-09-29 T20: Playwright hangs on an orphaned next-server after the run on this machine; fix the webServer config; dolphin and whirlpool only unit-tested
 - 2026-09-29 T27: the title sheet is upscaled ~1.6× on 3× DPR phones; consider a 2× sheet; letters use Inter until BOIA's real wordmark font is provided
@@ -274,3 +276,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 03:37 T24 launched · attempt 1 · agent a7f0ae4fa2a6b1c74
 - 2026-09-29 03:37 T26 launched · attempt 1 · agent a66fcfe8f16ef5caf
 - 2026-09-29 04:16 T26 done · branch worktree-agent-a66fcfe8f16ef5caf → bc9ca58
+- 2026-09-29 04:18 T28 launched · attempt 1 · agent a24eaf6fb4212430d
+- 2026-09-29 04:28 T21 done · branch worktree-agent-a8a239e3b0fba4d0a (1 conflict round) → 58bb656
