@@ -75,7 +75,8 @@ test('«Ir en nave» desde la ficha: despega, vuela y se posa sin abrir la compr
 }) => {
   test.setTimeout(60_000);
   const errors = await openMar(page);
-  await page.getByTestId('mar-mapa').click();
+  await minimap(page).click();
+  await expect(minimap(page)).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-pin="allday"]').click();
   await page.getByTestId('mar-volar').click();
   const main = page.locator('main.mar');
