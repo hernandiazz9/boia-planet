@@ -154,7 +154,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome:
 
 ## T50 — Brand: wordmark letters, logo, colours and type
-- Status: pending
+- Status: done
 - Depends on: none
 - Goal: Apply Álvaro's identity (inventory §6.8). Trace the wordmark (art/marca/boia-wordmark.jpg) to clean vectors (SVG in art/marca/), rebuild the intro's 3D «BOIA» letters from that shape in Blender (same pipeline and motion as plan 002 T27, replacing Inter), use the SVG wordmark and the mascot as logo in the landing header, footer, favicon/app icons and the Admin, and set the brand colours sampled from the two images (orange, navy-blue, black outline) as design tokens in apps/web (the /mar palette waits for plan 003). UI type: a free display font that matches the wordmark for titles (chosen by the agent, self-hosted, subset, within the 192 KB landing budget) until Álvaro sends the real font file.
 - Context: art/marca/**; tools/blender/intro/titulo.py, art/intro/**, packages/engine/src/intro/**, apps/web/lib/intro/**; apps/web/app/(landing)/**, apps/web/app/globals.css, apps/web/app/icon.svg, apps/web/app/admin/admin.css, apps/web/app/mar/engine/palette.ts; plan 002 T27 Outcome.
@@ -164,9 +164,10 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; `pnpm build` → landing ≤ 192 KB gzip (report it)
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0 (intro specs still pass)
   - Screenshots p004-t50-intro-letras.png (next to the wordmark image) and p004-t50-landing-logo.png
-- Outcome:
+- Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-29 T50: text on orange is black (navy on the new orange is 4.3:1); header logo decorative inside «Ir al inicio», footer logo named «BOIA.PLANET»; display font Titan One until Álvaro's font file (agent)
 - 2026-09-29 T38: new Álvaro questions start at P15 (P14 exists from D-22); O5 follows plan 003's approved catalog (B03/B06 by coins, B04 by 1500 points, B07/B01/B08 by achievements, skins 150); five new boies ids boia-espacio/descubrir/pertenecer/allday/secretos, placed by T45; «Condiciones» becomes aviso legal; also updated REQ-ENT-003, ENT-032, AVE-018, COM-031 (agent)
 - 2026-09-29: plan 004 runs in parallel with plan 003 on branch `plan-004` (integration worktree .claude/worktrees/orq-004); main is merged into plan-004 after each plan 003 task lands. Until plan 003 is done only tasks that do not touch its files run: T38 (docs; D-22 already on main) and T39 (art), then T50 without apps/web/app/mar/engine/palette.ts; T40–T48 wait for plan 003 to finish (they touch apps/web/app/mar, juego, engine or store) (orchestrator)
 - 2026-09-29: coins buy ships and skins; only B05 and B02 unlocked at start; points unlock one ship (Hernán) → B04 at 1500 points, prices in inventory O5 (orchestrator)
@@ -178,6 +179,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-29 T50: /mar brand colours (after plan 003); Admin title wordmark needs admin-app.tsx; themeColor in app/layout.tsx still #12233f; Act 0 boia in intro-stage.tsx is not the mascot yet; landing-budget.mjs ignores CSS-loaded assets
 - 2026-09-29 T38: es.ts still says «Lista provisional» for artists, legal slug `condiciones` → aviso legal, menu tab «Descuentos» vs «Mis códigos», ranking stub (covered by T40–T45/T49); O10 ambient music has no REQ; mapa.json still has a detour named `d_solar`
 
 ## Log
@@ -186,3 +188,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 16:22 T38 launched · attempt 1 · agent a6c9b003993ca3178
 - 2026-09-29 16:22 T39 launched · attempt 1 · agent aa756794320ace22d
 - 2026-09-29 16:40 T38 done · branch worktree-agent-a6c9b003993ca3178 → 69172c6
+- 2026-09-29 16:42 T50 launched · attempt 1 · agent af4598a59fa0e694c
+- 2026-09-29 17:24 T39 conflict in ESTADO.md · sent back to agent aa756794320ace22d
+- 2026-09-29 17:26 T50 done · branch worktree-agent-af4598a59fa0e694c → 8850a24
+- 2026-09-29 17:28 T39 second ESTADO.md conflict (T50 landed) · sent back to agent aa756794320ace22d
