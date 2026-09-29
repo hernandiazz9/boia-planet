@@ -168,6 +168,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-29: main merged into plan-004 again (plan 003 T33, T34, its own «T50» compact /mar world); conflicts in ESTADO.md and engine ship/controller.test.ts (both sides added describe blocks) resolved by keeping both; tests, typecheck, lint green. Note: plan 003 also used the id T50, different from this plan's T50 (brand) (orchestrator)
 - 2026-09-29 T46: fps box stays in the DOM hidden (specs use it); sensitivity as module state (setControlSensitivity) since game.ts was off limits; wake infers turn/boost/impact from motion (agent)
 - 2026-09-29 T47: atlases generated (gitignored) at dev/build/e2e, fallback to per-PNG if generation fails; sharp borrowed from Next; long moves freeze ≤2.5 s until art loads; createGame takes start/preload; STREAM_TUNING muestra (agent)
 - 2026-09-29 T48: draft is store state (v5); events keep «Guardar y publicar» (testid evento-guardar) plus «Guardar borrador»; purge asks the name again instead of re-auth (no login in the demo); achievement icons are keys without artwork; music ≤ ~1 MB muestra (agent)
@@ -229,3 +230,4 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29 20:01 T47 done · branch worktree-agent-acdbcc0aadea9d92e → 0425d7a (e2e: known Barco ×2, 3 load timeouts pass alone)
 - 2026-09-29 20:04 T45 launched · attempt 1 · agent a0ef37ddb695c2396 (no /mar)
 - 2026-09-29 20:23 T46 done · branch worktree-agent-a34f3a8db29063fc6 → f211f41
+- 2026-09-29 20:24 main merged into plan-004 (plan 003 T33, T34, T50) · tests/typecheck/lint pass
