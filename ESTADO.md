@@ -4,6 +4,29 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-30 — fuera de encargo: el barco vuela («Entradas» e «Ir en nave»)
+
+Experimento de Hernán en la rama `exp/entradas-vuelo`, que se queda y está unido a `main`. En `/mar`, «Entradas» ya no navega en turbo: el barco levita, le salen alas de nave, vuela sobre el planeta hasta la isla del evento, se posa y abre la compra. La ficha de cada isla ofrece «⛵ Navegar» o «🛸 Ir en nave». Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `apps/web/app/mar/engine/flight.ts`: el perfil del vuelo, puro y con pruebas en `flight.test.ts` (`FLIGHT`, `flightPlan`, `flightPose`). Levita en 1 s, las alas salen entre 0,85 y 2 s, arranca a los 2,3 s, avanza 2,4–4,4 s según la distancia (620 u/s) a 9 u de altura y se posa en 0,95 s; a la isla del evento desde el puerto, unos 6 s. Las piezas: `Wings` (alas delta crema con franja naranja, aletas moradas, luces en las puntas y dos propulsores), `Sparks` (estela de chispas), `Splash` (espuma y gotas al despegar y al posarse) y `FlightClouds` (nubecillas a la altura del vuelo).
+- `mar3d.ts`: `startFlight(placeId)`. Mientras vuela, el runtime ve un barco fantasma quieto donde despegó (sin choques ni disparadores por el camino), no se gobierna y `setCourse` no hace nada; `stopVoyage` («Saltar») lo posa ya en el destino. La cámara se queda cerca durante la transformación (`TRANSFORM_ZOOM` 0,15), se aleja al volar (`FLIGHT_ZOOM` 0,34), sube con el barco y gira hasta quedar detrás (`camYaw`); al posarse vuelve a mirar al norte. `Stats.flight` da la fase (`lift`/`cruise`/`land`).
+- `mar-client.tsx`: «Entradas» vuela (`?vuelo=0` vuelve al viaje en turbo, para comparar) y el botón dice «Volando a…». `flyTo` para «Ir en nave»: se posa sin abrir la compra. Con movimiento reducido, compra directa o navegar como siempre. `data-flight` en `<main>` y líneas de velocidad en CSS (`.mar-speedlines`) durante el crucero.
+- e2e en `mar-3d.spec.ts`: «Entradas» vuela y «Saltar» abre la compra; otro toque, y el vuelo llega y la abre; «Ir en nave» desde la ficha despega, vuela y se posa sin abrir la compra.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 69 archivos, 691 pruebas
+E2E_PORT=3475 pnpm e2e mar-3d.spec.ts --workers=2   # exit 0; 24 pasadas (2,9 min)
+```
+
+Desviaciones:
+- «Saltar» durante el vuelo deja el barco posado en la isla; antes se quedaba donde iba.
+
+Sin probar:
+- Móvil real: sólo Chromium a 390×844 y el túnel que probó Hernán.
+- Tocar una isla o el mar en la pantalla sigue navegando sin preguntar; la elección sólo sale en la ficha.
+
 ## 2026-09-30 — plan 003 T37: panel de logros con contador y «Reclamar» en /mar y /juego
 
 Los logros ya se reclaman desde la web: un mismo panel en `/mar` (icono 🏆 del HUD) y en `/juego` (sección «Logros» del Menú de a bordo). Al completar uno sale «¡Logro completado! Reclama tu premio» y el icono lleva un número rojo mientras haya algo por reclamar; «Reclamar» da el premio una vez, con una animación corta. Arreglados los tres huecos de T36. Todo `muestra`, pendiente de Álvaro.
