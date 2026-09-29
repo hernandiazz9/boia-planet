@@ -18,7 +18,16 @@ import { DEFAULT_TIME_ZONE, isoToLocal, localToIso } from '../../../lib/admin/da
 import { eventIslands, islandEvent, islandMemories } from '../../../lib/admin/world';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
-import { Changed, Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import {
+  Changed,
+  DeleteButton,
+  DraftBar,
+  Field,
+  ResetButton,
+  SectionHead,
+  StatusLine,
+  TrashInline,
+} from '../ui';
 
 export const STATE_LABELS: Record<EventState, string> = {
   draft: 'Borrador',
@@ -147,49 +156,60 @@ function EventForm({
   const worldName = (id: string) =>
     ctx.registry.get(ctx.registry.defaultId).places.find((p) => p.id === id)?.name ?? id;
 
-  const save = () =>
-    run(async () => {
-      const startsAt = localToIso(d.startsAt, DEFAULT_TIME_ZONE);
-      if (!startsAt) throw new Error('falta la fecha y hora del evento');
-      const endsAt = optionalIso(d.endsAt, 'fin');
-      const saleOpensAt = optionalIso(d.saleOpensAt, 'apertura de la venta');
-      const priceCents = d.price.trim() ? centsOf(d.price) : undefined;
-      if (priceCents === null) throw new Error('precio: escribe un importe en euros, p. ej. 12,50');
-      // Con apertura de venta y estado por fechas, se guarda «a la venta»: las
-      // fechas enseñan «próximamente» hasta que abre (REQ-COM-004).
-      const state =
-        d.stateSource === 'dates' && saleOpensAt && d.state === 'coming_soon' ? 'on_sale' : d.state;
-      const series = d.series.trim();
-      const input: EventInput = {
-        ...(d.id ? { id: d.id } : {}),
-        ...(d.slug ? { slug: d.slug } : {}),
-        name: d.name,
-        format: d.format,
-        startsAt,
-        timeZone: DEFAULT_TIME_ZONE,
-        placeLabel: d.placeLabel,
-        state,
-        stateSource: d.stateSource,
-        description: d.description,
-        artistIds: d.artistIds,
-        activities: d.activities
-          .split('\n')
-          .map((a) => a.trim())
-          .filter(Boolean),
-        priceSample: d.priceSample,
-        ...(series ? { series } : {}),
-        ...(endsAt ? { endsAt } : {}),
-        ...(saleOpensAt ? { saleOpensAt } : {}),
-        ...(priceCents !== undefined ? { priceCents } : {}),
-        ...(d.posterUrl.trim() ? { posterUrl: d.posterUrl.trim() } : {}),
-        ...(d.stateNote ? { stateNote: d.stateNote } : {}),
-        ...(d.ticketUrl ? { ticketUrl: d.ticketUrl } : {}),
-        ...(d.islandId ? { islandId: d.islandId } : {}),
-        ...(d.sample !== undefined ? { sample: d.sample } : {}),
-      };
-      await ctx.actions.saveEvent(input, d.id ? 'editar evento' : 'nuevo evento');
-      onDone();
-    }, 'Evento guardado en este navegador.');
+  /** «Guardar y publicar» (se ve ya) o «Guardar borrador» (se ve al publicar, REQ-ADM-015). */
+  const save = (mode: 'publish' | 'draft' = 'publish') =>
+    run(
+      async () => {
+        const startsAt = localToIso(d.startsAt, DEFAULT_TIME_ZONE);
+        if (!startsAt) throw new Error('falta la fecha y hora del evento');
+        const endsAt = optionalIso(d.endsAt, 'fin');
+        const saleOpensAt = optionalIso(d.saleOpensAt, 'apertura de la venta');
+        const priceCents = d.price.trim() ? centsOf(d.price) : undefined;
+        if (priceCents === null)
+          throw new Error('precio: escribe un importe en euros, p. ej. 12,50');
+        // Con apertura de venta y estado por fechas, se guarda «a la venta»: las
+        // fechas enseñan «próximamente» hasta que abre (REQ-COM-004).
+        const state =
+          d.stateSource === 'dates' && saleOpensAt && d.state === 'coming_soon'
+            ? 'on_sale'
+            : d.state;
+        const series = d.series.trim();
+        const input: EventInput = {
+          ...(d.id ? { id: d.id } : {}),
+          ...(d.slug ? { slug: d.slug } : {}),
+          name: d.name,
+          format: d.format,
+          startsAt,
+          timeZone: DEFAULT_TIME_ZONE,
+          placeLabel: d.placeLabel,
+          state,
+          stateSource: d.stateSource,
+          description: d.description,
+          artistIds: d.artistIds,
+          activities: d.activities
+            .split('\n')
+            .map((a) => a.trim())
+            .filter(Boolean),
+          priceSample: d.priceSample,
+          ...(series ? { series } : {}),
+          ...(endsAt ? { endsAt } : {}),
+          ...(saleOpensAt ? { saleOpensAt } : {}),
+          ...(priceCents !== undefined ? { priceCents } : {}),
+          ...(d.posterUrl.trim() ? { posterUrl: d.posterUrl.trim() } : {}),
+          ...(d.stateNote ? { stateNote: d.stateNote } : {}),
+          ...(d.ticketUrl ? { ticketUrl: d.ticketUrl } : {}),
+          ...(d.islandId ? { islandId: d.islandId } : {}),
+          ...(d.sample !== undefined ? { sample: d.sample } : {}),
+        };
+        const why = d.id ? 'editar evento' : 'nuevo evento';
+        if (mode === 'draft') await ctx.actions.saveEventDraft(input, why);
+        else await ctx.actions.saveEvent(input, why);
+        onDone();
+      },
+      mode === 'draft'
+        ? 'Guardado en el borrador: se ve al publicar.'
+        : 'Evento guardado y publicado.',
+    );
 
   return (
     <form
@@ -384,7 +404,16 @@ function EventForm({
       </details>
       <div className="admin-row">
         <button type="submit" className="admin-button" disabled={busy} data-testid="evento-guardar">
-          Guardar evento
+          Guardar y publicar
+        </button>
+        <button
+          type="button"
+          className="admin-button admin-button--ghost"
+          disabled={busy}
+          data-testid="evento-borrador"
+          onClick={() => void save('draft')}
+        >
+          Guardar borrador
         </button>
         <button type="button" className="admin-button admin-button--ghost" onClick={onDone}>
           Cancelar
@@ -411,14 +440,17 @@ function EventForm({
 
 /** Eventos (REQ-ADM-018): crear, duplicar, editar, estados a mano, isla, papelera. */
 export function EventsSection({ ctx }: { ctx: AdminContext }) {
-  const events = useRead(ctx, (r) => r.content.events());
+  // Lo que se edita es el borrador (lo publicado con los cambios sin publicar encima).
+  const events = useRead(ctx, (r) => r.admin.draftList('events'));
   const changed = useRead(ctx, (r) => r.admin.overridden('events'));
+  const pending = useRead(ctx, (r) => r.admin.pendingDrafts());
   const [editing, setEditing] = useState<Draft | null>(null);
   const { status, busy, run } = useRun();
   if (!events) return <p>Cargando…</p>;
-  const ids = new Set(events.map((e) => e.id));
-  const trashed = (changed ?? []).filter((id) => !ids.has(id));
   const changedSet = new Set(changed ?? []);
+  const drafts = new Map(
+    (pending ?? []).flatMap((c) => (c.area === 'events' && c.id ? [[c.id, c.isNew]] : [])),
+  );
   const now = new Date();
   const worldPlaces = ctx.registry.get(ctx.registry.defaultId).places;
   const current = effectiveEvents(events, now);
@@ -441,6 +473,7 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
         </button>
         <ResetButton ctx={ctx} areas={['events']} />
       </SectionHead>
+      <DraftBar ctx={ctx} />
       {editing ? (
         <EventForm
           key={editing.id ?? 'nuevo'}
@@ -455,6 +488,15 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
             <div className="admin-row admin-row--between">
               <div>
                 <strong>{e.name}</strong> <Changed on={changedSet.has(e.id)} />
+                {drafts.has(e.id) ? (
+                  <span
+                    className="admin-badge admin-badge--draft"
+                    data-testid={`evento-en-borrador-${e.id}`}
+                    title="Con cambios sin publicar: la web y el mar aún no los ven"
+                  >
+                    {drafts.get(e.id) ? 'borrador sin publicar' : 'cambios en borrador'}
+                  </span>
+                ) : null}
                 <p className="admin-meta">
                   {isoToLocal(e.startsAt, e.timeZone).replace('T', ' ')} · {e.placeLabel} · isla:{' '}
                   {islandName(e.islandId)} · {EVENT_FORMAT_LABELS[e.format]}
@@ -473,13 +515,9 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
                   data-testid={`evento-estado-${e.id}`}
                   onChange={(ev) => {
                     // Cambiarlo aquí es corregirlo a mano: las fechas ya no lo tocan (REQ-COM-004).
+                    // Se publica ya; si tiene borrador, el borrador lo recoge también.
                     const state = ev.target.value as EventState;
-                    void run(() =>
-                      ctx.actions.saveEvent(
-                        { ...e, state, stateSource: 'manual' },
-                        `estado a mano: ${state}`,
-                      ),
-                    );
+                    void run(() => ctx.actions.setEventStateManual(e.id, state));
                   }}
                 >
                   {EVENT_STATES.map((s) => (
@@ -509,45 +547,33 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
               >
                 Duplicar
               </button>
-              <button
-                type="button"
-                className="admin-button admin-button--ghost"
-                disabled={busy}
-                onClick={() =>
-                  void run(
-                    () => ctx.repo.admin.remove('events', e.id, { reason: 'papelera' }),
-                    'Enviado a la papelera.',
-                  )
-                }
-              >
-                A la papelera
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {trashed.length > 0 ? (
-        <div className="admin-card">
-          <h3>Papelera</h3>
-          <ul className="admin-list">
-            {trashed.map((id) => (
-              <li key={id} className="admin-row admin-row--between">
-                <span>{id}</span>
+              {drafts.has(e.id) && !drafts.get(e.id) ? (
                 <button
                   type="button"
                   className="admin-button admin-button--ghost"
                   disabled={busy}
+                  data-testid={`evento-descartar-${e.id}`}
                   onClick={() =>
-                    void run(() => ctx.repo.admin.restore('events', id), 'Recuperado.')
+                    void run(
+                      () => ctx.actions.discardDrafts({ area: 'events', id: e.id }),
+                      'Borrador descartado: queda lo publicado.',
+                    )
                   }
                 >
-                  Recuperar
+                  Descartar borrador
                 </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+              ) : null}
+              <DeleteButton
+                ctx={ctx}
+                area="events"
+                id={e.id}
+                label={drafts.get(e.id) ? 'Borrar borrador' : 'A la papelera'}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <TrashInline ctx={ctx} area="events" />
       <StatusLine status={status} />
       <h3>Islas y eventos</h3>
       <p className="admin-lead">{ADMIN_COPY.islandKeepsMemories}</p>

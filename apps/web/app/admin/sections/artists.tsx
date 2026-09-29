@@ -5,7 +5,15 @@ import { useState } from 'react';
 import { slugify } from '../../../lib/admin/actions';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
-import { Changed, Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import {
+  Changed,
+  DeleteButton,
+  Field,
+  ResetButton,
+  SectionHead,
+  StatusLine,
+  TrashInline,
+} from '../ui';
 
 const genresOf = (s: string) =>
   s
@@ -62,16 +70,7 @@ function ArtistRow({
         >
           Guardar
         </button>
-        <button
-          type="button"
-          className="admin-button admin-button--ghost"
-          disabled={busy}
-          onClick={() =>
-            void run(() => ctx.repo.admin.remove('artists', artist.id, { reason: 'papelera' }))
-          }
-        >
-          A la papelera
-        </button>
+        <DeleteButton ctx={ctx} area="artists" id={artist.id} />
       </div>
       <StatusLine status={status} />
     </li>
@@ -88,7 +87,6 @@ export function ArtistsSection({ ctx }: { ctx: AdminContext }) {
   if (!artists) return <p>Cargando…</p>;
   const changedSet = new Set(changed ?? []);
   const ids = new Set(artists.map((a) => a.id));
-  const trashed = (changed ?? []).filter((id) => !ids.has(id));
   return (
     <section>
       <SectionHead
@@ -137,21 +135,7 @@ export function ArtistsSection({ ctx }: { ctx: AdminContext }) {
         </button>
         <StatusLine status={status} />
       </form>
-      {trashed.length ? (
-        <p className="admin-meta">
-          En la papelera:{' '}
-          {trashed.map((id) => (
-            <button
-              key={id}
-              type="button"
-              className="admin-link"
-              onClick={() => void run(() => ctx.repo.admin.restore('artists', id), 'Recuperado.')}
-            >
-              recuperar {id}
-            </button>
-          ))}
-        </p>
-      ) : null}
+      <TrashInline ctx={ctx} area="artists" />
       <ul className="admin-list">
         {artists.map((a) => (
           <ArtistRow

@@ -9,7 +9,8 @@ import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 /**
  * «Probar admin» (T26, D-20, REQ-ADM-039): desde el pie de la landing se abre
  * el Admin sin login, con su aviso; se crea un evento en una isla, se suben
- * los artistas en la home, se mueve la isla en el mapa compartido (antes, un
+ * los artistas en la home y se publica el borrador (T48), se mueve la isla en
+ * el mapa compartido (antes, un
  * movimiento que dejaría la salida en tierra se rechaza con su motivo) y se
  * retira una botella reportada. Todo se ve después en la landing y en el mar,
  * en el mismo navegador. Corre en móvil 360×640 y en escritorio.
@@ -114,6 +115,10 @@ test('Probar admin: los cambios se ven en la landing y en el mar', async ({ page
   expect(order.indexOf(`bloque-${artistsBlock}`)).toBeLessThan(
     order.indexOf(`bloque-${upcomingBlock}`),
   );
+  // La home va en borrador (T48, REQ-ADM-015): se ve en la web al publicar.
+  await expect(page.getByTestId('borrador')).not.toHaveAttribute('data-pendientes', '0');
+  await page.getByTestId('publicar').click();
+  await expect(page.getByTestId('borrador')).toHaveAttribute('data-pendientes', '0');
 
   // 4. Mundo: mover la isla sobre la salida se rechaza con su motivo; 600 u al este, no.
   await section(page, 'mundo');

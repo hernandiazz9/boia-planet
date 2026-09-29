@@ -9,16 +9,35 @@ import {
   eventSchema,
 } from '@boia/contracts';
 import {
+  type AchievementDefinition,
   type AdminOptions,
   type BoiaRepository,
   type ContentArea,
+  type EntityArea,
+  type MusicTrack,
   type PlacePatch,
   type SkinPatch,
+  MUSIC_DATA_MAX,
+  TRASH_RETENTION_MAX_DAYS,
+  TRASH_RETENTION_MIN_DAYS,
+  achievementDefinitionSchema,
+  isStableKey,
   mergePlacePatch,
+  musicTrackSchema,
 } from '@boia/store';
 import type { RenameScope, WorldRegistry } from '@boia/world';
-import { worldProblem } from './validate';
-import { MAP_POINTS, type MapPointKey, discountHidingPlaces, eventIslands } from './world';
+import { MINIGAMES, type TriggerChoices, triggerParamsProblem } from './achievements';
+import { type ReferenceData, danglingReferences, itemName, referencesTo } from './references';
+import { circuitIds, worldProblem } from './validate';
+import {
+  EMPTY_WORLD_CONTENT,
+  MAP_POINTS,
+  type MapPointKey,
+  composeLiveWorld,
+  discountHidingPlaces,
+  eventIslands,
+  liveMap,
+} from './world';
 
 /**
  * Lo que hace el Admin de la demo (T26, REQ-ADM-008, REQ-ADM-039) sobre el
@@ -70,6 +89,52 @@ export type EventInput = Omit<BoiaEvent, 'id' | 'slug' | 'sample'> & {
   sample?: boolean;
 };
 
+/** Botones de la portada que se editan (REQ-ADM-017) y su clave de texto. */
+export const HOME_CTA_KEYS = { explore: 'hero.explore', tickets: 'hero.tickets' } as const;
+export type HomeCta = keyof typeof HOME_CTA_KEYS;
+export const HOME_CTA_MAX = 40;
+
+/** Iconos de logro que se pueden elegir (claves de arte; `muestra`). */
+export const ACHIEVEMENT_ICONS = [
+  'boia',
+  'isla',
+  'barco',
+  'ancla',
+  'brujula',
+  'estrella',
+  'botella',
+  'faro',
+  'canon',
+  'reloj',
+  'entrada',
+  'carnet',
+  'delfin',
+  'cofre',
+] as const;
+
+/** Un logro nuevo o editado (sin id: se saca del título; la versión la pone el repositorio). */
+export type AchievementInput = Omit<
+  AchievementDefinition,
+  'id' | 'version' | 'sample' | 'triggerParams'
+> & {
+  id?: string;
+  triggerParams?: AchievementDefinition['triggerParams'];
+  sample?: boolean;
+};
+
+/** Una pista de música subida (sin id: se saca del título). */
+export type MusicInput = Omit<MusicTrack, 'id' | 'sample' | 'kind'> & {
+  id?: string;
+  kind?: MusicTrack['kind'];
+};
+
+/** Segunda confirmación: el nombre escrito tiene que ser el del elemento, tal cual. */
+function confirmName(name: string, typed: string): void {
+  if (typed.trim() !== name) {
+    throw new AdminError(`para confirmar, escribe el nombre exacto: «${name}»`);
+  }
+}
+
 export function createAdminActions(deps: AdminDeps) {
   const { repo, registry } = deps;
   const now = deps.now ?? (() => new Date());
@@ -98,41 +163,146 @@ export function createAdminActions(deps: AdminDeps) {
   };
 
   const homeBlock = async (id: string): Promise<HomeBlock> => {
-    const b = await repo.content.get('homeBlocks', id);
+    const b = (await repo.admin.draftList('homeBlocks')).find((x) => x.id === id);
     if (!b) throw new AdminError(`no existe el bloque «${id}»`);
     return b;
+  };
+
+  /** Un evento del formulario, comprobado: id libre, isla y artistas que existen, esquema. */
+  const prepareEvent = async (input: EventInput): Promise<BoiaEvent> => {
+    const name = input.name.trim();
+    const id = input.id ?? `ev-${slugify(name) || 'evento'}`;
+    const slug = input.slug ?? (slugify(name) || id);
+    const known = new Set([
+      ...(await repo.content.events()).map((e) => e.id),
+      ...(await repo.admin.draftList('events')).map((e) => e.id),
+    ]);
+    if (!input.id && known.has(id)) {
+      throw new AdminError(`ya hay un evento con el id «${id}»: cambia el nombre`);
+    }
+    if (input.islandId) {
+      const ok = eventIslands(registry.map).some((p) => p.id === input.islandId);
+      if (!ok) throw new AdminError(`la isla «${input.islandId}» no existe o no admite eventos`);
+    }
+    const artists = new Set((await repo.content.list('artists')).map((a) => a.id));
+    const missing = input.artistIds.filter((a) => !artists.has(a));
+    if (missing.length) throw new AdminError(`no existen los artistas: ${missing.join(', ')}`);
+    const candidate = { ...input, id, slug, name, sample: input.sample ?? false };
+    if (!candidate.islandId) delete candidate.islandId;
+    if (!candidate.stateNote) delete candidate.stateNote;
+    if (!candidate.ticketUrl) delete candidate.ticketUrl;
+    const parsed = eventSchema.safeParse(candidate);
+    if (!parsed.success) {
+      const i = parsed.error.issues[0];
+      throw new AdminError(`evento: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válido'}`);
+    }
+    return parsed.data;
+  };
+
+  /** Un elemento tal como lo ve el Admin: en las áreas con borrador, con el borrador encima. */
+  const findItem = async (area: EntityArea, id: string): Promise<unknown> => {
+    if (area === 'events' || area === 'homeBlocks') {
+      return (await repo.admin.draftList(area)).find((x) => x.id === id) ?? null;
+    }
+    return repo.content.get(area, id);
+  };
+
+  /** Opciones que existen para los parámetros de logro (circuitos, minijuegos, mundos). */
+  const triggerChoices = (): TriggerChoices => {
+    const world = composeLiveWorld(registry, registry.defaultId, EMPTY_WORLD_CONTENT).config;
+    return { circuits: circuitIds(world), games: MINIGAMES, worlds: registry.ids() };
+  };
+
+  /** Todo lo que se cruza para impacto y referencias rotas (con o sin borrador). */
+  const referenceData = async ({ draft }: { draft: boolean }): Promise<ReferenceData> => {
+    const events = draft ? await repo.admin.draftList('events') : await repo.content.events();
+    const homeBlocks = draft
+      ? await repo.admin.draftList('homeBlocks')
+      : await repo.content.list('homeBlocks');
+    const discounts = await repo.content.list('discounts');
+    const map = liveMap(registry, {
+      places: await repo.content.places(),
+      skins: await repo.content.skins(),
+      events,
+      discounts,
+      now: now(),
+    });
+    const [purchases, found, progress, owned] = await Promise.all([
+      repo.purchases.list(),
+      repo.progress.discounts(),
+      repo.progress.achievements(),
+      repo.progress.cosmetics(),
+    ]);
+    return {
+      events,
+      homeBlocks,
+      artists: await repo.content.list('artists'),
+      albums: await repo.content.list('albums'),
+      photos: await repo.content.list('photos'),
+      discounts,
+      achievements: await repo.content.list('achievements'),
+      cosmetics: await repo.content.list('cosmetics'),
+      map,
+      worldIds: registry.ids(),
+      visitor: {
+        purchaseEventIds: purchases.map((p) => p.eventId),
+        foundDiscountIds: found.map((f) => f.discount.id),
+        achievementIds: progress.filter((a) => a.obtained).map((a) => a.definition.id),
+        cosmeticIds: owned.map((c) => c.id),
+      },
+    };
   };
 
   const api = {
     // --- Eventos -----------------------------------------------------------
 
-    /** Crea o edita un evento. La isla, si la hay, tiene que admitir eventos. */
+    /**
+     * Crea o edita un evento y lo publica ya («Guardar y publicar»). La isla,
+     * si la hay, tiene que admitir eventos. Si tenía borrador, lo sustituye.
+     */
     async saveEvent(input: EventInput, reason?: string | null): Promise<BoiaEvent> {
-      const name = input.name.trim();
-      const id = input.id ?? `ev-${slugify(name) || 'evento'}`;
-      const slug = input.slug ?? (slugify(name) || id);
+      const event = await prepareEvent(input);
       const events = await repo.content.events();
-      if (!input.id && events.some((e) => e.id === id)) {
-        throw new AdminError(`ya hay un evento con el id «${id}»: cambia el nombre`);
+      await checkWorld({ events: [...events.filter((e) => e.id !== event.id), event] });
+      return repo.admin.upsert('events', event, opts(reason));
+    },
+
+    /**
+     * Guarda un evento en el borrador (REQ-ADM-015): no se ve en la web ni en
+     * el mar hasta «Publicar». Mismas comprobaciones que al publicar.
+     */
+    async saveEventDraft(input: EventInput, reason?: string | null): Promise<BoiaEvent> {
+      const event = await prepareEvent(input);
+      const events = await repo.admin.draftList('events');
+      await checkWorld({ events: [...events.filter((e) => e.id !== event.id), event] });
+      return repo.admin.draftUpsert('events', event, opts(reason ?? 'borrador de evento'));
+    },
+
+    /**
+     * Estado fijado a mano desde la lista (REQ-COM-004): se publica al
+     * momento y, si el evento tiene borrador, el borrador lo recoge también
+     * (así «Publicar» no lo deshace).
+     */
+    async setEventStateManual(id: string, state: EventState) {
+      if (!EVENT_STATES.includes(state)) throw new AdminError(`estado desconocido: ${state}`);
+      const published = await repo.content.get('events', id);
+      const draft = (await repo.admin.pendingDrafts()).some(
+        (c) => c.area === 'events' && c.id === id,
+      )
+        ? (await repo.admin.draftList('events')).find((e) => e.id === id)
+        : undefined;
+      if (!published && !draft) throw new AdminError(`no existe el evento «${id}»`);
+      const why = `estado a mano: ${state}`;
+      if (published) {
+        await api.saveEvent({ ...published, state, stateSource: 'manual' }, why);
       }
-      if (input.islandId) {
-        const ok = eventIslands(registry.map).some((p) => p.id === input.islandId);
-        if (!ok) throw new AdminError(`la isla «${input.islandId}» no existe o no admite eventos`);
+      if (draft) {
+        await repo.admin.draftUpsert(
+          'events',
+          { ...draft, state, stateSource: 'manual' },
+          opts(why),
+        );
       }
-      const artists = new Set((await repo.content.list('artists')).map((a) => a.id));
-      const missing = input.artistIds.filter((a) => !artists.has(a));
-      if (missing.length) throw new AdminError(`no existen los artistas: ${missing.join(', ')}`);
-      const candidate = { ...input, id, slug, name, sample: input.sample ?? false };
-      if (!candidate.islandId) delete candidate.islandId;
-      if (!candidate.stateNote) delete candidate.stateNote;
-      if (!candidate.ticketUrl) delete candidate.ticketUrl;
-      const parsed = eventSchema.safeParse(candidate);
-      if (!parsed.success) {
-        const i = parsed.error.issues[0];
-        throw new AdminError(`evento: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válido'}`);
-      }
-      await checkWorld({ events: [...events.filter((e) => e.id !== id), parsed.data] });
-      return repo.admin.upsert('events', parsed.data, opts(reason));
     },
 
     /** Cambia el estado a mano (los siete estados de REQ-COM-003), con su nota. */
@@ -249,25 +419,79 @@ export function createAdminActions(deps: AdminDeps) {
       return repo.admin.upsert('discounts', next, opts('caducar'));
     },
 
-    // --- Página principal --------------------------------------------------
+    // --- Página principal (en borrador hasta «Publicar», REQ-ADM-015) -------
 
     /** Sube (-1) o baja (+1) un bloque de la home. */
     async moveBlock(id: string, delta: -1 | 1) {
-      const ids = (await repo.content.list('homeBlocks')).map((b) => b.id);
+      const ids = (await repo.admin.draftList('homeBlocks')).map((b) => b.id);
       const i = ids.indexOf(id);
       const j = i + delta;
       if (i < 0) throw new AdminError(`no existe el bloque «${id}»`);
       if (j < 0 || j >= ids.length) return;
       [ids[i], ids[j]] = [ids[j]!, ids[i]!];
-      await repo.admin.reorder('homeBlocks', ids, opts(`mover ${id}`));
+      await repo.admin.draftReorder('homeBlocks', ids, opts(`mover ${id}`));
     },
 
     async setBlockVisible(id: string, visible: boolean) {
       const b = await homeBlock(id);
-      await repo.admin.upsert(
+      await repo.admin.draftUpsert(
         'homeBlocks',
         { ...b, visible },
         opts(visible ? 'mostrar' : 'ocultar'),
+      );
+    },
+
+    /** Titular y subtítulo de la portada. */
+    async setHeroTexts(title: string, positioning: string) {
+      const hero = (await repo.admin.draftList('homeBlocks')).find((b) => b.type === 'hero');
+      if (!hero || hero.type !== 'hero') throw new AdminError('la home no tiene portada');
+      const t = title.trim();
+      const p = positioning.trim();
+      if (!t || !p) throw new AdminError('la portada necesita titular y subtítulo');
+      await repo.admin.draftUpsert(
+        'homeBlocks',
+        { ...hero, title: t, positioning: p },
+        opts('portada'),
+      );
+    },
+
+    /**
+     * Textos de los botones de la portada (REQ-ADM-017): «Explorar» y
+     * «Tickets». Vacío o igual al de la app: vuelve al de la app.
+     */
+    async setHomeCtas(ctas: Partial<Record<HomeCta, string>>, defaults: Record<HomeCta, string>) {
+      for (const [cta, key] of Object.entries(HOME_CTA_KEYS) as [HomeCta, string][]) {
+        const v = ctas[cta];
+        if (v === undefined) continue;
+        const text = v.trim();
+        if (text.length > HOME_CTA_MAX) {
+          throw new AdminError(
+            `el botón «${defaults[cta]}» admite hasta ${HOME_CTA_MAX} caracteres`,
+          );
+        }
+        await repo.admin.draftText(
+          key,
+          text && text !== defaults[cta] ? text : null,
+          opts('botón'),
+        );
+      }
+    },
+
+    /** Eventos que no salen en «Próximos eventos» (REQ-ADM-017, REQ-COM-011); no los borra. */
+    async setExcludedEvents(eventIds: readonly string[]) {
+      const block = (await repo.admin.draftList('homeBlocks')).find(
+        (b) => b.type === 'upcoming_events',
+      );
+      if (!block || block.type !== 'upcoming_events') {
+        throw new AdminError('la home no tiene bloque de próximos eventos');
+      }
+      const known = new Set((await repo.admin.draftList('events')).map((e) => e.id));
+      const missing = eventIds.filter((id) => !known.has(id));
+      if (missing.length) throw new AdminError(`no existen los eventos: ${missing.join(', ')}`);
+      await repo.admin.draftUpsert(
+        'homeBlocks',
+        { ...block, excludeEventIds: [...new Set(eventIds)] },
+        opts('excluir eventos'),
       );
     },
 
@@ -282,24 +506,235 @@ export function createAdminActions(deps: AdminDeps) {
       else delete next.showFrom;
       if (showUntil) next.showUntil = showUntil;
       else delete next.showUntil;
-      await repo.admin.upsert('homeBlocks', next, opts('programar'));
+      await repo.admin.draftUpsert('homeBlocks', next, opts('programar'));
     },
 
     /** Evento prioritario del bloque de la home (null: el que resuelva la home). */
     async setPriorityEvent(eventId: string | null) {
-      const block = (await repo.content.list('homeBlocks')).find(
+      const block = (await repo.admin.draftList('homeBlocks')).find(
         (b) => b.type === 'priority_event',
       );
       if (!block || block.type !== 'priority_event') {
         throw new AdminError('la home no tiene bloque de evento prioritario');
       }
-      if (eventId && !(await repo.content.get('events', eventId))) {
+      if (eventId && !(await repo.admin.draftList('events')).some((e) => e.id === eventId)) {
         throw new AdminError(`no existe el evento «${eventId}»`);
       }
       const next = { ...block };
       if (eventId) next.eventId = eventId;
       else delete next.eventId;
-      await repo.admin.upsert('homeBlocks', next, opts('evento prioritario'));
+      await repo.admin.draftUpsert('homeBlocks', next, opts('evento prioritario'));
+    },
+
+    // --- Borrador y publicación (REQ-ADM-015, REQ-ADM-014) ------------------
+
+    /**
+     * Lo que impide publicar el borrador, cada cosa con su motivo: referencias
+     * rotas (home, mapa, eventos, logros), un mar que no se puede jugar con
+     * los eventos del borrador o una home sin portada. Vacío: se puede.
+     */
+    async publishProblems(): Promise<string[]> {
+      const out: string[] = [];
+      const data = await referenceData({ draft: true });
+      out.push(...danglingReferences(data));
+      const hero = data.homeBlocks.find((b) => b.type === 'hero');
+      if (!hero || !hero.visible) {
+        out.push('Página principal: la portada (con «Explorar» y «Tickets») tiene que verse');
+      }
+      const texts = await repo.admin.draftTexts();
+      for (const key of Object.values(HOME_CTA_KEYS)) {
+        if (texts[key] !== undefined && texts[key].trim() === '') {
+          out.push(`Página principal: el botón «${key}» está vacío`);
+        }
+      }
+      try {
+        await checkWorld({ events: [...data.events] });
+      } catch (err) {
+        out.push(`Mapa: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      return out;
+    },
+
+    /** Publica todo el borrador de una vez (una revisión nueva) si no hay problemas. */
+    async publish(reason?: string | null) {
+      if ((await repo.admin.pendingDrafts()).length === 0) {
+        throw new AdminError('no hay cambios sin publicar');
+      }
+      const problems = await api.publishProblems();
+      if (problems.length) {
+        throw new AdminError(`no se publica: ${problems.join(' · ')}`);
+      }
+      return repo.admin.publish(opts(reason ?? 'publicar'));
+    },
+
+    /** Tira el borrador (todo, o el de un evento). */
+    async discardDrafts(target?: { area: 'homeBlocks' | 'events' | 'texts'; id?: string }) {
+      await repo.admin.discardDrafts(target ?? null, opts('descartar borrador'));
+    },
+
+    // --- Borrar con impacto y papelera (REQ-ADM-029, REQ-ADM-030) -----------
+
+    /** Nombre del elemento y qué lo nombra: lo que se enseña antes de borrarlo. */
+    async impact(area: EntityArea, id: string) {
+      const item = await findItem(area, id);
+      if (!item) throw new AdminError(`no existe «${id}»`);
+      const data = await referenceData({ draft: false });
+      return { name: itemName(area, item), references: referencesTo(area, id, data) };
+    },
+
+    /**
+     * A la papelera, sólo si se escribe su nombre exacto (segunda
+     * confirmación inequívoca, REQ-ADM-029). Un evento que sólo existe en el
+     * borrador se descarta.
+     */
+    async trashItem(area: EntityArea, id: string, typedName: string, reason?: string | null) {
+      const item = await findItem(area, id);
+      if (!item) throw new AdminError(`no existe «${id}»`);
+      confirmName(itemName(area, item), typedName);
+      const published = await repo.content.get(area, id);
+      if (!published && (area === 'events' || area === 'homeBlocks')) {
+        await repo.admin.discardDrafts({ area, id }, opts(reason ?? 'borrar borrador'));
+        return;
+      }
+      await repo.admin.remove(area, id, opts(reason ?? 'papelera'));
+    },
+
+    /**
+     * Purga un elemento de la papelera: irreversible, con otra confirmación
+     * escribiendo su nombre (en la demo no hay login con el que
+     * reautenticarse, REQ-ADM-030).
+     */
+    async purgeItem(area: EntityArea, id: string, typedName: string) {
+      const item = (await repo.admin.trash()).find((t) => t.area === area && t.id === id);
+      if (!item) throw new AdminError(`«${id}» no está en la papelera`);
+      confirmName(itemName(area, item.value), typedName);
+      await repo.admin.purge(area, id, opts('purga confirmada escribiendo el nombre'));
+    },
+
+    /** Plazo de la papelera en días (REQ-ADM-030) [pendiente Álvaro]. */
+    async setTrashRetention(days: number) {
+      if (
+        !Number.isInteger(days) ||
+        days < TRASH_RETENTION_MIN_DAYS ||
+        days > TRASH_RETENTION_MAX_DAYS
+      ) {
+        throw new AdminError(
+          `el plazo de la papelera va de ${TRASH_RETENTION_MIN_DAYS} a ${TRASH_RETENTION_MAX_DAYS} días`,
+        );
+      }
+      return repo.admin.setSettings({ trashRetentionDays: days }, opts('plazo de la papelera'));
+    },
+
+    async purgeExpired() {
+      return repo.admin.purgeExpired(opts('plazo de la papelera cumplido'));
+    },
+
+    // --- Logros (REQ-ADM-021, REQ-ADM-022) ----------------------------------
+
+    /**
+     * Crea o edita un logro con una condición del catálogo, sus parámetros en
+     * rango, premio, icono, ámbito y fechas. Cambiar la condición de uno que
+     * ya existe es una versión nueva (lo decide el repositorio).
+     */
+    async saveAchievement(input: AchievementInput, reason?: string | null) {
+      const title = input.title.trim();
+      if (!title) throw new AdminError('un logro necesita título');
+      const all = await repo.content.list('achievements');
+      const id = input.id ?? (slugify(title) || 'logro');
+      if (!isStableKey(id)) throw new AdminError(`«${id}» no vale como id`);
+      if (!input.id && all.some((a) => a.id === id)) {
+        throw new AdminError(`ya hay un logro con el id «${id}»: cambia el título`);
+      }
+      const params = input.triggerParams ?? {};
+      const why = triggerParamsProblem(input.trigger, params, triggerChoices());
+      if (why) throw new AdminError(`condición: ${why}`);
+      if (input.scope === 'season') {
+        if (!input.seasonId || !registry.has(input.seasonId)) {
+          throw new AdminError('un logro de temporada necesita un mundo que exista');
+        }
+      }
+      if (input.cosmeticKey && !(await repo.content.get('cosmetics', input.cosmeticKey))) {
+        throw new AdminError(`no existe el premio «${input.cosmeticKey}»`);
+      }
+      if (input.startsAt && input.endsAt && new Date(input.startsAt) >= new Date(input.endsAt)) {
+        throw new AdminError('el logro termina antes de empezar');
+      }
+      if (input.iconKey && !(ACHIEVEMENT_ICONS as readonly string[]).includes(input.iconKey)) {
+        throw new AdminError(`icono desconocido: ${input.iconKey}`);
+      }
+      const candidate: Record<string, unknown> = {
+        ...input,
+        id,
+        title,
+        triggerParams: params,
+        sample: input.sample ?? false,
+      };
+      if (input.scope !== 'season') delete candidate.seasonId;
+      for (const k of ['description', 'iconKey', 'cosmeticKey', 'badgeKey', 'startsAt', 'endsAt']) {
+        if (!candidate[k]) delete candidate[k];
+      }
+      const parsed = achievementDefinitionSchema.safeParse(candidate);
+      if (!parsed.success) {
+        const i = parsed.error.issues[0];
+        throw new AdminError(`logro: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válido'}`);
+      }
+      return repo.admin.upsert('achievements', parsed.data, opts(reason ?? 'logro'));
+    },
+
+    /** Duplica un logro como uno nuevo, desactivado hasta revisarlo. */
+    async duplicateAchievement(id: string) {
+      const a = await repo.content.get('achievements', id);
+      if (!a) throw new AdminError(`no existe el logro «${id}»`);
+      const all = await repo.content.list('achievements');
+      let n = 2;
+      while (all.some((x) => x.id === `${id}-copia-${n}`)) n++;
+      return repo.admin.upsert(
+        'achievements',
+        { ...a, id: `${id}-copia-${n}`, title: `${a.title} (copia)`, active: false, sample: false },
+        opts(`duplicado de ${id}`),
+      );
+    },
+
+    // --- Música (REQ-ADM-020) -----------------------------------------------
+
+    /** Sube una pista (data URL `muestra`) con su licencia y origen. */
+    async saveMusic(input: MusicInput) {
+      const title = input.title.trim();
+      if (!title) throw new AdminError('la pista necesita título');
+      if (!input.licence.trim()) throw new AdminError('falta la licencia de la pista');
+      if (!input.origin.trim()) throw new AdminError('falta el autor u origen de la pista');
+      if (!/^data:audio\//.test(input.src)) throw new AdminError('el archivo no es de audio');
+      if (input.src.length > MUSIC_DATA_MAX) {
+        throw new AdminError(
+          `el audio pesa demasiado para guardarlo en el navegador (hasta ${Math.floor(
+            (MUSIC_DATA_MAX * 3) / 4 / 1024,
+          )} KB)`,
+        );
+      }
+      if (input.worldId && !registry.has(input.worldId)) {
+        throw new AdminError(`no existe el mundo «${input.worldId}»`);
+      }
+      const all = await repo.content.list('music');
+      const id = input.id ?? `musica-${slugify(title) || 'pista'}`;
+      if (!input.id && all.some((m) => m.id === id)) {
+        throw new AdminError(`ya hay una pista con el id «${id}»: cambia el título`);
+      }
+      const candidate: Record<string, unknown> = {
+        ...input,
+        id,
+        title,
+        licence: input.licence.trim(),
+        origin: input.origin.trim(),
+        sample: true,
+      };
+      if (!candidate.worldId) delete candidate.worldId;
+      if (!candidate.licenceUrl) delete candidate.licenceUrl;
+      const parsed = musicTrackSchema.safeParse(candidate);
+      if (!parsed.success) {
+        const i = parsed.error.issues[0];
+        throw new AdminError(`pista: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válida'}`);
+      }
+      return repo.admin.upsert('music', parsed.data, opts('música'));
     },
 
     // --- Mundo --------------------------------------------------------------

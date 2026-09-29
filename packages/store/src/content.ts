@@ -52,6 +52,39 @@ export function resolveEntities<A extends EntityArea>(
   });
 }
 
+/**
+ * Lista de un área con el borrador encima (REQ-ADM-015): lo publicado y, sobre
+ * cada elemento, su cambio sin publicar; el orden del borrador si lo hay.
+ */
+export function resolveWithDrafts<A extends EntityArea>(
+  area: A,
+  sample: readonly AreaItem<A>[],
+  published: Readonly<Record<string, ItemOverride>> | undefined,
+  publishedOrder: readonly string[] | undefined,
+  draft: Readonly<Record<string, ItemOverride>> | undefined,
+  draftOrder: readonly string[] | undefined,
+): AreaItem<A>[] {
+  return resolveEntities(
+    area,
+    sample,
+    { ...(published ?? {}), ...(draft ?? {}) },
+    draftOrder ?? publishedOrder,
+  );
+}
+
+/** Textos con los del borrador encima: null devuelve el texto a su valor de la app. */
+export function applyDraftTexts(
+  texts: Readonly<Record<string, string>>,
+  draft: Readonly<Record<string, string | null>>,
+): Record<string, string> {
+  const out: Record<string, string> = { ...texts };
+  for (const [k, v] of Object.entries(draft)) {
+    if (v === null) delete out[k];
+    else out[k] = v;
+  }
+  return out;
+}
+
 /** Textos: los de la app (`base`) con los del Admin encima. */
 export function resolveTexts(
   base: Readonly<Record<string, string>>,

@@ -29,7 +29,7 @@ import { STABLE_KEY, STABLE_KEY_MAX } from './ids';
  * Subir `SCHEMA_VERSION` exige añadir la migración en `migrations.ts` con su
  * prueba.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 const iso = z.string().min(1);
 const stableKey = z.string().max(STABLE_KEY_MAX).regex(STABLE_KEY);
@@ -335,6 +335,33 @@ export const rankSchema = z.object({
 });
 export type Rank = z.infer<typeof rankSchema>;
 
+/** Máximo del audio subido guardado como data URL (≈ 1 MB de audio, `muestra`). */
+export const MUSIC_DATA_MAX = 1_400_000;
+
+/**
+ * Música de ambiente o efecto subido desde el Admin (REQ-ADM-020), con su
+ * licencia u origen. En la versión de prueba el audio vive como data URL
+ * `data:audio/…` en este navegador y es siempre `muestra` (D-20).
+ */
+export const musicTrackSchema = z.object({
+  id: stableKey,
+  title: z.string().min(1).max(120),
+  kind: z.enum(['ambient', 'effect']).default('ambient'),
+  /** Mundo al que va (id del registro); sin él, vale para todos. */
+  worldId: stableKey.optional(),
+  src: z
+    .string()
+    .max(MUSIC_DATA_MAX)
+    .regex(/^data:audio\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/),
+  /** Licencia: «CC BY 4.0», «propia», «cedida por…». */
+  licence: z.string().min(1).max(200),
+  /** Autor u origen de la pista. */
+  origin: z.string().min(1).max(200),
+  licenceUrl: z.url().optional(),
+  sample: z.literal(true).default(true),
+});
+export type MusicTrack = z.infer<typeof musicTrackSchema>;
+
 /**
  * Colecciones de contenido con id: muestra en código + cambios del Admin
  * guardados en el navegador. El orden de la lista es el de la muestra salvo
@@ -351,7 +378,15 @@ export const ENTITY_SCHEMAS = {
   achievements: achievementDefinitionSchema,
   cosmetics: cosmeticSchema,
   ranks: rankSchema,
+  music: musicTrackSchema,
 } as const;
+
+/**
+ * Áreas que se editan como borrador y se publican (REQ-ADM-015): la home y los
+ * eventos. Lo demás se guarda al momento.
+ */
+export const DRAFT_AREAS = ['homeBlocks', 'events'] as const;
+export type DraftArea = (typeof DRAFT_AREAS)[number];
 
 export type EntityArea = keyof typeof ENTITY_SCHEMAS;
 export const ENTITY_AREAS = Object.keys(ENTITY_SCHEMAS) as EntityArea[];
@@ -393,12 +428,50 @@ export const CONTENT_AREAS = [
 export type ContentArea = (typeof CONTENT_AREAS)[number];
 
 const itemOverrideSchema = z.object({
-  /** Valor completo que sustituye al de la muestra (o uno nuevo). */
+  /** Valor completo que sustituye al de la muestra (o uno nuevo); null si se purgó. */
   value: z.unknown(),
   /** Papelera: oculto, pero recuperable con `restore` (REQ-ADM-030). */
   deleted: z.boolean(),
+  /**
+   * Purgado: fuera de la papelera para siempre (REQ-ADM-030). Queda sólo la
+   * marca, sin el contenido, para que un elemento de la muestra no vuelva.
+   */
+  purged: z.boolean().optional(),
   at: iso,
 });
+
+/** Plazo de la papelera por defecto, en días [pendiente Álvaro] (REQ-ADM-030). */
+export const TRASH_RETENTION_DEFAULT_DAYS = 30;
+export const TRASH_RETENTION_MIN_DAYS = 1;
+export const TRASH_RETENTION_MAX_DAYS = 365;
+
+export const adminSettingsSchema = z.object({
+  /** Días que un elemento pasa en la papelera antes de purgarse solo. */
+  trashRetentionDays: z
+    .number()
+    .int()
+    .min(TRASH_RETENTION_MIN_DAYS)
+    .max(TRASH_RETENTION_MAX_DAYS)
+    .default(TRASH_RETENTION_DEFAULT_DAYS),
+});
+export type AdminSettings = z.infer<typeof adminSettingsSchema>;
+
+/**
+ * Borrador de la home y los eventos (REQ-ADM-015): cambios que no ve nadie
+ * hasta «Publicar», que los pasa a lo publicado de una vez (una revisión).
+ * `texts` guarda los textos de la home (CTA…) en borrador; null devuelve el
+ * texto a su valor de la app.
+ */
+export const draftsSchema = z.object({
+  items: z.record(z.string(), z.record(z.string(), itemOverrideSchema)),
+  order: z.record(z.string(), z.array(z.string())),
+  texts: z.record(z.string(), z.string().nullable()),
+});
+export type Drafts = z.infer<typeof draftsSchema>;
+
+export function emptyDrafts(): Drafts {
+  return { items: {}, order: {}, texts: {} };
+}
 export type ItemOverride = z.infer<typeof itemOverrideSchema>;
 
 export const contentOverridesSchema = z.object({
@@ -409,11 +482,25 @@ export const contentOverridesSchema = z.object({
   texts: z.record(z.string(), z.string()),
   /** Sin la clave: el de la muestra. `null`: el que diga el registro de mundos. */
   activeWorldId: z.string().nullable().optional(),
+  /** Borrador sin publicar de la home y los eventos (desde la v5). */
+  drafts: draftsSchema,
+  /** Revisión publicada de la home y los eventos: sube con cada «Publicar». */
+  revision: z.number().int().nonnegative(),
+  settings: adminSettingsSchema,
 });
 export type ContentOverrides = z.infer<typeof contentOverridesSchema>;
 
 export function emptyOverrides(): ContentOverrides {
-  return { items: {}, order: {}, places: {}, skins: {}, texts: {} };
+  return {
+    items: {},
+    order: {},
+    places: {},
+    skins: {},
+    texts: {},
+    drafts: emptyDrafts(),
+    revision: 0,
+    settings: { trashRetentionDays: TRASH_RETENTION_DEFAULT_DAYS },
+  };
 }
 
 /** Auditoría local, sólo de añadir (REQ-ARQ-009): autor, fecha, motivo, antes y después. */
@@ -432,6 +519,14 @@ export const auditEntrySchema = z.object({
     'moderate',
     'resolve_report',
     'compensate',
+    // Desde la v5 (T48): borrador y publicación, purga, ajustes, compras y sellos.
+    'draft',
+    'publish',
+    'discard',
+    'purge',
+    'settings',
+    'purchase',
+    'stamp',
   ]),
   targetId: z.string().nullable(),
   before: z.unknown(),
@@ -529,12 +624,29 @@ export function sanitizeDoc(
   }
   const order = recordOf(z.array(z.string()), content.order, dropped);
   const active = z.string().nullable().optional().safeParse(content.activeWorldId);
+  const rawDrafts = objectOf(content.drafts);
+  const draftItems: Drafts['items'] = {};
+  for (const [area, byId] of Object.entries(objectOf(rawDrafts.items))) {
+    draftItems[area] = recordOf(itemOverrideSchema, byId, dropped);
+  }
+  const revision = z.number().int().nonnegative().safeParse(content.revision);
+  const settings = adminSettingsSchema.safeParse(content.settings ?? {});
+  if (!settings.success) dropped.n++;
   const overrides: ContentOverrides = {
     items,
     order,
     places: recordOf(placePatchSchema, content.places, dropped),
     skins,
     texts: recordOf(z.string(), content.texts, dropped),
+    drafts: {
+      items: draftItems,
+      order: recordOf(z.array(z.string()), rawDrafts.order, dropped),
+      texts: recordOf(z.string().nullable(), rawDrafts.texts, dropped),
+    },
+    revision: revision.success ? revision.data : 0,
+    settings: settings.success
+      ? settings.data
+      : { trashRetentionDays: TRASH_RETENTION_DEFAULT_DAYS },
   };
   if (active.success && active.data !== undefined) overrides.activeWorldId = active.data;
   const doc: StoreDoc = {

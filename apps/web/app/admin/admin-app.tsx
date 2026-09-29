@@ -8,7 +8,13 @@ import { ArtistsSection } from './sections/artists';
 import { DiscountsSection } from './sections/discounts';
 import { EventsSection } from './sections/events';
 import { HomeSection } from './sections/home';
-import { AuditSection, IntegrationsSection, SeasonsSection, UsersSection } from './sections/misc';
+import {
+  AuditSection,
+  IntegrationsSection,
+  SeasonsSection,
+  TrashSection,
+  UsersSection,
+} from './sections/misc';
 import { ModerationSection } from './sections/moderation';
 import { PhotosSection } from './sections/photos';
 import { TextsSection } from './sections/texts';
@@ -29,6 +35,7 @@ const SECTIONS: { id: string; label: string; Component: ComponentType<{ ctx: Adm
   { id: 'temporadas', label: 'Temporadas', Component: SeasonsSection },
   { id: 'usuarios', label: 'Usuarios de administración', Component: UsersSection },
   { id: 'integraciones', label: 'Integraciones', Component: IntegrationsSection },
+  { id: 'papelera', label: 'Papelera', Component: TrashSection },
   { id: 'auditoria', label: 'Auditoría y muestra', Component: AuditSection },
 ];
 

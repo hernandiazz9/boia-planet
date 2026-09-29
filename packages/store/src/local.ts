@@ -10,16 +10,17 @@ import {
   discountStatus,
   type HomeContent,
 } from '@boia/contracts';
-import { mergePlacePatch, mergeSkinPatch, rankFor, resolveEntities } from './content';
+import {
+  applyDraftTexts,
+  mergePlacePatch,
+  mergeSkinPatch,
+  rankFor,
+  resolveEntities,
+  resolveWithDrafts,
+} from './content';
 import { StoreError } from './errors';
 import { isStableKey, ledgerId, newId, rewardKey } from './ids';
-import {
-  activeEntries,
-  checkAppend,
-  compensatedIds,
-  deriveBalances,
-  replayLedger,
-} from './ledger';
+import { activeEntries, checkAppend, compensatedIds, deriveBalances, replayLedger } from './ledger';
 import { MIGRATIONS, migrate, type Migration } from './migrations';
 import type {
   AchievementProgress,
@@ -37,6 +38,7 @@ import type {
   CarnetInput,
   CarnetView,
   ChangeArea,
+  DraftChange,
   ClaimResult,
   ContentApi,
   FoundDiscount,
@@ -48,12 +50,16 @@ import type {
   RepositoryChange,
   ShipUnlock,
   StampView,
+  TrashItem,
 } from './repository';
 import { parseSample, type SampleData, type SampleInput } from './sample';
 import {
   AVATAR_IMAGE_MAX,
   COSMETIC_SLOTS,
   CONTENT_AREAS,
+  DRAFT_AREAS,
+  adminSettingsSchema,
+  emptyDrafts,
   ENTITY_AREAS,
   ENTITY_SCHEMAS,
   SCHEMA_VERSION,
@@ -68,6 +74,7 @@ import {
   type AuditEntry,
   type Bottle,
   type ContentArea,
+  type DraftArea,
   type EntityArea,
   type Identity,
   type JsonValue,
@@ -329,6 +336,18 @@ class LocalRepository implements BoiaRepository {
     );
   }
 
+  /** Un área de borrador con el borrador encima (REQ-ADM-015). */
+  private draftResolved<A extends DraftArea>(area: A, doc: StoreDoc = this.doc): AreaItem<A>[] {
+    return resolveWithDrafts(
+      area,
+      this.sample[area] as unknown as readonly AreaItem<A>[],
+      doc.content.items[area],
+      doc.content.order[area],
+      doc.content.drafts.items[area],
+      doc.content.drafts.order[area],
+    );
+  }
+
   private activeWorld(doc: StoreDoc = this.doc): string | null {
     return doc.content.activeWorldId !== undefined
       ? doc.content.activeWorldId
@@ -366,11 +385,12 @@ class LocalRepository implements BoiaRepository {
     draft: StoreDoc,
     entry: Omit<AuditEntry, 'id' | 'at' | 'actor' | 'reason'>,
     opts?: AdminOptions,
+    actor: string = this.actor,
   ): void {
     draft.audit.push({
       id: newId(),
       at: this.iso(),
-      actor: this.actor,
+      actor,
       reason: opts?.reason ?? null,
       ...entry,
       before: entry.before === undefined ? null : clone(entry.before),
@@ -938,16 +958,14 @@ class LocalRepository implements BoiaRepository {
         const defs = this.resolved('achievements');
         return this.resolved('cosmetics')
           .filter((c) => c.slot === 'ship' && c.active)
-          .map(
-            (c): ShipUnlock => ({
-              style: c.assetKey ?? c.id,
-              cosmeticId: c.id,
-              name: c.name,
-              owned: owned.has(c.id),
-              achievementId: defs.find((a) => a.cosmeticKey === c.id)?.id ?? null,
-              priceCoins: c.priceCoins,
-            }),
-          );
+          .map((c): ShipUnlock => ({
+            style: c.assetKey ?? c.id,
+            cosmeticId: c.id,
+            name: c.name,
+            owned: owned.has(c.id),
+            achievementId: defs.find((a) => a.cosmeticKey === c.id)?.id ?? null,
+            priceCoins: c.priceCoins,
+          }));
       },
       buyCosmetic: async (cosmeticId) =>
         grant((d, me) => {
@@ -1146,7 +1164,7 @@ class LocalRepository implements BoiaRepository {
           invalid('compra: cantidad');
         const amount = input.amountCents ?? null;
         if (amount !== null) nonNegativeInt(amount, 'compra: importe');
-        return this.mutate(['identity', 'purchases', 'progress'], (d, skip) => {
+        return this.mutate(['identity', 'purchases', 'progress', 'audit'], (d, skip) => {
           const had = d.identity !== null;
           const me = this.ensureIdentity(d);
           let purchase = d.purchases.find((p) => p.id === input.purchaseId);
@@ -1193,6 +1211,19 @@ class LocalRepository implements BoiaRepository {
             };
             d.purchases.push(purchase);
             first = true;
+            // Auditoría de compras (REQ-ADM-007): la hace el visitante, no el Admin.
+            this.audit(
+              d,
+              {
+                area: 'purchases',
+                action: 'purchase',
+                targetId: purchase.id,
+                before: null,
+                after: purchase,
+              },
+              { reason: discountId ? `descuento ${discountId}` : null },
+              me.id,
+            );
           }
           const stampId = ledgerId('stamp', purchase.id);
           const own = d.ledger.find((e) => e.id === stampId);
@@ -1203,7 +1234,7 @@ class LocalRepository implements BoiaRepository {
           if (own) stamp = { granted: false, reason: 'duplicate', entry: clone(own) };
           else if (already)
             stamp = { granted: false, reason: 'already_stamped', entry: clone(already) };
-          else
+          else {
             stamp = this.append(
               d,
               this.baseEntry(me.id, {
@@ -1214,6 +1245,20 @@ class LocalRepository implements BoiaRepository {
                 sourceRef: `purchase:${purchase.id}`,
               }),
             );
+            if (stamp.granted)
+              this.audit(
+                d,
+                {
+                  area: 'ledger',
+                  action: 'stamp',
+                  targetId: stamp.entry.id,
+                  before: null,
+                  after: stamp.entry,
+                },
+                { reason: `sello de ${purchase.eventId}` },
+                me.id,
+              );
+          }
           if (!first && !stamp.granted && had) skip();
           return { purchase: clone(purchase), first, stamp };
         });
@@ -1377,19 +1422,101 @@ class LocalRepository implements BoiaRepository {
     };
     const sampleOf = (area: EntityArea, id: string) =>
       (this.sample[area] as { id: string }[]).find((x) => x.id === id);
+    const isDraftArea = (area: string): area is DraftArea =>
+      (DRAFT_AREAS as readonly string[]).includes(area);
+    const checkDraftArea = (area: string): DraftArea => {
+      if (!isDraftArea(area)) invalid(`área sin borrador: ${area}`);
+      return area;
+    };
+    const parseItem = <A extends EntityArea>(area: A, item: unknown): AreaItem<A> => {
+      const parsed = ENTITY_SCHEMAS[area].safeParse(item);
+      if (!parsed.success)
+        invalid(
+          `${area}: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
+        );
+      return parsed.data as AreaItem<A>;
+    };
+
+    /**
+     * Versión de un logro (REQ-ADM-022): cambiar su condición (disparador o
+     * parámetros) es una versión nueva; lo demás conserva la suya. Uno que
+     * vuelve con el mismo id después de tirarlo a la papelera también sube.
+     */
+    const versionAchievement = (d: StoreDoc, before: unknown, value: unknown) => {
+      const next = value as AchievementDefinition;
+      const prev = before as AchievementDefinition | null;
+      const trashed = d.content.items.achievements?.[next.id];
+      const old =
+        prev ??
+        (trashed?.deleted && !trashed.purged ? (trashed.value as AchievementDefinition) : null);
+      if (!old) {
+        next.version = 1;
+        return;
+      }
+      const condition = (a: AchievementDefinition) =>
+        JSON.stringify([a.trigger, Object.entries(a.triggerParams ?? {}).sort()]);
+      next.version =
+        !prev || condition(old) !== condition(next) ? (old.version ?? 1) + 1 : (old.version ?? 1);
+    };
+
+    const retentionMs = (d: StoreDoc) => d.content.settings.trashRetentionDays * 86_400_000;
+    const trashOf = (d: StoreDoc): TrashItem[] => {
+      const out: TrashItem[] = [];
+      const now = this.now().getTime();
+      for (const area of ENTITY_AREAS) {
+        for (const [id, o] of Object.entries(d.content.items[area] ?? {})) {
+          if (!o.deleted || o.purged) continue;
+          const expires = new Date(o.at).getTime() + retentionMs(d);
+          out.push({
+            area,
+            id,
+            value: clone(o.value),
+            deletedAt: o.at,
+            expiresAt: new Date(expires).toISOString(),
+            expired: expires <= now,
+          });
+        }
+      }
+      return out;
+    };
+    const purgeOne = (d: StoreDoc, area: EntityArea, id: string, reason: string | null) => {
+      const o = areaItems(d, area)[id];
+      areaItems(d, area)[id] = { value: null, deleted: true, purged: true, at: this.iso() };
+      this.audit(
+        d,
+        { area, action: 'purge', targetId: id, before: o?.value ?? null, after: null },
+        { reason },
+      );
+    };
+    /** Purga lo que pasó su plazo (REQ-ADM-030); devuelve cuántos. */
+    const purgeExpiredIn = (d: StoreDoc, reason?: string | null) => {
+      const expired = trashOf(d).filter((t) => t.expired);
+      for (const t of expired) purgeOne(d, t.area, t.id, reason ?? 'plazo de la papelera cumplido');
+      return expired.length;
+    };
+    const pendingOf = (d: StoreDoc): DraftChange[] => {
+      const out: DraftChange[] = [];
+      for (const area of DRAFT_AREAS) {
+        const published = new Set(this.resolved(area, d).map((x) => x.id));
+        for (const id of Object.keys(d.content.drafts.items[area] ?? {}))
+          out.push({ area, id, kind: 'item', isNew: !published.has(id) });
+        if (d.content.drafts.order[area]) out.push({ area, id: null, kind: 'order', isNew: false });
+      }
+      for (const key of Object.keys(d.content.drafts.texts))
+        out.push({ area: 'texts', id: key, kind: 'text', isNew: false });
+      return out;
+    };
 
     return {
       upsert: async (area, item, opts) => {
         checkArea(area);
-        const parsed = ENTITY_SCHEMAS[area].safeParse(item);
-        if (!parsed.success)
-          invalid(
-            `${area}: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
-          );
-        const value = parsed.data as AreaItem<typeof area>;
+        const value = parseItem(area, item);
         return this.mutate(['content', 'audit'], (d) => {
           const before = this.resolved(area, d).find((x) => x.id === value.id) ?? null;
+          if (area === 'achievements') versionAchievement(d, before, value);
           areaItems(d, area)[value.id] = { value: clone(value), deleted: false, at: this.iso() };
+          // Guardar y publicar a la vez deja atrás el borrador de ese elemento.
+          if (isDraftArea(area)) delete d.content.drafts.items[area]?.[value.id];
           this.audit(d, { area, action: 'upsert', targetId: value.id, before, after: value }, opts);
           return clone(value);
         });
@@ -1400,17 +1527,21 @@ class LocalRepository implements BoiaRepository {
           const current = this.resolved(area, d).find((x) => x.id === id);
           if (!current) throw new StoreError('not_found', `${area}/${id}`);
           areaItems(d, area)[id] = { value: clone(current), deleted: true, at: this.iso() };
+          if (isDraftArea(area)) delete d.content.drafts.items[area]?.[id];
           this.audit(
             d,
             { area, action: 'delete', targetId: id, before: current, after: null },
             opts,
           );
+          purgeExpiredIn(d);
         });
       },
       restore: async (area, id, opts) => {
         checkArea(area);
         return this.mutate(['content', 'audit'], (d, skip) => {
           const o = d.content.items[area]?.[id];
+          if (o?.purged)
+            throw new StoreError('forbidden', `${area}/${id}: purgado, no se recupera`);
           if (!o || !o.deleted) {
             skip();
             return clone(this.resolved(area, d).find((x) => x.id === id) ?? null);
@@ -1423,6 +1554,174 @@ class LocalRepository implements BoiaRepository {
           return clone(after);
         });
       },
+      trash: async () => trashOf(this.doc).sort((a, b) => b.deletedAt.localeCompare(a.deletedAt)),
+      purge: async (area, id, opts) => {
+        checkArea(area);
+        await this.mutate(['content', 'audit'], (d) => {
+          const o = d.content.items[area]?.[id];
+          if (!o || !o.deleted || o.purged)
+            throw new StoreError('not_found', `${area}/${id} no está en la papelera`);
+          purgeOne(d, area, id, opts?.reason ?? null);
+          purgeExpiredIn(d);
+        });
+      },
+      purgeExpired: async (opts) =>
+        this.mutate(['content', 'audit'], (d, skip) => {
+          const n = purgeExpiredIn(d, opts?.reason);
+          if (n === 0) skip();
+          return n;
+        }),
+      settings: async () => clone(this.doc.content.settings),
+      setSettings: async (patch, opts) => {
+        const r = adminSettingsSchema
+          .strict()
+          .safeParse({ ...this.doc.content.settings, ...patch });
+        if (!r.success)
+          invalid(
+            `ajustes: ${r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
+          );
+        return this.mutate(['content', 'audit'], (d) => {
+          const before = clone(d.content.settings);
+          d.content.settings = r.data;
+          this.audit(
+            d,
+            { area: 'settings', action: 'settings', targetId: null, before, after: r.data },
+            opts,
+          );
+          purgeExpiredIn(d);
+          return clone(r.data);
+        });
+      },
+
+      // --- Borrador y publicación (REQ-ADM-015) ------------------------------
+      draftUpsert: async (area, item, opts) => {
+        checkDraftArea(area);
+        const value = parseItem(area, item);
+        return this.mutate(['content', 'audit'], (d) => {
+          const before = this.draftResolved(area, d).find((x) => x.id === value.id) ?? null;
+          (d.content.drafts.items[area] ??= {})[value.id] = {
+            value: clone(value),
+            deleted: false,
+            at: this.iso(),
+          };
+          this.audit(d, { area, action: 'draft', targetId: value.id, before, after: value }, opts);
+          return clone(value);
+        });
+      },
+      draftReorder: async (area, ids, opts) => {
+        checkDraftArea(area);
+        await this.mutate(['content', 'audit'], (d) => {
+          const current = this.draftResolved(area, d).map((x) => x.id);
+          if (new Set(ids).size !== ids.length) invalid('orden: ids repetidos');
+          for (const id of ids)
+            if (!current.includes(id)) invalid(`orden: ${area}/${id} no existe`);
+          d.content.drafts.order[area] = [...ids];
+          this.audit(
+            d,
+            { area, action: 'draft', targetId: null, before: current, after: [...ids] },
+            opts,
+          );
+        });
+      },
+      draftText: async (key, value, opts) => {
+        if (typeof key !== 'string' || key.length < 1 || key.length > 200) invalid('texto: clave');
+        if (value !== null && (typeof value !== 'string' || value.length > 5000))
+          invalid('texto: hasta 5000 caracteres');
+        await this.mutate(['content', 'audit'], (d) => {
+          const before = d.content.texts[key] ?? null;
+          d.content.drafts.texts[key] = value;
+          this.audit(
+            d,
+            { area: 'texts', action: 'draft', targetId: key, before, after: value },
+            opts,
+          );
+        });
+      },
+      draftList: async (area) => {
+        checkDraftArea(area);
+        return clone(this.draftResolved(area));
+      },
+      draftHome: async (): Promise<HomeContent> =>
+        clone({
+          blocks: this.draftResolved('homeBlocks'),
+          events: this.draftResolved('events'),
+          artists: this.resolved('artists'),
+          photos: this.resolved('photos'),
+          promotions: this.resolved('promotions'),
+        }),
+      draftTexts: async () =>
+        applyDraftTexts(
+          { ...this.sample.texts, ...this.doc.content.texts },
+          this.doc.content.drafts.texts,
+        ),
+      pendingDrafts: async () => pendingOf(this.doc),
+      publish: async (opts) =>
+        this.mutate(['content', 'audit'], (d) => {
+          const changes = pendingOf(d);
+          if (changes.length === 0) invalid('no hay nada en el borrador');
+          const before = {
+            revision: d.content.revision,
+            items: Object.fromEntries(DRAFT_AREAS.map((a) => [a, clone(d.content.items[a] ?? {})])),
+            order: Object.fromEntries(DRAFT_AREAS.map((a) => [a, d.content.order[a] ?? null])),
+            texts: clone(d.content.texts),
+          };
+          for (const area of DRAFT_AREAS) {
+            for (const [id, o] of Object.entries(d.content.drafts.items[area] ?? {})) {
+              // Un borrador que ya no cumple el esquema no se publica: es un error de datos.
+              const r = ENTITY_SCHEMAS[area].safeParse(o.value);
+              if (!r.success) invalid(`${area}/${id}: el borrador no es válido`);
+              areaItems(d, area)[id] = { value: clone(r.data), deleted: false, at: this.iso() };
+            }
+            const order = d.content.drafts.order[area];
+            if (order) d.content.order[area] = [...order];
+          }
+          for (const [k, v] of Object.entries(d.content.drafts.texts)) {
+            if (v === null) delete d.content.texts[k];
+            else d.content.texts[k] = v;
+          }
+          d.content.drafts = emptyDrafts();
+          d.content.revision += 1;
+          this.audit(
+            d,
+            {
+              area: 'publish',
+              action: 'publish',
+              targetId: `revision-${d.content.revision}`,
+              before,
+              after: { revision: d.content.revision, changes },
+            },
+            opts,
+          );
+          return { revision: d.content.revision, changes };
+        }),
+      discardDrafts: async (target, opts) =>
+        this.mutate(['content', 'audit'], (d, skip) => {
+          const before = clone(d.content.drafts);
+          if (!target) d.content.drafts = emptyDrafts();
+          else if (target.area === 'texts') {
+            if (target.id) delete d.content.drafts.texts[target.id];
+            else d.content.drafts.texts = {};
+          } else {
+            const area = checkDraftArea(target.area);
+            if (target.id) delete d.content.drafts.items[area]?.[target.id];
+            else {
+              delete d.content.drafts.items[area];
+              delete d.content.drafts.order[area];
+            }
+          }
+          if (JSON.stringify(before) === JSON.stringify(d.content.drafts)) return skip();
+          this.audit(
+            d,
+            {
+              area: target?.area ?? 'publish',
+              action: 'discard',
+              targetId: target?.id ?? null,
+              before,
+              after: d.content.drafts,
+            },
+            opts,
+          );
+        }),
       reorder: async (area, ids, opts) => {
         checkArea(area);
         await this.mutate(['content', 'audit'], (d) => {
@@ -1528,6 +1827,7 @@ class LocalRepository implements BoiaRepository {
             } else if (a === 'texts') {
               before = d.content.texts;
               d.content.texts = {};
+              d.content.drafts.texts = {};
             } else if (a === 'activeWorld') {
               before = d.content.activeWorldId ?? null;
               delete d.content.activeWorldId;
@@ -1535,6 +1835,8 @@ class LocalRepository implements BoiaRepository {
               before = { items: d.content.items[a] ?? {}, order: d.content.order[a] ?? null };
               delete d.content.items[a];
               delete d.content.order[a];
+              delete d.content.drafts.items[a];
+              delete d.content.drafts.order[a];
             }
             this.audit(d, { area: a, action: 'reset', targetId: null, before, after: null }, opts);
           }

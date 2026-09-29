@@ -4,7 +4,15 @@ import type { Photo } from '@boia/contracts';
 import { useState } from 'react';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
-import { Changed, Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import {
+  Changed,
+  DeleteButton,
+  Field,
+  ResetButton,
+  SectionHead,
+  StatusLine,
+  TrashInline,
+} from '../ui';
 
 function PhotoRow({
   ctx,
@@ -55,16 +63,7 @@ function PhotoRow({
         >
           Guardar
         </button>
-        <button
-          type="button"
-          className="admin-button admin-button--ghost"
-          disabled={busy}
-          onClick={() =>
-            void run(() => ctx.repo.admin.remove('photos', photo.id, { reason: 'papelera' }))
-          }
-        >
-          A la papelera
-        </button>
+        <DeleteButton ctx={ctx} area="photos" id={photo.id} />
       </div>
       <StatusLine status={status} />
     </li>
@@ -152,6 +151,7 @@ export function PhotosSection({ ctx }: { ctx: AdminContext }) {
       </div>
       <StatusLine status={status} />
       <p className="admin-meta">Álbumes: {albums.map((a) => a.title).join(' · ')}</p>
+      <TrashInline ctx={ctx} area="photos" />
       <ul className="admin-list">
         {photos.map((p) => (
           <PhotoRow

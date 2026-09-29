@@ -27,7 +27,11 @@ import {
  * - la salida, el puerto, el aterrizaje de la entrada y todo destino de
  *   teletransporte quedan en el agua (nunca en tierra);
  * - ninguna isla corta el paso: desde la salida se llega a cada lugar que
- *   hace algo.
+ *   hace algo;
+ * - los parámetros de un lugar cambiado están en su rango seguro
+ *   (`PARAM_RANGES`, REQ-ADM-013);
+ * - toda misión tiene su destino y todo circuito una ruta válida: salida
+ *   (orden 0), al menos dos arcos y órdenes seguidos (REQ-ADM-014).
  * Devuelve el motivo del rechazo, en castellano, o null.
  */
 
@@ -160,6 +164,156 @@ export function unreachablePlaces(
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Rangos seguros de los parámetros de un lugar (REQ-ADM-013)
+
+/** Rango de un parámetro numérico, con su nombre para el motivo del rechazo. */
+export interface ParamRange {
+  label: string;
+  min: number;
+  max: number;
+  integer?: boolean;
+}
+
+/**
+ * Rangos de los parámetros de lugar que lee el motor (`params` del mapa):
+ * remolino, vaivén, misión, circuito y encuentros. La clave es la ruta del
+ * parámetro (`swirl.strength`). Los valores de la muestra caben con margen.
+ */
+export const PARAM_RANGES: Readonly<Record<string, ParamRange>> = {
+  proximityRadius: { label: 'radio de proximidad', min: 1, max: 2000 },
+  'swirl.strength': { label: 'fuerza del remolino', min: 0, max: 400 },
+  'swirl.pull': { label: 'atracción del remolino', min: 0, max: 200 },
+  'patrol.period': { label: 'periodo del vaivén (s)', min: 1, max: 120 },
+  crocRadius: { label: 'radio de los cocodrilos', min: 1, max: 2000 },
+  'missionReward.points': { label: 'puntos de la entrega', min: 0, max: 1000, integer: true },
+  'missionReward.coins': { label: 'monedas de la entrega', min: 0, max: 1000, integer: true },
+  rewardCoins: { label: 'monedas del encuentro', min: 0, max: 500, integer: true },
+  version: { label: 'versión del circuito', min: 1, max: 1000, integer: true },
+};
+
+/** Parámetros que son puntos del mar (listas de `{x, y}` o un punto). */
+const POINT_LISTS: Readonly<Record<string, { label: string; min: number; max: number }>> = {
+  'patrol.points': { label: 'puntos del vaivén', min: 2, max: 20 },
+  trail: { label: 'recorrido del encuentro', min: 1, max: 50 },
+};
+const POINTS: Readonly<Record<string, string>> = { missionDrop: 'punto de entrega de la misión' };
+
+function valueAt(params: Record<string, unknown>, path: string): unknown {
+  let v: unknown = params;
+  for (const k of path.split('.')) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+    v = (v as Record<string, unknown>)[k];
+  }
+  return v;
+}
+
+const fmt = (n: number) => String(n).replace('.', ',');
+
+/**
+ * Motivo por el que unos parámetros de lugar se salen de su rango seguro, o
+ * null. Sólo mira los que conoce; el resto lo valida el esquema del mundo.
+ */
+export function paramProblem(
+  name: string,
+  params: Record<string, unknown>,
+  bounds: { left: number; right: number; top: number; bottom: number },
+): string | null {
+  for (const [path, r] of Object.entries(PARAM_RANGES)) {
+    const v = valueAt(params, path);
+    if (v === undefined) continue;
+    if (typeof v !== 'number' || !Number.isFinite(v))
+      return `«${name}»: ${r.label} no es un número`;
+    if (r.integer && !Number.isInteger(v)) return `«${name}»: ${r.label} tiene que ser entero`;
+    if (v < r.min || v > r.max) {
+      return `«${name}»: ${r.label} fuera de rango (${fmt(v)}; entre ${fmt(r.min)} y ${fmt(r.max)})`;
+    }
+  }
+  const inside = (p: unknown) => {
+    const x = (p as { x?: unknown } | null)?.x;
+    const y = (p as { y?: unknown } | null)?.y;
+    return (
+      typeof x === 'number' &&
+      typeof y === 'number' &&
+      x >= bounds.left &&
+      x <= bounds.right &&
+      y >= bounds.top &&
+      y <= bounds.bottom
+    );
+  };
+  for (const [path, r] of Object.entries(POINT_LISTS)) {
+    const v = valueAt(params, path);
+    if (v === undefined) continue;
+    if (!Array.isArray(v) || v.length < r.min || v.length > r.max) {
+      return `«${name}»: ${r.label} fuera de rango (entre ${r.min} y ${r.max} puntos)`;
+    }
+    if (!v.every(inside)) return `«${name}»: ${r.label} con puntos fuera del mapa`;
+  }
+  for (const [path, label] of Object.entries(POINTS)) {
+    const v = valueAt(params, path);
+    if (v !== undefined && !inside(v)) return `«${name}»: ${label} fuera del mapa`;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Misiones y circuitos (REQ-ADM-014)
+
+const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
+
+/** Misiones (`params.mission`) sin un destino activo (`params.missionDestination`). */
+export function missionProblem(world: WorldConfig): string | null {
+  const active = world.objects.filter((o) => o.identity.active);
+  for (const o of active) {
+    const mission = str(o.params?.mission);
+    if (!mission) continue;
+    const dest = active.find((x) => x.params?.missionDestination === mission);
+    if (!dest) return `la misión «${mission}» de «${o.identity.name}» no tendría destino`;
+    if (
+      dest.geometry.proximityRadius === undefined &&
+      !dest.behaviors.some((b) => b.type === 'proximity')
+    ) {
+      return `el destino de la misión «${mission}» («${dest.identity.name}») no tiene radio de llegada`;
+    }
+  }
+  return null;
+}
+
+/** Circuitos del mapa: los que nombran sus arcos o un lugar (`params.circuit`). */
+export function circuitIds(world: WorldConfig): string[] {
+  const ids = new Set<string>();
+  for (const o of world.objects) {
+    const c = str(o.params?.circuit);
+    if (c) ids.add(c);
+    for (const b of o.behaviors) {
+      if (b.type === 'checkpoint' && b.params.circuitId) ids.add(b.params.circuitId);
+    }
+  }
+  return [...ids];
+}
+
+/**
+ * Circuitos sin ruta válida: con los arcos activos, hace falta la salida
+ * (orden 0), al menos dos arcos y que los órdenes vayan seguidos.
+ */
+export function circuitProblem(world: WorldConfig): string | null {
+  for (const id of circuitIds(world)) {
+    const orders = world.objects
+      .filter((o) => o.identity.active)
+      .flatMap((o) =>
+        o.behaviors.flatMap((b) =>
+          b.type === 'checkpoint' && b.params.circuitId === id ? [b.params.order] : [],
+        ),
+      );
+    const unique = [...new Set(orders)].sort((a, b) => a - b);
+    if (!unique.includes(0)) return `el circuito «${id}» no tendría salida (arco 0)`;
+    if (orders.length < 2) return `el circuito «${id}» no tendría ruta: hacen falta dos arcos`;
+    const gap = unique.findIndex((n, i) => n !== i);
+    if (gap >= 0) return `el circuito «${id}» no tendría ruta válida: falta el arco ${gap}`;
+  }
+  return null;
+}
+
 function zodMessage(err: unknown): string {
   if (err && typeof err === 'object' && 'issues' in err && Array.isArray(err.issues)) {
     const first = err.issues[0] as { message?: string; path?: unknown[] } | undefined;
@@ -199,6 +353,11 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
     if (x < b.left || x > b.right || y < b.top || y > b.bottom) {
       return `«${base?.name ?? id}» quedaría fuera del mapa`;
     }
+    if (patch.params && base) {
+      const merged = { ...(base.params ?? {}), ...patch.params };
+      const why = paramProblem(base.name, merged, b);
+      if (why) return why;
+    }
   }
   for (const [worldId, byPlace] of Object.entries(content.skins)) {
     if (!registry.has(worldId)) return `no existe el mundo «${worldId}»`;
@@ -218,6 +377,8 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
   const map = liveMap(registry, content);
   const skin = withEverythingVisible(registry.skin(registry.defaultId));
   const world = composeWorld(map, applySkinPatches(map, skin, {})).config;
+  const plot = missionProblem(world) ?? circuitProblem(world);
+  if (plot) return plot;
   const obstacles = solidCircles(world);
   for (const key of MAP_POINT_KEYS) {
     const p = mapPoint(registry.map, key, content.places);

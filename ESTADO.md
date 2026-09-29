@@ -4,6 +4,34 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 004 T48: Admin endurecido
+
+Qué existe:
+- **Borrador y «Publicar»** (REQ-ADM-015, REQ-ADM-017): la home y los eventos tienen borrador en el repositorio (`content.drafts`, áreas `DRAFT_AREAS = homeBlocks, events` más los textos de la portada). `repo.admin.draftUpsert/draftReorder/draftText/draftList/draftHome/draftTexts/pendingDrafts/publish/discardDrafts`; `content.*` (landing, /juego, /mar) sólo da lo publicado. `publish` pasa todo de una vez y sube `content.revision`. **Página principal** edita siempre el borrador: orden, visible, programación, titular y subtítulo, **botones «Explorar» y «Tickets»** (textos `hero.explore`/`hero.tickets`, hasta 40 caracteres), evento prioritario y **eventos excluidos** de «Próximos eventos» (`excludeEventIds`, no borra). **Eventos**: «Guardar borrador» (`evento-borrador`) o «Guardar y publicar» (`evento-guardar`, como antes); cambiar el estado desde la lista publica y el borrador lo recoge (`setEventStateManual`). Barra del borrador (`DraftBar`, testid `borrador`, `data-pendientes`) en las dos secciones, con vista previa privada **`/admin/vista-previa`** (la home del borrador con los bloques de la landing; el iframe móvil/escritorio también la usa), «Publicar» y «Descartar borrador».
+- **Publicar se bloquea** (REQ-ADM-014) con la lista de motivos si hay referencias rotas (`lib/admin/references.ts`, `danglingReferences`: evento prioritario, álbum del bloque de fotos, artistas e isla de un evento, evento y escondite de un descuento, álbum/portada/isla de fotos, premio y temporada de un logro, y en el mapa vivo tickets, paneles, códigos y logros que ya no existen), si la portada no se ve o si con los eventos del borrador el mar no se juega.
+- **Borrar con impacto y nombre** (REQ-ADM-029): `DeleteButton` (testid `borrar-<área>-<id>`) en eventos, descuentos, artistas, fotos, logros y música: enseña qué lo nombra (`referencesTo`: home, mapa, eventos, descuentos, fotos, logros y lo de este navegador) y sólo borra escribiendo el nombre exacto (`actions.trashItem`). Un evento que sólo existe en borrador se descarta.
+- **Papelera con plazo y purga** (REQ-ADM-030): `content.settings.trashRetentionDays` (30 por defecto, 1–365, [pendiente Álvaro]); `repo.admin.trash/purge/purgeExpired/settings/setSettings`. Lo caducado se purga solo en el siguiente cambio de la papelera; purgar deja una marca sin contenido (un elemento de la muestra no vuelve) y `restore` lo rechaza. Sección nueva **Papelera** (`/admin#papelera`): plazo, lista de todas las áreas con «Recuperar» y «Purgar» (pide escribir otra vez el nombre: en la demo no hay login con el que reautenticarse) y «Purgar lo caducado». Las listas «recuperar …» de cada sección salen de `trash()` (`TrashInline`).
+- **Logros** (REQ-ADM-021, REQ-ADM-022): formulario de crear y editar con condición del catálogo y sus parámetros con rango (`lib/admin/achievements.ts`, `TRIGGER_PARAMS`, `triggerParamsProblem`; circuitos, minijuegos y mundos que existen), puntos, monedas, premio, icono (`ACHIEVEMENT_ICONS`, `muestra`), ámbito global/temporada, fechas, secreto y activo; «Duplicar» (copia desactivada); borrar con impacto. El repositorio pone la versión: cambiar disparador o parámetros sube `version`; lo demás la conserva; uno nuevo empieza en 1.
+- **Validaciones del mundo** (REQ-ADM-013, REQ-ADM-014, `lib/admin/validate.ts`): `PARAM_RANGES` (radio de proximidad, remolino, vaivén, cocodrilos, premio de la entrega, monedas de encuentro, versión del circuito) y puntos dentro del mapa; misión sin destino (`missionProblem`); circuito sin salida, con menos de dos arcos o con huecos (`circuitProblem`). Rechazo con su motivo, sin guardar nada.
+- **Música con licencia** (REQ-ADM-020): área nueva `music` (`musicTrackSchema`: título, ambiente/efecto, mundo, data URL `data:audio/…` hasta ~1 MB, licencia, origen, enlace; siempre `sample: true`). En **Textos y música**: subir pista, escucharla, borrarla. El juego sigue con su loop generado (O10).
+- **Auditoría de compras y sellos** (REQ-ADM-007): `confirmSandbox` anota la compra (`purchases/purchase`) y el sello (`ledger/stamp`) con el visitante como autor. La auditoría del Admin traduce áreas y acciones.
+- **Migración v4 → v5** (`SCHEMA_VERSION = 5`): borrador vacío, revisión 0, plazo de 30 días, y las compras y sellos que ya había pasan a la auditoría («anotada al migrar (v5)»), sin duplicar.
+- **`docs/manual-admin.md`**: cómo publicar, borrar, papelera, logros, validaciones y música, y el **procedimiento a mano para peticiones de datos** (REQ-ADM-031): descarga, eliminación y retirada de contenido, en la versión de prueba y con Supabase.
+- Pruebas: `packages/store/src/admin-hardening.test.ts` (borrador invisible hasta publicar, papelera y purga por plazo, rango del plazo, versiones de logro, compras y sellos en la auditoría, migración v4 → v5), `apps/web/lib/admin/hardening.test.ts` (borrar exige el nombre exacto, impacto, borrador invisible en `resolveHome` hasta publicar, exclusión, publicación bloqueada por referencia rota o sin portada, parámetro fuera de rango con su motivo, misión sin destino, circuito sin salida, logros de la muestra en su catálogo, crear/duplicar/versionar, música). e2e `admin-endurecido.spec.ts` (borrador → landing sin cambios → vista previa → publicar; borrar con impacto y nombre, purgar; rango del remolino) y `admin.spec.ts` publica el borrador tras mover los bloques.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint   # exit 0; 71 archivos, 716 pruebas
+E2E_PORT=<libre> pnpm e2e --workers=2      # ver el informe de la tarea
+```
+
+Pendiente / para otros encargos:
+- **Moderación de Carnets** (REQ-ADM-040) no existe aún; el manual la cita como pendiente.
+- La sección **Textos** sigue publicando al momento (incluidos `hero.explore`/`hero.tickets`): si se quiere, pasar también los textos de la home al borrador desde allí.
+- Restaurar una revisión anterior (REQ-ADM-016) no está: `publish` guarda en la auditoría el antes y el después de cada revisión, que es lo que haría falta para volver atrás.
+- La música subida no suena en el juego: `/juego` y `/mar` siguen con el loop de cada mundo (O10) hasta que haya pistas con licencia (P18); enchufarla toca `app/juego` y `/mar`.
+- Los iconos de logro (`ACHIEVEMENT_ICONS`) son claves sin arte: el menú de logros de /juego no los pinta todavía.
+
 ## 2026-09-29 — plan 004 T44: la landing que te lleva en barco: accesos, cabecera, pie e invitaciones al Carnet
 
 Qué existe:

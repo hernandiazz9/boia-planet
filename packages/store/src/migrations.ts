@@ -195,10 +195,75 @@ function v3ToV4(doc: Record<string, unknown>): Record<string, unknown> {
   return { ...doc, content: { ...doc.content, items: { ...items, discounts } } };
 }
 
+/** Motivo de las entradas de auditoría que escribe la migración v4 → v5. */
+export const V5_AUDIT_REASON = 'anotada al migrar (v5)';
+
+/**
+ * v4 → v5 (T48): el Admin gana borrador y publicación de la home y los
+ * eventos, plazo de la papelera y purga, y la auditoría anota compras y
+ * sellos (REQ-ADM-007). Se escriben explícitos el borrador vacío, la revisión
+ * 0 y el plazo por defecto (30 días), y las compras y sellos que ya había
+ * pasan a la auditoría con su fecha y su autor (el visitante), marcados como
+ * anotados al migrar. Nada de lo publicado cambia.
+ */
+function v4ToV5(doc: Record<string, unknown>): Record<string, unknown> {
+  const content: Record<string, unknown> = isObject(doc.content) ? { ...doc.content } : {};
+  if (!isObject(content.drafts)) content.drafts = { items: {}, order: {}, texts: {} };
+  if (typeof content.revision !== 'number') content.revision = 0;
+  if (!isObject(content.settings)) content.settings = { trashRetentionDays: 30 };
+  const audit = Array.isArray(doc.audit) ? [...(doc.audit as unknown[])] : [];
+  const seen = new Set(
+    audit.flatMap((a) => (isObject(a) && typeof a.id === 'string' ? [a.id] : [])),
+  );
+  const add = (entry: Record<string, unknown>) => {
+    if (seen.has(String(entry.id))) return;
+    seen.add(String(entry.id));
+    audit.push(entry);
+  };
+  const purchases = Array.isArray(doc.purchases) ? doc.purchases : [];
+  for (const p of purchases) {
+    if (!isObject(p) || typeof p.id !== 'string' || typeof p.userId !== 'string') continue;
+    add({
+      id: `v5:purchase:${p.id}`,
+      at: typeof p.createdAt === 'string' ? p.createdAt : new Date(0).toISOString(),
+      actor: p.userId,
+      area: 'purchases',
+      action: 'purchase',
+      targetId: p.id,
+      before: null,
+      after: p,
+      reason: V5_AUDIT_REASON,
+    });
+  }
+  const ledger = Array.isArray(doc.ledger) ? doc.ledger : [];
+  for (const e of ledger) {
+    if (!isObject(e) || e.kind !== 'stamp' || typeof e.id !== 'string') continue;
+    if (typeof e.userId !== 'string') continue;
+    add({
+      id: `v5:stamp:${e.id}`,
+      at: typeof e.createdAt === 'string' ? e.createdAt : new Date(0).toISOString(),
+      actor: e.userId,
+      area: 'ledger',
+      action: 'stamp',
+      targetId: e.id,
+      before: null,
+      after: e,
+      reason: V5_AUDIT_REASON,
+    });
+  }
+  return { ...doc, content, audit };
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, name: 'logros que se reclaman (T36)', up: v1ToV2 },
   { from: 2, to: 3, name: 'eventos con formato, precio y estado por fechas (T42)', up: v2ToV3 },
   { from: 3, to: 4, name: 'descuentos con destino, prioridad y escondite (T43)', up: v3ToV4 },
+  {
+    from: 4,
+    to: 5,
+    name: 'borrador y publicación, papelera con plazo, compras y sellos auditados (T48)',
+    up: v4ToV5,
+  },
 ];
 
 export type MigrationOutcome =

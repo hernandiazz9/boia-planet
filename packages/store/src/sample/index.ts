@@ -45,6 +45,8 @@ export const DEFAULT_SAMPLE_INPUT: SampleInput = {
   achievements: SAMPLE_ACHIEVEMENTS,
   cosmetics: SAMPLE_COSMETICS,
   ranks: SAMPLE_RANKS,
+  /** Sin pistas subidas: la música de cada mundo es el loop generado (O10). */
+  music: [],
   texts: {},
   activeWorldId: null,
   crew: SAMPLE_CREW,

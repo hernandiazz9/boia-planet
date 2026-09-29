@@ -12,6 +12,7 @@ import type { RewardPolicy } from './ids';
 import type { Balances } from './ledger';
 import type {
   AchievementDefinition,
+  AdminSettings,
   AreaInput,
   AreaItem,
   AuditEntry,
@@ -19,6 +20,7 @@ import type {
   ContentArea,
   Cosmetic,
   CosmeticSlot,
+  DraftArea,
   EntityArea,
   Identity,
   JsonValue,
@@ -429,6 +431,35 @@ export interface AdminOptions {
   reason?: string | null | undefined;
 }
 
+/** Un elemento en la papelera (REQ-ADM-030). */
+export interface TrashItem {
+  area: EntityArea;
+  id: string;
+  /** El elemento tal como estaba al tirarlo. */
+  value: unknown;
+  deletedAt: string;
+  /** Cuándo se purga solo, con el plazo de ahora. */
+  expiresAt: string;
+  /** Ya pasó su plazo: se purga en el próximo cambio de la papelera. */
+  expired: boolean;
+}
+
+/** Un cambio del borrador sin publicar (REQ-ADM-015). */
+export interface DraftChange {
+  area: DraftArea | 'texts';
+  /** Id del elemento, clave del texto o null si es el orden del área. */
+  id: string | null;
+  kind: 'item' | 'order' | 'text';
+  /** Elemento nuevo: todavía no existe en lo publicado. */
+  isNew: boolean;
+}
+
+export interface PublishResult {
+  /** Revisión publicada ahora (sube con cada «Publicar»). */
+  revision: number;
+  changes: DraftChange[];
+}
+
 export interface AdminBottleView extends BottleView {
   reports: BottleReport[];
   moderationReason: string | null;
@@ -445,13 +476,57 @@ export interface AdminApi {
     item: AreaInput<A>,
     opts?: AdminOptions,
   ): Promise<AreaItem<A>>;
-  /** A la papelera (recuperable con `restore`). */
+  /**
+   * A la papelera (recuperable con `restore`). Quita también su borrador y
+   * purga lo que ya pasó su plazo.
+   */
   remove(area: EntityArea, id: string, opts?: AdminOptions): Promise<void>;
+  /** Sale de la papelera. Lo purgado ya no se recupera (`forbidden`). */
   restore<A extends EntityArea>(
     area: A,
     id: string,
     opts?: AdminOptions,
   ): Promise<AreaItem<A> | null>;
+  /** Lo que hay en la papelera, lo más reciente primero. */
+  trash(): Promise<TrashItem[]>;
+  /**
+   * Purga un elemento de la papelera: irreversible. Queda sólo la marca (sin
+   * contenido) para que uno de la muestra no vuelva. Quien llama pide antes
+   * una segunda confirmación (REQ-ADM-030).
+   */
+  purge(area: EntityArea, id: string, opts?: AdminOptions): Promise<void>;
+  /** Purga todo lo que pasó su plazo; devuelve cuántos. */
+  purgeExpired(opts?: AdminOptions): Promise<number>;
+  settings(): Promise<AdminSettings>;
+  /** Cambia los ajustes del Admin (plazo de la papelera), con auditoría. */
+  setSettings(patch: Partial<AdminSettings>, opts?: AdminOptions): Promise<AdminSettings>;
+
+  // Borrador y publicación de la home y los eventos (REQ-ADM-015).
+
+  /** Guarda un elemento en el borrador: nadie lo ve hasta `publish`. */
+  draftUpsert<A extends DraftArea>(
+    area: A,
+    item: AreaInput<A>,
+    opts?: AdminOptions,
+  ): Promise<AreaItem<A>>;
+  draftReorder(area: DraftArea, ids: readonly string[], opts?: AdminOptions): Promise<void>;
+  /** Un texto de la home en borrador; null lo devuelve a su valor de la app. */
+  draftText(key: string, value: string | null, opts?: AdminOptions): Promise<void>;
+  /** Un área con el borrador encima. */
+  draftList<A extends DraftArea>(area: A): Promise<AreaItem<A>[]>;
+  /** La home con el borrador encima (vista previa). */
+  draftHome(): Promise<HomeContent>;
+  /** Textos con el borrador encima. */
+  draftTexts(): Promise<Record<string, string>>;
+  /** Cambios sin publicar. */
+  pendingDrafts(): Promise<DraftChange[]>;
+  /** Pasa todo el borrador a lo publicado de una vez (una revisión). */
+  publish(opts?: AdminOptions): Promise<PublishResult>;
+  /** Tira el borrador: todo, el de un área o el de un elemento (o texto). */
+  discardDrafts(
+    target?: { area: DraftArea | 'texts'; id?: string } | null,
+    opts?: AdminOptions,
+  ): Promise<void>;
   reorder(area: EntityArea, ids: readonly string[], opts?: AdminOptions): Promise<void>;
   /** Cambio compartido de un lugar (se mezcla con el anterior); null lo quita. */
   setPlace(placeId: string, patch: PlacePatch | null, opts?: AdminOptions): Promise<void>;

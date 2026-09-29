@@ -7,7 +7,15 @@ import { isoToLocal, localToIso } from '../../../lib/admin/dates';
 import { discountHidingPlaces } from '../../../lib/admin/world';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
-import { Changed, Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import {
+  Changed,
+  DeleteButton,
+  Field,
+  ResetButton,
+  SectionHead,
+  StatusLine,
+  TrashInline,
+} from '../ui';
 
 /** Valor del selector de destino: la tienda o un evento. */
 const STORE = 'tienda';
@@ -243,16 +251,7 @@ function DiscountRow({
         >
           Caducar ya
         </button>
-        <button
-          type="button"
-          className="admin-button admin-button--ghost"
-          disabled={busy}
-          onClick={() =>
-            void run(() => ctx.repo.admin.remove('discounts', discount.id, { reason: 'papelera' }))
-          }
-        >
-          A la papelera
-        </button>
+        <DeleteButton ctx={ctx} area="discounts" id={discount.id} />
       </div>
       <StatusLine status={status} />
     </li>
@@ -276,8 +275,6 @@ export function DiscountsSection({ ctx }: { ctx: AdminContext }) {
   const listed = events.filter((e) => e.state !== 'draft');
   const form = draft ?? draftOf(null, listed);
   const changedSet = new Set(changed ?? []);
-  const ids = new Set(discounts.map((d) => d.id));
-  const trashed = (changed ?? []).filter((id) => !ids.has(id));
   return (
     <section>
       <SectionHead
@@ -315,21 +312,7 @@ export function DiscountsSection({ ctx }: { ctx: AdminContext }) {
         </button>
         <StatusLine status={status} />
       </form>
-      {trashed.length ? (
-        <p className="admin-meta">
-          En la papelera:{' '}
-          {trashed.map((id) => (
-            <button
-              key={id}
-              type="button"
-              className="admin-link"
-              onClick={() => void run(() => ctx.repo.admin.restore('discounts', id), 'Recuperado.')}
-            >
-              recuperar {id}
-            </button>
-          ))}
-        </p>
-      ) : null}
+      <TrashInline ctx={ctx} area="discounts" />
       <ul className="admin-list" data-testid="descuentos-admin">
         {discounts.map((d) => (
           <DiscountRow

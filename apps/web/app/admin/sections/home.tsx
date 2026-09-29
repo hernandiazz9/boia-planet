@@ -1,11 +1,14 @@
 'use client';
 
-import type { HomeBlock } from '@boia/contracts';
+import type { BoiaEvent, HomeBlock } from '@boia/contracts';
 import { useState } from 'react';
+import { HOME_CTA_KEYS, HOME_CTA_MAX } from '../../../lib/admin/actions';
+import { ADMIN_PREVIEW_PATH } from '../../../lib/admin/copy';
 import { isoToLocal, localToIso } from '../../../lib/admin/dates';
+import { es } from '../../../lib/i18n/es';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
-import { Changed, Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import { Changed, DraftBar, Field, ResetButton, SectionHead, StatusLine } from '../ui';
 
 const BLOCK_LABELS: Record<HomeBlock['type'], string> = {
   hero: 'Portada (hero)',
@@ -18,6 +21,18 @@ const BLOCK_LABELS: Record<HomeBlock['type'], string> = {
   contact: 'Contacto',
   footer: 'Pie',
 };
+
+const CTA_DEFAULTS = { explore: es[HOME_CTA_KEYS.explore], tickets: es[HOME_CTA_KEYS.tickets] };
+const SAVED_DRAFT = 'Guardado en el borrador: se ve al publicar.';
+
+/** Marca de «en borrador, sin publicar». */
+function InDraft({ on }: { on: boolean }) {
+  return on ? (
+    <span className="admin-badge admin-badge--draft" title="Cambiado en el borrador: aún no se ve">
+      borrador
+    </span>
+  ) : null;
+}
 
 function Schedule({ ctx, block }: { ctx: AdminContext; block: HomeBlock }) {
   const [from, setFrom] = useState(isoToLocal(block.showFrom));
@@ -48,12 +63,14 @@ function Schedule({ ctx, block }: { ctx: AdminContext; block: HomeBlock }) {
           className="admin-button"
           disabled={busy}
           onClick={() =>
-            void run(() =>
-              ctx.actions.scheduleBlock(
-                block.id,
-                from ? localToIso(from) : null,
-                until ? localToIso(until) : null,
-              ),
+            void run(
+              () =>
+                ctx.actions.scheduleBlock(
+                  block.id,
+                  from ? localToIso(from) : null,
+                  until ? localToIso(until) : null,
+                ),
+              SAVED_DRAFT,
             )
           }
         >
@@ -65,47 +82,119 @@ function Schedule({ ctx, block }: { ctx: AdminContext; block: HomeBlock }) {
   );
 }
 
+/** Titular, subtítulo y los dos botones de la portada (REQ-ADM-017). */
 function HeroTexts({
   ctx,
   block,
+  texts,
 }: {
   ctx: AdminContext;
   block: Extract<HomeBlock, { type: 'hero' }>;
+  texts: Record<string, string>;
 }) {
   const [title, setTitle] = useState(block.title);
   const [positioning, setPositioning] = useState(block.positioning);
+  const [explore, setExplore] = useState(texts[HOME_CTA_KEYS.explore] ?? CTA_DEFAULTS.explore);
+  const [tickets, setTickets] = useState(texts[HOME_CTA_KEYS.tickets] ?? CTA_DEFAULTS.tickets);
   const { status, busy, run } = useRun();
   return (
-    <details className="admin-details">
-      <summary>Titular y subtítulo</summary>
+    <details className="admin-details" data-testid="portada">
+      <summary>Titular, subtítulo y botones</summary>
       <Field label="Titular">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          data-testid="portada-titular"
+        />
       </Field>
       <Field label="Subtítulo">
         <input value={positioning} onChange={(e) => setPositioning(e.target.value)} />
       </Field>
+      <div className="admin-grid">
+        <Field
+          label="Botón Explorar"
+          hint={`Hasta ${HOME_CTA_MAX} caracteres. Vacío: «${CTA_DEFAULTS.explore}».`}
+        >
+          <input
+            value={explore}
+            maxLength={HOME_CTA_MAX}
+            onChange={(e) => setExplore(e.target.value)}
+            data-testid="cta-explorar"
+          />
+        </Field>
+        <Field
+          label="Botón Tickets"
+          hint={`Hasta ${HOME_CTA_MAX} caracteres. Vacío: «${CTA_DEFAULTS.tickets}».`}
+        >
+          <input
+            value={tickets}
+            maxLength={HOME_CTA_MAX}
+            onChange={(e) => setTickets(e.target.value)}
+            data-testid="cta-tickets"
+          />
+        </Field>
+      </div>
       <button
         type="button"
         className="admin-button"
         disabled={busy}
+        data-testid="portada-guardar"
         onClick={() =>
-          void run(() =>
-            ctx.repo.admin.upsert(
-              'homeBlocks',
-              { ...block, title, positioning },
-              { reason: 'portada' },
-            ),
-          )
+          void run(async () => {
+            await ctx.actions.setHeroTexts(title, positioning);
+            await ctx.actions.setHomeCtas({ explore, tickets }, CTA_DEFAULTS);
+          }, SAVED_DRAFT)
         }
       >
-        Guardar portada
+        Guardar en el borrador
       </button>
       <StatusLine status={status} />
     </details>
   );
 }
 
-/** Vista previa de la home en móvil o escritorio, con los cambios de este navegador. */
+/** Eventos que no salen en «Próximos eventos» (REQ-ADM-017): excluir no borra. */
+function Exclusions({
+  ctx,
+  block,
+  events,
+}: {
+  ctx: AdminContext;
+  block: Extract<HomeBlock, { type: 'upcoming_events' }>;
+  events: readonly BoiaEvent[];
+}) {
+  const { status, busy, run } = useRun();
+  const excluded = new Set(block.excludeEventIds);
+  return (
+    <details className="admin-details" data-testid="excluir-eventos">
+      <summary>Excluir eventos ({excluded.size})</summary>
+      <ul className="admin-checklist">
+        {events.map((e) => (
+          <li key={e.id}>
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={excluded.has(e.id)}
+                disabled={busy}
+                data-testid={`excluir-${e.id}`}
+                onChange={(ev) => {
+                  const next = ev.target.checked
+                    ? [...excluded, e.id]
+                    : [...excluded].filter((x) => x !== e.id);
+                  void run(() => ctx.actions.setExcludedEvents(next), SAVED_DRAFT);
+                }}
+              />
+              {e.name}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <StatusLine status={status} />
+    </details>
+  );
+}
+
+/** Vista previa del borrador de la home en móvil o escritorio (REQ-ADM-015, REQ-ADM-017). */
 function Preview({ revision }: { revision: number }) {
   const [mode, setMode] = useState<'movil' | 'escritorio' | null>(null);
   const size = mode === 'movil' ? { w: 390, h: 760 } : { w: 1280, h: 800 };
@@ -140,7 +229,7 @@ function Preview({ revision }: { revision: number }) {
           <iframe
             key={`${mode}-${revision}`}
             title={`Vista previa ${mode}`}
-            src="/?intro=0"
+            src={ADMIN_PREVIEW_PATH}
             width={size.w}
             height={size.h}
             style={{ transform: `scale(${scale})` }}
@@ -152,24 +241,35 @@ function Preview({ revision }: { revision: number }) {
   );
 }
 
-/** Página principal (REQ-ADM-017): orden, mostrar u ocultar, programar, evento prioritario, vista previa. */
+/**
+ * Página principal (REQ-ADM-015, REQ-ADM-017): orden, mostrar u ocultar,
+ * programar, portada y botones, evento prioritario y eventos excluidos. Todo
+ * va al borrador: se ve en la vista previa y, en la web, al «Publicar».
+ */
 export function HomeSection({ ctx }: { ctx: AdminContext }) {
-  const blocks = useRead(ctx, (r) => r.content.list('homeBlocks'));
-  const events = useRead(ctx, (r) => r.content.events());
+  const blocks = useRead(ctx, (r) => r.admin.draftList('homeBlocks'));
+  const events = useRead(ctx, (r) => r.admin.draftList('events'));
+  const texts = useRead(ctx, (r) => r.admin.draftTexts());
   const changed = useRead(ctx, (r) => r.admin.overridden('homeBlocks'));
+  const pending = useRead(ctx, (r) => r.admin.pendingDrafts());
   const { status, busy, run } = useRun();
-  if (!blocks || !events) return <p>Cargando…</p>;
+  if (!blocks || !events || !texts) return <p>Cargando…</p>;
   const priority = blocks.find((b) => b.type === 'priority_event');
   const changedSet = new Set(changed ?? []);
+  const drafted = new Set(
+    (pending ?? []).filter((c) => c.area === 'homeBlocks' && c.id).map((c) => c.id),
+  );
+  const listed = events.filter((e) => e.state !== 'draft');
 
   return (
     <section aria-labelledby="admin-h-home">
       <SectionHead
         title="Página principal"
-        lead="Ordena, muestra u oculta y programa los bloques de la home. Todo con formularios, sin HTML."
+        lead="Ordena, muestra u oculta y programa los bloques de la home, con formularios y sin HTML. Los cambios van al borrador: se ven en la vista previa y, en la web, al pulsar «Publicar»."
       >
         <ResetButton ctx={ctx} areas={['homeBlocks']} />
       </SectionHead>
+      <DraftBar ctx={ctx} />
       <h3 id="admin-h-home" className="visually-hidden">
         Bloques
       </h3>
@@ -178,7 +278,8 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
           <li key={b.id} className="admin-card" data-testid={`bloque-${b.id}`}>
             <div className="admin-row admin-row--between">
               <strong>
-                {i + 1}. {BLOCK_LABELS[b.type]} <Changed on={changedSet.has(b.id)} />
+                {i + 1}. {BLOCK_LABELS[b.type]} <Changed on={changedSet.has(b.id)} />{' '}
+                <InDraft on={drafted.has(b.id)} />
               </strong>
               <span className="admin-row">
                 <label className="admin-check">
@@ -188,7 +289,10 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
                     disabled={busy}
                     data-testid={`bloque-visible-${b.id}`}
                     onChange={(e) =>
-                      void run(() => ctx.actions.setBlockVisible(b.id, e.target.checked))
+                      void run(
+                        () => ctx.actions.setBlockVisible(b.id, e.target.checked),
+                        SAVED_DRAFT,
+                      )
                     }
                   />
                   Visible
@@ -199,7 +303,7 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
                   aria-label={`Subir ${BLOCK_LABELS[b.type]}`}
                   disabled={busy || i === 0}
                   data-testid={`bloque-subir-${b.id}`}
-                  onClick={() => void run(() => ctx.actions.moveBlock(b.id, -1))}
+                  onClick={() => void run(() => ctx.actions.moveBlock(b.id, -1), SAVED_DRAFT)}
                 >
                   ↑
                 </button>
@@ -209,7 +313,7 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
                   aria-label={`Bajar ${BLOCK_LABELS[b.type]}`}
                   disabled={busy || i === blocks.length - 1}
                   data-testid={`bloque-bajar-${b.id}`}
-                  onClick={() => void run(() => ctx.actions.moveBlock(b.id, 1))}
+                  onClick={() => void run(() => ctx.actions.moveBlock(b.id, 1), SAVED_DRAFT)}
                 >
                   ↓
                 </button>
@@ -231,29 +335,39 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
                   disabled={busy}
                   data-testid="evento-prioritario"
                   onChange={(e) =>
-                    void run(() => ctx.actions.setPriorityEvent(e.target.value || null))
+                    void run(
+                      () => ctx.actions.setPriorityEvent(e.target.value || null),
+                      SAVED_DRAFT,
+                    )
                   }
                 >
                   <option value="">El próximo a la venta</option>
-                  {events
-                    .filter((e) => e.state !== 'draft')
-                    .map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name}
-                      </option>
-                    ))}
+                  {listed.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
                 </select>
               </Field>
             ) : null}
             {b.type === 'hero' ? (
-              <HeroTexts key={`${b.title}|${b.positioning}`} ctx={ctx} block={b} />
+              <HeroTexts
+                // Sin volver a montar al guardar: el formulario ya tiene lo guardado y su estado.
+                key={b.id}
+                ctx={ctx}
+                block={b}
+                texts={texts}
+              />
+            ) : null}
+            {b.type === 'upcoming_events' ? (
+              <Exclusions ctx={ctx} block={b} events={listed} />
             ) : null}
             <Schedule key={`${b.showFrom}|${b.showUntil}`} ctx={ctx} block={b} />
           </li>
         ))}
       </ol>
       <StatusLine status={status} />
-      <h3>Vista previa</h3>
+      <h3>Vista previa del borrador</h3>
       <Preview revision={ctx.revision} />
     </section>
   );

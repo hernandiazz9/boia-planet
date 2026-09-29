@@ -458,3 +458,39 @@
 .admin-text-row .admin-status {
   grid-column: 1 / -1;
 }
+
+/* T48: borrador, impacto al borrar y papelera. */
+.admin-badge--draft {
+  background: #dfe8ff;
+  color: #1d2b53;
+}
+
+.admin-draftbar {
+  margin-bottom: 16px;
+  border-left: 4px solid var(--admin-line);
+}
+
+.admin-draftbar--pending {
+  border-left-color: var(--admin-accent);
+}
+
+.admin-delete {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-delete__panel {
+  border-color: var(--admin-danger);
+  max-width: 36rem;
+}
+
+.admin-impact {
+  margin: 4px 0 8px;
+  padding-left: 1.2em;
+  font-size: 14px;
+}
+
+.admin-impact--error {
+  color: var(--admin-danger);
+}
