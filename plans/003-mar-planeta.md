@@ -1,6 +1,6 @@
 # Plan 003 — /mar as a water planet: always-on tickets, readable dialogues, round minimap, game-like achievements
 
-Status: draft
+Status: active
 Created: 2026-09-29
 Base branch: main
 Goal: Hernán's improvements to the 3D view `/mar` (commit 23890e5): a «Entradas» button that is always on screen and sails the ship in turbo to the event island before opening the checkout; dialogues that stay readable (min 3 s, longer for long text) with a close button; the world redesigned as a small water planet with no grass or sand edges, where you sail around forever between islands, the sphere turns a little, and sky and stars show at the horizon; a round, transparent minimap that shows that planet turning and opens the big map on tap; and achievements that work like a game (counter, progress, «te queda…», «Reclamar» with a reward that depends on the achievement), the same in `/mar` and `/juego`. Everything stays browser-only (D-20) and `muestra` until Álvaro approves.
@@ -8,12 +8,12 @@ Test command: pnpm test
 Worktree setup: pnpm install
 Max parallel agents: 2
 
-Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow this prompt. Each task adds its own section at the top of ESTADO.md (`## <date> — plan 003 Txx: <title>`, what exists, commands, deviations, untested); on a merge conflict there keep every section, newest on top. Spanish copy uses "Boia" (D-18). Hernán may run a dev server of the main checkout on port 3000: never kill it and never use port 3000 (use 3100+). Several agents share this machine: run e2e with `--workers=2` and a free E2E_PORT. `/juego` (2D, Pixi) must keep working exactly as today unless a task says otherwise; anything shared (packages/engine runtime, packages/store) changes behind an option whose default keeps `/juego` as it is. three.js loads only on `/mar`. Every task touching the UI saves a phone-size screenshot (390×844) in docs/informes/img/ named `p003-txx-*.png` and gives the path in its final message: Hernán checks the look himself. Start this plan only after plan 002 T30 is done.
+Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow this prompt. Each task adds its own section at the top of ESTADO.md (`## <date> — plan 003 Txx: <title>`, what exists, commands, deviations, untested); on a merge conflict there keep every section, newest on top. Spanish copy uses "Boia" (D-18). Hernán may run a dev server of the main checkout on port 3000: never kill it and never use port 3000 (use 3100+). Several agents share this machine: run e2e with `--workers=2` and a free E2E_PORT. `/juego` (2D, Pixi) must keep working exactly as today unless a task says otherwise; anything shared (packages/engine runtime, packages/store) changes behind an option whose default keeps `/juego` as it is. three.js loads only on `/mar`. Every task touching the UI saves a phone-size screenshot (390×844) in docs/informes/img/ named `p003-txx-*.png` and gives the path in its final message: Hernán checks the look himself. Tasks touching apps/web start only after plan 002 T30 is done (T32 is docs-only and may run next to it).
 
 ## Tasks
 
 ## T32 — Decision D-22 and the achievements catalog draft
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: none
 - Goal: Record Hernán's decisions of 2026-09-29 as D-22 in docs/DECISIONES.md (existing format, author Hernán, Álvaro pending): (1) `/mar` is a 3D view of the shared map next to `/juego` (as shipped in 23890e5; three.js only on `/mar`), amending D-05 for that route; (2) in `/mar` the world is a water planet: no coasts, the castle and the Explanada become islands, sailing wraps around, sky and stars visible; `/juego` keeps its coasts; (3) the «Entradas» button is always on screen in `/mar`: the ship sails in turbo to the event island (`allday` or whatever island the current event points to) and the checkout opens on arrival, skippable; (4) dialogues last at least 3 s, longer for long text, and always have a close button; (5) achievements are claimed: completing one makes it «listo para reclamar», the reward is granted only on «Reclamar», same flow in `/mar` and `/juego`; rewards depend on the achievement: coins and points by default, a Carnet badge for buying a ticket, a specific ship for complex ones, ship cosmetics for some. Update the affected REQ lines in docs/spec/ (same IDs and format). Then draft the catalog in docs/propuestas/logros-catalogo.md: about 20 achievements, game-like (tiers such as 1/3/6 where it makes sense, hidden ones, one per main activity: exploring islands, boies, Fiestera, circuit, minigames, bottles, Carnet, time played, tickets, worlds), each row with id, name, description, the condition and goal number («te queda» text), which signal of the runtime/store counts it (name the existing signals from apps/web/app/juego/achievements.ts; mark NEW where a signal does not exist yet), and the reward (type + amount or item). Keep the 10 current ids (packages/store/src/sample/progress.ts) or map each one to its replacement. Mark the file `borrador — pendiente de Hernán`.
 - Context: docs/DECISIONES.md (D-05, D-20, D-21 format); docs/spec/03-mundo-y-motor.md, 04-aventura.md, 05-identidad-y-comunidad.md, 06-comercial.md; tools/spec/check.py; packages/store/src/sample/progress.ts, apps/web/app/juego/achievements.ts (signals, achievementFacts/achievementGoal); art/barco (the 8 style ships, candidates for ship rewards); plan 002 Proposals («Seis boies» unreachable: the map has one boia).
@@ -90,8 +90,11 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29: water planet only in /mar; the castle and the Explanada become islands; /juego keeps its coasts (Hernán)
 - 2026-09-29: achievements are claimed, in /mar and /juego alike; rewards by type: coins and points by default, a Carnet badge for buying a ticket, a specific ship for complex ones, ship cosmetics (Hernán)
 - 2026-09-29: the catalog is drafted first (T32) and Hernán approves it before T36 (Hernán)
+- 2026-09-29: Hernán approved chaining plan 003 right after plan 002 T30; T32 (docs only) starts next to T30 (orchestrator)
 - 2026-09-29: order T32 ∥ T35 → T33 → T34; T36 after the catalog is approved (can run next to T33/T34, no shared files); T37 last. Stop for Hernán after T35+T33 to look at the planet before the minimap (orchestrator)
 
 ## Proposals (new scope)
 
 ## Log
+- 2026-09-29 16:00 plan approved (Hernán)
+- 2026-09-29 16:00 T32 launched · attempt 1 · agent {AGENT}
