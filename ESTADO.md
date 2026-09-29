@@ -4,6 +4,35 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T20: el mundo Arcilla en el juego, con cada isla y encuentro
+
+`/juego` ya no abre el mundo de muestra de plan 001: abre Arcilla (B05) sobre el mapa compartido sacado de `mundos/arcilla/mapa.json`. Textos, radios, premios, descuentos y nombres son `muestra` [pendiente Álvaro].
+
+Qué existe:
+- Mapa compartido (`packages/world/src/worlds/arcilla/map.ts`, id `boia-mapa`): cada lugar de mapa.json con su `source` (ruta en mapa.json o pieza de T18). `units.ts` pasa u_maq a unidades del motor. Puerto El Varadero con anillo de salida (spawn), escolleras, balizas, boia y WhatsApp; Cala del Alfar (isla secundaria con recuerdos), isla de evento `allday` (panel del evento, entradas y recuerdos; compra de T25), Puerto de Fotos (abre la galería `/#fotos`), isla tienda (enlace externo en otra pestaña), Última isla (Isla del Amanecer), Faro y Cañón con `start_minigame` (`faro`, `canon`), náufrago que pide que lo lleven y da un código de descuento, restos y cofres con descuentos escondidos y monedas, delfín, remolino, secretos sin brújula, botellas (`BOTTLE_SPOTS`), el circuito El Freu (salida, CP1, ruta segura / atajo, CP2, meta, semáforo, carteles y obstáculos) y costas con esquinas y borde de abajo (arriba abierto).
+- Encuentro de la Fiestera sin lógica de misión: la Fiestera, la posidonia, los cocodrilos y las rocas son objetos del mundo; `moveObject` y `setObjectPresent` del runtime permiten que T21 los mueva y los oculte.
+- Piel `arcilla` (`skin.ts`): arte de `art/mundos/arcilla/<lugar>/` pieza a pieza (sprites y losas de costa), nombres de `diseno.md`. Secretos y grada sin arte: marcador a propósito. `WORLD_REGISTRY` usa `arcilla` por defecto; `prueba` sigue para el cambio de mundo hasta T24. `SAMPLE_MAP` queda para pruebas y la entrada.
+- Motor: colisión con varios círculos por objeto, vaivén (`params.patrol`), remolino (`params.swirl`), `@boia/engine/circuit` (carrera pura: cuenta atrás, arcos en orden, las dos ramas valen, se anula al abrir panel / ocultar pestaña / teletransportarse, caduca; récord local por circuito y versión que sólo mejora).
+- Web: `world-progress.ts` lleva premios, descuentos y descubrimientos a `repo.progress` (el descuento se concede una vez, también tras recargar; el caducado se guarda y se enseña como caducado). `place-panels.tsx` (panel de evento, descuento con copiar de un toque, fotos, tienda), `circuit-hud.tsx` (cronómetro pequeño y récord), `encounters.ts` (delfín y remolino), sección Descuentos del Menú. Minimapa y brújula listan los lugares nuevos. `?cerca=<lugar>` empieza al sur de un lugar (pruebas y enlaces).
+- Pruebas: `packages/world/src/worlds/arcilla/arcilla.test.ts` (cada lugar de mapa.json está en el mundo y en su sitio, costas, arte de cada lugar), `packages/engine/src/world/arcilla.test.ts` (ninguna isla corta el paso, la bocana está abierta, ningún teletransporte deja el barco en tierra), `encounters.test.ts`, `circuit/race.test.ts` (récord local), `apps/web/app/juego/world-progress.test.ts` (descuento una vez). e2e `apps/web/e2e/mundo-arcilla.spec.ts`: del puerto a cada tipo de lugar (isla de evento, náufrago, descuento, Fotos, tienda, salida del circuito), móvil y escritorio.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint                              # exit 0; 50 archivos, 513 pruebas
+E2E_PORT=3163 pnpm e2e --workers=2 e2e/mundo-arcilla.spec.ts          # 16 pasadas
+E2E_PORT=3166 pnpm e2e --workers=2                                    # exit 0; 78 pasadas, 14 omitidas
+```
+
+Desviaciones:
+- Fuera del alcance escrito, por necesidad: `apps/web/lib/repo.ts` (botellas de muestra en los sitios de botella del mapa), `apps/web/lib/intro/load.ts` y `packages/engine/src/intro/{scene,sphere-probe}.ts` (una costa sin `asset` único: la de Arcilla va por losas), y `apps/web/e2e/mundo-arcilla.spec.ts` (la spec que pide el encargo).
+- `demo.spec.ts` y `tickets.spec.ts` (fuera del alcance escrito) cambian porque el mundo por defecto ya no es el de muestra: el barco por defecto es el del mundo (`arcilla`), y el tramo hasta la isla de evento empieza con `?cerca=` (tras EXPLORAR el juego adopta la superficie de la entrada pero juega Arcilla desde el anillo del puerto, lejos de la isla; que EXPLORAR descubra el puerto es de T28).
+- En esta máquina, al terminar la suite Playwright se quedaba esperando a un `next-server` huérfano del `webServer`; se paró a mano ese proceso (el del puerto de la prueba) después de que todas las pruebas tuvieran resultado.
+- Las pruebas e2e empiezan con `?cerca=<lugar>` y navegan hasta él: cruzar el mapa desde el puerto para cada lugar pasaría del minuto por lugar. Sólo la primera sale del anillo del puerto.
+
+Sin probar:
+- Móviles reales: rendimiento con todas las piezas de Arcilla en pantalla.
+- El delfín y el remolino sólo con pruebas unitarias, no en e2e.
+
 ## 2026-09-29 — plan 002 T19: mundo Acuarela (B02), diseño y arte sobre el mapa compartido
 
 El segundo mundo, Acuarela ilustrada, sobre el mismo mapa que Arcilla (D-20): mismos 19 ids, posiciones, huellas, anclajes y animaciones; cambian la isla, el hito, el nombre y la historia. Todo es `muestra`.

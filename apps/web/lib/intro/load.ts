@@ -54,7 +54,7 @@ function worldImages(): string[] {
   const ids = new Set(
     demoWorld.objects.filter((o) => o.identity.active).map((o) => o.appearance.asset),
   );
-  if (demoWorld.coast) ids.add(demoWorld.coast.asset);
+  if (demoWorld.coast?.asset) ids.add(demoWorld.coast.asset);
   const urls: string[] = [];
   for (const id of ids) {
     let m: unknown;

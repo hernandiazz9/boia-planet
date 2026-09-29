@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DialogueLine } from '../behaviors';
+import { CoastArt } from '../schema';
 
 /**
  * La skin de un mundo sobre el mapa compartido (D-20): para cada lugar, su
@@ -61,8 +62,8 @@ export const WorldSkin = z.object({
   ui: z.object({ accent: Hex, onAccent: Hex.default('#ffffff') }),
   /** Ranura de música del mundo; `null` sin música. */
   music: z.string().min(1).nullable().default(null),
-  /** Losas de costa (manifiesto `kind: tile`); sin ellas, costas por código. */
-  coast: z.object({ asset: z.string().min(1) }).optional(),
+  /** Arte de las costas (ver `CoastArt`); sin él, costas por código. */
+  coast: CoastArt.optional(),
   /** Skin de cada lugar, por id del mapa compartido. */
   places: z.record(z.string(), PlaceSkin).default({}),
   /**

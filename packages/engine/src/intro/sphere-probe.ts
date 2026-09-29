@@ -190,7 +190,7 @@ export async function createSphereProbe(opts: CreateSphereProbeOptions): Promise
   const ship = await loadShipManifest(SHIP_URL);
   const artScale = ship?.displayScale ?? shipArtScale(ship?.manifest);
   const ids = world.objects.map((o) => o.appearance.asset);
-  if (world.coast) ids.push(world.coast.asset);
+  if (world.coast?.asset) ids.push(world.coast.asset);
   const art = await loadArt(ids);
   const manifests = manifestsOf(art);
   const objectViews = await Promise.all(
@@ -200,7 +200,7 @@ export async function createSphereProbe(opts: CreateSphereProbeOptions): Promise
   );
   const coasts = await createCoastView(
     world.bounds,
-    world.coast ? art.get(world.coast.asset) : undefined,
+    world.coast?.asset ? art.get(world.coast.asset) : undefined,
     artScale,
   );
   const water = new Water();

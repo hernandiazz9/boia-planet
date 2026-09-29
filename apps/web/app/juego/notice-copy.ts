@@ -27,6 +27,7 @@ export const FUNCTION_LABEL: Record<TargetFunction, string> = {
   reward: 'Premio',
   teleport: 'Atajo',
   minigame: 'Minijuego',
+  circuit: 'Circuito',
 };
 
 export function discoveryNotice(t: DiscoveryTarget): Notice {

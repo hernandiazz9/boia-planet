@@ -1,6 +1,6 @@
 import { bottlePositionValidator, settleInSea } from '@boia/engine/bottles';
 import { type BoiaRepository, SAMPLE_BOTTLES, browserRepository } from '@boia/store';
-import type { WorldConfig } from '@boia/world';
+import { BOTTLE_SPOTS, type WorldConfig } from '@boia/world';
 import { worlds } from '../app/juego/demo-world';
 
 /**
@@ -22,8 +22,21 @@ export function seaWorld(): WorldConfig {
 
 let sampleBottles: typeof SAMPLE_BOTTLES | null = null;
 
+/**
+ * Las botellas de muestra, en los sitios de botella del mapa (T20,
+ * `BOTTLE_SPOTS`: la bocana del puerto y las de mapa.json), por orden; las
+ * que sobren o no caigan en el mar se recolocan como en T22.
+ */
+function placeSampleBottles(): typeof SAMPLE_BOTTLES {
+  const placed = SAMPLE_BOTTLES.map((b, i) => {
+    const spot = BOTTLE_SPOTS[i];
+    return spot ? { ...b, x: spot.x, y: spot.y } : b;
+  });
+  return settleInSea(seaWorld(), placed);
+}
+
 export function gameRepository(): BoiaRepository {
-  sampleBottles ??= settleInSea(seaWorld(), SAMPLE_BOTTLES);
+  sampleBottles ??= placeSampleBottles();
   return browserRepository({
     validate: { bottlePosition: bottlePositionValidator(seaWorld) },
     sample: { bottles: sampleBottles },

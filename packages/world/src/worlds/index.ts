@@ -5,3 +5,4 @@ export * from './registry';
 export * from './selection';
 export * from './catalog';
 export * from './check';
+export * from './arcilla';

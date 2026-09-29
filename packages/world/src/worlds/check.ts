@@ -1,13 +1,17 @@
+import { parseArtManifest, parseAssetRef, placePartArt } from '../art';
+import { coastAssets } from '../schema';
 import type { WorldRegistry } from './registry';
 
 /**
  * `pnpm world:check`, sin E/S: para cada mundo registrado, el estado de cada
  * lugar del mapa compartido. Falla si a algún mundo le falta la skin de un
  * lugar (o su arte no está en `art/`) o si una skin nombra un lugar que no
- * existe (eso ya lo rechaza el registro; aquí se informa igual).
+ * existe (eso ya lo rechaza el registro; aquí se informa igual). Un lugar al
+ * que su skin pone a propósito un marcador (`placeholder:<forma>`, p. ej. los
+ * secretos sin arte de T18) sale como `marcador` y no falla.
  */
 
-export type CheckStatus = 'ok' | 'sin-skin' | 'sin-arte' | 'oculto';
+export type CheckStatus = 'ok' | 'sin-skin' | 'sin-arte' | 'marcador' | 'oculto';
 
 export interface CheckRow {
   placeId: string;
@@ -34,6 +38,24 @@ export interface CheckReport {
 /** ¿Existe `art/<asset>/manifest.json`? Los marcadores `placeholder:` cuentan como que no. */
 export type AssetExists = (assetId: string) => boolean;
 
+/**
+ * `AssetExists` a partir de un lector de manifiestos (`art/<carpeta>/manifest.json`
+ * ya leído, o null si no está). Entiende las piezas de lugar de T18
+ * (`<carpeta>#<pieza>[@variante]`): la pieza (y la variante) tiene que estar
+ * en el manifiesto.
+ */
+export function manifestAssetExists(read: (base: string) => unknown): AssetExists {
+  return (id) => {
+    if (id.startsWith('placeholder:')) return false;
+    const ref = parseAssetRef(id);
+    const raw = read(ref.base);
+    if (raw === null || raw === undefined) return false;
+    if (!ref.part) return true;
+    const r = parseArtManifest(raw);
+    return r.ok && placePartArt(r.manifest, ref.part, ref.variant) !== null;
+  };
+}
+
 export function checkWorlds(registry: WorldRegistry, assetExists: AssetExists): CheckReport {
   const categories = new Map(registry.map.places.map((p) => [p.id, p.category]));
   const worlds = registry.ids().map((id): WorldCheck => {
@@ -42,6 +64,7 @@ export function checkWorlds(registry: WorldRegistry, assetExists: AssetExists): 
       let status: CheckStatus;
       if (p.status === 'hidden') status = 'oculto';
       else if (p.status === 'missing' || p.asset === null) status = 'sin-skin';
+      else if (p.asset.startsWith('placeholder:')) status = 'marcador';
       else status = assetExists(p.asset) ? 'ok' : 'sin-arte';
       return {
         placeId: p.id,
@@ -51,19 +74,18 @@ export function checkWorlds(registry: WorldRegistry, assetExists: AssetExists): 
         asset: p.asset,
       };
     });
-    const coast = w.config.coast?.asset;
     return {
       worldId: id,
       worldName: w.theme.name,
       shipStyle: w.theme.ship.style,
       rows,
-      missingWorldAssets: coast && !assetExists(coast) ? [coast] : [],
+      missingWorldAssets: coastAssets(w.config.coast).filter((a) => !assetExists(a)),
     };
   });
   const ok = worlds.every(
     (w) =>
       w.missingWorldAssets.length === 0 &&
-      w.rows.every((r) => r.status === 'ok' || r.status === 'oculto'),
+      w.rows.every((r) => r.status === 'ok' || r.status === 'oculto' || r.status === 'marcador'),
   );
   return { worlds, ok };
 }

@@ -3,6 +3,7 @@ import {
   type Direction,
   type SeaPalette,
   type WorldConfig,
+  coastAssets,
   worldToScreen,
 } from '@boia/world';
 import { Application, Container } from 'pixi.js';
@@ -32,7 +33,7 @@ import { WakeSystem } from './wake';
 import { Water } from './water';
 import { type ArtUrl, loadArt, manifestsOf } from './world/assets';
 import { BubbleView } from './world/bubble';
-import { createCoastView } from './world/coast-view';
+import { createWorldCoastView } from './world/coast-view';
 import type { WorldEvent } from './world/events';
 import { ObjectView } from './world/object-view';
 import { MemoryRewardStore } from './world/rewards';
@@ -102,6 +103,12 @@ export interface Game {
    * `true` si quedó el pedido y `false` si otra petición lo adelantó.
    */
   setWorld(world: WorldConfig, opts?: { sea?: SeaPalette }): Promise<boolean>;
+  /**
+   * Pone el barco en (x, y), parado, en el agua navegable más cercana (nunca
+   * en tierra, como TELETRANSPORTE). Para empezar junto a un lugar
+   * (`/juego?cerca=`) y para las pruebas. Devuelve dónde quedó.
+   */
+  moveShip(x: number, y: number, heading?: number): { x: number; y: number };
   /** Bocadillo: siguiente línea (o cierra la última). */
   advanceDialogue(): void;
   /** Bocadillo: cierra el diálogo entero. */
@@ -186,8 +193,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   // Arte del mundo a la escala del barco (T01: misma densidad de píxeles).
   const artScale = opts.manifest?.displayScale ?? shipArtScale(opts.manifest?.manifest);
   const buildWorld = async (w: WorldConfig) => {
-    const assetIds = w.objects.map((o) => o.appearance.asset);
-    if (w.coast) assetIds.push(w.coast.asset);
+    const assetIds = [...w.objects.map((o) => o.appearance.asset), ...coastAssets(w.coast)];
     const art = opts.artUrl === null ? new Map() : await loadArt(assetIds, opts.artUrl);
     const manifests = manifestsOf(art);
     const objectViews = await Promise.all(
@@ -195,11 +201,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
         .filter((o) => o.identity.active)
         .map((o) => ObjectView.create(o, resolveObjectVisual(o, manifests, artScale), art)),
     );
-    const coasts = await createCoastView(
-      w.bounds,
-      w.coast ? art.get(w.coast.asset) : undefined,
-      artScale,
-    );
+    const coasts = await createWorldCoastView(w.bounds, w.coast, art, artScale);
     return { objectViews, coasts };
   };
   const built = await buildWorld(world);
@@ -387,6 +389,18 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
       runtime = new WorldRuntime(next, runtimeOpts);
       if (worldOpts.sea) water.setPalette(worldOpts.sea);
       return true;
+    },
+    moveShip(x, y, heading) {
+      const p = runtime.safePoint(x, y, cfg.radius);
+      ship.x = p.x;
+      ship.y = p.y;
+      ship.vx = 0;
+      ship.vy = 0;
+      if (heading !== undefined) ship.heading = heading;
+      Object.assign(prev, ship);
+      camera.x = ship.x;
+      camera.y = ship.y;
+      return p;
     },
     advanceDialogue: () => void runtime.advanceDialogue(),
     skipDialogue: () => void runtime.skipDialogue(),

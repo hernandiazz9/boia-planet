@@ -1,0 +1,102 @@
+/* T20: paneles de lugar, descuentos y cronómetro del circuito. */
+.juego-panel-block h3 {
+  margin: 10px 0 4px;
+  font-size: 14px;
+}
+.juego-panel-block ul {
+  margin: 0;
+  padding: 0 0 0 18px;
+  font-size: 14px;
+}
+.juego-link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #c2410c;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 32px;
+}
+.juego-panel-photos {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin: 4px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.juego-panel-photos li {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  background: #e8dcc6;
+  font-size: 18px;
+}
+.juego-descuento-label {
+  font-weight: 700;
+}
+.juego-descuento-code code {
+  font:
+    700 20px/1.2 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border: 2px dashed #12233f;
+  border-radius: 8px;
+}
+.juego-descuento-status {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: #d9f2df;
+  color: #14532d;
+}
+.juego-descuento-status.is-expired {
+  background: #eee;
+  color: #555;
+  text-decoration: line-through;
+}
+.juego-descuento-status.is-upcoming {
+  background: #fff1c7;
+  color: #6b4a00;
+}
+[data-status='expired'] .juego-descuento-code code {
+  opacity: 0.55;
+}
+.juego-panel-cta:disabled {
+  background: #d8d2c6;
+  cursor: not-allowed;
+}
+.juego-descuentos {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juego-crono {
+  position: absolute;
+  z-index: 3;
+  max-width: 60vw;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(18, 35, 63, 0.78);
+  color: #fffaf0;
+  font:
+    600 12px/1.4 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

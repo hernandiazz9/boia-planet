@@ -1,3 +1,4 @@
+import { WORLD_REGISTRY } from '@boia/world';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -26,6 +27,19 @@ const shipRoot = JSON.parse(readFileSync(path.join(ROOT, 'art/barco/manifest.jso
 const DEFAULT_STYLE = shipRoot.style;
 const OTHER_STYLE = shipRoot.style_variants.at(-1)!.id;
 const THEMED_SKIN = shipRoot.skins.find((s) => s !== 'base')!;
+
+// El mundo por defecto (Arcilla desde T20) trae su barco y su isla de evento.
+const defaultWorld = WORLD_REGISTRY.get(WORLD_REGISTRY.defaultId);
+const WORLD_SHIP_STYLE = defaultWorld.theme.ship.style;
+const EVENT_ID = 'ev-all-day-primavera';
+const eventIsland = defaultWorld.config.objects.find((o) =>
+  o.behaviors.some(
+    (b) =>
+      b.type === 'content' &&
+      (b.params as { target?: string; ref?: string }).target === 'event' &&
+      (b.params as { ref?: string }).ref === EVENT_ID,
+  ),
+)!;
 
 async function shot(page: Page, info: TestInfo, name: string) {
   if (!process.env.DEMO_SHOTS) return;
@@ -99,11 +113,17 @@ test('`/` → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con 
   await shot(page, info, '3-juego');
 
   // Rumbo norte hasta la isla de evento: su proximidad abre el panel del evento.
+  // El mapa de Arcilla es grande y la isla queda lejos del puerto (T28 hará
+  // que EXPLORAR descubra el puerto): se sigue junto a ella con `?cerca=`.
+  expect(eventIsland, `el mundo ${defaultWorld.id} tiene la isla de ${EVENT_ID}`).toBeDefined();
+  await page.goto(`/juego?cerca=${eventIsland.identity.id}`);
+  await gameRunning(page);
+  await page.locator('canvas:visible').first().focus().catch(() => {});
   await page.keyboard.down('ArrowUp');
   const panel = page.getByTestId('panel-evento');
   await expect(panel).toBeVisible({ timeout: 45_000 });
   await page.keyboard.up('ArrowUp');
-  const event = SAMPLE_CONTENT.events.find((e) => e.id === 'ev-all-day-primavera')!;
+  const event = SAMPLE_CONTENT.events.find((e) => e.id === EVENT_ID)!;
   await expect(panel.getByRole('heading', { name: event.name })).toBeVisible();
   await shot(page, info, '4-isla');
 });
@@ -114,7 +134,8 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
   test.setTimeout(120_000);
   await page.goto('/juego');
   await gameRunning(page);
-  await expect(game(page)).toHaveAttribute('data-ship-style', DEFAULT_STYLE);
+  // Sin elección guardada, el barco del mundo (T17).
+  await expect(game(page)).toHaveAttribute('data-ship-style', WORLD_SHIP_STYLE);
   await expect(game(page)).toHaveAttribute('data-ship-skin', 'base');
   await expect(game(page)).toHaveAttribute('data-world', 'nuevo');
 
@@ -139,7 +160,7 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
   await gameRunning(page);
   await expect(game(page)).toHaveAttribute('data-ship-style', OTHER_STYLE);
 
-  // El estilo por defecto con una skin temática; el otro estilo no la ofrece.
+  // El estilo por defecto del arte con una skin temática; el otro estilo no la ofrece.
   menu = await openBarco(page);
   await expect(menu.getByTestId(`barco-skin-${THEMED_SKIN}`)).toHaveCount(0);
   await menu.getByTestId(`barco-estilo-${DEFAULT_STYLE}`).click();

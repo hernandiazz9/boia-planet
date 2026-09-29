@@ -23,7 +23,8 @@ import {
   saveMinimapZone,
   saveSettings,
 } from '@boia/engine/ui';
-import { type ComposedWorld, chooseWorld as chooseWorldIn } from '@boia/world';
+import type { FoundDiscount } from '@boia/store';
+import { type ComposedWorld, type WorldObject, chooseWorld as chooseWorldIn } from '@boia/world';
 import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SKIN_LABELS, type ShipCatalog } from '../../lib/barco/catalog';
@@ -34,6 +35,16 @@ import { claimWorld } from '../../lib/world-handoff';
 import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
 import { BottleSheet, type BottleSheetMode } from './bottles/bottle-sheet';
 import { CarnetSheet } from './carnet/carnet-sheet';
+import { CircuitTimer, useCircuit } from './circuit-hud';
+import { type DolphinTrail, WhirlpoolTimer, findDolphin } from './encounters';
+import { DiscountPanel, PlacePanel, type PlacePanelState } from './place-panels';
+import {
+  type ProgressOutcome,
+  discoverPlace,
+  discoveredPlaces,
+  grantEncounter,
+  persistWorldEvent,
+} from './world-progress';
 import { SHIP_PREF, type ShipPref, isShipPref } from './carnet/use-carnet';
 import { worlds } from './demo-world';
 import { Compass, MenuAnchor } from './hud-buttons';
@@ -65,6 +76,27 @@ const ticketAvailable = (id: string) => {
 /** Premios de los minijuegos: el libro del repositorio local (T16). */
 const minigameSink = () => gameRepository().progress;
 
+/** Progreso del mar (premios, descuentos, récords): el mismo libro. */
+const progressApi = () => gameRepository().progress;
+
+/** `?cerca=<lugar>`: empezar junto a un lugar (pruebas y enlaces), al sur de él. */
+const NEAR_PARAM = 'cerca';
+/** u que se queda el barco fuera del radio del lugar al empezar a su lado. muestra */
+const NEAR_MARGIN = 140;
+
+/** Dónde empieza el barco con `?cerca=`: al sur del lugar, fuera de su radio. */
+function approachPoint(o: WorldObject): { x: number; y: number } {
+  const reach = Math.max(
+    o.geometry.proximityRadius ?? 0,
+    o.geometry.activation?.radius ?? 0,
+    o.geometry.collision?.radius ?? 0,
+  );
+  return { x: o.position.x, y: o.position.y + reach + NEAR_MARGIN };
+}
+
+/** Una visita = una carga de página: las recompensas «por sesión» vuelven en otra. */
+const newSessionId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
 export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const vp = useViewport();
@@ -85,6 +117,13 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   const [minigameOffer, setMinigameOffer] = useState<MinigameOffer | null>(null);
   // Compra de prueba abierta desde el panel de la isla (T25).
   const [checkoutFor, setCheckoutFor] = useState<string | null>(null);
+  // Paneles de los demás lugares (T20): isla, fotos, tienda, WhatsApp; y el descuento encontrado.
+  const [placePanel, setPlacePanel] = useState<PlacePanelState | null>(null);
+  const [discountPanel, setDiscountPanel] = useState<FoundDiscount | null>(null);
+  const [sessionId] = useState(newSessionId);
+  // Encuentros guionizados por la web (T20): el delfín y el remolino.
+  const dolphinRef = useRef<DolphinTrail | null>(null);
+  const whirlpoolRef = useRef(new WhirlpoolTimer());
 
   // Preferencias guardadas (se leen al montar: el HUD no se pinta en servidor).
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
@@ -136,6 +175,24 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (n.kind === 'achievement') setAchievements((a) => [...a, n]);
   };
 
+  // El Freu (T20): carrera, cronómetro pequeño y récord local.
+  const circuit = useCircuit(world, progressApi, (n) => notify(n), chime);
+
+  /** Lo que el repositorio concedió de verdad: avisos y, si es un descuento, su panel. */
+  const showOutcomes = (outcomes: ProgressOutcome[]) => {
+    for (const o of outcomes) {
+      notify(o.notice);
+      if (o.kind === 'discount') {
+        setPlacePanel(null);
+        setDiscountPanel(o.found);
+      }
+    }
+  };
+  const persist = (work: Promise<ProgressOutcome[]>) =>
+    void work.then(showOutcomes, (err: unknown) =>
+      console.warn('[boia] no se pudo guardar el progreso', err),
+    );
+
   const onStats = (s: GameStats) => {
     setStats(s);
     const t = trackerRef.current!;
@@ -144,6 +201,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       for (const f of fresh) foundRef.current.add(f.id);
       setDiscovered(t.discovered());
       for (const f of fresh) if (f.kind === 'island') notify(discoveryNotice(f));
+      // Primera llegada, guardada por id de lugar (REQ-AVE-013).
+      for (const f of fresh) {
+        void discoverPlace(progressApi(), f.id, { sessionId, worldId: world.id }).catch(
+          (err: unknown) => console.warn('[boia] no se pudo guardar el descubrimiento', err),
+        );
+      }
     }
     setSelectedId(t.selected?.id ?? null);
     const near = nearbyBottles(s, bottlesRef.current, nearRef.current);
@@ -163,11 +226,39 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     setDiscovered(next.discovered());
     setSelectedId(next.selected?.id ?? null);
     setPanel(null);
+    setPlacePanel(null);
+    dolphinRef.current = findDolphin(w.config.objects);
   }, []);
 
+  const isWhirlpool = (id: string) =>
+    world.config.objects.find((o) => o.identity.id === id)?.identity.category === 'remolino';
+
   const onWorldEvent = (e: WorldEvent) => {
-    const n = noticeFromWorldEvent(e);
+    // Los premios avisan cuando el repositorio los concede (world-progress.ts).
+    const n = e.type === 'reward' ? null : noticeFromWorldEvent(e);
     if (n) notify(n);
+    circuit.onWorldEvent(e);
+    const ctx = { sessionId, worldId: world.id };
+    switch (e.type) {
+      case 'reward':
+        persist(persistWorldEvent(progressApi(), e, ctx));
+        break;
+      case 'proximity_enter': {
+        const d = dolphinRef.current;
+        if (d && e.objectId === d.objectId) {
+          const step = d.reached();
+          gameRef.current?.runtime.moveObject(d.objectId, step.moveTo.x, step.moveTo.y);
+          plop();
+          if (step.reward) {
+            persist(grantEncounter(progressApi(), `lugar:${d.objectId}:seguir`, d.coins, 'daily'));
+          }
+        }
+        if (isWhirlpool(e.objectId)) whirlpoolRef.current.enter(performance.now());
+        break;
+      }
+      default:
+        break;
+    }
     switch (e.type) {
       case 'dialogue_line':
         plop();
@@ -177,10 +268,14 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       case 'content_open':
         if (e.target === 'event' && e.ref && findEvent(e.ref)) {
           setPanel({ objectId: e.objectId, eventId: e.ref });
+        } else if (e.target === 'info' || e.target === 'photos' || e.target === 'store') {
+          setDiscountPanel(null);
+          setPlacePanel({ objectId: e.objectId, target: e.target, ...(e.ref ? { ref: e.ref } : {}) });
         }
         break;
       case 'content_close':
         setPanel((p) => (p?.objectId === e.objectId ? null : p));
+        setPlacePanel((p) => (p?.objectId === e.objectId ? null : p));
         break;
       case 'ticket':
         setTicketFor(e.eventId);
@@ -190,6 +285,13 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         break;
       case 'proximity_exit':
         setMinigameOffer((m) => (m?.objectId === e.objectId ? null : m));
+        if (isWhirlpool(e.objectId)) {
+          // REQ-AVE-019: más premio cuanto más se aguanta dentro; cada tramo, una vez al día.
+          const { tiers } = whirlpoolRef.current.exit(performance.now());
+          for (const t of tiers) {
+            persist(grantEncounter(progressApi(), `lugar:remolino:${t.seconds}s`, t.coins, 'daily'));
+          }
+        }
         break;
       default:
         break;
@@ -229,6 +331,18 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (fromEvent && trackerRef.current?.selectEvent(fromEvent)) {
       setSelectedId(trackerRef.current.selected?.id ?? null);
     }
+    // Lo descubierto en otras visitas (T20): la brújula no vuelve a señalarlo.
+    void discoveredPlaces(progressApi())
+      .then((ids) => {
+        if (cancelled || ids.length === 0) return;
+        for (const id of ids) foundRef.current.add(id);
+        const t = trackerRef.current!;
+        const next = new DiscoveryTracker(t.targets, foundRef.current);
+        next.select(t.selected?.id ?? null);
+        trackerRef.current = next;
+        setDiscovered(next.discovered());
+      })
+      .catch((err: unknown) => console.warn('[boia] no se pudo leer lo descubierto', err));
 
     (async () => {
       const { createGame, loadShipStyle } = await import('@boia/engine');
@@ -269,7 +383,13 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         keyboardMode: settingsRef.current.keyboardMode,
         onStats: (s) => handlers.current.onStats(s),
         onWorldEvent: (e) => handlers.current.onWorldEvent(e),
-        runtime: { ticketAvailable, minigames: MINIGAME_REGISTRY },
+        runtime: {
+          ticketAvailable,
+          minigames: MINIGAME_REGISTRY,
+          sessionId,
+          // Restos y cofres reaparecen en otro sitio en cada visita (REQ-AVE-016).
+          seed: (Date.now() % 2147483646) + 1,
+        },
         // `?arte=marcadores`: el mismo mundo sin arte, para ver que se comporta igual.
         ...(query.get('arte') === 'marcadores' ? { artUrl: null } : {}),
       });
@@ -286,6 +406,15 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       created.setKeyboardMode(settingsRef.current.keyboardMode);
       // `?pasajera=1` muestra el slot TRIPULANTE (oculto hasta la misión Fiestera).
       if (query.get('pasajera') === '1') created.setPassenger(true);
+      // `?cerca=<lugar>`: empezar al sur de ese lugar, fuera de su radio (pruebas y enlaces).
+      const near = query.get(NEAR_PARAM);
+      const nearObject = near
+        ? initial.config.objects.find((o) => o.identity.id === near && o.identity.active)
+        : undefined;
+      if (nearObject) {
+        const p = approachPoint(nearObject);
+        created.moveShip(p.x, p.y, -Math.PI / 2);
+      }
       // Acceso para pruebas desde la consola; no existe en producción.
       if (process.env.NODE_ENV !== 'production') {
         (window as Window & { __boiaGame?: Game }).__boiaGame = created;
@@ -301,7 +430,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       gameRef.current = null;
       g?.destroy();
     };
-  }, [shipCatalog, adoptWorld]);
+  }, [shipCatalog, adoptWorld, sessionId]);
 
   // Sección «Barco»: aplica estilo y skin al barco en el agua, sin recargar.
   // `remember: false` (el barco por defecto de un mundo) no lo guarda como elección.
@@ -406,6 +535,27 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   };
 
   const panelEvent = panel ? findEvent(panel.eventId) : undefined;
+
+  // REQ-AVE-032: abrir un panel (lugar, descuento, compra, menú, mapa, botella) anula la vuelta.
+  const anyPanel =
+    !!panelEvent ||
+    !!placePanel ||
+    !!discountPanel ||
+    !!checkoutFor ||
+    menuOpen ||
+    mapOpen ||
+    !!bottleSheet;
+  const invalidateLap = circuit.invalidate;
+  useEffect(() => {
+    if (anyPanel) invalidateLap('panel');
+  }, [anyPanel, invalidateLap]);
+
+  const steerToEvent = (eventId: string) => {
+    const t = trackerRef.current!;
+    const ok = t.selectEvent(eventId);
+    setSelectedId(t.selected?.id ?? null);
+    return ok;
+  };
   const layout = vp ? hudLayout(vp, zonePref) : null;
   const ship = stats ? { x: stats.x, y: stats.y, heading: stats.heading } : null;
   const target = ship ? tracker.nextTarget(ship) : null;
@@ -538,6 +688,10 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             onZoneChange={setMinimapZone}
           />
           <NoticeToast shown={notices.current} rect={layout.notice} onDismiss={notices.dismiss} />
+          <CircuitTimer
+            state={circuit.state}
+            rect={{ x: layout.home.x, y: layout.home.y + layout.home.h + 6 }}
+          />
         </div>
       ) : null}
       {panelEvent && (
@@ -548,8 +702,19 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           onClose={() => setPanel(null)}
         />
       )}
+      {!panelEvent && placePanel ? (
+        <PlacePanel
+          state={placePanel}
+          object={world.config.objects.find((o) => o.identity.id === placePanel.objectId)}
+          onClose={() => setPlacePanel(null)}
+          onSteer={steerToEvent}
+        />
+      ) : null}
+      {!panelEvent && !placePanel && discountPanel ? (
+        <DiscountPanel found={discountPanel} onClose={() => setDiscountPanel(null)} />
+      ) : null}
       <MinigameLayer
-        offer={panelEvent || checkoutFor ? null : minigameOffer}
+        offer={panelEvent || checkoutFor || placePanel || discountPanel ? null : minigameOffer}
         onDismiss={() => setMinigameOffer(null)}
         world={world}
         settings={settings}

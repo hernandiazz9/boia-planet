@@ -11,7 +11,9 @@ import {
   WORLD_REGISTRY,
   WorldRegistry,
   parseArtManifest,
+  parseAssetRef,
   parseShipManifest,
+  placePartArt,
 } from '@boia/world';
 import { describe, expect, it } from 'vitest';
 import { IDLE_INPUT } from '../ship/controller';
@@ -35,9 +37,12 @@ function library(ids: Iterable<string>): Map<string, ArtManifest> {
   const m = new Map<string, ArtManifest>();
   for (const id of ids) {
     if (id.startsWith('placeholder:')) continue;
-    const r = parseArtManifest(readJson(`${id}/manifest.json`));
+    const ref = parseAssetRef(id);
+    const r = parseArtManifest(readJson(`${ref.base}/manifest.json`));
     if (!r.ok) throw new Error(`${id}: ${r.error}`);
-    m.set(id, r.manifest);
+    const part = ref.part ? placePartArt(r.manifest, ref.part, ref.variant) : r.manifest;
+    if (!part) throw new Error(`${id}: la pieza no está en el manifiesto`);
+    m.set(id, part);
   }
   return m;
 }
@@ -57,7 +62,17 @@ describe('dos mundos sobre el mismo mapa', () => {
     });
     const [a, b] = visuals as [(typeof visuals)[0], (typeof visuals)[0]];
     expect([...a.keys()]).toEqual([...b.keys()]);
-    for (const v of [...a.values(), ...b.values()]) expect(v.kind).toBe('sprite');
+    // Todo con arte, salvo los marcadores puestos a propósito (secretos sin arte de T18).
+    const marked = new Set(
+      worlds.flatMap((w) =>
+        w.config.objects
+          .filter((o) => o.appearance.asset.startsWith('placeholder:'))
+          .map((o) => o.identity.id),
+      ),
+    );
+    for (const m of [a, b]) {
+      for (const [id, v] of m) if (!marked.has(id)) expect(v.kind, id).toBe('sprite');
+    }
     const assetOf = (m: typeof a, id: string) => {
       const v = m.get(id)!;
       return v.kind === 'sprite' ? v.assetId : null;

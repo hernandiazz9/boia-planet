@@ -6,17 +6,22 @@
  * Sin argumentos revisa `WORLD_REGISTRY`. Con `--registro <módulo>` revisa el
  * `registry` que exporte ese módulo (las pruebas lo usan con un fixture).
  */
-import { existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { SkinError } from '../worlds/compose';
-import { checkWorlds, formatCheck } from '../worlds/check';
+import { checkWorlds, formatCheck, manifestAssetExists } from '../worlds/check';
 import type { WorldRegistry } from '../worlds/registry';
 
 const ART = fileURLToPath(new URL('../../../../art/', import.meta.url));
 
-const assetExists = (id: string) =>
-  !id.startsWith('placeholder:') && existsSync(path.join(ART, id, 'manifest.json'));
+const assetExists = manifestAssetExists((base) => {
+  try {
+    return JSON.parse(readFileSync(path.join(ART, base, 'manifest.json'), 'utf8')) as unknown;
+  } catch {
+    return null;
+  }
+});
 
 async function loadRegistry(args: string[]): Promise<WorldRegistry> {
   const i = args.indexOf('--registro');

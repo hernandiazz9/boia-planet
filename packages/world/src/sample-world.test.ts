@@ -16,7 +16,7 @@ function manifest(id: string) {
 
 describe('mundo de muestra de la demo L1', () => {
   it('cumple el esquema y cada asset existe en art/ con sus imágenes', () => {
-    const ids = new Set([...world.objects.map((o) => o.appearance.asset), world.coast!.asset]);
+    const ids = new Set([...world.objects.map((o) => o.appearance.asset), world.coast!.asset!]);
     for (const id of ids) {
       const m = manifest(id);
       const files =
@@ -64,7 +64,7 @@ describe('mundo de muestra de la demo L1', () => {
     const rocks = world.objects.filter((o) => o.identity.category === 'obstaculo');
     expect(rocks.length).toBeGreaterThan(1);
     for (const r of rocks) expect(r.behaviors.some((b) => b.type === 'collision')).toBe(true);
-    const sides = Object.values(manifest(world.coast!.asset).tile!.variants).map(
+    const sides = Object.values(manifest(world.coast!.asset!).tile!.variants).map(
       (v) => v.land_side,
     );
     expect(sides.sort()).toEqual(['left', 'right']);

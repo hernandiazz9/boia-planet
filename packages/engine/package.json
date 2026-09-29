@@ -11,6 +11,7 @@
     "./intro/sphere-probe": "./src/intro/sphere-probe.ts",
     "./ui": "./src/ui/index.ts",
     "./bottles": "./src/bottles/index.ts",
+    "./circuit": "./src/circuit/index.ts",
     "./minigames": "./src/minigames/index.ts",
     "./minigames/testing": "./src/minigames/testing.ts"
   },

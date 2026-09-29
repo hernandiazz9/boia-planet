@@ -1,12 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { MUESTRA_SKIN, PRUEBA_SKIN, SAMPLE_MAP, SAMPLE_WORLD } from '../sample-world';
 import { parseWorldConfig } from '../schema';
 import { WORLD_REGISTRY } from './catalog';
-import { checkWorlds, formatCheck } from './check';
+import { checkWorlds, formatCheck, manifestAssetExists } from './check';
 import { MISSING_SKIN_ASSET, SkinError, composeWorld, renamePlace } from './compose';
 import { REMOVED, registry as removedSkinRegistry } from './fixtures/sin-skin';
 import { type SharedMapInput, isEventPlace, parseSharedMap } from './map';
@@ -22,8 +22,12 @@ import { WorldSkin, conventionAsset } from './skin';
 
 const ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
 const ART = path.join(ROOT, 'art');
-const artExists = (id: string) =>
-  !id.startsWith('placeholder:') && existsSync(path.join(ART, id, 'manifest.json'));
+const artExists = manifestAssetExists((base) => {
+  const file = path.join(ART, base, 'manifest.json');
+  return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as unknown) : null;
+});
+/** El mapa de los mundos que se juegan (T20: el de Arcilla). */
+const played = WORLD_REGISTRY.map;
 
 const map = parseSharedMap(SAMPLE_MAP);
 const skins = [WorldSkin.parse(MUESTRA_SKIN), WorldSkin.parse(PRUEBA_SKIN)];
@@ -54,11 +58,11 @@ describe('mapa compartido y mundos (D-20)', () => {
   it('dos mundos registrados tienen los mismos lugares en el mismo sitio, cada uno con su skin y su barco', () => {
     expect(WORLD_REGISTRY.ids().length).toBeGreaterThanOrEqual(2);
     const [a, b] = WORLD_REGISTRY.ids().map((id) => WORLD_REGISTRY.get(id));
-    const ids = map.places.map((p) => p.id);
+    const ids = played.places.map((p) => p.id);
     for (const w of [a!, b!]) {
       expect(w.config.objects.map((o) => o.identity.id)).toEqual(ids);
       for (const o of w.config.objects) {
-        const place = map.places.find((p) => p.id === o.identity.id)!;
+        const place = played.places.find((p) => p.id === o.identity.id)!;
         expect(o.position).toEqual(place.position);
         expect(o.geometry).toEqual(place.geometry);
         // Los mismos comportamientos (una skin sólo puede cambiar el texto de los bocadillos).
@@ -154,11 +158,12 @@ describe('mapa compartido y mundos (D-20)', () => {
     ).toThrow(/DIÁLOGO/);
   });
 
-  it('el mundo `muestra` es el de la demo de plan 001', () => {
-    const muestra = WORLD_REGISTRY.get('muestra');
-    expect(WORLD_REGISTRY.defaultId).toBe('muestra');
+  it('el mundo `muestra` sigue siendo el de la demo de plan 001; se juega Arcilla', () => {
+    const muestra = new WorldRegistry(SAMPLE_MAP, skins).get('muestra');
     expect(parseWorldConfig(SAMPLE_WORLD)).toEqual(muestra.config);
     expect(muestra.config.id).toBe(`muestra-${map.id}`);
+    expect(WORLD_REGISTRY.defaultId).toBe('arcilla');
+    expect(WORLD_REGISTRY.map.id).not.toBe(map.id);
   });
 });
 
@@ -168,16 +173,19 @@ describe('nombres: común y propio de cada mundo', () => {
   const nameIn = (r: WorldRegistry, w: string, id: string) =>
     r.get(w).config.objects.find((o) => o.identity.id === id)!.identity.name;
 
-  it('en los datos de muestra las islas de evento o entradas sólo llevan el nombre común', () => {
+  it('en los datos que se juegan las islas de evento o entradas sólo llevan el nombre común', () => {
     expect(eventPlace).toBeDefined();
+    const events = played.places.filter(isEventPlace);
+    expect(events.length).toBeGreaterThan(0);
     for (const id of WORLD_REGISTRY.ids()) {
-      for (const p of map.places.filter(isEventPlace)) {
+      for (const p of events) {
         expect(WORLD_REGISTRY.skin(id).names[p.id], `${id}/${p.id}`).toBeUndefined();
         expect(nameIn(WORLD_REGISTRY, id, p.id)).toBe(p.name);
       }
     }
     // El resto puede llamarse distinto en cada mundo.
-    const names = WORLD_REGISTRY.ids().map((id) => nameIn(WORLD_REGISTRY, id, other.id));
+    const island = played.places.find((p) => !isEventPlace(p) && p.category === 'isla')!;
+    const names = WORLD_REGISTRY.ids().map((id) => nameIn(WORLD_REGISTRY, id, island.id));
     expect(new Set(names).size).toBeGreaterThan(1);
   });
 
@@ -252,7 +260,7 @@ describe('world:check', () => {
     const report = checkWorlds(WORLD_REGISTRY, artExists);
     expect(report.ok, formatCheck(report, WORLD_REGISTRY.map.id)).toBe(true);
     expect(report.worlds.map((w) => w.worldId)).toEqual(WORLD_REGISTRY.ids());
-    for (const w of report.worlds) expect(w.rows).toHaveLength(map.places.length);
+    for (const w of report.worlds) expect(w.rows).toHaveLength(played.places.length);
   });
 
   it('una skin quitada en un fixture hace fallar el check y sale en su tabla', () => {

@@ -33,6 +33,19 @@ function drawPlaceholder(shape: string, r: number): Graphics {
       g.circle(0, top - 3, 3.5).fill({ color: 0xff2bd6 });
       break;
     }
+    case 'secreto': {
+      // Secreto sin arte (T18 no lo dibujó): burbujas y un destello, discreto a propósito.
+      g.clear();
+      for (const [x, y, rr] of [
+        [-r * 0.3, -r * 0.1, r * 0.22],
+        [r * 0.25, -r * 0.35, r * 0.16],
+        [0, -r * 0.7, r * 0.12],
+      ] as const) {
+        g.circle(x, y, rr).stroke({ width: 1.5, color: 0xffffff, alpha: 0.75 });
+      }
+      g.star(r * 0.45, -r * 0.95, 4, r * 0.2, r * 0.07).fill({ color: 0xffe45c, alpha: 0.9 });
+      break;
+    }
     case 'isla':
       g.ellipse(0, -r * 0.08, r, r * 0.5).fill({ color: 0xe7c88f });
       g.ellipse(-r * 0.1, -r * 0.2, r * 0.7, r * 0.35).fill({ color: 0x8fbf6a });
@@ -108,7 +121,9 @@ export class ObjectView {
   sync(state: ObjectRuntimeState): void {
     const p = worldToScreen(state);
     this.view.position.set(p.x, p.y);
-    this.view.zIndex = state.y;
+    // Lo que va a ras de agua (anillo de salida, remolino, posidonia) queda
+    // siempre debajo del barco; lo demás se ordena por profundidad.
+    this.view.zIndex = this.object.appearance.layer === 'water' ? -1e7 + state.y : state.y;
     this.view.visible = state.present;
   }
 

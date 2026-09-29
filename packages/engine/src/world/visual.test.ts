@@ -81,7 +81,7 @@ describe('visual de los objetos del mundo de muestra', () => {
   });
 
   it('las costas declaran su línea de colisión para cada lado', () => {
-    const r = parseArtManifest(read(world.coast!.asset));
+    const r = parseArtManifest(read(world.coast!.asset!));
     if (!r.ok) throw new Error(r.error);
     const sides = Object.values(r.manifest.tile!.variants)
       .map((v) => v.land_side)

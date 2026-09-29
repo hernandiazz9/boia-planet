@@ -56,11 +56,19 @@ describe('mar válido para una botella (REQ-IDE-040)', () => {
 
 describe('echar la botella junto al barco', () => {
   it('cae en el mar, a su lado y por la popa si se puede', () => {
-    const p = findDropSpot(world, spawn)!;
+    // En mar abierto, al norte del puerto.
+    const ship = { x: spawn.x, y: spawn.y - 1500, heading: -Math.PI / 2 };
+    const p = findDropSpot(world, ship)!;
     expect(isSeaSpot(world, p)).toBe(true);
-    expect(Math.hypot(p.x - spawn.x, p.y - spawn.y)).toBeCloseTo(BOTTLE_DROP_DISTANCE, 5);
+    expect(Math.hypot(p.x - ship.x, p.y - ship.y)).toBeCloseTo(BOTTLE_DROP_DISTANCE, 5);
     // Rumbo norte (-y): la popa queda al sur (+y).
-    expect(p.y).toBeGreaterThan(spawn.y);
+    expect(p.y).toBeGreaterThan(ship.y);
+  });
+
+  it('en el puerto, con el paseo a popa, cae a un lado y en el mar', () => {
+    const p = findDropSpot(world, spawn)!;
+    expect(p).not.toBeNull();
+    expect(isSeaSpot(world, p)).toBe(true);
   });
 
   it('pegado a una isla busca otro lado, nunca la isla', () => {
@@ -82,7 +90,7 @@ describe('botellas de muestra', () => {
     const items = [
       { id: 'a', x: island.position.x, y: island.position.y },
       { id: 'b', x: spawn.x, y: spawn.y - 40 },
-      { id: 'c', x: -5000, y: -5000 },
+      { id: 'c', x: world.bounds.left - 5000, y: world.bounds.top - 5000 },
     ];
     const out = settleInSea(world, items);
     expect(out).toHaveLength(3);
@@ -92,7 +100,8 @@ describe('botellas de muestra', () => {
   });
 
   it('la primera recolocada queda a la vista nada más zarpar', () => {
-    const [first] = settleInSea(world, [{ id: 'a', x: -5000, y: -5000 }]);
+    const b = world.bounds;
+    const [first] = settleInSea(world, [{ id: 'a', x: b.left - 5000, y: b.bottom + 5000 }]);
     expect(Math.hypot(first!.x - spawn.x, first!.y - spawn.y)).toBeLessThanOrEqual(
       BOTTLE_FIND_RADIUS,
     );

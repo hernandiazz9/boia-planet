@@ -234,7 +234,7 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
     loadArt(
       [
         ...world.objects.map((o) => o.appearance.asset),
-        ...(world.coast ? [world.coast.asset] : []),
+        ...(world.coast?.asset ? [world.coast.asset] : []),
       ],
       opts.artUrl ?? DEV_ART_URL,
     ),
@@ -270,7 +270,7 @@ export async function createIntroScene(opts: CreateIntroSceneOptions): Promise<I
     );
     const coasts = await createCoastView(
       world.bounds,
-      world.coast ? art.get(world.coast.asset) : undefined,
+      world.coast?.asset ? art.get(world.coast.asset) : undefined,
       artScale,
     );
     const water = new Water();

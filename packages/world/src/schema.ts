@@ -65,8 +65,22 @@ export const ObjectPosition = z.object({
 export const CircleShape = z.object({ shape: z.literal('circle'), radius: finite.positive() });
 export const CollisionShape = z.discriminatedUnion('shape', [CircleShape]);
 
+/**
+ * Círculo más de la colisión de un objeto, relativo a su posición: islas
+ * alargadas y escolleras se cubren con varios círculos (la huella sigue
+ * siendo del objeto; la COLISIÓN, una sola).
+ */
+export const CollisionPart = z.object({
+  dx: finite,
+  dy: finite,
+  radius: finite.positive(),
+});
+export type CollisionPart = z.infer<typeof CollisionPart>;
+
 export const ObjectGeometry = z.object({
   collision: CollisionShape.optional(),
+  /** Círculos extra de la misma COLISIÓN (sólo con `collision`). */
+  collisionParts: z.array(CollisionPart).max(24).optional(),
   proximityRadius: finite.positive().optional(),
   activation: CollisionShape.optional(),
 });
@@ -107,6 +121,9 @@ export const WorldObject = z
       if (b.type === 'proximity' && !b.params.radius && !g.proximityRadius) {
         issue(i, 'PROXIMIDAD necesita un radio (params.radius o geometry.proximityRadius)');
       }
+      if (b.type === 'collision' && g.collisionParts?.length && !g.collision) {
+        issue(i, 'los círculos extra necesitan geometry.collision');
+      }
       if (b.type === 'collectible' && !b.params.radius && !g.activation && !g.collision) {
         issue(i, 'RECOGIBLE necesita un radio de recogida');
       }
@@ -125,6 +142,29 @@ export const WorldObject = z
 export type WorldObject = z.infer<typeof WorldObject>;
 export type WorldObjectInput = z.input<typeof WorldObject>;
 
+const assetId = z.string().min(1);
+
+/** Arte de las costas de un mundo (ver `WorldConfig.coast`). */
+export const CoastArt = z
+  .object({
+    asset: assetId.optional(),
+    west: assetId.optional(),
+    east: assetId.optional(),
+    south: assetId.optional(),
+    cornerWest: assetId.optional(),
+    cornerEast: assetId.optional(),
+  })
+  .refine((c) => Object.values(c).some(Boolean), 'costa sin arte: quitar `coast`');
+export type CoastArt = z.infer<typeof CoastArt>;
+
+/** Los ids de arte que usa una costa. */
+export function coastAssets(c: CoastArt | undefined): string[] {
+  if (!c) return [];
+  return [c.asset, c.west, c.east, c.south, c.cornerWest, c.cornerEast].filter(
+    (x): x is string => !!x,
+  );
+}
+
 export const WorldConfig = z
   .object({
     id: z.string().min(1),
@@ -134,10 +174,11 @@ export const WorldConfig = z
     spawn: z.object({ x: finite, y: finite, heading: finite.default(-Math.PI / 2) }).optional(),
     sectors: z.array(Sector).default([]),
     /**
-     * Arte de las costas laterales (manifiesto `kind: tile` con variantes
-     * izquierda y derecha). Sin él, costas dibujadas por código.
+     * Arte de las costas. `asset`: manifiesto `kind: tile` de T01 con
+     * variantes izquierda y derecha. O, por lados, piezas de lugar de T18
+     * (`west`, `east`, `south` y las dos esquinas). Sin él, costas por código.
      */
-    coast: z.object({ asset: z.string().min(1) }).optional(),
+    coast: CoastArt.optional(),
     objects: z.array(WorldObject).default([]),
   })
   .superRefine((w, ctx) => {

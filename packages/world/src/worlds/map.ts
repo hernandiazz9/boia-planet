@@ -57,6 +57,12 @@ export const Place = z.object({
   content: z.record(z.string(), z.unknown()).optional(),
   state: ObjectState.optional(),
   reward: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * De dónde sale el lugar: rutas de `mapa.json` (`zonas/cala/islas/isla`) o
+   * piezas de arte (`art:fiestera#cocodrilo_1`). La primera da la posición.
+   * No llega al motor: sirve para comprobar el mapa contra su fuente.
+   */
+  source: z.array(z.string().min(1)).default([]),
 });
 export type Place = z.infer<typeof Place>;
 export type PlaceInput = z.input<typeof Place>;

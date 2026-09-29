@@ -1,0 +1,133 @@
+import type { WorldEvent } from '@boia/engine';
+import type { Notice } from '@boia/engine/ui';
+import { type FoundDiscount, type ProgressApi, isStoreError } from '@boia/store';
+
+/**
+ * Del mar al repositorio local (T20, D-20): lo que el motor emite (premios,
+ * descuentos, descubrimientos, encuentros de la web) se guarda en
+ * `repo.progress` y sólo avisa si de verdad se concedió. El motor ya no
+ * repite en la misma visita; el repositorio no repite nunca (las claves van
+ * por id de lugar, así sobreviven a recargar y a cambiar de mundo).
+ *
+ * Los logros los concede T21; aquí sólo premios, descuentos y lugares.
+ */
+
+export interface ProgressContext {
+  /** Visita (carga de página): las recompensas «por sesión» vuelven en otra. */
+  sessionId: string;
+  /** Mundo que se juega: temporada de los descuentos y de lo «por temporada». */
+  worldId: string;
+}
+
+export type ProgressOutcome =
+  | { kind: 'notice'; notice: Notice }
+  | { kind: 'discount'; found: FoundDiscount; notice: Notice };
+
+/** Textos de los premios. muestra */
+export function rewardTitle(kind: 'coins' | 'points', n: number): string {
+  if (kind === 'coins') return `+${n} ${n === 1 ? 'moneda' : 'monedas'}`;
+  return `+${n} ${n === 1 ? 'punto' : 'puntos'}`;
+}
+
+export function discountTitle(f: FoundDiscount): string {
+  if (f.status === 'expired') return `Código caducado: ${f.discount.code}`;
+  return `Descuento encontrado: ${f.discount.code}`;
+}
+
+/** Origen estable de un premio del mundo: lugar, tipo y, si es por visita, la visita. */
+export function rewardSource(
+  objectId: string,
+  kind: string,
+  frequency: string,
+  ctx: ProgressContext,
+): { sourceRef: string; policy: 'once' | 'season' } {
+  const base = `lugar:${objectId}:${kind}`;
+  if (frequency === 'season') return { sourceRef: base, policy: 'season' };
+  if (frequency === 'once') return { sourceRef: base, policy: 'once' };
+  // «Por sesión» (restos, cofres) y repetibles: una vez por visita.
+  return { sourceRef: `${base}@visita:${ctx.sessionId}`, policy: 'once' };
+}
+
+/** Guarda lo que toca de un evento del mundo y devuelve lo que hay que enseñar. */
+export async function persistWorldEvent(
+  progress: ProgressApi,
+  e: WorldEvent,
+  ctx: ProgressContext,
+): Promise<ProgressOutcome[]> {
+  if (e.type !== 'reward') return [];
+  if (e.kind === 'discount') {
+    if (!e.ref) return [];
+    return discountFound(progress, e.ref, ctx);
+  }
+  if (e.kind !== 'coins' && e.kind !== 'points') return [];
+  if (e.amount <= 0) return [];
+  const { sourceRef, policy } = rewardSource(e.objectId, e.kind, e.frequency, ctx);
+  const r = await progress.grantWorldReward({ sourceRef, [e.kind]: e.amount, policy });
+  if (!r.granted) return [];
+  return [
+    {
+      kind: 'notice',
+      notice: { id: `premio:${sourceRef}`, kind: 'reward', title: rewardTitle(e.kind, e.amount) },
+    },
+  ];
+}
+
+/**
+ * Un descuento escondido encontrado (REQ-COM-021): se premia sólo la primera
+ * vez; uno que no existe (lo quitó el Admin) no hace nada.
+ */
+export async function discountFound(
+  progress: ProgressApi,
+  discountId: string,
+  ctx: ProgressContext,
+): Promise<ProgressOutcome[]> {
+  try {
+    const f = await progress.findDiscount(discountId, { worldId: ctx.worldId });
+    if (!f.first) return [];
+    return [
+      {
+        kind: 'discount',
+        found: f,
+        notice: { id: `descuento:${discountId}`, kind: 'reward', title: discountTitle(f) },
+      },
+    ];
+  } catch (err) {
+    if (isStoreError(err, 'not_found')) return [];
+    throw err;
+  }
+}
+
+/** Primera llegada a un lugar (REQ-AVE-013), por id: sobrevive a recargar. */
+export async function discoverPlace(
+  progress: ProgressApi,
+  placeId: string,
+  ctx: ProgressContext,
+): Promise<boolean> {
+  const r = await progress.discover(`lugar:${placeId}`, { worldId: ctx.worldId });
+  return r.first;
+}
+
+/** Los lugares ya descubiertos en este navegador (para la brújula y el mapa). */
+export async function discoveredPlaces(progress: ProgressApi): Promise<string[]> {
+  return (await progress.discoveries())
+    .map((d) => d.key)
+    .filter((k) => k.startsWith('lugar:'))
+    .map((k) => k.slice('lugar:'.length));
+}
+
+/** Premio de un encuentro de la web (delfín, remolino), idempotente por su origen. */
+export async function grantEncounter(
+  progress: ProgressApi,
+  sourceRef: string,
+  coins: number,
+  policy: 'once' | 'daily' | 'season',
+): Promise<ProgressOutcome[]> {
+  const r = await progress.grantWorldReward({ sourceRef, coins, policy });
+  if (!r.granted) return [];
+  return [
+    {
+      kind: 'notice',
+      notice: { id: `premio:${sourceRef}:${r.entry.id}`, kind: 'reward', title: rewardTitle('coins', coins) },
+    },
+  ];
+}

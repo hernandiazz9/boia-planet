@@ -1,0 +1,910 @@
+import type { BehaviorInput } from '../../behaviors';
+import type { PlaceInput, SharedMapInput } from '../map';
+import { type Maq, POS, U, at, ellipseCollision, near, proximity, size } from './units';
+
+/**
+ * El mapa compartido de la versión de prueba (T20, D-20), sacado de
+ * `mundos/arcilla/mapa.json`: todos los mundos (Arcilla, Acuarela…) juegan
+ * sobre estos lugares y sólo cambian su piel. Los números de la maqueta van
+ * tal cual (u_maq) y `./units` los pasa al motor; `source` dice de qué
+ * entrada de mapa.json (o de qué pieza de arte de T18) sale cada lugar, y la
+ * prueba `arcilla.test.ts` lo comprueba contra el archivo.
+ *
+ * Textos, radios, premios y descuentos son `muestra` [pendiente Álvaro].
+ * Los textos propios de cada mundo (bocadillos, nombres) van en su skin; aquí
+ * sólo los comunes.
+ */
+
+export const SHARED_MAP_ID = 'boia-mapa';
+
+/** Id del evento de muestra ligado a la isla `allday` (el de la landing y de `@boia/store`). */
+export const ALLDAY_EVENT_ID = 'ev-all-day-primavera';
+
+/** Id del circuito para checkpoints y récords (REQ-AVE-033 añade la versión). */
+export const CIRCUIT_ID = 'el-freu';
+/** `mapa.json` → `circuito.version`. */
+export const CIRCUIT_VERSION = 1;
+
+const TAGS = ['muestra'];
+
+// --- Anclas de las composiciones locales -------------------------------------
+
+/** El anillo de salida (`zonas/puerto/lugares/salida`): ancla del puerto. */
+export const PORT_ANCHOR: Maq = [0, 25.3];
+/** La Boia Fiestera (`zonas/fiestera/lugares/fiestera`): ancla del remanso. */
+export const FIESTERA_ANCHOR: Maq = [-3.8, 7.6];
+/** Arco de salida del circuito (`circuito/salida`): ancla del semáforo. */
+export const CIRCUIT_START: Maq = [12.6, 5.6];
+
+// --- Costas y límites ----------------------------------------------------------
+
+/**
+ * Datos de las losas de T18 (`art/mundos/arcilla/costa_*`, en px del arte a
+ * 88,2759 px/u_maq; en vertical, sobre el agua, la mitad): dónde cae la línea
+ * de mapa.json y dónde se para el casco. El motor pone la línea de colisión
+ * sobre el límite del mundo.
+ */
+const ART_PPU = 88.2759;
+const COAST = {
+  west: { mapLinePx: 441, collisionPx: 549 },
+  east: { mapLinePx: 199, collisionPx: 166 },
+  south: { mapLinePx: 96, collisionPx: 87.88 },
+  /** Periodo de la losa del paseo y dónde empieza su columna 0 (u_maq). */
+  southPeriod: 8.7,
+  southPhase: 6.3,
+};
+
+/**
+ * Semiancho del mar entre las líneas de costa (u). Sale de ±15 u_maq ×
+ * factor, redondeado para que las losas del paseo, que empiezan en x = 0 cada
+ * 8,70 u_maq, lleguen a las dos esquinas en la misma fase que en la maqueta
+ * (la esquina oeste empieza 6,30 u_maq antes de una columna): 0,5 % menos.
+ */
+export const COAST_HALF_WIDTH = (() => {
+  const period = COAST.southPeriod * U;
+  const phase = COAST.southPhase * U;
+  const k = Math.round((15 * POS - phase) / period);
+  return Math.round((phase + k * period) * 100) / 100;
+})();
+
+/** La costa sur (el paseo) queda a 2,5 u_maq del anillo, a 1:1 como el arte del puerto. */
+export const SOUTH_COAST_Y = near(PORT_ANCHOR, [0, 27.8]).y;
+
+const px = (v: number) => (v / ART_PPU) * U;
+export const ARCILLA_BOUNDS = {
+  left: Math.round((-COAST_HALF_WIDTH + px(COAST.west.collisionPx - COAST.west.mapLinePx)) * 100) / 100,
+  right: Math.round((COAST_HALF_WIDTH - px(COAST.east.mapLinePx - COAST.east.collisionPx)) * 100) / 100,
+  top: at([0, -31.5]).y,
+  bottom:
+    Math.round((SOUTH_COAST_Y - 2 * px(COAST.south.mapLinePx - COAST.south.collisionPx)) * 100) /
+    100,
+};
+
+// --- Ayudas --------------------------------------------------------------------
+
+const prox = (): BehaviorInput => ({ type: 'proximity' });
+const block = (): BehaviorInput => ({ type: 'collision', params: { mode: 'block' } });
+const bounce = (intensity = 0.45): BehaviorInput => ({
+  type: 'collision',
+  params: { mode: 'bounce', intensity },
+});
+const slow = (intensity: number, duration: number): BehaviorInput => ({
+  type: 'collision',
+  params: { mode: 'slow', intensity, duration },
+});
+const deco = (animation = 'idle'): BehaviorInput => ({ type: 'decorative', params: { animation } });
+const visit = (): BehaviorInput => ({ type: 'achievement', params: { trigger: 'visit_island' } });
+const points = (amount: number, on?: 'proximity_enter' | 'contact' | 'collect'): BehaviorInput => ({
+  type: 'reward',
+  params: { kind: 'points', amount, frequency: 'once', ...(on ? { on } : {}) },
+});
+const coins = (
+  amount: number,
+  frequency: 'once' | 'session' = 'once',
+  on?: 'proximity_enter' | 'contact' | 'collect',
+): BehaviorInput => ({
+  type: 'reward',
+  params: { kind: 'coins', amount, frequency, ...(on ? { on } : {}) },
+});
+const discount = (ref: string, on?: 'proximity_enter' | 'contact' | 'collect'): BehaviorInput => ({
+  type: 'reward',
+  params: { kind: 'discount', ref, amount: 1, frequency: 'once', ...(on ? { on } : {}) },
+});
+const content = (target: 'event' | 'photos' | 'store' | 'info', ref: string): BehaviorInput => ({
+  type: 'content',
+  params: { target, ref },
+});
+const talk = (lines: string[], once = false): BehaviorInput => ({
+  type: 'dialogue',
+  params: { lines, once },
+});
+
+/** Isla con colisión elíptica, proximidad amplia y primera llegada. */
+function island(
+  id: string,
+  name: string,
+  src: string,
+  c: Maq,
+  a: number,
+  b: number,
+  giro: number,
+  radio: number,
+  behaviors: BehaviorInput[],
+  source: string[] = [],
+): PlaceInput {
+  return {
+    id,
+    name,
+    category: 'isla',
+    tags: TAGS,
+    position: { ...at(c), zone: id },
+    geometry: { ...ellipseCollision(a, b, giro), proximityRadius: proximity(radio, 'isla') },
+    behaviors: [block(), prox(), ...behaviors],
+    source: [src, ...source],
+  };
+}
+
+// --- El Varadero: el puerto de salida (composición local) ---------------------
+
+const port = (part: Maq) => near(PORT_ANCHOR, part);
+
+/** Primera boia: diálogo tutorial común (REQ-AVE-001…004). [pendiente Álvaro] */
+const TUTORIAL: BehaviorInput = {
+  type: 'dialogue',
+  params: {
+    once: true,
+    lines: [
+      '¡Plop! Bienvenido a BOIA.PLANET.',
+      'Toca en cualquier sitio y arrastra: el barco va hacia donde apuntes.',
+      'Tu misión: encontrar a la Boia Fiestera y llevarla hasta la última isla.',
+      'Por el mar hay descuentos, monedas y secretos. Mira bien al navegar.',
+      {
+        text: 'Arriba tienes el minimapa: tócalo para ampliar, mantenlo pulsado para moverlo.',
+        cue: 'pulse_minimap',
+      },
+      { text: 'Y en el ancla está el Menú de a bordo. ¡Buen viaje!', cue: 'pulse_menu' },
+    ],
+  },
+};
+
+const PORT: PlaceInput[] = [
+  {
+    id: 'puerto',
+    name: 'Puerto de salida',
+    category: 'puerto',
+    tags: TAGS,
+    // El paseo central: su orilla es la costa sur.
+    position: { ...port([0, 30.6]), zone: 'puerto' },
+    geometry: {},
+    behaviors: [deco()],
+    source: [
+      'art:puerto#puerto',
+      'zonas/puerto',
+      'zonas/puerto/islas/paseo',
+      'zonas/puerto/lugares/caseta',
+    ],
+  },
+  {
+    id: 'puerto-anillo',
+    name: 'Anillo de salida',
+    category: 'decorado',
+    tags: TAGS,
+    appearance: { layer: 'water' },
+    position: { ...port([0, 25.3]), zone: 'puerto' },
+    geometry: {},
+    behaviors: [deco()],
+    source: ['zonas/puerto/lugares/salida'],
+  },
+  ...(
+    [
+      ['oeste', -3.9, -64.3],
+      ['este', 3.9, 64.3],
+    ] as const
+  ).map(
+    ([side, x, giro]): PlaceInput => ({
+      id: `puerto-escollera_${side}`,
+      name: 'Escollera',
+      category: 'obstaculo',
+      tags: TAGS,
+      position: { ...port([x, 25.1]), zone: 'puerto' },
+      geometry: ellipseCollision(3.0, 0.55, giro),
+      behaviors: [bounce(0.15)],
+      source: [`zonas/puerto/islas/escollera_${side}`],
+    }),
+  ),
+  ...(
+    [
+      ['verde', -2.6],
+      ['roja', 2.6],
+    ] as const
+  ).map(
+    ([color, x]): PlaceInput => ({
+      id: `puerto-baliza_${color}`,
+      name: `Baliza ${color}`,
+      category: 'obstaculo',
+      tags: TAGS,
+      position: { ...port([x, 22.4]), zone: 'puerto' },
+      geometry: { collision: { shape: 'circle', radius: size(0.22) } },
+      behaviors: [bounce(0.3)],
+      source: [`art:puerto#baliza_${color}`, 'zonas/puerto/lugares/bocana'],
+    }),
+  ),
+  {
+    id: 'puerto-boia',
+    name: 'La boia de la entrada',
+    category: 'boia',
+    tags: TAGS,
+    position: { ...port([0, 20.4]), zone: 'puerto' },
+    geometry: {
+      collision: { shape: 'circle', radius: size(0.55) },
+      proximityRadius: proximity(3.2, 'encuentro'),
+    },
+    behaviors: [
+      bounce(0.3),
+      prox(),
+      TUTORIAL,
+      { type: 'achievement', params: { trigger: 'find_boia' } },
+    ],
+    source: ['zonas/puerto/lugares/boia', 'zonas/puerto/proximidad/boia'],
+  },
+  {
+    id: 'puerto-whatsapp',
+    name: 'Boia de WhatsApp',
+    category: 'boia',
+    tags: TAGS,
+    position: { ...port([-4.8, 21.4]), zone: 'puerto' },
+    geometry: {
+      collision: { shape: 'circle', radius: size(0.32) },
+      proximityRadius: proximity(1.6, 'encuentro'),
+    },
+    // REQ-AVE-023: acceso voluntario al WhatsApp de BOIA [provisional].
+    behaviors: [bounce(0.3), prox(), content('info', 'whatsapp')],
+    source: ['zonas/puerto/lugares/whatsapp', 'zonas/puerto/proximidad/whatsapp'],
+  },
+];
+
+// --- Islas -----------------------------------------------------------------------
+
+const ISLANDS: PlaceInput[] = [
+  island(
+    'cala',
+    'Cala del Alfar',
+    'zonas/cala/islas/isla',
+    [8.5, 13.0],
+    3.1,
+    2.1,
+    45,
+    4.6,
+    [content('info', 'cala'), points(10), visit()],
+    [
+      'zonas/cala',
+      'zonas/cala/proximidad/isla',
+      ...['horno', 'chiringuito', 'paella', 'pista', 'embarcadero', 'amarre', 'torno'].map(
+        (l) => `zonas/cala/lugares/${l}`,
+      ),
+    ],
+  ),
+  // Isla de evento: sólo el nombre común, igual en todos los mundos (D-20).
+  island(
+    'allday',
+    'Isla del escenario · All Day BOIA',
+    'zonas/allday/islas/isla',
+    [1.2, -15.6],
+    4.6,
+    3.4,
+    12,
+    6.4,
+    [content('event', ALLDAY_EVENT_ID), { type: 'ticket', params: { eventId: ALLDAY_EVENT_ID } }, points(10), visit()],
+    [
+      'zonas/allday',
+      'zonas/allday/proximidad/isla',
+      ...['escenario', 'taquilla', 'barra', 'arco', 'muelle', 'dj'].map(
+        (l) => `zonas/allday/lugares/${l}`,
+      ),
+    ],
+  ),
+  island(
+    'fotos',
+    'Puerto de Fotos',
+    'zonas/fotos/islas/isla',
+    [-9.4, -9.9],
+    2.6,
+    1.9,
+    -20,
+    4.0,
+    // REQ-AVE-022: la galería como lugar del mundo.
+    [content('photos', 'album-muestra'), points(10), visit()],
+    [
+      'zonas/fotos',
+      'zonas/fotos/proximidad/isla',
+      ...['camara', 'marco', 'tendedero', 'cuarto'].map((l) => `zonas/fotos/lugares/${l}`),
+    ],
+  ),
+  island(
+    'tienda',
+    'Isla tienda',
+    'zonas/tienda/islas/isla',
+    [6.6, -1.2],
+    1.9,
+    1.5,
+    45,
+    3.2,
+    // REQ-COM-033: escaparate de la tienda externa.
+    [content('store', 'tienda'), points(5), visit()],
+    [
+      'zonas/tienda',
+      'zonas/tienda/proximidad/isla',
+      ...['kiosco', 'tendedero', 'cartel'].map((l) => `zonas/tienda/lugares/${l}`),
+    ],
+  ),
+  {
+    // La última isla: destino de la misión (la entrega es de T21).
+    ...island(
+      'ultima',
+      'Última isla',
+      'zonas/ultima/islas/isla',
+      [4.4, -27.4],
+      2.7,
+      2.1,
+      -10,
+      4.4,
+      [content('info', 'ultima'), points(20), visit()],
+      [
+        'zonas/ultima',
+        'zonas/ultima/proximidad/isla',
+        ...['nicho', 'muelle', 'hoguera', 'amigas'].map((l) => `zonas/ultima/lugares/${l}`),
+      ],
+    ),
+    params: { missionDestination: 'fiestera' },
+  },
+  // Islas de los minijuegos (T23): INICIAR_MINIJUEGO con `faro` y `canon`.
+  island('faro', 'Isla del Faro', 'minijuegos/faro/isla', [-10.5, -25.2], 1.9, 1.3, 30, 3.4, [
+    { type: 'start_minigame', params: { gameId: 'faro' } },
+    visit(),
+  ], ['minijuegos/faro']),
+  island('canon', 'Isla del Cañón', 'minijuegos/canon/isla', [-9.0, -18.6], 1.5, 1.1, -15, 3.0, [
+    { type: 'start_minigame', params: { gameId: 'canon' } },
+    visit(),
+  ], ['minijuegos/canon']),
+];
+
+// --- El Remanso de los Cocodrilos (composición local; la misión es de T21) ------
+
+const remanso = (p: Maq) => near(FIESTERA_ANCHOR, p);
+
+const CROCS: [number, number, number][] = [
+  [-5.4139, 7.9431, 0.5175],
+  [-4.6214, 6.2855, 0.4725],
+  [-2.8249, 6.2074, 0.495],
+  [-2.0783, 8.5155, 0.45],
+];
+const ROCKS: [number, number, number][] = [
+  [-6.5, 6.3, 0.399],
+  [-1.2, 5.7, 0.336],
+  [-1.6, 9.5, 0.294],
+];
+
+const FIESTERA: PlaceInput[] = [
+  {
+    id: 'fiestera',
+    name: 'La Boia Fiestera',
+    category: 'encuentro',
+    tags: TAGS,
+    position: { ...remanso(FIESTERA_ANCHOR), zone: 'fiestera' },
+    geometry: {
+      collision: { shape: 'circle', radius: size(0.48) },
+      proximityRadius: proximity(2.6, 'encuentro'),
+    },
+    behaviors: [
+      bounce(0.3),
+      prox(),
+      talk([
+        '¡Eh, barquito! Estos señores no me dejan ir a la fiesta.',
+        '¿Me llevas a la última isla? Te lo pagaré bailando.',
+      ]),
+    ],
+    // Radios de la misión para T21: rescate (el de proximidad) y cocodrilos.
+    params: { mission: 'fiestera', crocRadius: proximity(4.0, 'encuentro') },
+    source: [
+      'zonas/fiestera/lugares/fiestera',
+      'zonas/fiestera',
+      'zonas/fiestera/proximidad/rescate',
+      'zonas/fiestera/proximidad/cocodrilos',
+    ],
+  },
+  {
+    id: 'fiestera-posidonia',
+    name: 'Posidonia',
+    category: 'decorado',
+    tags: TAGS,
+    appearance: { layer: 'water' },
+    position: { ...remanso(FIESTERA_ANCHOR), zone: 'fiestera' },
+    geometry: {},
+    behaviors: [deco()],
+    source: ['art:fiestera#posidonia'],
+  },
+  ...CROCS.map(
+    ([x, y, r], i): PlaceInput => ({
+      id: `fiestera-cocodrilo_${i + 1}`,
+      name: 'Cocodrilo',
+      category: 'cocodrilo',
+      tags: TAGS,
+      position: { ...remanso([x, y]), zone: 'fiestera' },
+      // Pesados, no malos: ralentizan un 60 % durante 2 s (REQ-AVE-005, REQ-AVE-030).
+      geometry: { collision: { shape: 'circle', radius: size(r) } },
+      behaviors: [slow(0.6, 2), deco()],
+      source: [`art:fiestera#cocodrilo_${i + 1}`, ...(i === 0 ? ['zonas/fiestera/lugares/cocodrilos'] : [])],
+    }),
+  ),
+  ...ROCKS.map(
+    ([x, y, r], i): PlaceInput => ({
+      id: `fiestera-roca_${i + 1}`,
+      name: 'Roca',
+      category: 'obstaculo',
+      tags: TAGS,
+      position: { ...remanso([x, y]), zone: 'fiestera' },
+      geometry: { collision: { shape: 'circle', radius: size(r) } },
+      behaviors: [bounce(0.3)],
+      source: [`art:fiestera#roca_${i + 1}`],
+    }),
+  ),
+];
+
+// --- Mar vivo -------------------------------------------------------------------
+
+/** Restos flotantes (`zonas/marvivo/restos`): el cuarto guarda un código caducado. */
+const RESTOS: Maq[] = [
+  [-3.4, 18.4],
+  [-8.8, 12.4],
+  [-12.8, 6.2],
+  [-6.4, -3.2],
+  [2.4, 16.0],
+  [3.2, -7.6],
+  [-1.6, -21.6],
+  [10.2, 21.4],
+];
+/** Id del descuento caducado de los restos (REQ-COM-021: se enseña como caducado). */
+export const DEBRIS_DISCOUNT = { place: 'restos-4', discount: 'dto-caducado' };
+/** u de reaparición semialeatoria de los restos alrededor de su sitio. muestra */
+const RESTOS_JITTER = 40;
+
+const jitter = (p: { x: number; y: number }) =>
+  [
+    [0, 0],
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ].map(([dx, dy]) => ({ x: p.x + dx! * RESTOS_JITTER, y: p.y + dy! * RESTOS_JITTER }));
+
+const MAR_VIVO: PlaceInput[] = [
+  {
+    // REQ-AVE-020: pide que lo acerquen a una fiesta y deja un código de entradas.
+    id: 'naufrago',
+    name: 'El náufrago',
+    category: 'naufrago',
+    tags: TAGS,
+    position: { ...at([-5.6, 16.4]), zone: 'marvivo' },
+    geometry: {
+      ...ellipseCollision(1.3, 0.85, 20),
+      proximityRadius: proximity(2.2, 'isla'),
+    },
+    behaviors: [
+      block(),
+      prox(),
+      talk([
+        '¡Llevo tres fiestas esperando aquí! Acércame a una de BOIA y te dejo un regalo.',
+        'Arrima el barco al banco y subo de un salto.',
+      ]),
+      // Al arrimarse: sube a bordo y deja su código (una vez).
+      discount('dto-naufrago', 'contact'),
+      points(10, 'contact'),
+    ],
+    source: [
+      'zonas/marvivo/islas/banco_naufrago',
+      'zonas/marvivo',
+      'zonas/marvivo/lugares/naufrago',
+      'zonas/marvivo/proximidad/naufrago',
+    ],
+  },
+  ...RESTOS.map((p, i): PlaceInput => {
+    const id = `restos-${i + 1}`;
+    const pos = at(p);
+    return {
+      id,
+      name: 'Restos flotantes',
+      category: 'restos',
+      tags: [...TAGS, 'sin-brujula'],
+      position: { ...pos, zone: 'marvivo' },
+      geometry: { activation: { shape: 'circle', radius: 36 } },
+      // REQ-AVE-016: se recogen al pasar, dan monedas y vuelven en otra visita.
+      behaviors: [
+        { type: 'collectible', params: {} },
+        { type: 'spawn', params: { positions: jitter(pos) } },
+        coins(3, 'session'),
+        ...(id === DEBRIS_DISCOUNT.place ? [discount(DEBRIS_DISCOUNT.discount)] : []),
+      ],
+      source: [`zonas/marvivo/restos/${i}`],
+    };
+  }),
+  ...(
+    [
+      [-12.6, 13.8],
+      [-5.4, -1.8],
+    ] as Maq[]
+  ).map((p, i): PlaceInput => {
+    const pos = at(p);
+    return {
+      id: `cofre-${i + 1}`,
+      name: 'Cofre fugaz',
+      category: 'cofre',
+      tags: [...TAGS, 'sin-brujula'],
+      position: { ...pos, zone: 'marvivo' },
+      geometry: { activation: { shape: 'circle', radius: 30 } },
+      // REQ-AVE-017: 20 s a la vista, luego se esconde y vuelve a salir. muestra
+      behaviors: [
+        { type: 'collectible', params: {} },
+        {
+          type: 'spawn',
+          params: {
+            probability: 0.8,
+            lifetime: 20,
+            every: 25,
+            positions: [pos, { x: pos.x + 180, y: pos.y - 120 }, { x: pos.x - 160, y: pos.y + 140 }],
+          },
+        },
+        coins(8, 'session'),
+      ],
+      source: [`zonas/marvivo/lugares/cofre_${i + 1}`, `zonas/marvivo/proximidad/cofre_${i + 1}`],
+    };
+  }),
+  {
+    // REQ-AVE-018: seguirlo tres saltos lleva a un premio (la lógica, en la web).
+    id: 'delfin',
+    name: 'Delfín',
+    category: 'delfin',
+    tags: TAGS,
+    position: { ...at([-10.8, 8.6]), zone: 'marvivo' },
+    geometry: { proximityRadius: proximity(2.0, 'isla') },
+    behaviors: [prox(), deco('salto')],
+    params: {
+      trail: [at([-9.6, 6.9]), at([-10.9, 4.9]), at([-9.4, 2.9])],
+      rewardCoins: 12,
+    },
+    source: ['zonas/marvivo/lugares/delfin', 'zonas/marvivo/proximidad/delfin'],
+  },
+  {
+    // REQ-AVE-019: reto de control; la fuerza de giro la pone el motor (`swirl`).
+    id: 'remolino',
+    name: 'Remolino',
+    category: 'remolino',
+    tags: TAGS,
+    appearance: { layer: 'water' },
+    position: { ...at([-10.2, 0.6]), zone: 'marvivo' },
+    geometry: { proximityRadius: proximity(1.7, 'isla') },
+    behaviors: [prox(), deco('giro')],
+    params: { swirl: { strength: 110, pull: 25 } },
+    source: ['zonas/marvivo/lugares/remolino', 'zonas/marvivo/proximidad/remolino'],
+  },
+];
+
+/**
+ * Sitios de las botellas del mapa (`zonas/marvivo/lugares/botella_*`). Las
+ * botellas no son lugares (T22: viven en el repositorio); las de muestra se
+ * ponen aquí. El primer sitio es la bocana del puerto, para leer una nada
+ * más salir.
+ */
+export const BOTTLE_SPOTS: { id: string; x: number; y: number; source: string[] }[] = [
+  { id: 'bocana', ...port([1.6, 21.6]), source: ['zonas/puerto/lugares/bocana'] },
+  ...(
+    [
+      [-8.2, 4.4],
+      [-2.8, 13.4],
+      [-13.2, -2.4],
+    ] as Maq[]
+  ).map((p, i) => ({
+    id: `botella_${i + 1}`,
+    ...at(p),
+    source: [
+      `zonas/marvivo/lugares/botella_${i + 1}`,
+      `zonas/marvivo/proximidad/botella_${i + 1}`,
+    ],
+  })),
+];
+
+// --- El Freu: el circuito (a escala de posiciones) ------------------------------
+
+const gate = (
+  id: string,
+  name: string,
+  p: Maq,
+  order: number,
+  boost: number,
+  source: string[],
+): PlaceInput => ({
+  id,
+  name,
+  category: 'circuito',
+  tags: [...TAGS, 'sin-brujula'],
+  position: { ...at(p), zone: 'circuito' },
+  // El arco mide ~3,4 u_maq de ancho; pasar por él (o rozarlo) cuenta.
+  geometry: { activation: { shape: 'circle', radius: size(1.8) } },
+  behaviors: [
+    { type: 'checkpoint', params: { circuitId: CIRCUIT_ID, order, boost, on: 'contact' } },
+  ],
+  source,
+});
+
+/** Carriles de la maqueta (`mapa.json` → `circuito`). */
+const LANES: { rama: string; width: number; points: Maq[] }[] = [
+  {
+    rama: 'comun',
+    width: 2.6,
+    points: [
+      [12.6, 5.6],
+      [12.2, 1.0],
+      [12.4, -2.6],
+    ],
+  },
+  {
+    rama: 'segura',
+    width: 2.6,
+    points: [
+      [12.4, -2.6],
+      [9.6, -5.4],
+      [7.8, -9.6],
+      [7.8, -13.8],
+      [9.4, -17.6],
+      [12.4, -19.6],
+    ],
+  },
+  {
+    rama: 'atajo',
+    width: 1.2,
+    points: [
+      [12.4, -2.6],
+      [13.4, -6.0],
+      [12.9, -10.0],
+      [12.9, -14.0],
+      [13.4, -16.2],
+      [12.4, -19.6],
+    ],
+  },
+  {
+    rama: 'final',
+    width: 2.6,
+    points: [
+      [12.4, -19.6],
+      [11.4, -22.0],
+      [8.8, -25.0],
+    ],
+  },
+];
+/** u_maq entre boies de carril. muestra */
+const LANE_STEP = 2.4;
+
+/** Boies de carril a los dos lados de cada rama (decorado: no bloquean). */
+function laneBuoys(): PlaceInput[] {
+  const out: PlaceInput[] = [];
+  for (const lane of LANES) {
+    let n = 0;
+    for (let i = 0; i < lane.points.length - 1; i++) {
+      const [ax, ay] = lane.points[i]!;
+      const [bx, by] = lane.points[i + 1]!;
+      const len = Math.hypot(bx - ax, by - ay);
+      const steps = Math.max(1, Math.round(len / LANE_STEP));
+      const nx = -(by - ay) / len;
+      const ny = (bx - ax) / len;
+      for (let k = i === 0 ? 1 : 0; k < steps; k++) {
+        const t = k / steps;
+        const cx = ax + (bx - ax) * t;
+        const cy = ay + (by - ay) * t;
+        n++;
+        for (const side of [1, -1]) {
+          const w = (lane.width / 2) * side;
+          out.push({
+            id: `circuito-carril-${lane.rama}-${n}${side > 0 ? 'd' : 'i'}`,
+            name: 'Boia de carril',
+            category: 'carril',
+            tags: [...TAGS, 'sin-brujula'],
+            position: { ...at([cx + nx * w, cy + ny * w]), zone: 'circuito' },
+            geometry: {},
+            behaviors: [deco()],
+            source: [`circuito/${lane.rama}`],
+          });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+const CIRCUIT: PlaceInput[] = [
+  {
+    ...gate('circuito', 'Salida de El Freu', CIRCUIT_START, 0, 0, [
+      'circuito/salida',
+      'zonas/circuito',
+      'zonas/circuito/lugares/salida',
+    ]),
+    // Al acercarse se ve el récord (REQ-AVE-028: antes y después, no durante).
+    geometry: {
+      activation: { shape: 'circle', radius: size(1.8) },
+      proximityRadius: proximity(4, 'isla'),
+    },
+    behaviors: [
+      prox(),
+      { type: 'checkpoint', params: { circuitId: CIRCUIT_ID, order: 0, boost: 0, on: 'contact' } },
+    ],
+    params: { circuit: CIRCUIT_ID, version: CIRCUIT_VERSION, destination: 'ultima' },
+    tags: TAGS,
+  },
+  gate('circuito-cp1', 'Checkpoint 1', [12.2, 1.0], 1, 0.6, ['circuito/checkpoints/0']),
+  gate('circuito-cp-s', 'Checkpoint de la ruta segura', [7.8, -11.7], 2, 0.6, [
+    'circuito/checkpoints/1',
+  ]),
+  gate('circuito-cp-a', 'Checkpoint del atajo', [12.9, -12.0], 2, 0.6, ['circuito/checkpoints/2']),
+  gate('circuito-cp2', 'Checkpoint 2', [11.4, -22.0], 3, 0.6, ['circuito/checkpoints/3']),
+  gate('circuito-meta', 'Meta de El Freu', [8.8, -25.0], 4, 0, [
+    'circuito/meta',
+    'zonas/circuito/lugares/meta',
+  ]),
+  {
+    id: 'circuito-semaforo',
+    name: 'Semáforo de salida',
+    category: 'decorado',
+    tags: TAGS,
+    position: { ...near(CIRCUIT_START, [14.95, 5.25]), zone: 'circuito' },
+    geometry: {},
+    behaviors: [deco()],
+    source: ['art:circuito#semaforo', 'zonas/circuito/lugares/grada'],
+  },
+  {
+    id: 'circuito-cartel',
+    name: 'Cartel ATAJO →',
+    category: 'obstaculo',
+    tags: TAGS,
+    position: { ...at([12.3, -4.68]), zone: 'circuito' },
+    geometry: { collision: { shape: 'circle', radius: size(0.38) } },
+    behaviors: [bounce(0.3)],
+    source: ['art:circuito#cartel', 'circuito/cartel_atajo', 'zonas/circuito/lugares/atajo'],
+  },
+  {
+    id: 'circuito-dents',
+    name: 'Els Dents',
+    category: 'obstaculo',
+    tags: TAGS,
+    position: { ...at([10.7, -11.6]), zone: 'circuito' },
+    geometry: ellipseCollision(1.5, 1.15, 80),
+    behaviors: [block()],
+    source: ['zonas/circuito/islas/dents'],
+  },
+  {
+    id: 'circuito-freu',
+    name: 'Rocas del Freu',
+    category: 'obstaculo',
+    tags: TAGS,
+    position: { ...at([14.6, -12.0]), zone: 'circuito' },
+    geometry: ellipseCollision(1.0, 0.7, 90),
+    behaviors: [block()],
+    source: ['zonas/circuito/islas/freu'],
+  },
+  // Los tres obstáculos (REQ-AVE-030).
+  {
+    id: 'circuito-roca',
+    name: 'Roca',
+    category: 'obstaculo',
+    tags: TAGS,
+    position: { ...at([13.4, -8.0]), zone: 'circuito' },
+    geometry: { collision: { shape: 'circle', radius: size(0.4) } },
+    behaviors: [bounce(0.45)],
+    source: ['circuito/obstaculos/0'],
+  },
+  {
+    id: 'circuito-medusa',
+    name: 'Medusa',
+    category: 'obstaculo',
+    tags: TAGS,
+    position: { ...at([12.95, -15.3]), zone: 'circuito' },
+    geometry: { collision: { shape: 'circle', radius: size(0.35) } },
+    // Ralentiza un 40 % durante 1,5 s [provisional].
+    behaviors: [slow(0.4, 1.5)],
+    source: ['circuito/obstaculos/1'],
+  },
+  {
+    id: 'circuito-cocodrilo',
+    name: 'Cocodrilo',
+    category: 'cocodrilo',
+    tags: TAGS,
+    position: { ...at([7.9, -12.9]), zone: 'circuito' },
+    geometry: { collision: { shape: 'circle', radius: size(0.55) } },
+    behaviors: [slow(0.6, 2), deco()],
+    // Vaivén entre dos puntos (el motor lo mueve: `patrol`).
+    params: { patrol: { points: [at([7.1, -12.9]), at([8.7, -12.9])], period: 7 } },
+    source: ['circuito/obstaculos/2'],
+  },
+  ...laneBuoys(),
+];
+
+// --- Secretos (sin arte todavía: marcador) ----------------------------------------
+
+const secret = (
+  id: string,
+  name: string,
+  p: Maq,
+  i: number,
+  behaviors: BehaviorInput[],
+  zone: string,
+): PlaceInput => ({
+  id: `secreto-${id}`,
+  name,
+  category: 'secreto',
+  // Ni en el minimapa ni en la brújula: se insinúan en el mar (REQ-AVE-015).
+  tags: [...TAGS, 'oculto'],
+  position: { ...at(p), zone },
+  geometry: { proximityRadius: size(3), activation: { shape: 'circle', radius: 40 } },
+  behaviors: [prox(), ...behaviors, { type: 'achievement', params: { trigger: 'collect_objects' } }],
+  source: [`secretos/${i}`],
+});
+
+const SECRETS: PlaceInput[] = [
+  secret('cueva', 'La cueva del acantilado', [-14.8, 4.2], 0, [coins(15), points(15)], 'marvivo'),
+  {
+    // El tesoro: un descuento (REQ-AVE-021) y monedas, al recogerla.
+    ...secret('anfora', 'El ánfora de Agost', [8.1, 9.5], 1, [], 'cala'),
+    behaviors: [
+      { type: 'collectible', params: {} },
+      discount('dto-cofre'),
+      coins(10),
+      { type: 'achievement', params: { trigger: 'collect_objects' } },
+    ],
+    geometry: { activation: { shape: 'circle', radius: 40 } },
+  },
+  secret('campana', 'La campana hundida', [-13.2, -16.0], 2, [points(20)], 'fotos'),
+  secret('circulo', 'El círculo de las boies dormidas', [-5.0, -27.0], 3, [coins(20), points(20)], 'ultima'),
+];
+
+// --- Zonas como sectores ----------------------------------------------------------
+
+/** Rectángulo que envuelve el contorno de cada zona (`zonas[].contorno`). */
+const ZONES: [string, string, number, number, number, number][] = [
+  ['puerto', 'Puerto de salida', -7, 7, 19.2, 31],
+  ['cala', 'Cala del Alfar', 3, 15, 8, 19.2],
+  ['fiestera', 'Encuentro de la Boia Fiestera', -7, 1.5, 3.5, 11],
+  ['allday', 'Isla del escenario · All Day BOIA', -6, 7, -21.5, -4.5],
+  ['fotos', 'Puerto de Fotos', -15, -3, -15.5, -4.5],
+  ['tienda', 'Isla tienda', 1.5, 9.8, -4.5, 8],
+  ['marvivo', 'Mar vivo', -15, -2, -4.5, 19.2],
+  ['circuito', 'Circuito de velocidad', 7, 15, -25.8, 8],
+  ['ultima', 'Última isla', -2, 15, -31.5, -21.5],
+];
+
+const clampY = (y: number) => Math.min(Math.max(y, ARCILLA_BOUNDS.top), ARCILLA_BOUNDS.bottom);
+
+/** El mapa compartido, listo para `WorldRegistry`. */
+export const ARCILLA_MAP: SharedMapInput = {
+  id: SHARED_MAP_ID,
+  version: 1,
+  bounds: ARCILLA_BOUNDS,
+  spawn: { ...port(PORT_ANCHOR), heading: -Math.PI / 2 },
+  port: { ...port(PORT_ANCHOR), place: 'puerto' },
+  // Aterrizaje de la entrada: el puerto (D-20, punto 6; T28 hace el encuadre).
+  introLanding: port([0, 22.4]),
+  sectors: ZONES.map(([id, name, x0, x1, y0, y1]) => ({
+    id,
+    name,
+    area: {
+      left: Math.max(at([x0, 0]).x, ARCILLA_BOUNDS.left),
+      right: Math.min(at([x1, 0]).x, ARCILLA_BOUNDS.right),
+      top: clampY(at([0, y0]).y),
+      bottom: clampY(id === 'puerto' ? ARCILLA_BOUNDS.bottom : at([0, y1]).y),
+    },
+  })),
+  places: [...PORT, ...ISLANDS, ...FIESTERA, ...MAR_VIVO, ...CIRCUIT, ...SECRETS],
+};
+
+/** Las anclas de las composiciones locales, por prefijo de id (para las pruebas). */
+export const LOCAL_ANCHORS: [prefix: string, anchor: Maq][] = [
+  ['puerto', PORT_ANCHOR],
+  ['fiestera', FIESTERA_ANCHOR],
+  ['circuito-semaforo', CIRCUIT_START],
+];

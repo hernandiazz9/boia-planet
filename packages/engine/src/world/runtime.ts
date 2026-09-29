@@ -73,6 +73,53 @@ interface CollisionRule {
   duration: number;
   solid: boolean;
   radius: number;
+  /** Círculos extra (islas alargadas), relativos al objeto. */
+  parts: { dx: number; dy: number; radius: number }[];
+}
+
+/**
+ * Vaivén de un objeto entre puntos (`params.patrol`), p. ej. el cocodrilo del
+ * circuito (REQ-AVE-030). Ida y vuelta en `period` s. muestra
+ */
+interface Patrol {
+  points: { x: number; y: number }[];
+  period: number;
+}
+
+/**
+ * Fuerza de un remolino (`params.swirl`) dentro de su radio de proximidad
+ * (REQ-AVE-019): empuja el barco de lado (u/s² de giro) y un poco hacia el
+ * centro. El catálogo no tiene este efecto; va como parámetro del objeto.
+ */
+interface Swirl {
+  strength: number;
+  pull: number;
+}
+
+function num(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+function pointsOf(v: unknown): { x: number; y: number }[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((p) => {
+    const x = num((p as { x?: unknown })?.x);
+    const y = num((p as { y?: unknown })?.y);
+    return x !== null && y !== null ? [{ x, y }] : [];
+  });
+}
+
+function patrolOf(o: WorldObject): Patrol | null {
+  const p = o.params?.patrol as { points?: unknown; period?: unknown } | undefined;
+  const points = pointsOf(p?.points);
+  const period = num(p?.period);
+  return points.length >= 2 && period && period > 0 ? { points, period } : null;
+}
+
+function swirlOf(o: WorldObject): Swirl | null {
+  const s = o.params?.swirl as { strength?: unknown; pull?: unknown } | undefined;
+  const strength = num(s?.strength);
+  return strength ? { strength, pull: num(s?.pull) ?? 0 } : null;
 }
 
 interface Obj {
@@ -96,6 +143,8 @@ interface Obj {
   actions: Action[];
   dialogueDone: boolean;
   openContent: Map<number, { target: string; ref?: string }>;
+  patrol: Patrol | null;
+  swirl: Swirl | null;
 }
 
 interface Effect {
@@ -155,12 +204,26 @@ function collisionRuleOf(o: WorldObject): CollisionRule | null {
     duration: b.params.duration,
     solid: b.params.solid ?? d.solid,
     radius,
+    parts: o.geometry.collision ? (o.geometry.collisionParts ?? []) : [],
   };
 }
 
 /** Obstáculos sólidos iniciales de un mundo (objetos activos con COLISIÓN sólida). */
 export function solidObstaclesOf(world: WorldConfig): CircleObstacle[] {
   return new WorldRuntime(world).solidObstacles();
+}
+
+/** Punto del vaivén en el instante `t` (ida y vuelta por los puntos). */
+export function patrolPoint(p: Patrol, t: number): { x: number; y: number } {
+  const legs = p.points.length - 1;
+  const phase = (t / p.period) % 1;
+  // 0 → 1 ida, 1 → 0 vuelta.
+  const u = (phase < 0.5 ? phase * 2 : 2 - phase * 2) * legs;
+  const i = Math.min(legs - 1, Math.floor(u));
+  const f = u - i;
+  const a = p.points[i]!;
+  const b = p.points[i + 1]!;
+  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
 }
 
 export class WorldRuntime {
@@ -224,6 +287,8 @@ export class WorldRuntime {
         ),
         dialogueDone: false,
         openContent: new Map(),
+        patrol: patrolOf(o),
+        swirl: swirlOf(o),
       };
       if (obj.spawn) this.rollSpawn(obj, false);
       this.objs.push(obj);
@@ -279,14 +344,35 @@ export class WorldRuntime {
     for (const o of this.objs) {
       const c = o.collision;
       if (!o.present || !c?.solid) continue;
-      out.push({
-        x: o.x,
-        y: o.y,
-        radius: c.radius,
-        restitution: c.mode === 'bounce' ? c.intensity : 0,
-      });
+      const restitution = c.mode === 'bounce' ? c.intensity : 0;
+      out.push({ x: o.x, y: o.y, radius: c.radius, restitution });
+      for (const p of c.parts) {
+        out.push({ x: o.x + p.dx, y: o.y + p.dy, radius: p.radius, restitution });
+      }
     }
     return out;
+  }
+
+  // --- Encuentros guionizados desde la aplicación --------------------------
+
+  /**
+   * Mueve un objeto (el delfín que salta, T20; los cocodrilos de T21). Su
+   * proximidad y su contacto se recalculan en el siguiente paso.
+   */
+  moveObject(id: string, x: number, y: number): boolean {
+    const o = this.byId.get(id);
+    if (!o) return false;
+    o.x = x;
+    o.y = y;
+    return true;
+  }
+
+  /** Muestra u oculta un objeto (un cocodrilo que se sumerge). */
+  setObjectPresent(id: string, present: boolean): boolean {
+    const o = this.byId.get(id);
+    if (!o) return false;
+    this.setPresent(o, present);
+    return true;
   }
 
   // --- Acciones del jugador sobre el diálogo --------------------------------
@@ -323,6 +409,7 @@ export class WorldRuntime {
     this.tickObjects(dt);
     this.tickDialogue(ship, dt);
 
+    this.applySwirls(ship, dt);
     collideShip(ship, { bounds: this.bounds, obstacles: this.solidObstacles() }, cfg, dt);
 
     const r = cfg.radius;
@@ -368,6 +455,23 @@ export class WorldRuntime {
 
   private emit(e: WorldEvent): void {
     this.queue.push(e);
+  }
+
+  /** Remolinos: giro alrededor del centro, más fuerte cuanto más dentro. */
+  private applySwirls(ship: ShipState, dt: number): void {
+    for (const o of this.objs) {
+      if (!o.swirl || !o.present || o.proximityRadius === null) continue;
+      const dx = ship.x - o.x;
+      const dy = ship.y - o.y;
+      const d = Math.hypot(dx, dy);
+      if (d >= o.proximityRadius || d < 1e-6) continue;
+      const k = 1 - d / o.proximityRadius;
+      const nx = dx / d;
+      const ny = dy / d;
+      // Tangente en sentido horario en pantalla (+x hacia +y) y tirón al centro.
+      ship.vx += (-ny * o.swirl.strength * k - nx * o.swirl.pull * k) * dt;
+      ship.vy += (nx * o.swirl.strength * k - ny * o.swirl.pull * k) * dt;
+    }
   }
 
   private rand(): number {
@@ -429,6 +533,11 @@ export class WorldRuntime {
 
   private tickObjects(dt: number): void {
     for (const o of this.objs) {
+      if (o.patrol) {
+        const { x, y } = patrolPoint(o.patrol, this.time);
+        o.x = x;
+        o.y = y;
+      }
       if (o.respawnIn !== null) {
         o.respawnIn -= dt;
         if (o.respawnIn <= 1e-9) {
@@ -619,16 +728,20 @@ export class WorldRuntime {
    * fuera de todo obstáculo sólido. Un teletransporte nunca deja el barco en
    * tierra (§48.3).
    */
-  safePoint(x: number, y: number): { x: number; y: number } {
-    const r = this.shipRadius;
+  safePoint(x: number, y: number, shipRadius = this.shipRadius): { x: number; y: number } {
+    const r = shipRadius;
     const b = this.bounds;
-    let px = x;
-    let py = y;
-    for (let pass = 0; pass < 4; pass++) {
-      px = Math.min(Math.max(px, b.left + r), b.right - r);
-      py = Math.min(Math.max(py, b.top + r), b.bottom - r);
-      let moved = false;
-      for (const o of this.solidObstacles()) {
+    const obstacles = this.solidObstacles();
+    const clampX = (v: number) => Math.min(Math.max(v, b.left + r), b.right - r);
+    const clampY = (v: number) => Math.min(Math.max(v, b.top + r), b.bottom - r);
+    const free = (px: number, py: number) =>
+      px === clampX(px) &&
+      py === clampY(py) &&
+      obstacles.every((o) => Math.hypot(px - o.x, py - o.y) >= o.radius + r);
+    let px = clampX(x);
+    let py = clampY(y);
+    for (let pass = 0; pass < 8 && !free(px, py); pass++) {
+      for (const o of obstacles) {
         const dx = px - o.x;
         const dy = py - o.y;
         const d = Math.hypot(dx, dy);
@@ -638,9 +751,21 @@ export class WorldRuntime {
         const ny = d > 1e-6 ? dy / d : 1;
         px = o.x + nx * min;
         py = o.y + ny * min;
-        moved = true;
       }
-      if (!moved) break;
+      px = clampX(px);
+      py = clampY(py);
+    }
+    if (free(px, py)) return { x: px, y: py };
+    // Encajonado entre obstáculos y costa: el agua libre más cercana, en espiral.
+    const ox = px;
+    const oy = py;
+    for (let d = 8; d < 4000; d += 8) {
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        const qx = ox + Math.cos(a) * d;
+        const qy = oy + Math.sin(a) * d;
+        if (free(qx, qy)) return { x: qx, y: qy };
+      }
     }
     return { x: px, y: py };
   }

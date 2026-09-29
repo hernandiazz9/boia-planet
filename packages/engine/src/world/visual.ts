@@ -16,6 +16,7 @@ import { SHIP_LENGTH } from '../ship/provisional';
 export type ObjectVisual =
   | {
       kind: 'sprite';
+      /** Id del asset (clave del arte cargado; con pieza de lugar si la hay). */
       assetId: string;
       version: string;
       /** Archivos relativos a la carpeta del asset, en orden de fotograma. */
@@ -81,6 +82,9 @@ export function resolveObjectVisual(
   const deco = o.behaviors.find((b) => b.type === 'decorative');
   const animation = deco?.type === 'decorative' ? deco.params.animation : 'idle';
   const frames = m ? artFrames(m, animation) : null;
+  // DECORATIVO manda sobre el bucle: una animación de un solo pase (el salto
+  // del delfín) se repite si el objeto es decorado en bucle.
+  if (frames && deco?.type === 'decorative' && m?.animations[animation]) frames.loop = deco.params.loop;
   const pivot = m?.pivot_px ?? m?.anchors.pivot;
   if (!m || !frames || frames.files.length === 0 || !pivot) {
     return {
@@ -97,7 +101,7 @@ export function resolveObjectVisual(
   }
   return {
     kind: 'sprite',
-    assetId: m.id,
+    assetId: asset,
     version: m.version,
     frames: frames.files,
     fps: frames.fps,

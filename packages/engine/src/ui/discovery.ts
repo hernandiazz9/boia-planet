@@ -7,7 +7,22 @@ import { type Vec2, type WorldConfig, type WorldObject, worldToScreen } from '@b
  */
 
 /** Para qué sirve un punto, según sus comportamientos (lo que dice el mapa ampliado). */
-export type TargetFunction = 'event' | 'tickets' | 'guide' | 'reward' | 'teleport' | 'minigame';
+export type TargetFunction =
+  | 'event'
+  | 'tickets'
+  | 'guide'
+  | 'reward'
+  | 'teleport'
+  | 'minigame'
+  | 'circuit';
+
+/**
+ * Etiquetas de objeto que el mapa respeta: `oculto` no sale en el minimapa ni
+ * en la brújula (secretos, REQ-AVE-015); `sin-brujula` sale en el minimapa
+ * pero la brújula no lo persigue (restos, cofres, boies de carril).
+ */
+export const HIDDEN_TAG = 'oculto';
+export const NO_COMPASS_TAG = 'sin-brujula';
 
 export type MarkerKind = 'island' | 'boia' | 'obstacle' | 'point';
 
@@ -56,6 +71,7 @@ function functionsOf(o: WorldObject): TargetFunction[] {
     if (b.type === 'reward' || b.type === 'collectible') out.add('reward');
     if (b.type === 'teleport') out.add('teleport');
     if (b.type === 'start_minigame') out.add('minigame');
+    if (b.type === 'checkpoint') out.add('circuit');
   }
   return [...out];
 }
@@ -73,7 +89,7 @@ const sizeOf = (o: WorldObject) =>
 /** Todo lo activo, para dibujar el minimapa. */
 export function mapMarkers(world: WorldConfig): MapMarker[] {
   return world.objects
-    .filter((o) => o.identity.active)
+    .filter((o) => o.identity.active && !o.identity.tags.includes(HIDDEN_TAG))
     .map((o) => ({
       id: o.identity.id,
       kind: kindOf(o),
@@ -91,6 +107,7 @@ export function discoveryTargets(world: WorldConfig): DiscoveryTarget[] {
   const out: DiscoveryTarget[] = [];
   for (const o of world.objects) {
     if (!o.identity.active) continue;
+    if (o.identity.tags.includes(HIDDEN_TAG) || o.identity.tags.includes(NO_COMPASS_TAG)) continue;
     const kind = kindOf(o);
     const functions = functionsOf(o);
     if (kind === 'obstacle' || (kind === 'point' && functions.length === 0)) continue;

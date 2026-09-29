@@ -1,5 +1,6 @@
 import { canBuy } from '@boia/contracts';
 import { SAMPLE_ACHIEVEMENTS, SAMPLE_EVENTS } from '@boia/store';
+import { WORLD_REGISTRY } from '@boia/world';
 import { expect, test, type Page } from '@playwright/test';
 import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 import { CHECKOUT_COPY } from '../lib/ticketing/copy';
@@ -15,6 +16,15 @@ import { TICKET_TRIGGER } from '../lib/ticketing/sandbox';
 // El evento de la isla (el de la isla de la demo) y otro a la venta sin isla.
 const islandEvent = SAMPLE_CONTENT.events.find((e) => canBuy(e) && e.islandId)!;
 const landingEvent = SAMPLE_CONTENT.events.find((e) => canBuy(e) && !e.islandId)!;
+// Su isla en el mundo por defecto (Arcilla desde T20).
+const islandPlace = WORLD_REGISTRY.get(WORLD_REGISTRY.defaultId).config.objects.find((o) =>
+  o.behaviors.some(
+    (b) =>
+      b.type === 'content' &&
+      (b.params as { target?: string }).target === 'event' &&
+      (b.params as { ref?: string }).ref === islandEvent.id,
+  ),
+);
 // Mi Carnet lee los nombres del repositorio.
 const storeName = (id: string) => SAMPLE_EVENTS.find((e) => e.id === id)!.name;
 const ticketAchievement = SAMPLE_ACHIEVEMENTS.find((a) => a.trigger === TICKET_TRIGGER)!;
@@ -67,6 +77,11 @@ test('landing → compra de prueba → Mi Carnet; isla → compra de prueba → 
   await expect(menu).toBeHidden();
 
   // Rumbo norte hasta la isla del evento: su panel ofrece la compra de prueba.
+  // El mapa de Arcilla es grande: se empieza junto a la isla con `?cerca=`.
+  expect(islandPlace, `la isla de ${islandEvent.id} está en el mundo`).toBeDefined();
+  await page.goto(`/juego?cerca=${islandPlace!.identity.id}`);
+  await gameRunning(page);
+  await page.locator('canvas:visible').first().focus().catch(() => {});
   await page.keyboard.down('ArrowUp');
   const islandPanel = page.getByTestId('panel-evento');
   await expect(islandPanel).toBeVisible({ timeout: 45_000 });
