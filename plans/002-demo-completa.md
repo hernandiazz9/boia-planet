@@ -129,7 +129,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: Blender renders each letter at 17 turn angles in one 203 KB WebP sheet (tools/blender/intro/titulo.py, Cycles CPU, own PNG writer); rise/bob/wobble/exit computed in the browser on a 2D canvas (titlePoses), intro config v3; text fallback kept; landing 168.5 kB; recordings p002-t27-titulo-* → f0d9a26
 
 ## T24 — Acuarela world in the game and world switching
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T19, T20
 - Goal: Add the Acuarela skins (T19's art, names and texts from mundos/acuarela/diseno.md; event/ticket islands keep their shared name) to the shared map so every place and encounter works in Acuarela exactly where it is in Arcilla (no second map), its Fiestera encounter and última isla (T21 mission logic generalised if needed), Faro and Cañón islands wired to the minigames. Switching world: from the menu («Mundos», showing both with their story line and ship) and as Admin's active world; each world uses its ship style by default (B05 / B02) and the «Barco» section still lets you change it.
 - Context: T19 and T20 Outcomes; mundos/acuarela/**; art/mundos/acuarela/**; packages/world, packages/engine (T17 registry); apps/web/app/juego/** (menu).
@@ -138,7 +138,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm test` → exit 0; adds tests: every shared place has an Acuarela skin; moving a place moves it in both worlds; progress in Arcilla survives switching to Acuarela and back
   - `pnpm world:check` → exit 0 with both worlds complete
   - `pnpm e2e` → exit 0; a spec switches world from the menu, sails to Acuarela's event island and its náufrago
-- Outcome:
+- Outcome: Acuarela registered on the shared map (replaces `prueba`), «Mundos» menu section, each world with its ship; active world stored only in the repository (T26 key mirror removed); T21 mission works in Acuarela; shared place-art.ts; world:check 94 places × 2 worlds, 0 missing; 578 tests → dd06fc3
 
 ## T25 — Tickets that grant the stamp directly
 - Status: done
@@ -174,7 +174,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: intro plays the active world with the Admin's landing/spawn/port points (2400 u map square on the sphere); arrival ×1.3/×1.45 then EXPLORAR pulls back to ×1 revealing El Varadero with the ship; /juego and direct links start at the port; per-world intro data in apps/web/lib/intro/worlds.ts; handed-over sea fix → 242649a
 
 ## T29 — Real-phone polish, sound and music
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T21, T23, T24, T25, T26, T28
 - Goal: Make it feel final on phones: frame-time budget and memory on mid-range Android and iPhone profiles (Chromium mobile emulation with CPU ×4 plus WebKit in Playwright), texture atlases and lazy loading per world sector, iOS Safari quirks (audio unlock, WebGL context loss and restore, safe areas, 100vh), Instagram in-app browser, the Pixi hidden accessibility button tab stop, keyboard and screen-reader paths for panels, reduced motion everywhere; sound: SFX set and one music loop per world (`muestra`, royalty-free or generated), with the separate music and SFX controls of T05 and no audio before the first interaction.
 - Context: ESTADO.md sections of plans 001 and 002 (open issues); docs/spec/03-mundo-y-motor.md, 02-entrada-y-landing.md (performance and accessibility REQs); apps/web/**, packages/engine/**.
@@ -228,6 +228,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T26: «en todos los mundos» writes the name into each registered world (later worlds don't inherit); sea check copied into lib/admin/validate.ts (engine index loads Pixi); spring event island now `allday`; also edited juego game-canvas/place-panels so admin changes show in the world (agent)
 - 2026-09-29 T21: Fiestera asks for help at the crocodile radius (4.0) and boards at 2.6; she waits in the última isla niche (missionDrop); map trigger find_boia = catalogue find_buoy; time played logged every 15 s while visible; mission built from the Admin-edited world (agent)
 - 2026-09-29 T28: game runs at ×1 so the arrival is closer and EXPLORAR pulls back with no scale jump; ?mundo= carried from landing to /juego; reduced motion skips the pull-back; Acuarela uses the default intro data until it has its own (agent)
+- 2026-09-29 T24: restos/cofres/botellas/delfín keep common names in Acuarela; accent = B02 hull blue; menu icons 34 px to fit nine at 360 px; Acuarela intro entry = Arcilla's (shared map) (agent)
 
 ## Proposals (new scope)
 - 2026-09-29 T28: a saved themed ship skin shows as base during the intro then switches; give Acuarela its own intro framing
@@ -281,3 +282,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 04:18 T28 launched · attempt 1 · agent a24eaf6fb4212430d
 - 2026-09-29 04:28 T21 done · branch worktree-agent-a8a239e3b0fba4d0a (1 conflict round) → 58bb656
 - 2026-09-29 05:21 T28 done · branch worktree-agent-a24eaf6fb4212430d (1 conflict round) → 242649a
+- 2026-09-29 05:27 T24 done · branch worktree-agent-a7f0ae4fa2a6b1c74 (3 merge rounds) → dd06fc3
