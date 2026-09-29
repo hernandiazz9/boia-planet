@@ -45,7 +45,7 @@ import {
   grantEncounter,
   persistWorldEvent,
 } from '../juego/world-progress';
-import { compressWorld } from './engine/compress';
+import { marWorld } from './engine/compact';
 import type { CourseInfo, Mar3D, PinSpec, Stats, VoyageEnd } from './engine/mar3d';
 import { MOOD_IDS, MOOD_LABEL, type MoodId } from './engine/palette';
 import { type ShipModelEntry, loadShipManifest, loadShipModel } from './engine/ship-model';
@@ -497,7 +497,8 @@ export function MarClient() {
     (async () => {
       const chosen = currentWorld(window.location.search, await adminWorldId());
       const live = await liveWorld(gameRepository(), worlds, chosen);
-      const world = compressWorld(live.config);
+      // El mundo compacto de /mar (T50): el mapa compartido a escala, sin tocarlo.
+      const world = marWorld(live.config);
       // three.js, el mar y el barco llegan aparte: la página pinta su pantalla de carga antes.
       const [{ Mar3D }, shipList] = await Promise.all([
         import('./engine/mar3d'),

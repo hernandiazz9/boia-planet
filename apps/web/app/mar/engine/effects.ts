@@ -21,14 +21,15 @@ import {
   ShaderMaterial,
   Vector3,
 } from 'three';
-import { rng, wobble } from './kit';
+import { rng, smooth, wobble } from './kit';
 import type { Glows } from './props';
 import { wrapD } from './wrap';
 
 /**
  * Efectos del mar 3D, todos baratos: la estela (una cinta que se ensancha y
  * se desvanece), los resplandores (un solo `Points` aditivo), la marca de
- * destino y la ruta, el confeti, las nubes y el remolino.
+ * destino y la ruta, la línea de la ruta de boyas en el mapa, el confeti,
+ * las nubes y el remolino.
  */
 
 // --- Estela -----------------------------------------------------------------
@@ -276,6 +277,58 @@ export class CourseMarker {
       this.dots.setMatrixAt(i, this.m);
     }
     this.dots.instanceMatrix.needsUpdate = true;
+  }
+}
+
+// --- La ruta de boyas en el mapa (T50) -------------------------------------------
+
+/**
+ * La ruta de boyas vista de lejos: trazos amarillos sobre el agua, que
+ * aparecen al alejarse (de cerca se ven las boyas) y engordan en el mapa
+ * para leerse en un móvil. Un solo `InstancedMesh`; quien lo usa lo curva
+ * con el planeta (cada vértice en su copia más cercana).
+ */
+export class RouteLine {
+  readonly mesh: InstancedMesh;
+  private readonly mat: MeshBasicMaterial;
+  private readonly o = new Object3D();
+  private k = -1;
+
+  constructor(private readonly dashes: readonly { x: number; z: number; angle: number }[]) {
+    this.mat = new MeshBasicMaterial({
+      color: '#ffd23f',
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    this.mesh = new InstancedMesh(
+      new PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      this.mat,
+      Math.max(1, dashes.length),
+    );
+    this.mesh.count = dashes.length;
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 1;
+    this.mesh.visible = false;
+  }
+
+  /** `zoom` 0 (barco) … 1 (mapa). */
+  update(zoom: number): void {
+    const a = smooth(0.3, 0.6, zoom);
+    this.mat.opacity = a * 0.95;
+    this.mesh.visible = a > 0.01 && this.dashes.length > 0;
+    if (!this.mesh.visible) return;
+    const k = 1 + smooth(0.3, 1, zoom) * 1.2;
+    if (Math.abs(k - this.k) < 0.01) return;
+    this.k = k;
+    this.dashes.forEach((d, i) => {
+      this.o.position.set(d.x, 0.15, d.z);
+      this.o.rotation.set(0, -d.angle, 0);
+      this.o.scale.set(1.45 * k, 1, 0.8 * k);
+      this.o.updateMatrix();
+      this.mesh.setMatrixAt(i, this.o.matrix);
+    });
+    this.mesh.instanceMatrix.needsUpdate = true;
   }
 }
 

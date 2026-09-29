@@ -55,8 +55,8 @@ import {
   litMaterial,
 } from './characters';
 import { fromScene, toScene } from './compress';
-import { buildDecor, decorSpots } from './decor';
-import { Clouds, Confetti, CourseMarker, Wake, glowPoints, whirlpool } from './effects';
+import { buildDecor } from './decor';
+import { Clouds, Confetti, CourseMarker, RouteLine, Wake, glowPoints, whirlpool } from './effects';
 import {
   type IslandBuild,
   amphora,
@@ -66,6 +66,7 @@ import {
   textTexture,
 } from './islands';
 import { Kit, clamp01, lerp, rng, seedOf, smooth } from './kit';
+import { type SeaRoute, decorSpots, seaRoute } from './compact';
 import { C, type Mood, type MoodId, cloneMood, mixMood, moods } from './palette';
 import { Sky, curveMaterial, curveTree, planetUniforms } from './planet';
 import { Glows, buoy, crag, rock } from './props';
@@ -164,6 +165,11 @@ export interface Mar3DOptions {
 
 /** A partir de este zoom el arrastre mueve el mapa en vez del barco. */
 export const MAP_ZOOM = 0.55;
+/**
+ * px que sube el planeta en la vista de mapa (T50): así el puerto y el
+ * final de la ruta de boyas quedan por encima de la barra de abajo.
+ */
+const MAP_LIFT_PX = 48;
 const BOAT_ZOOM = 0.2;
 /**
  * Curva del planeta (1/unidad de escena) de cerca y en la vista de mapa: la
@@ -254,6 +260,9 @@ export class Mar3D {
   private readonly marker = new CourseMarker();
   private readonly confetti = new Confetti();
   private readonly clouds: Clouds;
+  /** La ruta de boyas (T50): las boyas en el agua y la línea que se ve en el mapa. */
+  readonly route: SeaRoute;
+  private readonly routeLine: RouteLine;
   private readonly glow;
   private readonly views = new Map<string, View>();
   private readonly islands: { x: number; z: number; R: number; build: IslandBuild }[] = [];
@@ -387,6 +396,15 @@ export class Mar3D {
     const glows: Glows[] = [];
     const shores = this.buildPlaces(glows);
     shores.push(...this.buildDecor(glows));
+    this.route = seaRoute(this.world);
+    this.routeLine = new RouteLine(
+      this.route.dashes.map((d) => ({ x: toScene(d.x), z: toScene(d.y), angle: d.angle })),
+    );
+    curveMaterial(this.routeLine.mesh.material as MeshBasicMaterial, true);
+    this.scene.add(this.routeLine.mesh);
+    this.buildRouteBuoys(glows);
+    // Para las pruebas: cuántas boyas hay en el agua.
+    opts.canvas.dataset.routeBuoys = String(this.route.buoys.length);
     this.water.setShores(shores);
     this.glow = glowPoints(glows);
     // Los resplandores no tienen sitio propio: cada uno va a su copia más cercana.
@@ -733,14 +751,8 @@ export class Mar3D {
    */
   private buildDecor(glows: Glows[]): { x: number; z: number; r: number; w: number }[] {
     const shores: { x: number; z: number; r: number; w: number }[] = [];
-    const sp = this.world.spawn ?? { x: 0, y: 0 };
-    const cave = this.world.objects.find((o) => o.identity.id === 'secreto-cueva');
     const lit = litMaterial();
-    const spots = decorSpots(
-      { x: toScene(sp.x), z: toScene(sp.y) },
-      cave ? { x: toScene(cave.position.x), z: toScene(cave.position.y) } : null,
-    );
-    for (const spot of spots) {
+    for (const spot of decorSpots(this.world)) {
       const build = buildDecor(spot.kind);
       const g = new Group();
       g.position.set(spot.x, 0, spot.z);
@@ -778,6 +790,31 @@ export class Mar3D {
       });
     }
     return shores;
+  }
+
+  /**
+   * Las boyas de la ruta (T50): una boya con farolillo cada tramo, en el
+   * orden de la historia. Sólo decorado (sin choques ni premios): piezas
+   * fusionadas que se dibujan en su copia más cercana, y su luz.
+   */
+  private buildRouteBuoys(glows: Glows[]): void {
+    const k = new Kit();
+    const lights = new Glows();
+    for (const b of this.route.buoys) {
+      const x = toScene(b.x);
+      const z = toScene(b.y);
+      k.add(new CylinderGeometry(0.42, 0.58, 0.55, 10), C.yellow, { p: [x, 0.12, z] });
+      k.add(new CylinderGeometry(0.44, 0.44, 0.14, 10), C.purple, { p: [x, 0.3, z] });
+      k.add(new CylinderGeometry(0.1, 0.13, 1.3, 6), C.purple, { p: [x, 1, z] });
+      k.add(new SphereGeometry(0.24, 10, 8), C.bulb, { p: [x, 1.72, z] });
+      lights.add([x, 1.72, z], C.yellow, 3.2);
+    }
+    glows.push(lights);
+    if (k.empty) return;
+    const m = new Mesh(k.build(), litMaterial());
+    curveMaterial(m.material, true);
+    m.frustumCulled = false;
+    this.scene.add(m);
   }
 
   /** Construye cada lugar; devuelve las orillas para el agua. */
@@ -1657,11 +1694,14 @@ export class Mar3D {
     const h = this.opts.canvas.clientHeight || 1;
     const perPx = (2 * dist * Math.tan((this.camera.fov * Math.PI) / 360)) / h;
     const lift = this.inset * 0.5 * perPx * (1 - w);
+    // En el mapa la carta sube sin mover su centro (lo que da la vuelta no cambia de copia).
+    const mapLift = MAP_LIFT_PX * perPx * w;
     const fx = lerp(bx, this.mapC.x, w) + this.pan.x;
     const fz = lerp(bz, this.mapC.y, w) + this.pan.y + lift;
     if (snap) this.focus.set(fx, 0, fz);
     else this.focus.lerp(tmpV.set(fx, 0, fz), 1 - Math.exp(-dt * 8));
     this.look.copy(this.focus);
+    this.look.z += mapLift;
     let ox = 0;
     let oz = 0;
     if (this.shake > 0) {
@@ -1670,7 +1710,7 @@ export class Mar3D {
       this.shake = Math.max(0, this.shake - dt * 2.5);
     }
     const camY = Math.sin(elev) * dist;
-    const camZ = this.focus.z + Math.cos(elev) * dist;
+    const camZ = this.look.z + Math.cos(elev) * dist;
     this.camera.position.set(this.focus.x + ox, camY, camZ + oz);
     // La curva: fuerte de cerca (horizonte y cielo), casi plana en el mapa.
     this.bend = lerp(BEND_NEAR, BEND_MAP, smooth(0.25, 0.9, z));
@@ -1678,7 +1718,7 @@ export class Mar3D {
     planetUniforms.uBendCenter.value.set(this.focus.x, camZ);
     planetUniforms.uPlanetFocus.value.set(this.focus.x, this.focus.z);
     // Se mira al foco ya curvado (baja un poco con la distancia).
-    this.look.y = -bendDrop(this.bend, camZ - this.focus.z);
+    this.look.y = -bendDrop(this.bend, camZ - this.look.z);
     this.camera.lookAt(this.look);
     const fov = 40 + this.fovKick * 7;
     if (Math.abs(this.camera.fov - fov) > 0.01) this.camera.fov = fov;
@@ -1784,6 +1824,7 @@ export class Mar3D {
       }
     }
     for (const a of this.animated) a(t, glow);
+    this.routeLine.update(this.zoom);
     this.confetti.update(dt);
     this.clouds.update(dt, cam.y, { x: fx, z: fz }, P);
 

@@ -2,7 +2,7 @@ import { canBuy } from '@boia/contracts';
 import { READABLE_MIN_MS } from '@boia/engine/ui';
 import { WORLD_REGISTRY } from '@boia/world';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { compressWorld } from '../app/mar/engine/compress';
+import { marWorld, seaRoute } from '../app/mar/engine/compact';
 import { periodOf, planetRect, shortest } from '../app/mar/engine/wrap';
 import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
 
@@ -11,8 +11,8 @@ import { SAMPLE_CONTENT } from '../lib/landing/sample-content';
  * de la isla del evento abre su ficha y «Navegar aquí» fija el rumbo. Y la
  * landing lo enlaza junto a EXPLORAR. El botón «Entradas» siempre a la vista
  * (REQ-ENT-040) y los bocadillos que se leen y se cierran (REQ-AVE-002).
- * El mar es un planeta que da la vuelta (D-22, REQ-MUN-038). Móvil y
- * escritorio.
+ * El mar es un planeta que da la vuelta (D-22, REQ-MUN-038), compacto y con
+ * una ruta de boyas que une las islas (T50). Móvil y escritorio.
  */
 
 const world = WORLD_REGISTRY.get(WORLD_REGISTRY.defaultId).config;
@@ -165,7 +165,7 @@ test('el planeta da la vuelta: desde la cueva del oeste, El Freu (al este) queda
   page,
 }) => {
   // Las posiciones del mar 3D salen del mapa compartido, como en el motor.
-  const sea = compressWorld(world);
+  const sea = marWorld(world);
   const at = (id: string) => sea.objects.find((o) => o.identity.id === id)!;
   const cave = at('secreto-cueva');
   const freu = at('circuito');
@@ -199,5 +199,41 @@ test('el planeta da la vuelta: desde la cueva del oeste, El Freu (al este) queda
     ((await page.getByTestId('mar-rumbo-activo').textContent()) ?? '').match(/(\d+) m/)?.[1],
   );
   expect(left).toBeLessThan(flat / 2);
+  expect(errors).toEqual([]);
+});
+
+test('el mundo compacto: boyas en el agua y la isla del evento a unos segundos del puerto', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  // El mundo de /mar y su ruta, como los calcula el motor.
+  const sea = marWorld(world);
+  const route = seaRoute(sea);
+  const errors = await openMar(page);
+  await expect(page.getByTestId('mar-canvas')).toHaveAttribute(
+    'data-route-buoys',
+    String(route.buoys.length),
+  );
+
+  // Rumbo a la isla del evento desde el anillo: la distancia es la del mundo
+  // compacto por el camino corto, hasta su orilla (Mar3D.setCourse).
+  const allday = sea.objects.find((o) => o.identity.id === 'allday')!;
+  const spawn = sea.spawn!;
+  const { dx, dy } = shortest(spawn, allday.position, periodOf(planetRect(sea.bounds)));
+  const reach =
+    Math.max(allday.geometry.collision?.radius ?? 0, allday.geometry.activation?.radius ?? 0) +
+    18 +
+    40;
+  const expected = (Math.hypot(dx, dy) - reach) * 0.25;
+  await page.getByTestId('mar-mapa').click();
+  await page.locator('[data-pin="allday"]').click();
+  await page.getByTestId('mar-rumbo').click();
+  const chip = page.getByTestId('mar-rumbo-activo');
+  await expect(chip).toBeVisible();
+  const meters = Number(((await chip.textContent()) ?? '').match(/(\d+) m/)?.[1]);
+  expect(meters).toBeGreaterThan(expected * 0.9);
+  expect(meters).toBeLessThan(expected * 1.1);
+  // Y llega sola, a velocidad normal (sin turbo), en unos segundos.
+  await expect(chip).toHaveCount(0, { timeout: 45_000 });
   expect(errors).toEqual([]);
 });

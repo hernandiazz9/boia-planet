@@ -1,6 +1,6 @@
 import { WORLD_REGISTRY } from '@boia/world';
 import { describe, expect, it } from 'vitest';
-import { compressWorld } from './compress';
+import { marWorld } from './compact';
 import {
   PLANET_MARGIN,
   behindPlanet,
@@ -13,7 +13,7 @@ import {
   wrapIn,
 } from './wrap';
 
-const world = compressWorld(WORLD_REGISTRY.get('arcilla').config);
+const world = marWorld(WORLD_REGISTRY.get('arcilla').config);
 const rect = planetRect(world.bounds);
 const period = periodOf(rect);
 const opts = { shipRadius: 18, period };

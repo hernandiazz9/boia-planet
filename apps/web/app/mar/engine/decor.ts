@@ -12,6 +12,7 @@ import {
 } from 'three';
 import { type IslandBuild, newParts, rocky, sandy, shoreRocks, terrain } from './islands';
 import { rng, seedOf, wobble } from './kit';
+import { DECOR_SIZE, DECOR_SOLIDS, type DecorKind } from './compact';
 import { C } from './palette';
 import { crag, flag, house, palm, pine } from './props';
 
@@ -22,39 +23,14 @@ import { crag, flag, house, palm, pine } from './props';
  * puerto, y el islote de la cueva guarda el secreto que en el 2D está en el
  * acantilado oeste. No son lugares del mapa compartido (sin id, sin
  * comportamientos, fuera del runtime): sólo se ven y no se atraviesan. Las
- * posiciones del mapa no cambian. Unidades de escena. Todo `muestra`.
+ * posiciones del mapa no cambian. Dónde va cada pieza y sus círculos sólidos
+ * están en `compact.ts` (T50: se mueven con el mundo compacto). Unidades de
+ * escena. Todo `muestra`.
  */
-
-export type DecorKind = 'castillo' | 'explanada' | 'cueva';
 
 export interface DecorBuild extends IslandBuild {
   /** Círculos sólidos, respecto al centro. */
   solids: { dx: number; dz: number; r: number }[];
-}
-
-export interface DecorSpot {
-  kind: DecorKind;
-  /** Centro (unidades de escena). */
-  x: number;
-  z: number;
-}
-
-/**
- * Dónde va cada pieza: el castillo al oeste y la Explanada al este de la
- * salida del puerto (se ven al zarpar y en el mapa, sin tapar la bocana ni
- * ningún lugar), y el islote al oeste del punto de la cueva, con la boca
- * hacia él.
- */
-export function decorSpots(
-  spawn: { x: number; z: number },
-  cave: { x: number; z: number } | null,
-): DecorSpot[] {
-  const out: DecorSpot[] = [
-    { kind: 'castillo', x: spawn.x - 26, z: spawn.z - 35 },
-    { kind: 'explanada', x: spawn.x + 30, z: spawn.z - 32 },
-  ];
-  if (cave) out.push({ kind: 'cueva', x: cave.x - 4.2, z: cave.z });
-  return out;
 }
 
 /** El mosaico de olas de la Explanada (rojo, crema y negro), en canvas. */
@@ -87,7 +63,7 @@ function mosaicTexture(): CanvasTexture {
 
 /** El castillo de Santa Bárbara en el monte Benacantil, ahora isla. */
 function castillo(rnd: () => number): DecorBuild {
-  const R = 13;
+  const R = DECOR_SIZE.castillo;
   const parts = newParts();
   const k = parts.lit;
   const h = terrain(k, R, rocky(1.4), rnd, 24);
@@ -127,13 +103,13 @@ function castillo(rnd: () => number): DecorBuild {
     const a = Math.PI + (i / 5) * Math.PI * 0.9;
     pine(k, Math.cos(a) * 7.5, 4 + rnd() * 2, Math.sin(a) * 6.5 - 1.5, 2.2 + rnd());
   }
-  return { parts, animated: [], heightAt: h, labelY: cy + 4, solids: [{ dx: 0, dz: 0, r: R }] };
+  return { parts, animated: [], heightAt: h, labelY: cy + 4, solids: [...DECOR_SOLIDS.castillo] };
 }
 
 /** La Explanada: el paseo de las palmeras y el mosaico de olas, como isla alargada. */
 function explanada(rnd: () => number): DecorBuild {
-  const L = 17;
-  const W = 6.5;
+  const L = DECOR_SIZE.explanadaL;
+  const W = DECOR_SIZE.explanadaW;
   const parts = newParts();
   const k = parts.lit;
   // Isla alargada: el terreno de siempre, estirado en x.
@@ -165,14 +141,12 @@ function explanada(rnd: () => number): DecorBuild {
     house(k, x, top, -1.8 - rnd() * 0.6, 1.9 + rnd() * 0.4, 2, hh, (rnd() - 0.5) * 0.08, rnd);
     if (rnd() > 0.6) parts.glows.add([x, top + hh * 0.6, -0.7], C.bulb, 1.2);
   }
-  const solids: { dx: number; dz: number; r: number }[] = [];
-  for (let i = -2; i <= 2; i++) solids.push({ dx: i * (L / 3), dz: 0, r: W * 0.95 });
-  return { parts, animated: [walk], heightAt, labelY: 6, solids };
+  return { parts, animated: [walk], heightAt, labelY: 6, solids: [...DECOR_SOLIDS.explanada] };
 }
 
 /** El islote de la cueva del secreto (en el 2D, un hueco en el acantilado oeste). */
 function cueva(rnd: () => number): DecorBuild {
-  const R = 3.6;
+  const R = DECOR_SIZE.cueva;
   const parts = newParts();
   const k = parts.lit;
   const h = terrain(k, R, rocky(3.2), rnd, 16);
@@ -183,7 +157,7 @@ function cueva(rnd: () => number): DecorBuild {
     r: [0, -Math.PI / 2, 0],
     s: [0.6, 1.1, 1],
   });
-  return { parts, animated: [], heightAt: h, labelY: 5, solids: [{ dx: 0, dz: 0, r: R * 0.9 }] };
+  return { parts, animated: [], heightAt: h, labelY: 5, solids: [...DECOR_SOLIDS.cueva] };
 }
 
 export function buildDecor(kind: DecorKind): DecorBuild {

@@ -8,13 +8,16 @@ import type { Rect } from '@boia/world';
  */
 
 /**
- * Agua de más alrededor del mapa compartido antes de dar la vuelta (u): sin
- * ella, quien sale del puerto hacia el sur aparecería de golpe junto a la
- * última isla. Las posiciones del mapa no cambian (REQ-MUN-035). muestra
+ * Agua de más alrededor de lo que hay en el mar antes de dar la vuelta (u).
+ * T50: los límites ya se ajustan a lo que ocupa el mar (`contentBounds` en
+ * `compact.ts`) y el margen es corto: lo justo para que dos cosas de lados
+ * opuestos no se toquen al dar la vuelta. Así la última isla queda a un
+ * paso del puerto (la ruta de boyas cierra por ahí). Las posiciones del
+ * mapa compartido no cambian (REQ-MUN-035). muestra
  */
-export const PLANET_MARGIN = { side: 300, top: 300, bottom: 600 } as const;
+export const PLANET_MARGIN = { side: 150, top: 150, bottom: 150 } as const;
 
-/** El periodo del planeta: el mapa (ya a escala del mar 3D) con su margen. */
+/** El periodo del planeta: lo que hay (ya a escala del mar 3D) con su margen. */
 export function planetRect(bounds: Rect): Rect {
   return {
     left: bounds.left - PLANET_MARGIN.side,
