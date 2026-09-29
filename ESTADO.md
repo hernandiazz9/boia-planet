@@ -4,6 +4,46 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 002 T30: última pasada de la demo y preparación del despliegue
+
+La versión de prueba entera, repasada de punta a punta en móvil, y lo que Hernán necesita para desplegarla él mismo en Vercel. No se ha desplegado nada.
+
+Qué existe:
+- Despliegue sin variables de entorno: `pnpm build` pasa con el entorno vacío; la analítica queda apagada sin `NEXT_PUBLIC_POSTHOG_KEY` (los eventos sólo se apuntan en `window.__boiaAnalytics`); el arte sale del repo por `/api/art` (D-16) también en producción: `next.config.ts` ya metía `art/**` en la traza de la función (`outputFileTracingIncludes`, 23 MB, ningún archivo pasa de 1,6 MB) y ahora la respuesta lleva `s-maxage=86400` para que la CDN de Vercel la guarde y la función no se invoque por cada sprite. Los `.glb` de `/mar` salen por el mismo camino. Sin `vercel.json`: bastan los ajustes del proyecto (Root Directory `apps/web`, archivos de fuera incluidos, Node 24, sin variables).
+- `README.md` (nuevo): el repo en local y la sección «Desplegar la versión de prueba» (ajustes del proyecto en Vercel, `git push` o `vercel` / `vercel --prod` desde la raíz, y cómo comprobar el despliegue).
+- e2e `apps/web/e2e/despliegue.spec.ts`: la traza de `/api/art` contiene todo `art/` (con los dos mundos, la entrada y el barco), `/api/art` sirve cada manifiesto e imagen esencial con su tipo y `s-maxage` y rechaza rutas fuera de `art/`, y sin clave de PostHog no sale ninguna petición de analítica.
+- Grabación: `apps/web/e2e/record-demo.spec.ts` (sólo con `RECORD_DEMO=1`) → `docs/informes/img/p002-t30-demo-movil.webm`, el recorrido completo en móvil (360×640) sobre el main actual (con `/mar`).
+
+### Guía de la demo (en el móvil, en este orden)
+
+Abrir la URL de producción (o `pnpm demo` y la URL de la Wi-Fi que imprime). Todo es `muestra`; lo que se hace se guarda en ese navegador.
+1. **Entrada**: el mini-mundo con las letras 3D «BOIA»; tocar «Zarpar». Aterriza en la bocana y aparece la landing.
+2. **Landing**: «Tickets» abre «Elige tu evento» (el All Day, compra de prueba). «Explorar el universo»: la landing se aparta, la cámara se aleja y empieza `/juego` con el barco en el puerto (El Varadero). «Navegar en 3D» lleva a `/mar`, la vista 3D nueva (fuera del plan 002).
+3. **Navegar**: el dedo en el mar es el joystick; el minimapa arriba; la primera boia está delante.
+4. **La Boia Fiestera**: rumbo norte hasta su remanso; sube a bordo (aviso). Llevarla a su isla (la última, al norte) esquivando los cocodrilos: celebración y premio.
+5. **Isla de evento** (el escenario del All Day): se abre su panel; «Comprar entrada» → confirmar (sandbox, rotulado) → «Mi Carnet»: crear el carnet con un apodo y ver el sello.
+6. **Una botella**: en Mi Carnet, «Echar una botella», escribir (140 caracteres) y echarla; aparece junto al barco y se lee al tocarla. Sólo la ve su autor en esta versión (D-20).
+7. **Un minijuego**: acercarse al Faro (Vigilancia del faro) o al Cañón (Cañón contra tiburones) y jugar hasta el final; «Volver al mar».
+8. **Cambiar de mundo**: Menú (ancla) → Mundos → Acuarela; cambian islas, mar y barco sin recargar, y lo descubierto se conserva.
+9. **Admin**: Menú → «Probar admin» → Eventos → nuevo evento en la isla de evento, estado «A la venta» → Guardar. Volver al juego y navegar a esa isla: el panel enseña el evento nuevo. «Volver a la muestra» deshace los cambios.
+10. **Para curiosear**: náufrago con código de descuento, cofres, delfín, remolino, el circuito de El Freu, Puerto de Fotos, la tienda y los descuentos escondidos; logros, puntos y monedas en el Menú.
+Para empezar de cero: borrar los datos del sitio en el navegador.
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint && pnpm build   # con el entorno vacío (env -i PATH HOME USER): exit 0; 60 archivos, 585 pruebas; landing 173,9 kB de 192 kB
+E2E_PORT=3163 pnpm e2e --workers=2                       # exit 0; 93 pasadas, 19 omitidas (6,7 min)
+RECORD_DEMO=1 E2E_PORT=3171 pnpm e2e record-demo.spec.ts --project=mobile --workers=1   # exit 0; 1 pasada (1,9 min), vídeo de 58 s, 1,3 MB
+```
+
+Desviaciones:
+- `apps/web/e2e/*.spec.ts` nuevas: son las pruebas del despliegue y la grabación que pide el encargo (apps/web/** está en el alcance).
+- Las pruebas de `packages/db` necesitan el PostgreSQL 17 local (D-17), que no estaba arrancado; se arrancó con `LC_ALL=en_US.UTF-8 pg_ctl -D /opt/homebrew/var/postgresql@17 start` (sin `LC_ALL` no arranca: «postmaster became multithreaded») y se paró al terminar.
+
+Sin probar:
+- Un despliegue real en Vercel (no se despliega en los encargos): que la función encuentre `art/` desde `apps/web` como en local, y las cabeceras de la CDN.
+- iOS Safari real y móviles lentos.
+
 ## 2026-09-29 — plan 003 T32: decisión D-22 y borrador del catálogo de logros
 
 Sólo documentos; no se toca código.
