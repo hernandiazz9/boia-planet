@@ -13,14 +13,22 @@ import {
 import { mergePlacePatch, mergeSkinPatch, rankFor, resolveEntities } from './content';
 import { StoreError } from './errors';
 import { isStableKey, ledgerId, newId, rewardKey } from './ids';
-import { activeEntries, checkAppend, deriveBalances, replayLedger } from './ledger';
+import {
+  activeEntries,
+  checkAppend,
+  compensatedIds,
+  deriveBalances,
+  replayLedger,
+} from './ledger';
 import { MIGRATIONS, migrate, type Migration } from './migrations';
 import type {
   AchievementProgress,
+  AchievementReward,
   AchievementView,
   AdminApi,
   AdminBottleView,
   AdminOptions,
+  BadgeView,
   BoiaRepository,
   BottleApi,
   BottleInput,
@@ -29,6 +37,7 @@ import type {
   CarnetInput,
   CarnetView,
   ChangeArea,
+  ClaimResult,
   ContentApi,
   FoundDiscount,
   GrantResult,
@@ -37,6 +46,7 @@ import type {
   ProgressApi,
   PurchaseApi,
   RepositoryChange,
+  ShipUnlock,
   StampView,
 } from './repository';
 import { parseSample, type SampleData, type SampleInput } from './sample';
@@ -53,6 +63,7 @@ import {
   placePatchSchema,
   sanitizeDoc,
   skinPatchSchema,
+  type AchievementDefinition,
   type AreaItem,
   type AuditEntry,
   type Bottle,
@@ -435,6 +446,80 @@ class LocalRepository implements BoiaRepository {
     }));
   }
 
+  // -------------------------------------------------------------------------
+  // Logros que se reclaman (T36, D-22 punto 5)
+
+  /** Premio de un logro según su definición y el catálogo de cosméticos. */
+  private rewardOf(def: AchievementDefinition, doc: StoreDoc = this.doc): AchievementReward {
+    const cosmetic = def.cosmeticKey
+      ? this.resolved('cosmetics', doc).find((c) => c.id === def.cosmeticKey)
+      : undefined;
+    const shipStyle = cosmetic?.slot === 'ship' ? (cosmetic.assetKey ?? cosmetic.id) : null;
+    return {
+      kind: def.badgeKey ? 'badge' : shipStyle ? 'ship' : def.cosmeticKey ? 'cosmetic' : 'coins',
+      points: def.points,
+      coins: def.coins,
+      badgeKey: def.badgeKey ?? null,
+      cosmeticKey: def.cosmeticKey ?? null,
+      shipStyle,
+    };
+  }
+
+  /** La fila del libro de un logro de esta cuenta (vigente o compensada). */
+  private achievementEntry(doc: StoreDoc, userId: string, id: string): LedgerEntry | undefined {
+    const txId = ledgerId('achievement', id);
+    return doc.ledger.find((e) => e.id === txId && e.userId === userId);
+  }
+
+  private achievementView(
+    def: AchievementDefinition,
+    doc: StoreDoc,
+    userId: string | null,
+    revoked: ReadonlySet<string> = compensatedIds(doc.ledger),
+  ): AchievementProgress {
+    const entry = userId ? this.achievementEntry(doc, userId, def.id) : undefined;
+    const completion = userId ? doc.players[userId]?.achievements[def.id] : undefined;
+    const claimed = !!entry && !revoked.has(entry.id);
+    // Una fila compensada por el Admin (REQ-ADM-028) no vuelve a estar lista.
+    const state = claimed ? 'claimed' : !entry && completion ? 'ready' : 'in_progress';
+    const obtained = state !== 'in_progress';
+    const hidden = def.secret && !obtained;
+    const definition = clone(def);
+    if (hidden) {
+      definition.title = '???';
+      delete definition.description;
+      delete definition.iconKey;
+    }
+    return {
+      definition,
+      state,
+      hidden,
+      obtained,
+      obtainedAt: obtained ? (completion?.completedAt ?? entry?.createdAt ?? null) : null,
+      claimedAt: claimed && entry ? entry.createdAt : null,
+      reward: this.rewardOf(def, doc),
+    };
+  }
+
+  private badgeViews(doc: StoreDoc, userId: string): BadgeView[] {
+    const defs = this.resolved('achievements', doc);
+    return activeEntries(doc.ledger, userId, 'achievement').flatMap((e) => {
+      const def = defs.find((d) => d.id === e.achievementId);
+      const stored = e.metadata.badge;
+      const key = typeof stored === 'string' ? stored : def?.badgeKey;
+      if (!key) return [];
+      return [
+        {
+          key,
+          achievementId: e.achievementId ?? '',
+          title: def?.title ?? key,
+          iconKey: def?.iconKey ?? null,
+          claimedAt: e.createdAt,
+        },
+      ];
+    });
+  }
+
   private carnetView(userId: string, doc: StoreDoc = this.doc): CarnetView | null {
     const me = doc.identity?.id ?? null;
     const ranks = this.resolved('ranks', doc);
@@ -474,6 +559,7 @@ class LocalRepository implements BoiaRepository {
         points,
         rank: rankFor(points, ranks),
         achievements,
+        badges: this.badgeViews(doc, userId),
         stamps: this.stampViews(doc, userId),
         cosmeticIds: activeEntries(doc.ledger, userId, 'cosmetic').map((e) => e.cosmeticKey ?? ''),
         equipped: { ...(doc.players[userId]?.equipped ?? {}) },
@@ -507,6 +593,20 @@ class LocalRepository implements BoiaRepository {
                 description: d.description ?? null,
                 iconKey: d.iconKey ?? null,
                 obtainedAt: crew.memberSince,
+              },
+            ]
+          : [];
+      }),
+      badges: crew.showcase.achievementIds.flatMap((id) => {
+        const d = defs.find((x) => x.id === id);
+        return d?.badgeKey
+          ? [
+              {
+                key: d.badgeKey,
+                achievementId: id,
+                title: d.title,
+                iconKey: d.iconKey ?? null,
+                claimedAt: null,
               },
             ]
           : [];
@@ -724,61 +824,122 @@ class LocalRepository implements BoiaRepository {
           );
         });
       },
-      grantAchievement: async (achievementId, metadata = {}) =>
-        grant((d, me) => {
+      completeAchievement: async (achievementId, metadata = {}) => {
+        if (!jsonValue.safeParse(metadata).success) invalid('logro: metadata JSON');
+        return this.mutate(['identity', 'progress'], (d, skip) => {
+          const had = d.identity !== null;
+          const me = this.ensureIdentity(d);
           const def = this.resolved('achievements', d).find((a) => a.id === achievementId);
           if (!def) throw new StoreError('not_found', `logro ${achievementId}`);
+          const p = this.player(d, me.id);
+          if (p.achievements[def.id] || this.achievementEntry(d, me.id, def.id)) {
+            if (had) skip();
+            return { completed: false, achievement: this.achievementView(def, d, me.id) };
+          }
           const t = this.now().getTime();
           const inWindow =
             (!def.startsAt || t >= new Date(def.startsAt).getTime()) &&
             (!def.endsAt || t < new Date(def.endsAt).getTime());
-          const id = ledgerId('achievement', def.id);
-          const existing = d.ledger.find((e) => e.id === id);
-          if (existing) return { granted: false, reason: 'duplicate', entry: clone(existing) };
           if (!def.active || !inWindow)
             throw new StoreError('forbidden', `logro inactivo: ${def.id}`);
+          p.achievements[def.id] = {
+            completedAt: this.iso(),
+            version: def.version,
+            worldId: this.activeWorld(d),
+            metadata: clone(metadata),
+          };
+          return { completed: true, achievement: this.achievementView(def, d, me.id) };
+        });
+      },
+      claimAchievement: async (achievementId) =>
+        this.mutate(['identity', 'progress'], (d, skip): ClaimResult => {
+          const had = d.identity !== null;
+          const me = this.ensureIdentity(d);
+          const def = this.resolved('achievements', d).find((a) => a.id === achievementId);
+          if (!def) throw new StoreError('not_found', `logro ${achievementId}`);
+          const existing = this.achievementEntry(d, me.id, def.id);
+          const completion = d.players[me.id]?.achievements[def.id];
+          if (existing || !completion) {
+            if (had) skip();
+            return existing
+              ? { claimed: false, reason: 'duplicate', entry: clone(existing) }
+              : { claimed: false, reason: 'not_ready', entry: null };
+          }
+          // Completado es ganado: se reclama aunque el Admin lo desactive después.
+          const reward = this.rewardOf(def, d);
           const r = this.append(
             d,
             this.baseEntry(me.id, {
-              id,
+              id: ledgerId('achievement', def.id),
               kind: 'achievement',
               achievementId: def.id,
-              // La recompensa la fija la definición, no quien concede.
+              // La recompensa la fija la definición, no quien reclama.
               pointsDelta: def.points,
               coinsDelta: def.coins,
               seasonId: def.scope === 'season' ? (def.seasonId ?? null) : this.activeWorld(d),
               sourceRef: `achievement:${def.id}@${def.version}`,
-              metadata: { ...metadata, version: def.version },
+              metadata: {
+                version: def.version,
+                completedAt: completion.completedAt,
+                reward: reward.kind,
+                ...(reward.badgeKey ? { badge: reward.badgeKey } : {}),
+              },
             }),
           );
-          if (r.granted && def.cosmeticKey) {
-            this.append(
-              d,
-              this.baseEntry(me.id, {
-                id: ledgerId('cosmetic', def.cosmeticKey),
-                kind: 'cosmetic',
-                cosmeticKey: def.cosmeticKey,
-                sourceRef: `achievement:${def.id}`,
-              }),
-            );
+          if (!r.granted) {
+            if (had) skip();
+            return { claimed: false, reason: 'duplicate', entry: r.entry };
           }
-          return r;
+          let cosmetic: LedgerEntry | null = null;
+          if (def.cosmeticKey) {
+            const key = def.cosmeticKey;
+            const owned = activeEntries(d.ledger, me.id, 'cosmetic').some(
+              (e) => e.cosmeticKey === key,
+            );
+            if (!owned) {
+              const c = this.append(
+                d,
+                this.baseEntry(me.id, {
+                  id: ledgerId('cosmetic', key),
+                  kind: 'cosmetic',
+                  cosmeticKey: key,
+                  sourceRef: `achievement:${def.id}`,
+                }),
+              );
+              if (c.granted) cosmetic = c.entry;
+            }
+          }
+          return { claimed: true, entry: r.entry, reward, cosmetic };
         }),
       achievements: async () => {
         const id = myId();
-        const got = new Map(
-          (id ? activeEntries(this.doc.ledger, id, 'achievement') : []).map((e) => [
-            e.achievementId,
-            e.createdAt,
-          ]),
+        const revoked = compensatedIds(this.doc.ledger);
+        return this.resolved('achievements').map((def) =>
+          this.achievementView(def, this.doc, id, revoked),
         );
-        return this.resolved('achievements')
-          .filter((def) => !def.secret || got.has(def.id))
-          .map((def): AchievementProgress => ({
-            definition: clone(def),
-            obtained: got.has(def.id),
-            obtainedAt: got.get(def.id) ?? null,
-          }));
+      },
+      badges: async () => {
+        const id = myId();
+        return id ? this.badgeViews(this.doc, id) : [];
+      },
+      ships: async () => {
+        const id = myId();
+        const owned = new Set(
+          (id ? activeEntries(this.doc.ledger, id, 'cosmetic') : []).map((e) => e.cosmeticKey),
+        );
+        const defs = this.resolved('achievements');
+        return this.resolved('cosmetics')
+          .filter((c) => c.slot === 'ship' && c.active)
+          .map(
+            (c): ShipUnlock => ({
+              style: c.assetKey ?? c.id,
+              cosmeticId: c.id,
+              name: c.name,
+              owned: owned.has(c.id),
+              achievementId: defs.find((a) => a.cosmeticKey === c.id)?.id ?? null,
+              priceCoins: c.priceCoins,
+            }),
+          );
       },
       buyCosmetic: async (cosmeticId) =>
         grant((d, me) => {

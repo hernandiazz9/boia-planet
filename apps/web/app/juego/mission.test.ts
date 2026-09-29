@@ -93,17 +93,24 @@ describe('la misión de la Fiestera, guardada', () => {
     expect((await v2.sail(near, 2)).events).toEqual([]);
     expect(v2.passenger()).toBe(true);
 
-    // Entrega: logro y premio grande, una vez.
+    // Entrega: logro (listo para reclamar) y premio grande, una vez.
     const before = await v2.repo.progress.balances();
     const d = await v2.sail(dest.center, 2);
     expect(d.events.map((e) => e.type)).toEqual(['delivered', 'landed']);
     expect(d.notices.map((n) => n.kind).sort()).toEqual(['achievement', 'reward']);
     const after = await v2.repo.progress.balances();
     const deliverDef = (await v2.repo.content.list('achievements')).find(
-      (x) => x.trigger === 'deliver_character',
+      (x) =>
+        x.trigger === 'deliver_character' &&
+        (x.triggerParams as Record<string, unknown>).character === spec.character,
     )!;
-    expect(after.points - before.points).toBe(dest.reward.points + deliverDef.points);
-    expect(after.coins - before.coins).toBe(dest.reward.coins + deliverDef.coins);
+    // El premio del logro llega al reclamarlo (D-22); aquí sólo el de la misión.
+    expect(after.points - before.points).toBe(dest.reward.points);
+    expect(after.coins - before.coins).toBe(dest.reward.coins);
+    const deliverState = (await v2.repo.progress.achievements()).find(
+      (a) => a.definition.id === deliverDef.id,
+    )?.state;
+    expect(deliverState).toBe('ready');
     expect(await v2.repo.progress.mission(spec.missionId)).toMatchObject({ step: 'delivered' });
 
     // Otra visita: entregada, se queda en su isla y el premio no vuelve.

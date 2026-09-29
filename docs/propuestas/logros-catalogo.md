@@ -1,22 +1,25 @@
-# Catálogo de logros · borrador — pendiente de Hernán
+# Catálogo de logros · aprobado por Hernán
 
 - Fecha: 2026-09-29
 - Pide: Hernán (D-22, punto 5)
-- Estado: **borrador — pendiente de Hernán**. Cuando lo apruebe (o lo
-  corrija), T36 del plan 003 lo implementa. Todo es `muestra` hasta el visto
+- Estado: **aprobado por Hernán el 2026-09-29, con cambios** (abajo, «Cambios
+  de Hernán al borrador»). Lo implementa T36 del plan 003
+  (`packages/store/src/sample/progress.ts`). Todo es `muestra` hasta el visto
   bueno de Álvaro (P14).
-- Sustituye a: los 10 logros de muestra de
-  `packages/store/src/sample/progress.ts` (ver «Qué pasa con los 10 de hoy»).
+- Sustituye a: los 10 logros de muestra de antes (ver «Qué pasa con los 10
+  de antes»).
 
 ## Cómo funciona
 
 Cada logro pasa por tres estados, igual en `/mar` y en `/juego`:
 
-1. **En curso**: se ve lo que lleva y lo que pide («3 de 7») y una frase
-   «te queda…».
-2. **Listo para reclamar**: al cumplirse, sale el aviso «¡Logro completado!
-   Reclama tu premio» y el icono de logros lleva un contador.
-3. **Reclamado**: el premio llega sólo al pulsar «Reclamar», una sola vez.
+1. **En curso** (`in_progress`): se ve lo que lleva y lo que pide («3 de 7»)
+   y una frase «te queda…».
+2. **Listo para reclamar** (`ready`): al cumplirse, sale el aviso «¡Logro
+   completado! Reclama tu premio» y el icono de logros lleva un contador.
+   Completar no da nada todavía.
+3. **Reclamado** (`claimed`): el premio llega sólo al pulsar «Reclamar», una
+   sola vez (el libro guarda la fila del logro con un id fijo por logro).
 
 Arriba del panel, un contador «X de Y logros». Los **ocultos** cuentan en
 Y, pero se ven como «???» hasta completarlos.
@@ -29,47 +32,89 @@ Y, pero se ven como «???» hasta completarlos.
   10–20.
 - **Premio especial en lugar de monedas** en tres casos:
   - **Insignia del Carnet** por comprar entradas (se ve en Mi Carnet).
-  - **Barco de estilo** para los logros complejos: queda bloqueado en Mi
-    Barco hasta reclamarlo. Son 5 de los 8 estilos de `art/barco/estilos/`;
-    Arcilla, Acuarela y Semi-realista siguen libres.
+  - **Barco de estilo** para tres logros complejos: queda bloqueado en Mi
+    Barco hasta reclamarlo. Son Cel-shaded cómic, Boceto a lápiz y Pixel art.
   - **Cosmético del barco** (bandera o estela) para algunos.
-- Con todo reclamado se suman 1320 pts y 160 monedas (el rango más alto de
+- Barcos: Arcilla y Acuarela son libres; Cel-shaded cómic, Boceto a lápiz y
+  Pixel art se ganan con un logro; Semi-realista, Cartoon años 30 y Low-poly
+  se venderán por monedas en la tienda del plan 004 (hasta entonces se
+  eligen libremente, como hoy).
+- Con todo reclamado se suman 1380 pts y 205 monedas (el rango más alto de
   muestra, «Capitana de la fiesta», pide 600 pts).
 
-## Catálogo (23 logros)
+## Catálogo (25 logros)
 
-«Señal» es lo que el juego ya envía (`apps/web/app/juego/achievements.ts`,
-tipo `AchievementSignal`) o lo que habría que añadir (**NUEVO**).
+«Señal» es lo que el juego envía (`apps/web/app/juego/achievements.ts`,
+tipo `AchievementSignal`). Las marcadas **T36** son nuevas: existen en la
+demo del navegador y faltan en el enum de Supabase.
 
 | # | id | Nombre | Qué hay que hacer | Meta · «te queda» | Señal | Premio |
 |---|---|---|---|---|---|---|
 | 1 | `primera-boia` | Primera boia | Habla con tu primera boia. | 1 · «Te falta 1 boia» | `find_buoy` (el mapa la llama `find_boia`) | 10 pts + 5 monedas |
-| 2 | `boies-3` | Coro de boies | Habla con 3 boies distintas. | 3 · «Te quedan 2 boies» | `find_buoy`; **NUEVO en el mapa**: disparador en la boia de WhatsApp y una tercera boia | 30 pts + 10 monedas |
+| 2 | `boies-3` | Coro de boies | Habla con 3 boies distintas. | 3 · «Te quedan 2 boies» | `find_buoy`; se podrá completar cuando el plan 004 ponga sus boies en el mapa | 30 pts + 10 monedas |
 | 3 | `islas-3` | Isla a isla | Descubre 3 islas. | 3 · «Te quedan 2 islas» | `visit_island` | 30 pts + 10 monedas |
-| 4 | `islas-7` | Cartógrafa | Descubre todas las islas del mapa. | 7 · «Te quedan 4 islas» | `visit_island` | 80 pts + barco **Cartoon años 30** |
+| 4 | `islas-7` | Cartógrafa | Descubre todas las islas del mapa. | 7 · «Te quedan 4 islas» | `visit_island` | 80 pts + 20 monedas |
 | 5 | `fiestera-rescatada` | Boia Fiestera rescatada | Saca a la Boia Fiestera de entre los cocodrilos. | 1 · «Búscala entre los cocodrilos» | `rescue_character` (`boia-fiestera`) | 50 pts + 20 monedas |
 | 6 | `fiestera-entregada` | Hasta el amanecer | Lleva a la Boia Fiestera a la última isla. | 1 · «Llévala a la última isla» | `deliver_character` (`boia-fiestera`) | 150 pts + **Bandera de la Fiestera** |
-| 7 | `circuito` | Por El Freu | Termina una vuelta al circuito. | 1 · «Termina una vuelta» | `complete_circuit` (lo concede `finishLap`, en `circuit-hud.tsx`) | 40 pts + 15 monedas |
-| 8 | `circuito-atajo` | ¿Atajo? Atajo. *(oculto)* | Termina una vuelta por el atajo. | 1 · «???» | `complete_circuit` + **NUEVO** dato de la vuelta: por qué rama pasó (checkpoint `circuito-cp-a`) | 40 pts + **Bandera a cuadros** (cosmético nuevo) |
-| 9 | `circuito-rapido` | Rayo del Freu | Haz una vuelta en menos de 45 s (muestra). | 45 s · «Tu récord: 52 s, te sobran 7 s» | `complete_circuit` + **NUEVO** parámetro `maxMs` (`finishLap` ya tiene los ms) | 100 pts + barco **Low-poly** |
-| 10 | `faro` | Vigía del faro | Gana Vigilancia del faro. | 1 · «Gana una partida en el Faro» | **NUEVO** `win_minigame` (`faro`); hoy sólo hay premio `minigame:faro` en el libro | 40 pts + 15 monedas |
-| 11 | `canon` | Ni un tiburón | Gana Cañón contra tiburones. | 1 · «Gana una partida en el Cañón» | **NUEVO** `win_minigame` (`canon`) | 40 pts + 15 monedas |
-| 12 | `guardacostas` | Guardacostas | Gana los dos minijuegos. | 2 · «Te queda 1 minijuego» | **NUEVO** `win_minigame`, contando juegos distintos | 100 pts + barco **Cel-shaded cómic** |
+| 7 | `circuito` | Por El Freu | Termina una vuelta al circuito. | 1 · «Termina una vuelta» | `complete_circuit` (`finishLap`, en `circuit-hud.tsx`) | 40 pts + 15 monedas |
+| 8 | `circuito-atajo` | ¿Atajo? Atajo. *(oculto)* | Termina una vuelta por el atajo. | 1 · «???» | `complete_circuit` con la ruta de la vuelta (`via`: arco `circuito-cp-a`) | 40 pts + **Bandera a cuadros** |
+| 9 | `circuito-rapido` | Rayo del Freu | Haz una vuelta en menos de 43,6 s. | 43,6 s · «Tu récord: 52 s, te sobran 8,4 s» | `complete_circuit` con el tiempo (`maxMs` 43 600) | 100 pts + **Estela de rayo** |
+| 10 | `faro` | Vigía del faro | Gana Vigilancia del faro. | 1 · «Gana una partida en el Faro» | **T36** `win_minigame` (`faro`) | 40 pts + 15 monedas |
+| 11 | `canon` | Ni un tiburón | Gana Cañón contra tiburones. | 1 · «Gana una partida en el Cañón» | **T36** `win_minigame` (`canon`) | 40 pts + 15 monedas |
+| 12 | `guardacostas` | Guardacostas | Gana los dos minijuegos. | 2 · «Te queda 1 minijuego» | **T36** `win_minigame`, juegos distintos | 100 pts + barco **Cel-shaded cómic** |
 | 13 | `secretos` | Ojo de marinera *(oculto)* | Encuentra los 4 secretos del mapa. | 4 · «Te quedan 3 secretos» | `collect_objects` (`secreto`) | 80 pts + barco **Boceto a lápiz** |
-| 14 | `delfin` | Amiga del delfín *(oculto)* | Sigue al delfín hasta el final de sus saltos. | 1 · «???» | **NUEVO** `complete_encounter` (`delfin`); hoy `encounters.ts` sólo da monedas | 30 pts + **Estela de burbujas** (cosmético nuevo) |
-| 15 | `botellas-3` | Correo del mar | Lee 3 botellas. | 3 · «Te quedan 2 botellas» | **NUEVO** `read_bottle` (al leer en `bottle-sheet.tsx`, botellas distintas) | 20 pts + 10 monedas |
-| 16 | `carnet` | Con Carnet | Crea tu Carnet BOIA. | 1 · «Crea tu Carnet» | **NUEVO** `create_carnet` (`carnet-editor.tsx`) | 20 pts + 10 monedas |
-| 17 | `carnet-preguntas` | Libro abierto | Responde las 5 preguntas del Carnet. | 5 · «Te quedan 3 preguntas» | **NUEVO** `answer_question` (respuestas del Carnet) | 40 pts + 20 monedas |
-| 18 | `minutos-5` | Cinco minutos a bordo | Navega 5 minutos. | 5 · «Te quedan 2 minutos» | `time_played` | 10 pts + 5 monedas |
-| 19 | `minutos-20` | Veinte minutos a bordo | Navega 20 minutos. | 20 · «Te quedan 12 minutos» | `time_played` | 30 pts + 10 monedas |
-| 20 | `minutos-60` | Lobo de mar | Navega una hora (en varias visitas). | 60 · «Te quedan 40 minutos» | `time_played` | 100 pts + barco **Pixel art** |
-| 21 | `entrada` | Con entrada | Compra una entrada para un evento de BOIA. | 1 · «Compra tu primera entrada» | `buy_ticket` (lo concede `sandbox.ts`) | 100 pts + insignia **Con entrada** |
-| 22 | `entradas-3` | Fiel a BOIA | Ten entradas de 3 eventos distintos. | 3 · «Te quedan 2 eventos» | `buy_ticket` + **NUEVO** dato: sellos de eventos distintos | 150 pts + insignia **Fiel a BOIA** |
-| 23 | `mundos-2` | Entre dos mundos | Navega en Arcilla y en Acuarela. | 2 · «Te queda 1 mundo» | **NUEVO** `visit_world` (al cambiar de mundo, mundos distintos) | 30 pts + 15 monedas |
+| 14 | `delfin` | Amiga del delfín *(oculto)* | Sigue al delfín hasta el final de sus saltos. | 1 · «???» | **T36** `complete_encounter` (`delfin`) | 30 pts + **Estela de burbujas** |
+| 15 | `botellas-3` | Correo del mar | Lee 3 botellas. | 3 · «Te quedan 2 botellas» | **T36** `read_bottle` (botellas de otros, distintas; sólo `/juego`) | 20 pts + 10 monedas |
+| 16 | `botella-propia` | Mensaje al mar | Echa tu propia botella. | 1 · «Echa tu botella» | **T36** `throw_bottle` (sólo `/juego`) | 10 pts + 5 monedas |
+| 17 | `carnet` | Con Carnet | Crea tu Carnet BOIA. | 1 · «Crea tu Carnet» | **T36** `create_carnet` | 20 pts + 10 monedas |
+| 18 | `carnet-preguntas` | Libro abierto | Responde las 5 preguntas del Carnet. | 5 · «Te quedan 3 preguntas» | **T36** `answer_question` | 40 pts + 20 monedas |
+| 19 | `minutos-5` | Cinco minutos a bordo | Navega 5 minutos. | 5 · «Te quedan 2 minutos» | `time_played` | 10 pts + 5 monedas |
+| 20 | `minutos-20` | Veinte minutos a bordo | Navega 20 minutos. | 20 · «Te quedan 12 minutos» | `time_played` | 30 pts + 10 monedas |
+| 21 | `minutos-60` | Lobo de mar | Navega una hora (en varias visitas). | 60 · «Te quedan 40 minutos» | `time_played` | 100 pts + barco **Pixel art** |
+| 22 | `entrada` | Con entrada | Compra una entrada para un evento de BOIA. | 1 · «Compra tu primera entrada» | `buy_ticket` (el checkout de prueba, `sandbox.ts`) | 100 pts + insignia **Con entrada** |
+| 23 | `entradas-3` | Fiel a BOIA | Ten entradas de 3 eventos distintos. | 3 · «Te quedan 2 eventos» | `buy_ticket`, eventos distintos con sello | 150 pts + insignia **Fiel a BOIA** |
+| 24 | `mundos-2` | Entre dos mundos | Navega en Arcilla y en Acuarela. | 2 · «Te queda 1 mundo» | **T36** `visit_world` | 30 pts + 15 monedas |
+| 25 | `naufrago-fiesta` | Náufrago de fiesta | Lleva al náufrago a una fiesta de BOIA. | 1 · «Llévalo a una fiesta» | `deliver_character` (`naufrago`); se podrá completar cuando el náufrago tenga su misión | 50 pts + 20 monedas |
 
 Las cifras de «te queda» son ejemplos; el juego pone las de cada persona.
 
-## Qué pasa con los 10 de hoy
+## Cambios de Hernán al borrador (2026-09-29)
+
+- **Barcos mixtos.** Arcilla y Acuarela, libres. Sólo tres barcos son premio
+  de logro: `guardacostas` → Cel-shaded cómic, `secretos` → Boceto a lápiz y
+  `minutos-60` → Pixel art. Semi-realista, Cartoon años 30 y Low-poly irán a
+  la tienda del plan 004 (hasta entonces, libres). `islas-7` pasa a 80 pts +
+  20 monedas y `circuito-rapido` a 100 pts + Estela de rayo, en lugar de
+  barco.
+- **`boies-3` entra como estaba**, pero no se añaden boies al mapa: se podrá
+  completar cuando el plan 004 ponga las suyas.
+- **Dos logros más:** `botella-propia` (echar tu botella, señal nueva
+  `throw_bottle`) y `naufrago-fiesta` (llevar al náufrago a una fiesta, con
+  la señal que ya existe `deliver_character`: el náufrago hoy sólo deja su
+  código al arrimarse, así que se completará cuando tenga misión).
+- **Puntos abiertos, como recomendaba el borrador:** «Rayo del Freu» al 80 %
+  de una vuelta limpia medida con el barco base; quien ya tenía `entrada` o
+  `secretos` recibe también la insignia o el barco sin tocar sus saldos; el
+  castillo y la Explanada de `/mar` no cuentan como islas; las botellas
+  siguen sólo en `/juego`; los 3 ocultos, como estaban; el aviso dice
+  «Reclama tu premio».
+
+## Tiempo de «Rayo del Freu»
+
+Medido en T36 con el runtime del motor (`WorldRuntime` y `DEFAULT_SHIP_CONFIG`,
+el barco base), saliendo parado en «¡Ya!» y siguiendo el centro de los
+carriles hasta la meta, con los impulsos de los arcos:
+
+| Ruta | Vuelta limpia |
+|---|---|
+| Segura (`circuito-cp-s`) | 54,5 s |
+| Atajo (`circuito-cp-a`) | 51,3 s |
+
+«Rayo del Freu» pide el 80 % de la vuelta limpia por la ruta segura:
+**43,6 s** (`FAST_LAP_MS` en `sample/progress.ts`). Ni el atajo sin más
+llega: hace falta derrapar bien y aprovechar los impulsos.
+
+## Qué pasa con los 10 de antes
 
 - `primera-boia`, `islas-3`, `minutos-5`, `minutos-20`,
   `fiestera-rescatada` y `circuito`: se quedan igual.
@@ -82,52 +127,24 @@ Las cifras de «te queda» son ejemplos; el juego pone las de cada persona.
 - `secretos`: se queda, oculto; su premio pasa de 80 pts + 25 monedas a
   80 pts + barco Boceto a lápiz.
 
-Los logros ya concedidos antes de este cambio cuentan como reclamados y
-conservan sus puntos y monedas (T36).
+Migración (esquema v1 → v2 de `@boia/store`): los logros ya concedidos
+cuentan como completados y reclamados y conservan sus puntos y monedas (sus
+filas del libro no cambian). Quien tenía `secretos` recibe el barco Boceto a
+lápiz (fila de cosmético con 0 puntos y 0 monedas); quien tenía `entrada` ve
+la insignia «Con entrada», que sale de la definición.
 
-## Señales nuevas que harían falta
+## Señales
 
-Hoy existen `find_buoy`, `visit_island`, `collect_objects`, `time_played`,
+Ya existían `find_buoy`, `visit_island`, `collect_objects`, `time_played`,
 `rescue_character`, `deliver_character`, `complete_circuit` y `buy_ticket`.
-Para este catálogo habría que añadir:
+T36 añade (`ACHIEVEMENT_TRIGGERS_NEW` en `packages/contracts`):
 
-- `win_minigame` (id del juego): al ganar una partida de Faro o Cañón.
+- `win_minigame` (id del juego): al ganar una partida válida de Faro o Cañón.
 - `complete_encounter` (id del encuentro): al terminar el delfín.
-- `read_bottle`, `create_carnet`, `answer_question`, `visit_world`.
-- Datos nuevos en señales que ya existen: la rama y el tiempo máximo de la
-  vuelta (`complete_circuit`) y los eventos distintos con sello
-  (`buy_ticket`).
-- En el mapa compartido: el disparador de boia en la boia de WhatsApp y una
-  tercera boia (para `boies-3`).
+- `read_bottle`, `throw_bottle`, `create_carnet`, `answer_question`,
+  `visit_world`.
+- Datos nuevos en señales que ya existían: la ruta y el tiempo de la vuelta
+  (`complete_circuit`); `buy_ticket` cuenta los eventos distintos con sello.
 
-Cada señal nueva es un valor más de `ACHIEVEMENT_TRIGGERS`
-(`packages/contracts`) y, en la versión final, del enum de Supabase.
-
-## Puntos abiertos para Hernán
-
-1. **Barcos bloqueados.** Hoy los 8 estilos se eligen libremente en Mi
-   Barco. La propuesta bloquea 5 (Cartoon años 30, Low-poly, Cel-shaded
-   cómic, Boceto a lápiz y Pixel art) y deja libres Arcilla, Acuarela y
-   Semi-realista. ¿Te vale, o prefieres bloquear menos?
-2. **Boies.** `boies-3` pide poner una tercera boia en el mapa compartido.
-   Otra opción: quedarse con `primera-boia` y quitar el escalón.
-3. **Tiempo del «Rayo del Freu».** 45 s es un valor a ojo: nadie ha medido
-   todavía una vuelta con el barco base. Propuesta: medirlo en T36 y fijarlo
-   en un 80 % del tiempo de una vuelta limpia.
-4. **Islas de `/mar`.** El castillo y la Explanada son decorado de `/mar`,
-   sin disparador: no cuentan para «Cartógrafa» (7 islas en los dos
-   mundos). ¿Deben contar?
-5. **Botellas sólo en `/juego`.** `/mar` todavía no tiene botellas, así que
-   «Correo del mar» sólo avanza en `/juego`. ¿Se añaden botellas a `/mar`
-   o se acepta así?
-6. **Premio nuevo para quien ya lo tenía.** Quien ya consiguió `entrada` o
-   `secretos` con el premio viejo: ¿le damos también la insignia o el barco
-   al migrar (sin tocar sus saldos)? Propuesta: sí.
-7. **Ocultos.** Son 3 (`circuito-atajo`, `secretos`, `delfin`) y se ven
-   como «???» hasta completarlos. ¿Más, menos, o que `secretos` se vea en
-   cuanto encuentras el primero?
-8. **Candidatos que se quedaron fuera** para no pasar de ~20: aguantar 10 s
-   en el remolino, echar tu propia botella y llevar al náufrago a una
-   fiesta. ¿Entra alguno?
-9. **Texto del aviso.** «Reclama tu premio» (español de España); el plan
-   decía «Reclamá».
+En la versión final, cada señal nueva es también un valor del enum
+`achievement_trigger` de Supabase (migración pendiente).

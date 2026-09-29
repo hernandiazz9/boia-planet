@@ -73,7 +73,8 @@ export type RaceEvent =
   | { type: 'countdown'; goAt: number }
   | { type: 'go' }
   | { type: 'checkpoint'; order: number }
-  | { type: 'finish'; ms: number }
+  /** `route`: arcos que contaron en la vuelta, por id de objeto (la rama), si se dieron. */
+  | { type: 'finish'; ms: number; route: string[] }
   | { type: 'invalid'; reason: InvalidReason };
 
 /** Lo que el cronómetro enseña ahora. */
@@ -91,6 +92,7 @@ export class CircuitRace {
   private phase: RacePhase = 'idle';
   private goAt = 0;
   private next = 1;
+  private route: string[] = [];
 
   constructor(readonly spec: CircuitSpec) {}
 
@@ -124,22 +126,27 @@ export class CircuitRace {
     return [];
   }
 
-  /** El barco pasó por un arco (evento CHECKPOINT) en el instante `now` (s). */
-  checkpoint(order: number, now: number): RaceEvent[] {
+  /**
+   * El barco pasó por un arco (evento CHECKPOINT) en el instante `now` (s).
+   * Con `objectId`, la vuelta recuerda por qué arcos pasó (la rama del atajo).
+   */
+  checkpoint(order: number, now: number, objectId?: string): RaceEvent[] {
     const out = this.tick(now);
     if (order === 0) {
       if (this.phase !== 'idle') return out;
       this.phase = 'countdown';
       this.goAt = now + this.spec.countdown;
       this.next = 1;
+      this.route = [];
       out.push({ type: 'countdown', goAt: this.goAt });
       return out;
     }
     if (this.phase !== 'racing' || order !== this.next) return out;
+    if (objectId) this.route.push(objectId);
     if (order === this.spec.finishOrder) {
       const ms = Math.round((now - this.goAt) * 1000);
       this.phase = 'idle';
-      out.push({ type: 'finish', ms });
+      out.push({ type: 'finish', ms, route: [...this.route] });
       return out;
     }
     this.next++;

@@ -9,6 +9,7 @@ import {
 } from '@boia/contracts';
 import { type BoiaRepository, type CarnetView, isStoreError } from '@boia/store';
 import { type FormEvent, useId, useState } from 'react';
+import { emitSignal } from '../achievements';
 import { Avatar, DEFAULT_AVATAR, NEUTRAL_AVATARS, shrinkPhoto } from './avatar';
 
 /**
@@ -252,6 +253,14 @@ export async function saveCarnet(
     const next = (draft.answers[q.id] ?? '').trim();
     if (next === (old[q.id] ?? '')) continue;
     view = await repo.carnet.answer(q.id, next || null);
+  }
+  // Logros del Carnet (T36): tener Carnet y las preguntas contestadas.
+  void emitSignal(repo, { trigger: 'create_carnet' });
+  if (view.answers.length > 0) {
+    void emitSignal(repo, {
+      trigger: 'answer_question',
+      questionIds: view.answers.map((a) => a.questionId),
+    });
   }
   return view;
 }

@@ -1,5 +1,6 @@
 import { EVENT_STATE_BEHAVIOR } from '@boia/contracts';
 import type { BoiaRepository } from '@boia/store';
+import { completeBySignal } from '../../app/juego/achievements';
 import type {
   CheckoutEvent,
   CheckoutSession,
@@ -9,7 +10,7 @@ import type {
 } from './adapter';
 import { quoteFor } from './pricing';
 
-/** El logro de la entrada se busca por su disparador, no por un id fijo. */
+/** Los logros de la entrada se buscan por su disparador, no por un id fijo. */
 export const TICKET_TRIGGER = 'buy_ticket';
 
 export interface SandboxOptions {
@@ -31,7 +32,8 @@ function randomId(eventId: string): string {
  * pago. `start` calcula el precio `muestra` con el descuento encontrado que
  * valga; `confirm` registra la compra en el repositorio, que concede el sello
  * una vez por id de compra (y ninguno más si ese evento ya tenía sello), y
- * concede el logro de la entrada. Todo queda en este navegador.
+ * completa los logros de entradas que toquen (se reclaman aparte, D-22). Todo
+ * queda en este navegador.
  */
 export function createSandboxTicketing(
   repo: BoiaRepository,
@@ -78,16 +80,22 @@ export function createSandboxTicketing(
         discountId: session.quote.discount?.id ?? null,
         amountCents: session.quote.totalCents,
       });
-      // El repositorio no concede el logro de la entrada: se pide aquí, y es
-      // idempotente por id de logro.
-      const def = (await repo.progress.achievements()).find(
-        (a) => a.definition.trigger === TICKET_TRIGGER,
-      )?.definition;
-      let achievement: PurchaseOutcome['achievement'] = null;
-      if (def) {
-        const r = await repo.progress.grantAchievement(def.id, { purchaseId: purchase.id });
-        achievement = { id: def.id, title: def.title, granted: r.granted };
-      }
+      // El repositorio no completa los logros de entradas: se piden aquí (con
+      // los sellos ya en el libro), y son idempotentes por id de logro.
+      const done = await completeBySignal(repo, {
+        trigger: TICKET_TRIGGER,
+        eventId: purchase.eventId,
+      });
+      const justDone = done[0]?.definition;
+      const base = justDone
+        ? null
+        : (await repo.progress.achievements()).find((a) => a.definition.trigger === TICKET_TRIGGER)
+            ?.definition;
+      const achievement: PurchaseOutcome['achievement'] = justDone
+        ? { id: justDone.id, title: justDone.title, granted: true }
+        : base
+          ? { id: base.id, title: base.title, granted: false }
+          : null;
       return {
         purchaseId: purchase.id,
         eventId: purchase.eventId,

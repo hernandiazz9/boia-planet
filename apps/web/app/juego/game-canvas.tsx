@@ -40,7 +40,12 @@ import { liveContent } from '../../lib/landing/live-content';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
 import { claimWorld, offerWorld } from '../../lib/world-handoff';
-import { TIME_PLAYED_TICK_S, recordSignal, signalFromWorldEvent } from './achievements';
+import {
+  TIME_PLAYED_TICK_S,
+  onAchievementNotices,
+  recordSignal,
+  signalFromWorldEvent,
+} from './achievements';
 import { BalancesChip } from './balances';
 import { BottleBar, bottleBarRect } from './bottles/bottle-bar';
 import { Celebration } from './celebration';
@@ -605,6 +610,23 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     // `notifyGranted` sólo encola avisos; basta con el motor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game]);
+
+  // Logros (T36): navegar en este mundo cuenta, y los avisos de las señales
+  // sueltas (botellas, Carnet, minijuegos) llegan a la cola de avisos.
+  useEffect(() => {
+    if (!game) return;
+    notifyGranted(recordSignal(gameRepository(), { trigger: 'visit_world', worldId: world.id }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game, world.id]);
+  useEffect(
+    () =>
+      onAchievementNotices((ns) => {
+        for (const n of ns) notify(n);
+      }),
+    // `notify` sólo encola avisos con refs y colas estables.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   // Sección «Barco»: aplica estilo y skin al barco en el agua, sin recargar.
   // `remember: false` (el barco por defecto de un mundo) no lo guarda como elección.

@@ -18,7 +18,9 @@ test.describe.configure({ timeout: 120_000 });
 
 const world = WORLD_REGISTRY.get(WORLD_REGISTRY.defaultId);
 const spec = rescueMissionOf(world.config)!;
-const deliverAchievement = SAMPLE_ACHIEVEMENTS.find((a) => a.trigger === 'deliver_character')!;
+const deliverAchievement = SAMPLE_ACHIEVEMENTS.find(
+  (a) => a.trigger === 'deliver_character' && a.triggerParams?.character === 'boia-fiestera',
+)!;
 const rescueAchievement = SAMPLE_ACHIEVEMENTS.find((a) => a.trigger === 'rescue_character')!;
 
 const game = (page: Page) => page.getByTestId('juego');
@@ -77,10 +79,9 @@ test('rescata a la Fiestera y la deja en la última isla', async ({ page }, info
   await expect(page.getByTestId('celebracion')).toBeVisible();
   await expect(game(page)).toHaveAttribute('data-mision', 'delivered', { timeout: 10_000 });
   await expect(game(page)).not.toHaveAttribute('data-tripulante', /.+/);
-  // Logro y premio grande: los puntos suben al menos lo del logro.
-  await expect
-    .poll(() => points(page), { timeout: 10_000 })
-    .toBeGreaterThanOrEqual(before + deliverAchievement.points);
+  // Premio grande de la misión: los puntos suben. El logro queda conseguido y
+  // su premio llega al reclamarlo (D-22, T36), así que aquí no cuenta.
+  await expect.poll(() => points(page), { timeout: 10_000 }).toBeGreaterThan(before);
   await page.getByTestId('menu-ancla').click();
   await page.getByTestId('menu').getByRole('tab', { name: 'Logros' }).click();
   await expect(page.getByTestId(`logro-${deliverAchievement.id}`)).toHaveAttribute(

@@ -4,6 +4,32 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-29 — plan 003 T36: logros que se reclaman: almacén, catálogo y señales
+
+Los logros ya no se conceden al cumplirse: se completan (listos para reclamar) y el premio llega al reclamarlos, una vez, igual en `/juego` y en `/mar`. Sin interfaz nueva (el panel con «Reclamar» es T37): hasta entonces nadie puede reclamar desde la web, y los logros completados salen como conseguidos en el panel viejo de `/juego`.
+
+Qué hay:
+- Catálogo aprobado (25 logros, 3 ocultos) en `packages/store/src/sample/progress.ts` y `docs/propuestas/logros-catalogo.md` (sin «borrador», con los cambios de Hernán). Cosméticos nuevos: Bandera a cuadros, Estela de burbujas, Estela de rayo y los barcos de estilo Cel-shaded cómic, Boceto a lápiz y Pixel art (ranura nueva `ship`, `assetKey` = id del estilo). «Rayo del Freu» = 43,6 s (`FAST_LAP_MS`): el 80 % de una vuelta limpia medida con el barco base (54,5 s por la ruta segura, 51,3 s por el atajo).
+- `@boia/store` (esquema v2): `progress.completeAchievement` (marca en `players[].achievements`, sin libro), `claimAchievement` (fila `achievement` con puntos y monedas + cosmético o barco; `duplicate` si ya estaba, `not_ready` si no se completó), `achievements()` con `state` (`in_progress` / `ready` / `claimed`), `hidden` (ocultos como «???»), `claimedAt` y `reward` (`kind`: coins, badge, ship, cosmetic), `badges()` y `CarnetView.badges` (insignias de lo reclamado), `ships()` (barcos bloqueables y si se tienen). Sale `grantAchievement`. Migración v1 → v2: lo concedido cuenta como completado y reclamado con los mismos saldos; `secretos` recibe su barco (fila de 0/0) y `entrada` su insignia (derivada de la definición).
+- `@boia/contracts`: `ACHIEVEMENT_TRIGGERS_DB` (los de Supabase) + `ACHIEVEMENT_TRIGGERS_NEW` (`win_minigame`, `complete_encounter`, `read_bottle`, `throw_bottle`, `create_carnet`, `answer_question`, `visit_world`), `ACHIEVEMENT_STATES`, `ACHIEVEMENT_REWARD_KINDS`.
+- `apps/web/app/juego/achievements.ts`: condiciones sólo a partir de lo contado (`achievementFacts` + `achievementGoal` con `done`, también para vuelta, atajo, tiempo, minijuegos, botellas, Carnet, mundos y entradas por eventos distintos), `completeBySignal`, `recordSignal` (avisos «¡Logro completado! Reclama tu premio»), `emitSignal` + `onAchievementNotices` para las señales sin cola de avisos. Sólo necesita `progress`.
+- Señales: vuelta con tiempo y ruta (`CircuitRace.checkpoint(order, now, objectId?)` y `finish.route`; `finishLap(progress, spec, ms, route?)`), compra de prueba (`sandbox.ts`), minijuego ganado (`withWinSignal` en `minigame-layer.tsx`), delfín (`grantEncounter`), mundo (`discoverPlace` y al arrancar `/juego`), botella leída/echada (`bottle-sheet.tsx`), Carnet y preguntas (`saveCarnet`).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint          # exit 0; 62 archivos, 635 pruebas (tras unir main con T35)
+E2E_PORT=3238 pnpm e2e --workers=2                # exit 0; 101 pasadas, 19 omitidas (7,9 min, tras unir main)
+```
+
+Desviaciones:
+- `naufrago-fiesta` usa `deliver_character` (`naufrago`): el náufrago no tiene misión de llevarlo a una fiesta, así que, como `boies-3`, todavía no se puede completar.
+- El atajo sólo se detecta en `/juego`: `/mar` llama a `race.checkpoint` sin id de arco y a `finishLap` sin ruta (no se toca `apps/web/app/mar/**`). Allí la vuelta y la vuelta rápida sí cuentan.
+- En `/mar` los logros de mundo y de minijuego se completan sin aviso (no escucha `onAchievementNotices`); el del delfín sí avisa. T37 pondrá el contador.
+- `fiestera.spec.ts`: los puntos tras la entrega ya no incluyen los del logro (llegan al reclamar).
+
+Sin probar:
+- Reclamar desde la interfaz (T37). Supabase: falta la migración (valores nuevos del enum `achievement_trigger`, logros completados sin reclamar, `badge_key`).
+
 ## 2026-09-29 — plan 003 T35: «Entradas» siempre a mano con viaje en turbo, y diálogos que se leen
 
 Botón «Entradas» fijo en `/mar` (REQ-ENT-040) y tiempo de lectura con botón de cerrar para bocadillos y avisos en `/mar` y `/juego` (REQ-AVE-002, REQ-IDE-026, D-22). Todo `muestra`, pendiente de Álvaro.

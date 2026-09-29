@@ -60,7 +60,10 @@ describe('Carnet', () => {
   it('el Carnet muestra puntos, rango, logros y sellos del libro', async () => {
     const { repo } = makeRepo();
     await repo.carnet.create({ nickname: 'Coleccionista' });
-    await repo.progress.grantAchievement('primera-boia');
+    await repo.progress.completeAchievement('primera-boia');
+    // Completado aún no está en el Carnet: sólo lo reclamado.
+    expect((await repo.carnet.mine())?.achievements).toEqual([]);
+    await repo.progress.claimAchievement('primera-boia');
     const c = await repo.carnet.mine();
     expect(c?.achievements.map((a) => a.id)).toEqual(['primera-boia']);
     expect(c?.points).toBe((await repo.progress.balances()).points);

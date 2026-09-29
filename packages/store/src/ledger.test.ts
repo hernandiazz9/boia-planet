@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Constants } from '@boia/db';
 import {
   ACHIEVEMENT_TRIGGERS,
+  ACHIEVEMENT_TRIGGERS_DB,
+  ACHIEVEMENT_TRIGGERS_NEW,
   BOTTLE_STATUSES,
   LEDGER_KINDS,
   PURCHASE_STATUSES,
@@ -15,7 +17,12 @@ describe('vocabulario compartido con el esquema de T06', () => {
   it('los enums de @boia/contracts son los de la base de datos', () => {
     const e = Constants.public.Enums;
     expect([...LEDGER_KINDS]).toEqual([...e.ledger_kind]);
-    expect([...ACHIEVEMENT_TRIGGERS]).toEqual([...e.achievement_trigger]);
+    expect([...ACHIEVEMENT_TRIGGERS_DB]).toEqual([...e.achievement_trigger]);
+    // Las condiciones de T36 van aparte hasta que Supabase tenga su migración.
+    expect([...ACHIEVEMENT_TRIGGERS]).toEqual([
+      ...e.achievement_trigger,
+      ...ACHIEVEMENT_TRIGGERS_NEW,
+    ]);
     expect([...BOTTLE_STATUSES]).toEqual([...e.bottle_status]);
     expect([...PURCHASE_STATUSES]).toEqual([...e.purchase_status]);
   });
@@ -174,33 +181,33 @@ describe('saldos derivados', () => {
 });
 
 describe('logros', () => {
-  it('se conceden una vez, con el premio de la definición y su cosmético', async () => {
+  it('se reclaman una vez, con el premio de la definición y su cosmético', async () => {
     const { repo } = makeRepo();
     const def = SAMPLE_ACHIEVEMENTS.find((a) => a.cosmeticKey);
     if (!def) throw new Error('la muestra no tiene logros con cosmético');
-    const r = await repo.progress.grantAchievement(def.id);
-    expect(r.granted).toBe(true);
-    expect((await repo.progress.grantAchievement(def.id)).granted).toBe(false);
+    expect((await repo.progress.completeAchievement(def.id)).completed).toBe(true);
+    const r = await repo.progress.claimAchievement(def.id);
+    expect(r.claimed).toBe(true);
+    expect((await repo.progress.claimAchievement(def.id)).claimed).toBe(false);
     expect(await repo.progress.balances()).toMatchObject({ points: def.points, coins: def.coins });
     expect((await repo.progress.cosmetics()).map((c) => c.id)).toEqual([def.cosmeticKey]);
     const list = await repo.progress.achievements();
-    expect(list.find((a) => a.definition.id === def.id)?.obtained).toBe(true);
+    expect(list.find((a) => a.definition.id === def.id)?.state).toBe('claimed');
   });
 
-  it('los secretos no se listan hasta obtenerlos; un logro desactivado no se concede', async () => {
+  it('los ocultos salen como «???» hasta completarlos; un logro desactivado no se completa', async () => {
     const { repo } = makeRepo();
     const secret = SAMPLE_ACHIEVEMENTS.find((a) => a.secret);
     const other = SAMPLE_ACHIEVEMENTS.find((a) => !a.secret);
-    if (!secret || !other) throw new Error('muestra sin logro secreto');
-    expect((await repo.progress.achievements()).some((a) => a.definition.id === secret.id)).toBe(
-      false,
-    );
-    await repo.progress.grantAchievement(secret.id);
-    expect((await repo.progress.achievements()).some((a) => a.definition.id === secret.id)).toBe(
-      true,
-    );
+    if (!secret || !other) throw new Error('muestra sin logro oculto');
+    const before = (await repo.progress.achievements()).find((a) => a.definition.id === secret.id);
+    expect(before).toMatchObject({ hidden: true, definition: { title: '???' } });
+    expect(before?.definition.description).toBeUndefined();
+    await repo.progress.completeAchievement(secret.id);
+    const after = (await repo.progress.achievements()).find((a) => a.definition.id === secret.id);
+    expect(after).toMatchObject({ hidden: false, definition: { title: secret.title } });
     await repo.admin.upsert('achievements', { ...other, active: false });
-    await expect(repo.progress.grantAchievement(other.id)).rejects.toMatchObject({
+    await expect(repo.progress.completeAchievement(other.id)).rejects.toMatchObject({
       code: 'forbidden',
     });
   });
@@ -209,14 +216,16 @@ describe('logros', () => {
     const { repo } = makeRepo();
     const def = SAMPLE_ACHIEVEMENTS[0];
     if (!def) throw new Error('muestra vacía');
-    const r = await repo.progress.grantAchievement(def.id);
-    if (!r.granted) throw new Error('no concedido');
+    await repo.progress.completeAchievement(def.id);
+    const r = await repo.progress.claimAchievement(def.id);
+    if (!r.claimed) throw new Error('no reclamado');
     const c = await repo.admin.compensate(r.entry.id, 'prueba');
     expect(c.pointsDelta).toBe(-def.points);
     expect(await repo.progress.balances()).toMatchObject({ points: 0, coins: 0 });
-    expect(
-      (await repo.progress.achievements()).find((a) => a.definition.id === def.id)?.obtained,
-    ).toBe(false);
+    const view = (await repo.progress.achievements()).find((a) => a.definition.id === def.id);
+    expect(view).toMatchObject({ obtained: false, state: 'in_progress' });
+    // Ni vuelve a estar listo ni se puede reclamar otra vez.
+    expect((await repo.progress.claimAchievement(def.id)).claimed).toBe(false);
     const again = await repo.admin.compensate(r.entry.id, 'otra vez').catch((e: unknown) => e);
     expect(isStoreError(again, 'conflict')).toBe(true);
     expect((await repo.admin.audit({ area: 'ledger' })).length).toBe(1);
