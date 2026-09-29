@@ -1,6 +1,6 @@
 # Plan 002 — Complete playable demo: two worlds, missions, community, admin, deployable
 
-Status: active
+Status: done
 Created: 2026-09-28
 Base branch: main
 Goal: Turn the plan 001 demo into a test version that feels final: two finished worlds (Arcilla/B05 and Acuarela/B02), each with its own islands, story and ship; every L1 island and encounter reachable (event islands, náufragos, hidden discounts, chests, dolphin, whirlpool, circuit, Puerto de Fotos, shop, última isla) plus the two minigames (faro, cañón); the Boia Fiestera mission from the port; bottles, Mi Carnet, achievements, points and coins; tickets that grant the stamp directly; an Admin reachable with a «Probar admin» button; the intro with 3D «BOIA» letters and EXPLORAR revealing the port; polished for real phones and ready for Hernán to deploy on Vercel. No Supabase yet: everything persists in the visitor's browser behind a repository interface that Supabase will replace later. Decisions in docs/DECISIONES.md (D-01…D-19, plus D-20 from T15); spec in docs/spec/.
@@ -186,7 +186,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: landing 173.7 kB gzip (server computes the home, store/zod load lazily), scripts/e2e-server.mjs + gracefulShutdown so the suite exits by itself (85 e2e passed in 6 min), 192 kB check in landing-budget.mjs, minimap clamp, Pixi hidden a11y button removed → 3ae9fa0
 
 ## T30 — Final demo pass and deploy preparation
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T15, T29
 - Goal: One last end-to-end pass of the whole test version and everything Hernán needs to deploy it himself on Vercel: build without any env var, `vercel.json` or project settings if needed, `/api/art` and art served correctly in production, analytics off without key, a README section «Desplegar la versión de prueba» with the exact commands (`vercel` / `vercel --prod`), and a demo guide in ESTADO.md: what to try, in order, on a phone. Fix small glue gaps found on the way.
 - Context: every Outcome of this plan; D-04 (Vercel), D-16 (art from the repo); apps/web/**.
@@ -195,7 +195,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm test && pnpm typecheck && pnpm lint && pnpm build` → exit 0 with no env vars set
   - `pnpm e2e` → exit 0 (full suite)
   - A full recorded run on mobile (intro → port → Fiestera → an event island with purchase and stamp → a bottle → a minigame → switch world → admin change seen live) saved in docs/informes/img/ (path in the final message)
-- Outcome:
+- Outcome: build/test/lint/typecheck green with no env vars (585 tests, landing 173.9 kB); e2e 93 passed; README «Desplegar la versión de prueba» (Vercel project settings, no vercel.json); demo guide in ESTADO.md; mobile run docs/informes/img/p002-t30-demo-movil.webm → f633dac
 
 ## T31 — The intro plays on every full page load
 - Status: done
@@ -231,8 +231,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T24: restos/cofres/botellas/delfín keep common names in Acuarela; accent = B02 hull blue; menu icons 34 px to fit nine at 360 px; Acuarela intro entry = Arcilla's (shared map) (agent)
 - 2026-09-29 T29: after two stalled attempts Hernán reduced it to the essentials (landing ≤ 192 KB, Playwright exits by itself, small minimap/Pixi a11y bugs); real-phone perf, WebKit, iOS quirks, sound and music moved to Proposals (Hernán)
 - 2026-09-29 T29: attempt 3 cherry-picked only finished WIP pieces; dropped sound, WebKit, perf/a11y/ios specs; Pixi a11y fixed by replacing its private _createTouchHook and activateOnTab=false (agent)
+- 2026-09-29 T30: no vercel.json, project settings in the README (Root Directory apps/web, include files outside it, Node 24); `pnpm test` needs the local PostgreSQL 17 running (packages/db tests): start it with `LC_ALL=en_US.UTF-8 pg_ctl -D /opt/homebrew/var/postgresql@17 start` (agent / orchestrator)
 
 ## Proposals (new scope)
+- 2026-09-29 T30: a real Vercel deploy is untested (art/ found from apps/web, CDN cache headers); ESTADO.md is not Prettier-formatted
 - 2026-09-29 (from T29): real-phone perf budget with CPU ×4 + WebKit project, texture atlases/lazy loading per sector, iOS Safari quirks (audio unlock, context loss, safe areas, 100vh), Instagram in-app, sound SFX and one music loop per world, 2× title sheet for 3× DPR
 - 2026-09-29 T28: a saved themed ship skin shows as base during the intro then switches; give Acuarela its own intro framing
 - 2026-09-29 T21: «Seis boies» achievement unreachable (map has one boia trigger) — add 5 more boies to the shared map; Admin screen for the Fiestera destination of new games + audited migration (REQ-AVE-011) not built
@@ -293,3 +295,6 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 13:27 T29 done · branch worktree-agent-a14bec70134a4f16f (attempts 1–2 worktrees removed) → 3ae9fa0
 - 2026-09-29 13:29 T30 launched · attempt 1 · agent aad7e5fb538b13c5e
 - 2026-09-29 15:55 T30 orphan (no activity since 13:34) · leftovers committed as 06ebc44 T30: WIP on worktree-agent-aad7e5fb538b13c5e · continuation (interrupted) agent a7a1ee88f42a08293
+- 2026-09-29 16:08 T30 integration: tests_failed only because PostgreSQL was down (17a2735 reverted by 9bd49ef); started it and re-integrated
+- 2026-09-29 16:09 T30 done · branch worktree-agent-a7a1ee88f42a08293 (attempt 1 worktree removed) → f633dac
+- 2026-09-29 16:10 plan 002 done
