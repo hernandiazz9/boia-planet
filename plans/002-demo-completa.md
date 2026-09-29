@@ -59,7 +59,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: D-20 (7 points, «Para la versión final» 11 items, pending Álvaro), P10–P13; minigames REQ-AVE-035…039 now L1; test-version exceptions REQ-ARQ-025, IDE-051, COM-035, ADM-039; REQ-MUN-035…037 shared map/worlds; 286 REQ → 9aab31b
 
 ## T20 — Arcilla world in the game: every island and encounter
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T16, T17, T18
 - Goal: Build the shared map (places, once, in packages/world) from mundos/arcilla/mapa.json and the Arcilla skins from T18's art, and make every place work with the behavior catalog and the local repository: start at the port El Varadero (spawn ring); event islands with their panels, tickets and memories; náufragos that ask for a lift and grant a ticket discount; hidden discounts in debris and treasure (code copied with one tap, granted once, expired shown as such); chests; dolphin; whirlpool; the El Freu circuit with a local personal record; Puerto de Fotos opening the gallery; the shop island (external link); the Isla del Amanecer as última isla; Faro and Cañón islands wired to `start_minigame` with ids `faro` and `canon` (the minigames themselves are T23); secondary islands along the route; coasts with corners and bottom edge. Replace the plan 001 sample world as the default world. Minimap and compass list the new places.
 - Context: mundos/arcilla/** (diseno.md zones, mapa.json), art/mundos/arcilla/** manifests (T18), packages/world/** and packages/engine/** (T17 world registry, behavior catalog), packages/store (T16), docs/spec/04-aventura.md (REQ-AVE-012…027), 06-comercial.md (REQ-COM-020…022), apps/web/app/juego/**.
@@ -68,7 +68,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
   - `pnpm test` → exit 0; adds tests: every place in mapa.json exists in the world data; no island blocks navigation and no teleport lands on land; a discount code is granted once; the circuit keeps the best local time
   - `pnpm e2e` → exit 0; a new spec drives the ship from the port to each kind of place (event island panel, náufrago, discount, Puerto de Fotos, shop, circuit start) on desktop and mobile
   - `pnpm typecheck && pnpm lint` → exit 0
-- Outcome:
+- Outcome: shared map from mapa.json + Arcilla skins; every place works (port ring spawn, allday event panel/tickets, náufrago discount, restos/cofres codes, delfín, remolino, El Freu circuit with local record, Puerto de Fotos, tienda, faro/canon minigames, última isla); Arcilla is the default world with its own ship; `?cerca=<place>` test start; 513 tests, e2e 78 → 40b890d
 
 ## T19 — Acuarela world design and art (B02)
 - Status: done
@@ -105,7 +105,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: faro (daily) and cañón (season) in packages/engine/src/minigames, test route /juego?minijuego=faro|canon, non-modal «Jugar» panel near the island, seed-based minimum duration, rewards via gameRepository().progress, arcilla/acuarela styles; islands to be placed by T20 → e2c8abf
 
 ## T21 — Boia Fiestera mission, achievements, points and coins
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T20
 - Goal: REQ-AVE-005…011 in Arcilla: the Fiestera floats among 3–4 crocodiles that dive one by one as the ship nears; she boards with the notice «Nueva tripulante a bordo · Boia Fiestera rescatada · Destino: última isla»; she stays visible in the TRIPULANTE slot; she disembarks at the Isla del Amanecer with a celebration, achievement and big reward; the world stays open after. Destination stored by world/season id, never coordinates. Achievements system with the base list of REQ-IDE-025 (first boia, X/6 boies, islands, ticket, 5/20 minutes, Fiestera, circuit, secrets), notices one at a time 4 s (T05 queue), points and coins as separate balances from the T16 ledger, shown in the HUD/menu.
 - Context: docs/spec/04-aventura.md (REQ-AVE-005…011), 05-identidad-y-comunidad.md (REQ-IDE-024…028); T18 art (crocodiles, Fiestera on B05); packages/store (T16); packages/engine (dialogue, collectible, reward, achievement-trigger behaviors); apps/web/app/juego/** (menu, notices).
@@ -129,7 +129,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: Blender renders each letter at 17 turn angles in one 203 KB WebP sheet (tools/blender/intro/titulo.py, Cycles CPU, own PNG writer); rise/bob/wobble/exit computed in the browser on a 2D canvas (titlePoses), intro config v3; text fallback kept; landing 168.5 kB; recordings p002-t27-titulo-* → f0d9a26
 
 ## T24 — Acuarela world in the game and world switching
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T19, T20
 - Goal: Add the Acuarela skins (T19's art, names and texts from mundos/acuarela/diseno.md; event/ticket islands keep their shared name) to the shared map so every place and encounter works in Acuarela exactly where it is in Arcilla (no second map), its Fiestera encounter and última isla (T21 mission logic generalised if needed), Faro and Cañón islands wired to the minigames. Switching world: from the menu («Mundos», showing both with their story line and ship) and as Admin's active world; each world uses its ship style by default (B05 / B02) and the «Barco» section still lets you change it.
 - Context: T19 and T20 Outcomes; mundos/acuarela/**; art/mundos/acuarela/**; packages/world, packages/engine (T17 registry); apps/web/app/juego/** (menu).
@@ -152,7 +152,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: sandbox checkout from landing and islands (lib/ticketing adapter: start/confirm, real provider plugs in via ticketing()), one stamp per purchase id, best found discount auto-applied, ticket achievement via buy_ticket trigger; repo moved to apps/web/lib/repo.ts; landing 166.5 kB → a450c34
 
 ## T26 — Demo Admin with a «Probar admin» button
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T20, T22
 - Goal: The L1 Admin sections (REQ-ADM-008) in a demo mode reachable from a «Probar admin» button (landing footer and menu), no login, a permanent banner saying changes stay in this browser: Página principal (order, show/hide, schedule, priority event, desktop/mobile preview), Eventos (seven states with manual override, event↔island link, an island keeps its memories), Mundo (the shared map: list places, edit position, params and enabled state with a map preview — a position change moves the place in every world, stated in the UI; per world: skin and texts of each place; renaming a place asks «solo en este mundo» or «en todos los mundos»; set spawn, port and intro landing point; validation from T09: islands never block navigation, teleports never land on land, ids exist), Artistas, Fotos y vídeos, Logros y cosméticos, Moderación (bottles and reports), Textos y música, Temporadas (active world), Usuarios de administración and Integraciones as read-only stubs. Every change goes through T16 overrides, is logged in a local audit list and can be reset to sample data. The landing still reads apps/web/lib/landing SAMPLE_CONTENT (T25 note): make it read events, home blocks, artists and photos from the repository (gameRepository in apps/web/lib/repo.ts) so admin changes show on the landing. The visual drag-and-drop editor stays for later.
 - Context: docs/spec/07-admin.md (REQ-ADM-*), docs/DECISIONES.md D-20; packages/store (T16 overrides and audit); packages/world validation; apps/web/app/(landing) and juego (to see changes live).
@@ -224,8 +224,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29: the intro plays on every full load of `/` (not only the first visit); deep links and in-app navigation still skip it (Hernán) → T31
 - 2026-09-29 T31: campaign params (utm_*, fbclid, gclid, igsh…) still show the intro; browser Back to `/` without bfcache counts as a full load; also edited docs/spec/09-requisitos.md rows so check.py passes (agent)
 - 2026-09-29 T19: Acuarela story = Sant Joan night; places not in real coastal order; --all rendered into tools/blender/out to avoid rewriting 35 stale sources_sha256 lines outside scope (agent)
+- 2026-09-29 T20: e2e start next to places with ?cerca=<place> because the Arcilla map is too big to sail in test time; default ship is the world's own (arcilla); touched outside scope: apps/web/lib/repo.ts, lib/intro/load.ts, engine intro scene/sphere-probe, e2e specs (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T20: Playwright hangs on an orphaned next-server after the run on this machine; fix the webServer config; dolphin and whirlpool only unit-tested
 - 2026-09-29 T27: the title sheet is upscaled ~1.6× on 3× DPR phones; consider a 2× sheet; letters use Inter until BOIA's real wordmark font is provided
 - 2026-09-29 T18: no art yet for secrets, season buoys on the top edge, circuit grandstand and judge; 16 older manifests carry a stale sources_sha256 until the next --all
 - 2026-09-29 T23: minimap logs negative-size SVG errors while resizing (pre-existing); full e2e flaky at 5 workers under load (passes with --workers=2)
@@ -265,3 +267,4 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 03:00 T20 continuation 2 · agent a1fcd6e146a666805 · merges worktree-agent-a9a8600bd7f3cc391
 - 2026-09-29 03:00 T19 continuation 2 · agent a3f0770e4a9a1e2c3 · merges worktree-agent-abbf91d7fdb9babc9
 - 2026-09-29 03:26 T19 done · branch worktree-agent-a3f0770e4a9a1e2c3 (3 attempts' worktrees removed) → 0989c4c
+- 2026-09-29 03:35 T20 done · branch worktree-agent-a1fcd6e146a666805 (3 attempts' worktrees removed) → 40b890d
