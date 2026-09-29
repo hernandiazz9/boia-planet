@@ -4,6 +4,36 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-30 — plan 003 T37: panel de logros con contador y «Reclamar» en /mar y /juego
+
+Los logros ya se reclaman desde la web: un mismo panel en `/mar` (icono 🏆 del HUD) y en `/juego` (sección «Logros» del Menú de a bordo). Al completar uno sale «¡Logro completado! Reclama tu premio» y el icono lleva un número rojo mientras haya algo por reclamar; «Reclamar» da el premio una vez, con una animación corta. Arreglados los tres huecos de T36. Todo `muestra`, pendiente de Álvaro.
+
+Qué existe:
+- `apps/web/lib/logros/` (nuevo, compartido): `model.ts` (sin React: filas del panel desde `progress.achievements()` y `achievementFacts`; «???» y «Logro oculto. Sigue explorando…» para los ocultos sin completar, barra 0…1, cuenta «3/7», «te queda…» por disparador —«Te quedan 4 islas», «Te quedan 3 minutos a bordo», «Te queda: termina una vuelta al circuito», en la vuelta rápida «Tu mejor vuelta: 50,2 s · te quedan 6,6 s»—, premio en corto «+30 ★ · +10 🪙 · Barco Pixel art», orden: por reclamar, en curso —lo más avanzado arriba, ocultos al final—, reclamados; `readyCount`, `obtainedCount`), `panel.tsx` (`AchievementsPanel`: saldos que suben contando, rango, «X de Y logros» —X = completados + reclamados—, lista y «Reclamar»), `reward.tsx` (`ClaimReward`: chispas, puntos y monedas contando desde 0, la insignia volando al 🪪 Carnet, el candado que se abre y deja ver el barco, o «Nuevo para tu barco: …»; se va a los 2,6 s o al tocarla; sin movimiento con movimiento reducido), `claim-badge.tsx` (el numerito, «9+» a partir de 10), `use-logros.ts` (`useLogros`, `useReadyCount`, `useShipLocks`, `lockedShipText`, `useCountUp`) y `logros.css`.
+- `/mar`: icono 🏆 al final de la barra de arriba (a la derecha de los saldos): el minimapa empieza debajo de la barra y «Entradas» está abajo, así que no pisa ninguno a 360 ni a 390 px (e2e). Con algo por reclamar, aro naranja y número. Abre `MarLogros` (`app/mar/logros.tsx`): hoja crema desde abajo en el móvil, tarjeta centrada en escritorio, con «🪪 Mi Carnet», × , Escape o tocar fuera; con el panel abierto el barco no se mueve y una vuelta en curso se anula (como cualquier panel, REQ-AVE-032). Tocar un aviso de logro abre el panel. En el menú, «🏆 Logros · N por reclamar» y los barcos que se ganan con logro con candado (no se eligen) y el logro que los da.
+- `/mar` escucha `onAchievementNotices` (minijuegos, botellas, Carnet… ya avisan) y apunta «navegar en este mundo» al arrancar, con su aviso, como `/juego` (antes sólo se apuntaba, sin aviso, dentro de `discoverPlace`).
+- El atajo en `/mar`: `app/mar/race.ts` (`raceCheckpoint`) pasa el id del arco a `race.checkpoint` y la vuelta llega a `finishLap` con `e.route`.
+- Récord de la vuelta: `circuitRecordId` (`packages/engine/src/circuit/race.ts`) da `circuito:el-freu:v1` (clave estable; antes `circuito:el-freu@v1`, que el repositorio rechazaba y el récord nunca se guardaba). `legacyCircuitRecordId` + `readRecord`: la clave vieja se sigue leyendo (si un navegador la tuviera) y cuenta en `submitRecord`; el aviso de salida de `/juego` usa `readRecord`.
+- `/juego`: la sección «Logros» es el panel compartido (debajo, lo descubierto en esta visita); su icono de la barra del menú y el ancla del HUD (`hud-buttons.tsx`) llevan el número (`data-por-reclamar`, nombre accesible «…: 1 premio por reclamar»). Selector «Barco» (`sections/barco.tsx`): los barcos de `progress.ships()` que no se tienen salen con 🔒, gris y «Se gana con el logro «Vigía del faro»» (o «un logro oculto» si el logro es oculto); no se pueden elegir.
+- Mi Carnet (`carnet-card.tsx`): sección «Insignias» con las de los logros reclamados (`carnet.badges`).
+- Pruebas: `lib/logros/model.test.ts` (sobre el repositorio de verdad: ocultos, barra y «te queda», orden, contador, reclamar una sola vez, textos), `app/mar/race.test.ts` (el atajo en el mundo compacto completa su logro; el récord se guarda), `circuit-hud.test.ts` (récord con clave estable, sólo mejora), `race.test.ts` del motor (clave nueva, la vieja se lee). e2e nuevo `logros.spec.ts`: en `/mar` y en `/juego`, llegar a la boia del tutorial completa «Primera boia», aviso, número en el icono, «Reclamar» sube los puntos exactamente una vez, animación, y tras recargar sigue reclamado; el icono de `/mar` no pisa minimapa ni «Entradas» (360×640 y 390×844); el selector de `/juego` enseña el barco bloqueado con su logro. `demo.spec.ts`: «otro estilo» es ahora el último estilo libre (el último del arte, Pixel art, se gana con un logro).
+- Capturas 390×844 (`LOGROS_SHOTS=1 E2E_PORT=… pnpm e2e e2e/logros.spec.ts --project=mobile`): `docs/informes/img/p003-t37-aviso-mar.png` (aviso y número), `p003-t37-logros-mar.png` (panel en `/mar`), `p003-t37-reclamar.png` (animación del premio), `p003-t37-logros-juego.png` (sección de `/juego`).
+
+Comandos:
+```
+pnpm test && pnpm typecheck && pnpm lint      # exit 0; 68 archivos, 687 pruebas
+E2E_PORT=3417 pnpm e2e --workers=2            # exit 0; 119 pasadas, 23 omitidas (9,3 min)
+```
+
+Desviaciones:
+- El número de `/juego` va en el ancla del Menú de a bordo (no hay otro icono de logros en su HUD) y en el icono «Logros» del menú: toca `hud-buttons.tsx`, fuera de la lista de archivos del encargo.
+- Los barcos bloqueados también en el menú de `/mar` (el encargo pedía el selector de `/juego`). Sólo el selector: `?estilo=` o una elección guardada de antes siguen poniendo un barco bloqueado.
+- «X de Y logros» cuenta los completados sin reclamar como conseguidos.
+
+Sin probar:
+- Móvil real. La animación de la insignia volando al Carnet (sólo «Con entrada» y «Fiel a BOIA» dan una) y la del candado del barco no se han visto en pantalla: las e2e reclaman «Primera boia» (puntos y monedas). La sección «Insignias» de Mi Carnet tampoco tiene e2e.
+- En la e2e de `/mar` a veces el aviso se va (tiempo de lectura) justo al tocarlo; la prueba entra entonces por el icono. Tocar el aviso para abrir el panel no queda probado en todas las pasadas.
+
 ## 2026-09-29 — plan 003 T34: minimapa redondo del planeta girando (y cámara del móvil)
 
 En `/mar` el botón «Mapa» ya no está: en la esquina de arriba a la derecha hay un minimapa redondo y semitransparente con el planeta entero girando despacio, el barco, las islas (la del evento en naranja), el rumbo y la ruta de boyas. Tocarlo abre el mapa grande; tocarlo otra vez o «Cerrar» vuelve a cubierta; la M sigue igual. Además, a petición de Hernán tras probarlo en el móvil: en un móvil en vertical el barco va en el centro de lo que se ve y se sale con algo más de zoom. `/juego` no cambia. Todo `muestra`, pendiente de Álvaro.

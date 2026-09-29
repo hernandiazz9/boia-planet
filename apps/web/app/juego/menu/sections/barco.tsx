@@ -1,4 +1,6 @@
 import type { ShipCatalog } from '../../../../lib/barco/catalog';
+import { type ShipLock, lockedShipText, useShipLocks } from '../../../../lib/logros/use-logros';
+import '../../../../lib/logros/logros.css';
 import type { ShipLook } from '../../ship-look';
 import type { MenuSection } from '../types';
 
@@ -6,18 +8,23 @@ import type { MenuSection } from '../types';
  * ⛵ Barco (REQ-IDE-030, T12): los estilos del barco de T11 y sus skins
  * (base, fiesta, noche; cada estilo enseña sólo las que tiene), con una
  * miniatura de cada uno. Elegir cambia el barco al momento, sin recargar, y
- * se recuerda en este navegador. Sólo cambia cómo se ve.
+ * se recuerda en este navegador. Sólo cambia cómo se ve. Los barcos que se
+ * ganan con un logro (T36, T37) salen con candado y el logro que los da
+ * hasta tenerlos; no se pueden elegir.
  */
 
 export function BarcoPicker({
   catalog,
   current,
   pending = false,
+  locks = [],
   onChoose,
 }: {
   catalog: ShipCatalog | null;
   current: ShipLook | null;
   pending?: boolean;
+  /** Barcos bloqueables (`progress.ships()`); los que no se tienen van con candado. */
+  locks?: readonly ShipLock[];
   onChoose: (look: ShipLook) => void;
 }) {
   if (!catalog || catalog.styles.length === 0) {
@@ -40,6 +47,36 @@ export function BarcoPicker({
       <ul className="barco-estilos" role="radiogroup" aria-labelledby="barco-estilos">
         {catalog.styles.map((style) => {
           const checked = style.id === selected.id;
+          const lock = locks.find((l) => l.style === style.id && !l.owned);
+          if (lock && !checked) {
+            const why = lockedShipText(lock);
+            return (
+              <li key={style.id}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={false}
+                  aria-disabled="true"
+                  aria-label={`${style.name}: bloqueado. ${why}`}
+                  className="barco-estilo is-locked"
+                  data-testid={`barco-estilo-${style.id}`}
+                  data-bloqueado="si"
+                  title={why}
+                  onClick={() => undefined}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- arte servido desde art/ (D-16) */}
+                  <img src={style.skins[0]!.preview} alt="" width={72} height={72} loading="lazy" />
+                  <span className="barco-estilo-nombre">
+                    <span aria-hidden="true">🔒 </span>
+                    {style.name}
+                  </span>
+                  <span className="barco-candado" data-testid={`barco-candado-${style.id}`}>
+                    {why}
+                  </span>
+                </button>
+              </li>
+            );
+          }
           // La miniatura del estilo elegido enseña su skin actual.
           const shown = (checked && style.skins.find((k) => k.id === skinId)) || style.skins[0]!;
           return (
@@ -118,8 +155,10 @@ export const barcoSection: MenuSection = {
   label: 'Barco',
   group: 'progress',
   Component: function Barco({ ctx }) {
+    const locks = useShipLocks() ?? [];
     return (
       <BarcoPicker
+        locks={locks}
         catalog={ctx.ship.catalog}
         current={ctx.ship.current}
         pending={ctx.ship.pending || !ctx.game}

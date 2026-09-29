@@ -28,7 +28,14 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 import { liveWorld } from '../../lib/admin/live-world';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
-import { TIME_PLAYED_TICK_S, recordSignal, signalFromWorldEvent } from '../juego/achievements';
+import { ClaimBadge, claimLabel } from '../../lib/logros/claim-badge';
+import { lockedShipText, useReadyCount, useShipLocks } from '../../lib/logros/use-logros';
+import {
+  TIME_PLAYED_TICK_S,
+  onAchievementNotices,
+  recordSignal,
+  signalFromWorldEvent,
+} from '../juego/achievements';
 import { finishLap, lapNotices } from '../juego/circuit-hud';
 import { worlds } from '../juego/demo-world';
 import type { DolphinTrail } from '../juego/encounters';
@@ -49,7 +56,9 @@ import { marWorld } from './engine/compact';
 import type { CourseInfo, Mar3D, PinSpec, Stats, VoyageEnd } from './engine/mar3d';
 import { MOOD_IDS, MOOD_LABEL, type MoodId } from './engine/palette';
 import { type ShipModelEntry, loadShipManifest, loadShipModel } from './engine/ship-model';
+import { MarLogros } from './logros';
 import { MarMinimap } from './minimap';
+import { raceCheckpoint } from './race';
 import {
   type EventTrip,
   Sheet,
@@ -205,6 +214,10 @@ export function MarClient() {
     typeof window === 'undefined' ? null : loadSettings(browserStore()),
   );
   const { data: balances } = useRepoData((r) => r.progress.balances());
+  // Logros (T37): el icono del HUD con su número y el panel para reclamar.
+  const [logros, setLogros] = useState(false);
+  const readyToClaim = useReadyCount();
+  const shipLocks = useShipLocks() ?? [];
 
   // Avisos con tiempo de lectura (D-22): al menos 3 s, más si el texto es largo.
   const notices = useNoticeQueue(
@@ -235,6 +248,10 @@ export function MarClient() {
     },
     [push],
   );
+
+  // Los logros de las señales sueltas (minijuegos, mundo, botellas, Carnet)
+  // también avisan aquí, como en /juego (T37).
+  useEffect(() => onAchievementNotices((ns) => ns.forEach(push)), [push]);
 
   // --- Eventos del mundo ------------------------------------------------------
 
@@ -269,7 +286,8 @@ export function MarClient() {
           g.setNextGate(null);
           g.celebrate(null);
           fanfare();
-          finishLap(progressApi(), r.spec, e.ms)
+          // Con la ruta: el atajo cuenta también en /mar (T37).
+          finishLap(progressApi(), r.spec, e.ms, e.route)
             .then((res) => lapNotices(e.ms, res).forEach(push))
             .catch((err: unknown) => console.warn('[boia] no se pudo guardar la vuelta', err));
           break;
@@ -295,8 +313,7 @@ export function MarClient() {
     const repo = gameRepository();
     const r = raceRef.current;
     if (r && e.type === 'checkpoint') {
-      const order = r.race.orderOf(e.objectId);
-      if (order !== null) raceEvents(r.race.checkpoint(order, performance.now() / 1000));
+      raceEvents(raceCheckpoint(r.race, e.objectId, performance.now() / 1000));
     }
     switch (e.type) {
       case 'reward':
@@ -611,6 +628,15 @@ export function MarClient() {
     return () => g.release(el);
   }, [dialogue]);
 
+  // Navegar en este mundo cuenta (logro «Entre dos mundos»), con su aviso,
+  // como al arrancar /juego (T37: antes sólo se apuntaba, sin aviso).
+  useEffect(() => {
+    if (status !== 'ready') return;
+    pushAll(
+      recordSignal(gameRepository(), { trigger: 'visit_world', worldId: worldIdRef.current }),
+    );
+  }, [status, pushAll]);
+
   // Tiempo a bordo (logros de tiempo jugado), sólo con la pestaña a la vista.
   useEffect(() => {
     if (status !== 'ready') return;
@@ -645,9 +671,17 @@ export function MarClient() {
   useEffect(() => {
     const g = engineRef.current;
     if (!g) return;
-    g.inputEnabled = !checkoutFor && !minigameOpen;
+    g.inputEnabled = !checkoutFor && !minigameOpen && !logros;
     g.paused = minigameOpen;
-  }, [checkoutFor, minigameOpen, status]);
+  }, [checkoutFor, minigameOpen, logros, status]);
+
+  /** Abre el panel de logros; como cualquier panel, anula la vuelta en curso (REQ-AVE-032). */
+  const openLogros = () => {
+    const r = raceRef.current;
+    if (r?.race.active) raceEvents([r.race.invalidate('panel')!].filter(Boolean));
+    setMenu(false);
+    setLogros(true);
+  };
 
   useEffect(() => {
     // La capa del minijuego se monta en su propio nodo: se observa si tiene hijos.
@@ -787,6 +821,21 @@ export function MarClient() {
           <span title="Puntos">★ {balances?.points ?? '–'}</span>
           <span title="Monedas">🪙 {balances?.coins ?? '–'}</span>
         </div>
+        {/* Logros (T37): arriba a la derecha, sobre el minimapa; nunca junto a «Entradas». */}
+        <button
+          type="button"
+          className="mar-round mar-logros-btn"
+          data-testid="mar-logros"
+          data-por-reclamar={readyToClaim}
+          aria-label={claimLabel('Logros', readyToClaim)}
+          aria-expanded={logros}
+          aria-haspopup="dialog"
+          title={claimLabel('Logros', readyToClaim)}
+          onClick={() => (logros ? setLogros(false) : openLogros())}
+        >
+          <span aria-hidden="true">🏆</span>
+          <ClaimBadge count={readyToClaim} testId="mar-logros-contador" />
+        </button>
       </header>
 
       {menu ? (
@@ -808,19 +857,54 @@ export function MarClient() {
             <>
               <p className="mar-menu__label">Barco</p>
               <div className="mar-menu__moods" data-testid="mar-barcos">
-                {ships.map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    className={`mar-chip${b.id === shipId ? ' is-on' : ''}`}
-                    onClick={() => chooseShip(b)}
-                  >
-                    {b.label}
-                  </button>
-                ))}
+                {ships.map((b) => {
+                  // Los que se ganan con un logro, con candado hasta tenerlos (T37).
+                  const lock = shipLocks.find((l) => l.style === b.id && !l.owned);
+                  if (lock && b.id !== shipId) {
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        className="mar-chip is-locked"
+                        data-testid={`mar-barco-${b.id}`}
+                        data-bloqueado="si"
+                        aria-disabled="true"
+                        aria-label={`${b.label}: bloqueado. ${lockedShipText(lock)}`}
+                        title={lockedShipText(lock)}
+                      >
+                        🔒 {b.label}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      className={`mar-chip${b.id === shipId ? ' is-on' : ''}`}
+                      data-testid={`mar-barco-${b.id}`}
+                      onClick={() => chooseShip(b)}
+                    >
+                      {b.label}
+                    </button>
+                  );
+                })}
               </div>
+              {shipLocks.some((l) => !l.owned && ships.some((b) => b.id === l.style)) ? (
+                <ul className="mar-menu__locks" data-testid="mar-barcos-bloqueados">
+                  {shipLocks
+                    .filter((l) => !l.owned && ships.some((b) => b.id === l.style))
+                    .map((l) => (
+                      <li key={l.style}>
+                        🔒 <strong>{l.name}</strong>: {lockedShipText(l)}
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
             </>
           ) : null}
+          <button type="button" className="mar-menu__link" onClick={openLogros}>
+            🏆 Logros{readyToClaim > 0 ? ` · ${readyToClaim} por reclamar` : ''}
+          </button>
           <Link className="mar-menu__link" href="/#tickets">
             🎟️ Entradas
           </Link>
@@ -845,7 +929,13 @@ export function MarClient() {
             type="button"
             className={`mar-notice is-${notices.current.notice.kind}`}
             data-testid="mar-aviso"
-            onClick={notices.dismiss}
+            data-kind={notices.current.notice.kind}
+            onClick={() => {
+              // «¡Logro completado! Reclama tu premio»: tocarlo lleva al panel (T37).
+              const toClaim = notices.current?.notice.kind === 'achievement';
+              notices.dismiss();
+              if (toClaim) openLogros();
+            }}
           >
             <strong>{notices.current.notice.title}</strong>
             {notices.current.notice.body ? <span>{notices.current.notice.body}</span> : null}
@@ -1070,6 +1160,8 @@ export function MarClient() {
           />
         </div>
       ) : null}
+
+      {logros ? <MarLogros onClose={() => setLogros(false)} /> : null}
 
       {checkoutFor ? (
         <SandboxCheckout

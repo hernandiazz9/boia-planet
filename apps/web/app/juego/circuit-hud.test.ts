@@ -1,5 +1,5 @@
-import { circuitFromWorld } from '@boia/engine/circuit';
-import { FAST_LAP_MS, createLocalRepository } from '@boia/store';
+import { circuitFromWorld, circuitRecordId, readRecord } from '@boia/engine/circuit';
+import { FAST_LAP_MS, createLocalRepository, isStableKey } from '@boia/store';
 import { CIRCUIT_ID, WORLD_REGISTRY } from '@boia/world';
 import { describe, expect, it } from 'vitest';
 import { finishLap, lapNotices } from './circuit-hud';
@@ -46,5 +46,19 @@ describe('finishLap', () => {
     );
     // Otra vuelta igual no repite nada.
     expect((await finishLap(r.progress, spec, maxMs - 1)).achievements).toEqual([]);
+  });
+});
+
+describe('récord de la vuelta (T37)', () => {
+  it('se guarda con una clave estable y sólo mejora', async () => {
+    const r = repo();
+    expect(isStableKey(circuitRecordId(spec))).toBe(true);
+    expect(await finishLap(r.progress, spec, 60_000)).toMatchObject({ best: true, bestMs: 60_000 });
+    expect(await finishLap(r.progress, spec, 70_000)).toMatchObject({
+      best: false,
+      bestMs: 60_000,
+    });
+    expect((await r.progress.record(circuitRecordId(spec)))?.bestMs).toBe(60_000);
+    expect(await readRecord(r.progress, spec)).toMatchObject({ bestMs: 60_000 });
   });
 });
