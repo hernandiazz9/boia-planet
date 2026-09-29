@@ -152,18 +152,18 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Outcome: sandbox checkout from landing and islands (lib/ticketing adapter: start/confirm, real provider plugs in via ticketing()), one stamp per purchase id, best found discount auto-applied, ticket achievement via buy_ticket trigger; repo moved to apps/web/lib/repo.ts; landing 166.5 kB → a450c34
 
 ## T26 — Demo Admin with a «Probar admin» button
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T20, T22
 - Goal: The L1 Admin sections (REQ-ADM-008) in a demo mode reachable from a «Probar admin» button (landing footer and menu), no login, a permanent banner saying changes stay in this browser: Página principal (order, show/hide, schedule, priority event, desktop/mobile preview), Eventos (seven states with manual override, event↔island link, an island keeps its memories), Mundo (the shared map: list places, edit position, params and enabled state with a map preview — a position change moves the place in every world, stated in the UI; per world: skin and texts of each place; renaming a place asks «solo en este mundo» or «en todos los mundos»; set spawn, port and intro landing point; validation from T09: islands never block navigation, teleports never land on land, ids exist), Artistas, Fotos y vídeos, Logros y cosméticos, Moderación (bottles and reports), Textos y música, Temporadas (active world), Usuarios de administración and Integraciones as read-only stubs. Every change goes through T16 overrides, is logged in a local audit list and can be reset to sample data. The landing still reads apps/web/lib/landing SAMPLE_CONTENT (T25 note): make it read events, home blocks, artists and photos from the repository (gameRepository in apps/web/lib/repo.ts) so admin changes show on the landing. The visual drag-and-drop editor stays for later.
 - Context: docs/spec/07-admin.md (REQ-ADM-*), docs/DECISIONES.md D-20; packages/store (T16 overrides and audit); packages/world validation; apps/web/app/(landing) and juego (to see changes live).
-- Scope: may touch ESTADO.md (own top section), apps/web/app/admin/** (new), apps/web/lib/admin/** (new), apps/web/app/(landing)/** (only the button), apps/web/app/juego/** (only the button) / must not touch packages/store/** (API only), packages/engine/**, docs/spec/**.
+- Scope: may touch ESTADO.md (own top section), apps/web/app/admin/** (new), apps/web/lib/admin/** (new), apps/web/app/(landing)/** (the button and reading content from the repository), apps/web/lib/landing/**, apps/web/app/juego/** (only the button), apps/web/e2e/** / must not touch packages/store/** (API only), packages/engine/**, docs/spec/**.
 - Done when:
   - `pnpm test` → exit 0; adds tests: an invalid world edit is refused with its reason; reset restores sample data; each change writes an audit entry
   - `pnpm e2e` → exit 0; a spec opens «Probar admin», creates an event, links it to an island, reorders home blocks, moves an object and sees all of it on the landing and in the world; hides a reported bottle
-- Outcome:
+- Outcome: /admin demo (no login, banner) with all L1 sections, rules in apps/web/lib/admin (validate, actions+audit, world overlay); spawn/port/intro point as reserved places mapa:salida/puerto/entrada; landing reads @boia/store (lazy import, landing critical path 201 kB); event↔island panels; active world in store + boia:mundo-activo → bc9ca58
 
 ## T28 — EXPLORAR reveals the port and starts the adventure there
-- Status: pending
+- Status: running (attempt 1)
 - Depends on: T20, T27
 - Goal: When EXPLORAR is pressed, the camera pulls back a little (less than the early versions) and reveals the port El Varadero with the ship in it, then hands the live scene to /juego (T12) with the ship at the port; the first boia and the path to the Boia Fiestera encounter are the first things met. The intro landing point and the port framing are config data per world. Deep links to /juego still start clean at the active world's port.
 - Context: T12 handoff (apps/web/lib/world-handoff.ts), T14/T27 intro, T20 Arcilla world (port, spawn ring), T17 registry; docs/spec/02-entrada-y-landing.md (REQ-ENT-012), D-20 point 6.
@@ -182,7 +182,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - Done when:
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0
   - `pnpm e2e` → exit 0 including a WebKit project; a perf spec reports p95 frame time on throttled mobile for the intro, sailing and a minigame (numbers in ESTADO.md), and axe shows 0 serious or critical violations on landing, carnet and admin
-  - `pnpm build` → landing ≤ 192 KB gzip, /juego first world sector ≤ 5 MB gzip (report both)
+  - `pnpm build` → landing ≤ 192 KB gzip, /juego first world sector ≤ 5 MB gzip (report both) — T26 left the landing at 201 kB: bring it back under 192
 - Outcome:
 
 ## T30 — Final demo pass and deploy preparation
@@ -225,8 +225,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 T31: campaign params (utm_*, fbclid, gclid, igsh…) still show the intro; browser Back to `/` without bfcache counts as a full load; also edited docs/spec/09-requisitos.md rows so check.py passes (agent)
 - 2026-09-29 T19: Acuarela story = Sant Joan night; places not in real coastal order; --all rendered into tools/blender/out to avoid rewriting 35 stale sources_sha256 lines outside scope (agent)
 - 2026-09-29 T20: e2e start next to places with ?cerca=<place> because the Arcilla map is too big to sail in test time; default ship is the world's own (arcilla); touched outside scope: apps/web/lib/repo.ts, lib/intro/load.ts, engine intro scene/sphere-probe, e2e specs (agent)
+- 2026-09-29 T26: «en todos los mundos» writes the name into each registered world (later worlds don't inherit); sea check copied into lib/admin/validate.ts (engine index loads Pixi); spring event island now `allday`; also edited juego game-canvas/place-panels so admin changes show in the world (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T26: landing critical path is now 201 kB, over the 192 kB intro budget — T29 must bring it back under
 - 2026-09-29 T20: Playwright hangs on an orphaned next-server after the run on this machine; fix the webServer config; dolphin and whirlpool only unit-tested
 - 2026-09-29 T27: the title sheet is upscaled ~1.6× on 3× DPR phones; consider a 2× sheet; letters use Inter until BOIA's real wordmark font is provided
 - 2026-09-29 T18: no art yet for secrets, season buoys on the top edge, circuit grandstand and judge; 16 older manifests carry a stale sources_sha256 until the next --all
@@ -268,3 +270,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador` (the en
 - 2026-09-29 03:00 T19 continuation 2 · agent a3f0770e4a9a1e2c3 · merges worktree-agent-abbf91d7fdb9babc9
 - 2026-09-29 03:26 T19 done · branch worktree-agent-a3f0770e4a9a1e2c3 (3 attempts' worktrees removed) → 0989c4c
 - 2026-09-29 03:35 T20 done · branch worktree-agent-a1fcd6e146a666805 (3 attempts' worktrees removed) → 40b890d
+- 2026-09-29 03:37 T21 launched · attempt 1 · agent a8a239e3b0fba4d0a
+- 2026-09-29 03:37 T24 launched · attempt 1 · agent a7f0ae4fa2a6b1c74
+- 2026-09-29 03:37 T26 launched · attempt 1 · agent a66fcfe8f16ef5caf
+- 2026-09-29 04:16 T26 done · branch worktree-agent-a66fcfe8f16ef5caf → bc9ca58
