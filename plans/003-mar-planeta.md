@@ -50,7 +50,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - Outcome: coasts removed (coast.ts gone), castle/Explanada/cave islet as /mar-only decor islands; toroidal wrap (PLANET_MARGIN 300 u, 600 u south) with curved-world bend, sky dome, stars, slow spin; wrap option in the shared controller off by default; 60 fps with 4× CPU throttle; 653 tests, e2e 103 passed → c8473cb
 
 ## T50 — A compact /mar world with a buoy route
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T33
 - Goal: Hernán tried the water planet (T33) and likes it, but things are too far apart and hard to find or reach. In `/mar` only: (1) halve the distances: islands at about half their current distance from each other and much less empty sea at the wrap margins (PLANET_MARGIN), so sailing from one island to the next takes a few seconds at normal speed; the shared map data (packages/world positions) and `/juego` stay unchanged: derive the compact layout at load time for `/mar` (apps/web/app/mar/engine/compress.ts already exists; check what it does and extend it) and run the /mar runtime on the compact positions consistently (triggers, pins, autopilot, «Entradas» voyage, rewards by place id), keeping island footprints and trigger radii readable and never overlapping; decor islands (castle, Explanada, cave islet) move with it. (2) A path to follow: a route of buoys or small lights on the water linking the islands in story order: port (El Varadero) → Cala del Alfar → Boia Fiestera spot (crocodiles) → event island (`allday`) → Puerto de Fotos → shop island → Faro and Cañón → Isla del Amanecer (última isla); adjust the order to the Fiestera mission if it contradicts it and say so. The route reads from the deck and in map view, follows the shortest way around the planet, loops back to the port, and is decor only (no collisions, no rewards). Places not on the route (mar vivo: náufrago, debris, chests, dolphin, whirlpool, circuit gates) stay near it so they are met on the way.
 - Context: T33 Outcome and ESTADO.md T33 section; apps/web/app/mar/engine/** (wrap.ts PLANET_MARGIN, compress.ts, mar3d.ts, decor.ts, islands.ts), apps/web/app/mar/mar-client.tsx; packages/world/src/worlds/arcilla/map.ts (place ids, read only); packages/engine/src/mission/** (Fiestera mission order, read only); apps/web/e2e/mar-3d.spec.ts.
@@ -59,7 +59,7 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds unit tests: the compact layout halves the median distance between neighbouring islands, keeps every place id, and no two footprints overlap; the route visits the places in the order above and closes the loop
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0 (mar-3d.spec.ts updated, /juego specs unchanged)
   - Screenshots p003-t50-ruta-cubierta.png (deck, buoys visible ahead) and p003-t50-ruta-mapa.png (map view with the whole route), and the sailing time from the port to the event island at normal speed, measured, in the final message
-- Outcome:
+- Outcome: compact.ts feeds /mar (islands at half spacing, PLANET_MARGIN 150 u, planet 2600×4400 u); buoy route port → Cala → Fiestera → allday → Fotos → Tienda → Cañón → Faro → Última, loop over the north edge; port→event 8.4–8.9 s; 665 tests, e2e 105 passed → 4b99bfe
 
 ## T34 — Round, transparent minimap of the turning planet
 - Status: pending
@@ -113,8 +113,10 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29 T33: shortest way around makes the autopilot and «Entradas» voyage leave the port south with a U-turn; camera north-up looking ahead; map view is a fixed chart; tapping the sky sets a course to the horizon; Mar3D.planetSpin/planetBounds exposed for T34 (agent)
 - 2026-09-29: Hernán liked the T33 screenshots and is trying /mar before T34 (Hernán)
 - 2026-09-29: after trying /mar, Hernán wants it smaller and with a path: halve the distances (/mar only), a buoy route in story order; new task T50 before T34, and T34 builds on the compact world (Hernán)
+- 2026-09-29 T50: route order kept (Fiestera boards at stop 3, delivered at the last); Cañón before Faro; mar vivo within 240 u of the route; castle and Explanada either side of the port; map camera lifted 48 px; fixed T33 respawn positions not scaled (agent)
 
 ## Proposals (new scope)
+- 2026-09-29 T50: El Freu circuit not moved (would overlap the shop), its gates 370–630 u off the route; the /mar circuit is half as long, so «Rayo del Freu» (43.6 s, measured in /juego) is easier in /mar
 - 2026-09-29 T33: packages/engine/src/mission/rescue.ts measures straight-line distances (fine while its zones are far from the edges)
 - 2026-09-29 T36: Supabase migration for the new trigger values, completed-but-unclaimed state and badge_key; the náufrago needs a mission for «Náufrago a la fiesta»; ticketing copy «Logro conseguido» unchanged
 - 2026-09-29 T35: /juego bubble × has no e2e (drawn in Pixi); in map mode the /mar bubble stays behind the sheet (pre-existing); some files already fail prettier
@@ -132,4 +134,5 @@ Agent notes: do not invoke the project skills `encargo` or `orquestador`; follow
 - 2026-09-29 16:54 T36 done · branch worktree-agent-a6f8af0b570ae4e6f (1 conflict round) → a689cf9
 - 2026-09-29 17:45 T33 done · branch worktree-agent-ab0436509d1f02be6 (1 conflict round) → c8473cb
 - 2026-09-29 17:46 paused for Hernán to try /mar before T34 · watchdog timers stopped by Hernán
-- 2026-09-29 17:55 T50 added (Hernán) and launched · attempt 1 · agent {AGENT}
+- 2026-09-29 17:55 T50 added (Hernán) and launched · attempt 1 · agent aabae9a6908dbeb13
+- 2026-09-29 18:22 T50 done · branch worktree-agent-aabae9a6908dbeb13 → 4b99bfe · paused for Hernán to try it
