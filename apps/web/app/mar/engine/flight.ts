@@ -267,7 +267,7 @@ export class Sparks {
       this.N,
     );
     this.mesh.frustumCulled = false;
-    const colors = ['#ffd23f', '#fff4e2', '#f26a1b', '#b9a6ff'];
+    const colors = ['#ffd23f', '#fff4e2', C.orange, '#b9a6ff'];
     for (let i = 0; i < this.N; i++) {
       this.mesh.setColorAt(i, new Color(colors[i % colors.length]!));
       this.p.push({ pos: new Vector3(), vel: new Vector3(), life: 0, max: 1, size: 1 });

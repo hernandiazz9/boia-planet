@@ -22,6 +22,7 @@ import {
   Vector3,
 } from 'three';
 import { rng, smooth, wobble } from './kit';
+import { C } from './palette';
 import type { Glows } from './props';
 import { wrapD } from './wrap';
 
@@ -353,7 +354,7 @@ export class Confetti {
       this.N,
     );
     this.mesh.frustumCulled = false;
-    const colors = ['#f26a1b', '#ffd23f', '#6a4fc4', '#f2557a', '#fff4e2', '#4cc3d9'];
+    const colors = [C.orange, '#ffd23f', '#6a4fc4', '#f2557a', '#fff4e2', '#4cc3d9'];
     for (let i = 0; i < this.N; i++) {
       this.mesh.setColorAt(i, new Color(colors[i % colors.length]!));
       this.p.push({

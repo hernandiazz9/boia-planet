@@ -6,14 +6,16 @@ import {
   type ShipConfig,
   type ShipInput,
   type ShipState,
+  type SwitchMode,
   type WorldEvent,
   WorldRuntime,
+  WorldSwitcher,
   createShipState,
   shipSpeed,
   stepShip,
 } from '@boia/engine/headless';
 import type { MissionHost } from '@boia/engine/mission';
-import type { WorldConfig } from '@boia/world';
+import type { WorldConfig, WorldObject } from '@boia/world';
 import type { Color, ShaderMaterial } from 'three';
 import {
   Box3,
@@ -84,6 +86,8 @@ import { C, type Mood, type MoodId, cloneMood, mixMood, moods } from './palette'
 import { Sky, curveMaterial, curveTree, planetUniforms } from './planet';
 import { Glows, buoy, crag, rock } from './props';
 import { type ShipModel, createFlag, modelLength, topPoint } from './ship-model';
+import { type ModelKey, ModelStore, fitHeight, modelFor, modelSlot, planModels } from './models';
+import { VortexPass } from './vortex';
 import { createWater } from './water';
 import {
   type Circle,
@@ -149,6 +153,12 @@ export interface Stats {
   voyage: string | null;
   /** Fase del vuelo de «Entradas» (experimento), o null si no vuela. */
   flight: FlightPose['phase'] | null;
+  /** Dónde está el barco (u de motor) y hacia dónde mira (rad). */
+  x: number;
+  y: number;
+  heading: number;
+  /** Modelos de Blender puestos ahora (carga por distancia, T51). */
+  models: number;
 }
 
 /** Cómo terminó un viaje en turbo: llegó, tardó demasiado o el jugador tomó el timón. */
@@ -176,7 +186,33 @@ export interface Mar3DOptions {
   onFirstMove?(): void;
   /** Terminó el viaje en turbo de `startVoyage` (REQ-ENT-040). */
   onVoyageEnd?(placeId: string, how: VoyageEnd): void;
+  /** Empieza (`vortex`/`fade`) o termina (null) un cambio de mundo (T41, T51). */
+  onSwitch?(mode: SwitchMode | null): void;
+  /** Un golpe contra algo sólido: velocidad perdida (u/s). Para el sonido (T46). */
+  onImpact?(speed: number): void;
 }
+
+/** Un mundo en el mar 3D: su configuración y su runtime (el resto no cambia, D-20.7). */
+interface MarScene {
+  world: WorldConfig;
+  runtime: WorldRuntime;
+  sea: { base: string; wave: string; crest: string } | undefined;
+  destroy(): void;
+}
+
+/** Un lugar con modelo de Blender (T39), cargado por distancia (T51). */
+interface ModelView {
+  key: ModelKey;
+  slot: Group;
+  fallback: Object3D;
+  model: Object3D | null;
+  acquired: boolean;
+}
+
+/** s entre dos repasos de qué modelos cargar. */
+const MODEL_PLAN_S = 0.3;
+/** u/s perdidas de golpe a partir de las que suena y salpica un choque. muestra */
+const IMPACT_MIN = 40;
 
 /** A partir de este zoom el arrastre mueve el mapa en vez del barco. */
 export const MAP_ZOOM = 0.55;
@@ -275,8 +311,9 @@ const tmpV2 = new Vector2();
 const tmpSphere = new Sphere();
 
 export class Mar3D {
-  readonly world: WorldConfig;
-  readonly runtime: WorldRuntime;
+  /** El mundo de ahora (cambia de piel con `setWorld`; los lugares son los mismos). */
+  world: WorldConfig;
+  private rt: WorldRuntime;
   readonly ship: ShipState;
   readonly missionHost: MissionHost;
 
@@ -322,7 +359,8 @@ export class Mar3D {
   // Radio de choque acorde con el barco que se ve (más grande que en el 2D).
   private readonly cfg: ShipConfig = { ...DEFAULT_SHIP_CONFIG, radius: 18 };
   private sternX = -1.3;
-  private readonly moods: Record<MoodId, Mood>;
+  private moods: Record<MoodId, Mood>;
+  private moodId: MoodId;
   private mood: Mood;
   private moodFrom: Mood;
   private moodTo: Mood;
@@ -398,16 +436,22 @@ export class Mar3D {
   /** Sin simular ni pintar (un minijuego a pantalla completa encima). */
   paused = false;
   private gates = new Map<number, MeshBasicMaterial[]>();
+  // Cambio de mundo por agujero negro (T41 en /juego; aquí T51).
+  private readonly vortex = new VortexPass();
+  private readonly switcher: WorldSwitcher<MarScene>;
+  private switchingMode: SwitchMode | null = null;
+  // Modelos de Blender por distancia (T51).
+  private readonly modelStore = new ModelStore();
+  private readonly modelViews = new Map<string, ModelView>();
+  private modelClock = MODEL_PLAN_S;
 
   constructor(opts: Mar3DOptions) {
     this.opts = opts;
     this.world = opts.world;
     // El planeta: el mapa con su margen da la vuelta (sólo en /mar; /juego conserva sus costas).
     const rect = planetRect(opts.world.bounds);
-    this.runtime = new WorldRuntime(
-      { ...opts.world, bounds: rect },
-      { ...opts.runtime, wrap: true },
-    );
+    this.rt = new WorldRuntime({ ...opts.world, bounds: rect }, { ...opts.runtime, wrap: true });
+    this.switcher = new WorldSwitcher<MarScene>({ swap: (next) => this.adoptWorld(next) });
     this.periodU = periodOf(rect);
     const spawn = opts.world.spawn ?? { x: 0, y: 0, heading: -Math.PI / 2 };
     this.ship = createShipState(spawn.x, spawn.y, spawn.heading);
@@ -432,6 +476,7 @@ export class Mar3D {
     this.renderer.setPixelRatio(this.dpr);
 
     this.moods = moods(opts.sea);
+    this.moodId = opts.mood;
     this.mood = cloneMood(this.moods[opts.mood]);
     this.moodFrom = cloneMood(this.mood);
     this.moodTo = this.moods[opts.mood];
@@ -504,7 +549,13 @@ export class Mar3D {
 
   // --- API -------------------------------------------------------------------
 
+  /** El runtime del mundo de ahora (otro tras `setWorld`). */
+  get runtime(): WorldRuntime {
+    return this.rt;
+  }
+
   setMood(id: MoodId): void {
+    this.moodId = id;
     this.moodFrom = cloneMood(this.mood);
     this.moodTo = this.moods[id];
     this.moodT = 0;
@@ -570,6 +621,72 @@ export class Mar3D {
       this.course = { x: p.x, y: p.y, placeId: null };
     }
     this.marker.show(true);
+  }
+
+  /**
+   * Cambia de mundo (T41, D-23 punto 4) por un agujero negro centrado en el
+   * barco; con `fade`, un fundido de 300 ms. Los lugares son los mismos: sólo
+   * cambian los nombres, los diálogos y el color del mar. El barco se queda
+   * donde está, con su rumbo; mientras dura no se gobierna. Resuelve `true`
+   * si quedó puesto y `false` si otra petición lo adelantó.
+   */
+  setWorld(
+    world: WorldConfig,
+    opts: {
+      sea?: { base: string; wave: string; crest: string };
+      runtime?: Partial<RuntimeOptions>;
+      transition?: SwitchMode;
+    } = {},
+  ): Promise<boolean> {
+    if (this.destroyed) return Promise.resolve(false);
+    // Se deja el vuelo o el viaje donde iban: el cambio empieza con el barco en el agua.
+    if (this.flight) this.finishFlight(false);
+    this.endVoyage('cancelled');
+    this.clearCourse();
+    return this.switcher.switchTo(async () => {
+      const runtime = new WorldRuntime(
+        { ...world, bounds: planetRect(world.bounds) },
+        { ...this.opts.runtime, ...opts.runtime, wrap: true },
+      );
+      return { world, runtime, sea: opts.sea, destroy: () => undefined };
+    }, opts.transition ?? 'vortex');
+  }
+
+  /** Hay cambio de mundo en curso (entrada bloqueada). */
+  get switching(): boolean {
+    return this.switcher.locked;
+  }
+
+  /** Con la pantalla a oscuras (o antes de fundir): el mundo nuevo ocupa el sitio del viejo. */
+  private adoptWorld(next: MarScene): void {
+    if (this.switcher.timeline.mode === 'fade') {
+      this.vortex.capture(this.renderer, this.scene, this.camera);
+    }
+    // Lo que el mundo de antes tenía pendiente sale antes del cambio.
+    for (const e of this.rt.drainEvents()) this.opts.onWorldEvent(e);
+    this.rt = next.runtime;
+    this.world = next.world;
+    if (next.sea) {
+      this.moods = moods(next.sea);
+      this.moodTo = this.moods[this.moodId];
+      this.mood = cloneMood(this.moodTo);
+      this.moodFrom = cloneMood(this.mood);
+      this.moodT = 1;
+      this.applyMood();
+    }
+  }
+
+  /**
+   * Pone el barco en (x, y), parado, en el agua libre más cercana (la
+   * posición guardada de una recarga, «Saltar» un viaje). Devuelve dónde quedó.
+   */
+  moveShip(x: number, y: number, heading?: number): { x: number; y: number } {
+    const p = this.freePoint(x, y);
+    const h = heading ?? this.ship.heading;
+    Object.assign(this.ship, { x: p.x, y: p.y, vx: 0, vy: 0, heading: h });
+    Object.assign(this.prev, { x: p.x, y: p.y, heading: h });
+    this.updateCamera(0, true);
+    return p;
   }
 
   /** Pone el barco al sur de un lugar, fuera de su radio (`?cerca=` y enlaces). */
@@ -929,6 +1046,7 @@ export class Mar3D {
 
   destroy(): void {
     this.destroyed = true;
+    this.switcher.destroy();
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.resize);
     this.unbindInput();
@@ -941,6 +1059,8 @@ export class Mar3D {
       if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
       else mat?.dispose();
     });
+    this.modelStore.destroy();
+    this.vortex.dispose();
     this.renderer.dispose();
   }
 
@@ -1093,7 +1213,9 @@ export class Mar3D {
               p: [-0.35, 1.05, 0],
               r: [0, 0, -0.6],
             });
-            g.add(new Mesh(k.build(), lit));
+            // La mascota de WhatsApp (T39) llega por distancia; mientras, la boya verde.
+            const fallback = new Mesh(k.build(), lit);
+            g.add(this.modelSlotFor(o, fallback));
             g.position.set(x, 0, z);
             this.addView({ id, obj: g, kind: 'boia', y: 0, phase, labelY: 2.6, update: bob(0.08) });
           } else {
@@ -1101,14 +1223,18 @@ export class Mar3D {
             const k = new Kit();
             k.add(new CylinderGeometry(0.9, 1.1, 0.5, 12), C.white, { p: [0, 0.1, 0] });
             k.add(new CylinderGeometry(0.2, 0.2, 0.2, 8), C.orange, { p: [0, 0.4, 0] });
-            g.add(new Mesh(k.build(), lit));
-            const m = createMascot(this.faces.orange, {
+            const fallback = new Group();
+            fallback.add(new Mesh(k.build(), lit));
+            const mascot = createMascot(this.faces.orange, {
               cap: 'beanie',
               band: C.white,
               scale: 0.75,
             });
-            m.position.y = 0.35;
-            m.rotation.y = Math.PI / 2;
+            mascot.position.y = 0.35;
+            mascot.rotation.y = Math.PI / 2;
+            fallback.add(mascot);
+            // La mascota de Blender (T39: primera o informativa) llega por distancia.
+            const m = this.modelSlotFor(o, fallback);
             g.add(m);
             g.position.set(x, 0, z);
             this.addView({
@@ -1128,8 +1254,14 @@ export class Mar3D {
         }
         case 'encuentro': {
           const g = new Group();
-          const m = createMascot(this.faces.pink, { cap: 'party', band: C.yellow, scale: 0.55 });
-          m.rotation.y = Math.PI / 2;
+          const mascot = createMascot(this.faces.pink, {
+            cap: 'party',
+            band: C.yellow,
+            scale: 0.55,
+          });
+          mascot.rotation.y = Math.PI / 2;
+          // La Boia Fiestera de Blender (T39) llega por distancia.
+          const m = this.modelSlotFor(o, mascot);
           g.add(m);
           g.position.set(x, 0, z);
           this.addView({
@@ -1300,7 +1432,7 @@ export class Mar3D {
           const banner = new Mesh(new BoxGeometry(0.2, 0.9, half * 2 + 0.4), bannerMat);
           banner.position.y = 3.7;
           g.add(banner);
-          const tex = textTexture([text], { w: 512, h: 96, bg: '#3b2a8f', fg: '#fff4e2' });
+          const tex = textTexture([text], { w: 512, h: 96, bg: C.purple, fg: '#fff4e2' });
           for (const s of [-1, 1]) {
             const face = new Mesh(
               new BoxGeometry(0.02, 0.7, half * 2),
@@ -1528,7 +1660,7 @@ export class Mar3D {
   };
 
   private readonly onDown = (e: PointerEvent) => {
-    if (!this.inputEnabled) return;
+    if (!this.inputEnabled || this.switcher.locked) return;
     this.opts.canvas.setPointerCapture?.(e.pointerId);
     this.pointers.set(e.pointerId, {
       x: e.clientX,
@@ -1611,7 +1743,7 @@ export class Mar3D {
 
   private readonly onKey = (e: KeyboardEvent) => {
     const t = e.target as HTMLElement | null;
-    if (!this.inputEnabled) return;
+    if (!this.inputEnabled || this.switcher.locked) return;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     const k = e.key.toLowerCase();
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k)) {
@@ -1758,15 +1890,40 @@ export class Mar3D {
     this.last = now;
     if (this.paused) return;
     this.time += dt;
-    this.acc += dt;
-    let steps = 0;
-    while (this.acc >= STEP && steps < 6) {
-      this.simulate(STEP);
-      this.acc -= STEP;
-      steps++;
+    // Cambio de mundo: el barco se queda quieto y la entrada no cuenta.
+    const free = this.switcher.advance(dt * 1000);
+    const mode = this.switcher.locked ? this.switcher.timeline.mode : null;
+    if (mode !== this.switchingMode) {
+      this.switchingMode = mode;
+      if (mode) {
+        this.keys.clear();
+        this.endStick();
+      }
+      this.opts.onSwitch?.(mode);
     }
-    if (steps === 6) this.acc = 0;
+    if (free) {
+      this.acc += dt;
+      let steps = 0;
+      while (this.acc >= STEP && steps < 6) {
+        this.simulate(STEP);
+        this.acc -= STEP;
+        steps++;
+      }
+      if (steps === 6) this.acc = 0;
+    } else {
+      this.acc = 0;
+      this.ship.vx = 0;
+      this.ship.vy = 0;
+      this.prev.x = this.ship.x;
+      this.prev.y = this.ship.y;
+      this.prev.heading = this.ship.heading;
+    }
     for (const e of this.runtime.drainEvents()) this.opts.onWorldEvent(e);
+    this.modelClock += dt;
+    if (this.modelClock >= MODEL_PLAN_S) {
+      this.modelClock = 0;
+      this.streamModels();
+    }
     this.render(dt, this.acc / STEP);
     this.measure(dt, now);
   };
@@ -1806,6 +1963,18 @@ export class Mar3D {
     }
     const after = shipSpeed(s);
     if (before - after > 60) this.shake = Math.min(1, this.shake + (before - after) / 250);
+    // Golpe (T46): lo que el choque le quitó al barco; suena y salpica en la proa.
+    const impact = Math.max(s.impact ?? 0, before - after);
+    if (impact >= IMPACT_MIN) {
+      const bp = this.boat.group.position;
+      const h = s.heading;
+      this.splash.burst(
+        bp.x + Math.cos(h) * SHIP_LENGTH * 0.45,
+        bp.z + Math.sin(h) * SHIP_LENGTH * 0.45,
+        Math.min(1, impact / 200),
+      );
+      this.opts.onImpact?.(impact);
+    }
     const dh = Math.atan2(
       Math.sin(s.heading - this.prev.heading),
       Math.cos(s.heading - this.prev.heading),
@@ -2084,8 +2253,73 @@ export class Mar3D {
       this.marker.update({ x, z }, { x: tx, z: tz }, t, 1 + this.zoom * 8);
     }
 
-    this.renderer.render(this.scene, this.camera);
+    // El agujero negro, centrado en el barco (sin cambio de mundo, se pinta directo).
+    const bp = this.boat.group.position;
+    tmpV.set(bp.x, 0.6 - bendDrop(this.bend, Math.hypot(bp.x - cam.x, bp.z - cam.z)), bp.z);
+    tmpV.project(this.camera);
+    this.vortex.render(this.renderer, this.scene, this.camera, this.switcher.timeline.pose(), {
+      x: tmpV.x * 0.5 + 0.5,
+      y: tmpV.y * 0.5 + 0.5,
+    });
     this.placeOverlay();
+  }
+
+  /**
+   * Carga por distancia (T47 en /juego): los lugares con modelo de Blender
+   * cerca del barco lo piden; los lejanos lo sueltan y vuelven a la mascota
+   * hecha a mano (que no pesa nada).
+   */
+  private streamModels(): void {
+    if (this.modelViews.size === 0) return;
+    const ship = this.ship;
+    // En el planeta cuenta la copia más cercana: se mide por el camino corto.
+    const near = [...this.modelViews.keys()].map((id) => {
+      const st = this.runtime.objectState(id);
+      const at = st ?? this.world.objects.find((x) => x.identity.id === id)?.position;
+      const { dx, dy } = this.runtime.delta(ship.x, ship.y, at?.x ?? 0, at?.y ?? 0);
+      return { id, x: ship.x + dx, y: ship.y + dy };
+    });
+    const { want, keep } = planModels(near, ship);
+    for (const [id, mv] of this.modelViews) {
+      if (want.has(id) && !mv.acquired) this.acquireModel(mv);
+      else if (!keep.has(id) && mv.acquired) this.releaseModel(mv);
+    }
+  }
+
+  /**
+   * El hueco del modelo de Blender de un lugar (T39), con `fallback` dentro
+   * hasta que llegue; sin modelo, `fallback` tal cual.
+   */
+  private modelSlotFor(o: WorldObject, fallback: Object3D): Object3D {
+    const key = modelFor(o);
+    if (!key) return fallback;
+    const slot = modelSlot(fallback);
+    this.modelViews.set(o.identity.id, { key, slot, fallback, model: null, acquired: false });
+    return slot;
+  }
+
+  private acquireModel(mv: ModelView): void {
+    mv.acquired = true;
+    void this.modelStore.acquire(mv.key).then((model) => {
+      if (!model || !mv.acquired || this.destroyed) return;
+      // Blender pone la cara a +X, como la mascota hecha a mano ya girada.
+      model.rotation.y = Math.PI / 2;
+      model.scale.setScalar(fitHeight(model, mv.fallback));
+      curveTree(model);
+      mv.slot.remove(mv.fallback);
+      mv.slot.add(model);
+      mv.model = model;
+    });
+  }
+
+  private releaseModel(mv: ModelView): void {
+    mv.acquired = false;
+    if (mv.model) {
+      mv.slot.remove(mv.model);
+      mv.model = null;
+      mv.slot.add(mv.fallback);
+    }
+    this.modelStore.release(mv.key);
   }
 
   /** Alas, chispas y nubecillas del vuelo (escena), en la copia del barco que se ve. */
@@ -2311,6 +2545,10 @@ export class Mar3D {
       panned: this.pan.lengthSq() > 25,
       voyage: this.flight?.placeId ?? this.voyage?.placeId ?? null,
       flight: this.flight?.pose.phase ?? null,
+      x: this.ship.x,
+      y: this.ship.y,
+      heading: this.ship.heading,
+      models: [...this.modelViews.values()].filter((m) => m.model).length,
     });
   }
 }

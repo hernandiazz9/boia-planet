@@ -3,10 +3,11 @@
    con el naranja y el morado de BOIA. muestra */
 
 .mar {
-  --orange: #f26a1b;
-  --orange-2: #ff8a3d;
+  /* Marca (T50): los tokens de globals.css. */
+  --orange: #ec4f24;
+  --orange-2: #ff5219;
   --indigo: #231a5c;
-  --purple: #3b2a8f;
+  --purple: #36278a;
   --cream: #fff4e2;
   --ink: #1b1440;
   --glass: rgb(24 18 66 / 0.62);
@@ -986,8 +987,9 @@
 .mar-btn--primary,
 .mar .juego-panel-cta {
   background: var(--orange);
-  color: #fff !important;
-  box-shadow: 0 8px 20px rgb(242 106 27 / 0.35);
+  /* Negro sobre el naranja de la marca, como en la landing (T50: el blanco no llega a AA). */
+  color: #000 !important;
+  box-shadow: 0 8px 20px rgb(236 79 36 / 0.35);
 }
 
 .mar-btn--big {
@@ -1422,4 +1424,172 @@
   font-size: 0.78rem;
   line-height: 1.35;
   opacity: 0.85;
+}
+
+/* ---------- T51: lo que plan 004 trajo a /juego, en el mar 3D ---------- */
+
+/* El menú crece con «Mundos»: se desplaza dentro sin tapar el mar entero. */
+.mar-menu {
+  max-height: calc(100% - var(--safe-t) - 150px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.mar-menu__mundos .mundos > p {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.mar-menu__mundos .mundos-lista {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.mar-menu__mundos .mundo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+  text-align: left;
+}
+
+.mar-menu__mundos .mundo.is-active {
+  border-color: var(--orange);
+  background: rgb(236 79 36 / 0.22);
+}
+
+.mar-menu__mundos .mundo img,
+.mar-menu__mundos .mundo-sin-barco {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  display: grid;
+  place-items: center;
+}
+
+.mar-menu__mundos .mundo-texto {
+  display: grid;
+  gap: 1px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.mar-menu__mundos .mundo-nombre {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.mar-menu__mundos .mundo-historia,
+.mar-menu__mundos .mundo-barco,
+.mar-menu__mundos .juego-muted {
+  opacity: 0.75;
+  font-size: 0.74rem;
+}
+
+/* Durante el agujero negro los rótulos no se quedan flotando sobre la nada. */
+.mar[data-cambio-mundo] .mar-pin,
+.mar[data-cambio-mundo] .mar-bubble {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.mar-switch {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 28%);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  z-index: 5;
+  pointer-events: none;
+  animation: mar-in 0.3s ease-out;
+}
+
+/* Invitación al Carnet (T44): bajo los avisos, sin tapar «Entradas» ni el barco. */
+.mar-invite {
+  position: absolute;
+  top: calc(var(--safe-t) + 62px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 20px));
+  z-index: 5;
+}
+
+.mar-invite .carnet-invite__create,
+.mar-invite .carnet-invite__later {
+  min-height: 44px;
+}
+
+/* Piezas de los paneles de /juego dentro de la ficha (T42, T43). */
+.mar-sheet .juego-panel-cta.is-secundario,
+.mar .juego-panel-cta.is-secundario {
+  background: rgb(27 20 64 / 0.06);
+  color: var(--ink) !important;
+  border: 2px solid var(--ink);
+  box-shadow: none;
+}
+
+.mar-sheet .juego-panel-cta:disabled {
+  background: #d8d2c6;
+  box-shadow: none;
+}
+
+.mar-sheet .juego-descuento-acciones .juego-panel-cta {
+  flex: 1 1 140px;
+}
+
+.mar-sheet .juego-link-button,
+.mar-sheet .juego-panel-links a,
+.mar-sheet .juego-panel-link {
+  color: #b43a12 !important;
+}
+
+.mar-sheet .juego-panel-links {
+  margin: 0 0 10px;
+}
+
+.mar-sheet .juego-panel-links a {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mar-sheet .juego-panel-block h3 {
+  margin: 12px 0 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.mar-sheet .juego-panel-pending {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.mar-sheet .discount-banner {
+  margin: 6px 0 4px;
+}
+
+.mar-codes {
+  margin-top: 6px !important;
 }

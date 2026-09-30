@@ -16,7 +16,12 @@ import {
   rescueMissionOf,
 } from '@boia/engine/mission';
 import { type Notice, browserStore, loadSettings } from '@boia/engine/ui';
-import { CIRCUIT_ID, type ComposedWorld, type WorldConfig } from '@boia/world';
+import {
+  CIRCUIT_ID,
+  type ComposedWorld,
+  type WorldConfig,
+  chooseWorld as chooseWorldIn,
+} from '@boia/world';
 import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { liveWorld } from '../../lib/admin/live-world';
@@ -30,23 +35,57 @@ import type { ShipLook } from '../../lib/barco/shop-model';
 import {
   TIME_PLAYED_TICK_S,
   onAchievementNotices,
+  recordBuoy,
   recordSignal,
   signalFromWorldEvent,
 } from '../juego/achievements';
+import { CarnetInvite } from '../juego/carnet/carnet-invite';
 import { finishLap, lapNotices } from '../juego/circuit-hud';
 import { worlds } from '../juego/demo-world';
-import type { DolphinTrail } from '../juego/encounters';
-import { WhirlpoolTimer, findDolphin } from '../juego/encounters';
+import {
+  DOLPHIN_PARAM,
+  type DolphinAction,
+  type DolphinGuide,
+  WhirlpoolTimer,
+  findDolphinGuide,
+  inOpenSea,
+  undiscoveredTarget,
+} from '../juego/encounters';
+import { MundosPicker } from '../juego/menu/sections/mundos';
 import { type MinigameOffer, MinigameLayer } from '../juego/minigame-layer';
 import { boardedNotice, deliveredNotice, loadMission, persistMissionEvent } from '../juego/mission';
 import { useNoticeQueue } from '../juego/notices';
 import { gameRepository, useRepoData } from '../juego/repo';
-import { chime, fanfare, plop } from '../juego/sound';
+import {
+  SHIP_POSITION_SAVE_MS,
+  documentNavigationType,
+  loadShipPosition,
+  movedEnough,
+  saveShipPosition,
+  shouldRestorePosition,
+} from '../juego/ship-position';
+import {
+  applyAudioSettings,
+  bump,
+  chime,
+  fanfare,
+  installAudioLifecycle,
+  plop,
+  setAmbientWorld,
+  whoosh,
+} from '../juego/sound';
 import { equipLook, rememberLook, storedLook, syncStyleParam } from '../juego/ship-look';
-import { adminWorldId, currentWorld } from '../juego/world-choice';
+import { useCarnetInvitations } from '../juego/use-invitations';
+import {
+  adminWorldId,
+  currentWorld,
+  syncWorldParam,
+  visitorWorldChoice,
+} from '../juego/world-choice';
 import {
   type ProgressOutcome,
   discoverPlace,
+  discoveredPlaces,
   grantEncounter,
   persistWorldEvent,
 } from '../juego/world-progress';
@@ -65,7 +104,9 @@ import {
   currentEventTrip,
   eventOfPlace,
   findEvent,
+  islandOfEvent,
 } from './sheet';
+import { islandTrip, marPositionStore, tripOutcome } from './voyage';
 import './mar.css';
 
 /**
@@ -164,6 +205,22 @@ function pinsOf(world: WorldConfig, phase: RescuePhase | null): PinSpec[] {
 
 type Status = 'loading' | 'ready' | 'error';
 
+/** Golpes (T46): velocidad perdida que suena al máximo y espera entre dos. muestra */
+const BUMP_FULL_SPEED = 200;
+const BUMP_COOLDOWN_MS = 350;
+
+/** El mar 3D ya arrancó antes en este documento (volver sin recargar restaura la posición). */
+let bootedInDocument = false;
+
+/** La posición del barco de /mar en este navegador (T44), o null sin almacenamiento. */
+function devicePositions() {
+  try {
+    return marPositionStore(window.localStorage);
+  } catch {
+    return null;
+  }
+}
+
 export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -175,7 +232,16 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
   const phaseRef = useRef<RescuePhase | null>(null);
   const missionRef = useRef<RescueMission | null>(null);
   const raceRef = useRef<{ race: CircuitRace; spec: CircuitSpec } | null>(null);
-  const dolphinRef = useRef<DolphinTrail | null>(null);
+  // El delfín guía (O15, T45): el runtime en que se escondió y el reloj de sus pasos.
+  const dolphinRef = useRef<DolphinGuide | null>(null);
+  const dolphinRuntime = useRef<unknown>(null);
+  const dolphinClock = useRef(0);
+  const [dolphinOut, setDolphinOut] = useState(false);
+  // Lo ya encontrado (secretos, cofres, boias…): el delfín no guía hasta ahí.
+  const foundObjectsRef = useRef(new Set<string>());
+  // Islas ya descubiertas: su ficha ofrece «Explorar la isla» (REQ-AVE-013).
+  const discoveredRef = useRef(new Set<string>());
+  const bumpCooldown = useRef(0);
   const whirlRef = useRef(new WhirlpoolTimer());
   const rescueNotices = useRef<Promise<Notice[]> | null>(null);
 
@@ -183,6 +249,8 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
   const [status, setStatus] = useState<Status>('loading');
   const [stats, setStats] = useState<Stats | null>(null);
   const [sheet, setSheet] = useState<SheetState | null>(null);
+  const sheetRef = useRef<SheetState | null>(null);
+  sheetRef.current = sheet;
   const [checkoutFor, setCheckoutFor] = useState<string | null>(null);
   // Viaje en turbo del botón «Entradas» (REQ-ENT-040) y lo que sube la ficha abierta.
   const [trip, setTrip] = useState<EventTrip | null>(null);
@@ -207,9 +275,15 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
   const [help, setHelp] = useState(false);
   const [menu, setMenu] = useState(false);
   const [worldName, setWorldName] = useState('');
+  // Cambio de mundo por agujero negro (T41, T51): el mundo de ahora y la transición.
+  const [worldId, setWorldId] = useState<string | null>(null);
+  const [switching, setSwitching] = useState<'vortex' | 'fade' | null>(null);
+  const [worldPending, setWorldPending] = useState(false);
   const [ships, setShips] = useState<ShipModelEntry[]>([]);
   // El barco que se lleva (estilo y skin) y la tienda «Barco» (T40).
   const [shipLook, setShipLook] = useState<ShipLook | null>(null);
+  const shipLookRef = useRef<ShipLook | null>(null);
+  shipLookRef.current = shipLook;
   const [shipPending, setShipPending] = useState(false);
   const [tienda, setTienda] = useState(false);
   const { data: equippedNow } = useRepoData((r) => r.progress.equipped());
@@ -319,11 +393,15 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
     }
     switch (e.type) {
       case 'reward':
+        foundObjectsRef.current.add(e.objectId);
         persist(persistWorldEvent(progressApi(), e, ctx));
         break;
       case 'achievement': {
+        foundObjectsRef.current.add(e.objectId);
         const s = signalFromWorldEvent(e, world);
-        if (s) pushAll(recordSignal(repo, s));
+        // Una boia nueva avisa «Boia encontrada · n de 6» (O12, T45), como en /juego.
+        if (s?.trigger === 'find_buoy') pushAll(recordBuoy(repo, s.objectId, world));
+        else if (s) pushAll(recordSignal(repo, s));
         break;
       }
       case 'proximity_enter': {
@@ -339,14 +417,6 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
                 });
             })
             .catch(() => undefined);
-        }
-        const d = dolphinRef.current;
-        if (d && e.objectId === d.objectId) {
-          const step = d.reached();
-          engineRef.current?.runtime.moveObject(d.objectId, step.moveTo.x, step.moveTo.y);
-          plop();
-          if (step.reward)
-            persist(grantEncounter(progressApi(), `lugar:${d.objectId}:seguir`, d.coins, 'daily'));
         }
         if (o?.identity.category === 'remolino') whirlRef.current.enter(performance.now());
         break;
@@ -378,20 +448,24 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         if (e.target === 'event' && e.ref && findEvent(e.ref)) {
           setSheet({ kind: 'event', placeId: e.objectId, eventId: e.ref });
         } else if (e.target === 'info' || e.target === 'photos' || e.target === 'store') {
+          // Otra visita a una isla ya descubierta: «Explorar la isla» (REQ-AVE-013).
+          const revisit = e.target === 'info' && discoveredRef.current.has(e.objectId);
           setSheet((s) =>
-            s?.kind === 'discount'
+            s?.kind === 'discount' || s?.kind === 'codes'
               ? s
               : {
                   kind: 'content',
                   placeId: e.objectId,
                   target: e.target as 'info',
                   ...(e.ref ? { ref: e.ref } : {}),
+                  ...(revisit ? { revisit: true } : {}),
                 },
           );
         }
         break;
       case 'content_close':
-        setSheet((s) => (s && s.kind !== 'discount' && s.placeId === e.objectId ? null : s));
+        discoveredRef.current.add(e.objectId);
+        setSheet((s) => (s && 'placeId' in s && s.placeId === e.objectId ? null : s));
         break;
       case 'minigame':
         if (e.available && e.gameId) setMinigameOffer({ objectId: e.objectId, gameId: e.gameId });
@@ -433,9 +507,64 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
     }
   };
 
+  /** Lo que hace el delfín guía (O15), aplicado al runtime del mundo de ahora. */
+  const applyDolphin = (g: Mar3D, d: DolphinGuide, actions: DolphinAction[]) => {
+    const rt = g.runtime;
+    for (const a of actions) {
+      if (a.type === 'place') rt.moveObject(d.objectId, a.x, a.y);
+      else if (a.type === 'surface') {
+        rt.setObjectPresent(d.objectId, true);
+        setDolphinOut(true);
+        plop();
+      } else if (a.type === 'dive') rt.setObjectPresent(d.objectId, false);
+      else if (a.type === 'gone') {
+        setDolphinOut(false);
+        // Seguirlo hasta el final da su premio (una vez al día).
+        if (a.followed) {
+          persist(grantEncounter(progressApi(), `lugar:${d.objectId}:seguir`, d.coins, 'daily'));
+        }
+      }
+    }
+  };
+
+  /**
+   * El delfín (O15, REQ-AVE-018), como en /juego: escondido hasta que, tras
+   * 2–4 minutos de mar abierto (sin carrera, ficha, viaje ni diálogo), sale
+   * junto al barco y guía hacia lo más cercano sin descubrir.
+   */
+  const stepDolphin = (g: Mar3D, ship: ShipState, dt: number) => {
+    const d = dolphinRef.current;
+    const world = worldRef.current;
+    if (!d || !world) return;
+    if (dolphinRuntime.current !== g.runtime) {
+      // Runtime nuevo (arranque o cambio de mundo): se esconde y vuelve a esperar.
+      dolphinRuntime.current = g.runtime;
+      d.reset();
+      g.runtime.setObjectPresent(d.objectId, false);
+      setDolphinOut(false);
+    }
+    dolphinClock.current += dt;
+    if (dolphinClock.current < 0.2) return;
+    const elapsed = dolphinClock.current;
+    dolphinClock.current = 0;
+    const calm =
+      !sheetRef.current &&
+      !g.dialogue() &&
+      !g.voyaging &&
+      !g.switching &&
+      !(raceRef.current?.race.active ?? false);
+    const found = {
+      has: (id: string) => discoveredRef.current.has(id) || foundObjectsRef.current.has(id),
+    };
+    const openSea = calm && !d.active && inOpenSea(world.objects, ship);
+    const target = d.active || openSea ? undiscoveredTarget(world.objects, found, ship) : null;
+    applyDolphin(g, d, d.step(elapsed, ship, { openSea, target }));
+  };
+
   const onStep = (ship: ShipState, dt: number) => {
-    const m = missionRef.current;
     const g = engineRef.current;
+    if (g) stepDolphin(g, ship, dt);
+    const m = missionRef.current;
     if (!m || !g) return;
     const evs = m.step(g.missionHost, ship, dt);
     for (const e of evs) onMissionEvent(e);
@@ -476,11 +605,51 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
     setCheckoutFor(eventId);
   };
 
+  /** Termina un viaje: la compra («Entradas»), la ficha del evento («Ir a la isla») o nada. */
+  const finishTrip = (t: EventTrip, how: VoyageEnd | 'skip') => {
+    const outcome = tripOutcome(t, how);
+    if (outcome === 'checkout') {
+      openCheckout(t.eventId);
+      return;
+    }
+    setTrip(null);
+    if (outcome === 'sheet') {
+      const g = engineRef.current;
+      // «Saltar»: el barco llega de un salto, junto a la isla.
+      if (how === 'skip' && g) {
+        g.stopVoyage();
+        g.startNear(t.placeId);
+      }
+      setSheet({ kind: 'event', placeId: t.placeId, eventId: t.eventId });
+    }
+  };
+
   const onVoyageEnd = (placeId: string, how: VoyageEnd) => {
     const t = tripRef.current;
     if (!t || t.placeId !== placeId) return;
-    if (how === 'cancelled') setTrip(null);
-    else openCheckout(t.eventId);
+    finishTrip(t, how);
+  };
+
+  /**
+   * «Ir a la isla» de un código (T43): el barco navega solo, en turbo, hasta
+   * la isla del evento del código (se puede «Saltar» o tomar el timón) y,
+   * al llegar, abre su ficha con «Tienes un código de descuento para este
+   * evento». Con movimiento reducido llega de un salto.
+   */
+  const goToIsland = (eventId: string) => {
+    const w = worldRef.current;
+    const g = engineRef.current;
+    const next = w ? islandTrip(w, eventId) : null;
+    if (!next || !g) return;
+    setMenu(false);
+    setSheet(null);
+    if (prefersReducedMotion() || !g.startVoyage(next.placeId)) {
+      finishTrip(next, 'skip');
+      return;
+    }
+    navigator.vibrate?.(20);
+    whoosh();
+    setTrip(next);
   };
 
   /**
@@ -491,7 +660,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
   const onTickets = () => {
     const current = tripRef.current;
     if (current) {
-      openCheckout(current.eventId);
+      finishTrip(current, 'skip');
       return;
     }
     const w = worldRef.current;
@@ -511,12 +680,22 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       return;
     }
     navigator.vibrate?.(20);
+    whoosh();
     setSheet((s) => (s?.kind === 'discount' ? s : null));
     setTrip(next);
   };
 
-  const handlers = useRef({ onWorldEvent, onStep, onStats, onPin, onVoyageEnd });
-  handlers.current = { onWorldEvent, onStep, onStats, onPin, onVoyageEnd };
+  /** Un golpe (T46): suena según lo fuerte que fue, sin repetirse en el mismo choque. */
+  const onImpact = (speed: number) => {
+    const now = performance.now();
+    if (now < bumpCooldown.current) return;
+    bumpCooldown.current = now + BUMP_COOLDOWN_MS;
+    bump(Math.min(1, speed / BUMP_FULL_SPEED));
+    navigator.vibrate?.(12);
+  };
+
+  const handlers = useRef({ onWorldEvent, onStep, onStats, onPin, onVoyageEnd, onImpact });
+  handlers.current = { onWorldEvent, onStep, onStats, onPin, onVoyageEnd, onImpact };
 
   // --- Arranque ---------------------------------------------------------------
 
@@ -555,7 +734,13 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       liveRef.current = live;
       worldIdRef.current = live.id;
       setWorldName(live.theme.name);
-      dolphinRef.current = findDolphin(world.objects);
+      setWorldId(live.id);
+      // `?delfin=<s>`: el delfín sale tras esos segundos de mar abierto (pruebas y demos).
+      const every = Number(new URLSearchParams(window.location.search).get(DOLPHIN_PARAM));
+      dolphinRef.current = findDolphinGuide(
+        world.objects,
+        every > 0 ? { tuning: { minInterval: every, maxInterval: every } } : undefined,
+      );
       const spec = circuitFromWorld(world, CIRCUIT_ID);
       raceRef.current = spec ? { race: new CircuitRace(spec), spec } : null;
 
@@ -590,6 +775,8 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         onStats: (s) => handlers.current.onStats(s),
         onPin: (id) => handlers.current.onPin(id),
         onVoyageEnd: (id, how) => handlers.current.onVoyageEnd(id, how),
+        onImpact: (speed) => handlers.current.onImpact(speed),
+        onSwitch: (mode) => setSwitching(mode),
         onFirstMove: () => {
           setHelp(false);
           writePref(HELP_KEY, 'visto');
@@ -606,9 +793,38 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         void equipLook(progressApi(), look);
       }
       const near = new URLSearchParams(window.location.search).get('cerca');
+      // REQ-IDE-004 (T44): al recargar, el barco sigue donde estaba y con su rumbo.
+      const positions = devicePositions();
+      const restore =
+        !near &&
+        positions &&
+        shouldRestorePosition({
+          navigationType: documentNavigationType(),
+          bootedBefore: bootedInDocument,
+          handedOver: false,
+          placeRequested: false,
+        })
+          ? loadShipPosition(positions)
+          : null;
+      bootedInDocument = true;
       if (near) engine.startNear(near);
+      else if (restore) engine.moveShip(restore.x, restore.y, restore.heading);
       setPhase(mission?.phase ?? null);
       setStatus('ready');
+      // Lo descubierto en otras visitas: sus islas ofrecen «Explorar la isla»
+      // y el delfín no guía hasta lo ya encontrado.
+      void discoveredPlaces(progressApi())
+        .then((ids) => ids.forEach((id) => discoveredRef.current.add(id)))
+        .catch(() => undefined);
+      void progressApi()
+        .discoveries()
+        .then((list) => {
+          for (const { key } of list) {
+            const m = /^objeto:[^:]+:(.+)$/.exec(key);
+            if (m) foundObjectsRef.current.add(m[1]!);
+          }
+        })
+        .catch(() => undefined);
     })().catch((err: unknown) => {
       console.error('[boia] el mar 3D no pudo arrancar', err);
       if (!cancelled) setStatus('error');
@@ -645,6 +861,51 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       recordSignal(gameRepository(), { trigger: 'visit_world', worldId: worldIdRef.current }),
     );
   }, [status, pushAll]);
+
+  // Sonido (T46, O10): el primer gesto lo desbloquea (también en iOS), ocultar
+  // la pestaña lo pausa, y al salir del mar se calla el ambiente.
+  useEffect(() => {
+    const off = installAudioLifecycle();
+    if (settings) applyAudioSettings(settings);
+    return () => {
+      off();
+      setAmbientWorld(null);
+    };
+  }, [settings]);
+  // Un loop de ambiente por mundo: cambia con el mundo.
+  useEffect(() => {
+    if (worldId) setAmbientWorld(worldId);
+  }, [worldId]);
+
+  // La posición del barco (REQ-IDE-004, T44): cada poco mientras se navega y
+  // al irse; una recarga la restaura (arranque, arriba).
+  useEffect(() => {
+    if (status !== 'ready') return;
+    const store = devicePositions();
+    if (!store) return;
+    let last: { x: number; y: number; heading: number } | null = null;
+    const save = () => {
+      const g = engineRef.current;
+      // En pleno vuelo el barco no está en el agua: se guarda al posarse.
+      if (!g || g.voyaging) return;
+      const now = { x: g.ship.x, y: g.ship.y, heading: g.ship.heading };
+      if (!movedEnough(last, now)) return;
+      last = now;
+      saveShipPosition(store, now);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') save();
+    };
+    const id = window.setInterval(save, SHIP_POSITION_SAVE_MS);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', save);
+    return () => {
+      save();
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', save);
+    };
+  }, [status]);
 
   // Tiempo a bordo (logros de tiempo jugado), sólo con la pestaña a la vista.
   useEffect(() => {
@@ -715,7 +976,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
 
   /** Equipar en la tienda (T40): el modelo de ese estilo en esa skin, en el agua. */
   const shipRequest = useRef(0);
-  const chooseShip = (look: ShipLook) => {
+  const chooseShip = (look: ShipLook, remember = true) => {
     const entry = ships.find((b) => b.id === look.style);
     if (!entry) return;
     const request = ++shipRequest.current;
@@ -726,8 +987,11 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         engineRef.current.setShipModel(m);
         const applied = { style: m.id, skin: m.skin };
         setShipLook(applied);
-        rememberLook(applied);
-        syncStyleParam(applied.style);
+        // El barco del mundo (tras un cambio de mundo) no se apunta como elegido.
+        if (remember) {
+          rememberLook(applied);
+          syncStyleParam(applied.style);
+        }
       })
       .catch((err: unknown) => console.warn('[boia] no se pudo cargar el barco', err))
       .finally(() => {
@@ -764,18 +1028,136 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
     setSheet(null);
   };
 
-  const steerToEvent = (eventId: string) => {
+  const steerToEvent = (eventId: string): boolean => {
     const w = worldRef.current;
-    const o = w?.objects.find((x) => eventOfPlace(x) === eventId);
-    if (o) courseTo(o.identity.id);
+    const o = w ? islandOfEvent(w, eventId) : null;
+    if (!o) return false;
+    courseTo(o.identity.id);
+    return true;
   };
+
+  // --- Cambio de mundo (T41 en /juego, T51 aquí) -----------------------------
+  // Mismo mapa, otra piel: el mundo cae a un agujero negro centrado en el
+  // barco, se cambia a oscuras y el nuevo se despliega; con movimiento
+  // reducido, un fundido. El barco sigue donde está, con su misión.
+  const worldRequest = useRef(0);
+  /** El último mundo pedido (el que acabará en pantalla). */
+  const wantedWorld = useRef<string | null>(null);
+  const switchWorld = (chosen: ComposedWorld) => {
+    const g = engineRef.current;
+    if (!g || chosen.id === (wantedWorld.current ?? worldIdRef.current)) return;
+    wantedWorld.current = chosen.id;
+    const request = ++worldRequest.current;
+    setWorldPending(true);
+    setSheet(null);
+    setTrip(null);
+    let next = chosen;
+    let nextWorld: WorldConfig | null = null;
+    liveWorld(gameRepository(), worlds, chosen)
+      .then((live) => {
+        next = live;
+        nextWorld = marWorld(live.config);
+        return g.setWorld(nextWorld, {
+          sea: live.theme.sea,
+          runtime: { seasonId: live.id },
+          transition: prefersReducedMotion() ? 'fade' : 'vortex',
+        });
+      })
+      .then((ok) => {
+        if (!ok || !nextWorld || request !== worldRequest.current || engineRef.current !== g)
+          return;
+        const w = nextWorld;
+        worldRef.current = w;
+        liveRef.current = next;
+        worldIdRef.current = next.id;
+        setWorldId(next.id);
+        setWorldName(next.theme.name);
+        syncWorldParam(next.id);
+        // La misión sigue (mismo paso, mismo destino guardado) con la piel del mundo nuevo.
+        missionRef.current?.setWorld(w);
+        g.setPins(pinsOf(w, phaseRef.current));
+        const spec = circuitFromWorld(w, CIRCUIT_ID);
+        raceRef.current = spec ? { race: new CircuitRace(spec), spec } : null;
+        setRace(null);
+        // Sin barco elegido (ni en la URL ni equipado), el del mundo nuevo (T40).
+        void storedLook(progressApi(), next.theme.ship, window.location.search).then((want) => {
+          if (want.source !== 'world') return;
+          const now = shipLookRef.current;
+          if (!now || want.style !== now.style || want.skin !== now.skin) {
+            chooseShip({ style: want.style, skin: want.skin }, false);
+          }
+        });
+      })
+      .catch((err: unknown) => {
+        console.warn('[boia] no se pudo cambiar de mundo', err);
+        if (request === worldRequest.current) wantedWorld.current = null;
+      })
+      .finally(() => {
+        if (request === worldRequest.current) setWorldPending(false);
+      });
+  };
+
+  /** El visitante elige un mundo (menú «Mundos»): se recuerda en este navegador. */
+  const chooseWorld = (id: string) => {
+    if (!engineRef.current || id === (wantedWorld.current ?? worldIdRef.current)) return;
+    const chosen = chooseWorldIn(worlds, visitorWorldChoice(), id);
+    setMenu(false);
+    if (chosen) switchWorld(chosen);
+  };
+
+  // El Admin cambia el mundo activo (T26) con /mar abierto (otra pestaña):
+  // quien no eligió mundo ni lo trae en la URL pasa a él por el agujero negro.
+  const switchWorldRef = useRef(switchWorld);
+  switchWorldRef.current = switchWorld;
+  useEffect(() => {
+    if (status !== 'ready') return;
+    let alive = true;
+    const off = gameRepository().subscribe((change) => {
+      if (!change.areas.includes('content')) return;
+      void adminWorldId().then((adminId) => {
+        if (alive) switchWorldRef.current(currentWorld(window.location.search, adminId));
+      });
+    });
+    return () => {
+      alive = false;
+      off();
+    };
+  }, [status]);
+
+  // Invitaciones al Carnet (T44, REQ-IDE-008/009): nunca sobre una carrera,
+  // un diálogo, la compra, un panel o un cambio de mundo; esperan a que acaben.
+  const inviteBlocked =
+    !!sheet ||
+    !!dialogue ||
+    !!race ||
+    !!checkoutFor ||
+    !!trip ||
+    !!switching ||
+    minigameOpen ||
+    logros ||
+    tienda ||
+    menu;
+  const invitations = useCarnetInvitations({
+    running: status === 'ready',
+    blocked: inviteBlocked,
+  });
+  const inviteTrigger = invitations.trigger;
+  // Al cerrar la galería del Puerto de Fotos.
+  const galleryOpen = sheet?.kind === 'content' && sheet.target === 'photos';
+  const wasGallery = useRef(false);
+  useEffect(() => {
+    if (wasGallery.current && !galleryOpen) inviteTrigger('gallery');
+    wasGallery.current = galleryOpen;
+  }, [galleryOpen, inviteTrigger]);
+  const purchasedRef = useRef(false);
 
   const world = worldRef.current;
   // Los rótulos también van al minimapa (la isla del evento, destacada).
   const pins = useMemo(() => (world ? pinsOf(world, phase) : []), [world, phase]);
   const sheetObject = useMemo(() => {
-    if (!sheet || sheet.kind === 'discount' || !world) return undefined;
-    return world.objects.find((o) => o.identity.id === sheet.placeId);
+    if (!sheet || !('placeId' in sheet) || !world) return undefined;
+    const placeId = sheet.placeId;
+    return world.objects.find((o) => o.identity.id === placeId);
   }, [sheet, world]);
 
   const engine = engineRef.current;
@@ -813,6 +1195,13 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       data-ship-skin={shipLook?.skin}
       data-ship-flag={shipLook ? equippedNow?.flag : undefined}
       data-ship-wake={shipLook ? equippedNow?.wake : undefined}
+      data-mundo={worldId ?? undefined}
+      data-cambio-mundo={
+        switching === 'vortex' ? 'vortice' : switching === 'fade' ? 'fundido' : undefined
+      }
+      data-barco={stats ? `${Math.round(stats.x)},${Math.round(stats.y)}` : undefined}
+      data-delfin={dolphinOut ? 'guiando' : undefined}
+      data-modelos={stats?.models}
     >
       <canvas
         ref={canvasRef}
@@ -907,6 +1296,17 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
                 : ''}
             </button>
           ) : null}
+          <button
+            type="button"
+            className="mar-menu__link"
+            data-testid="mar-mis-codigos"
+            onClick={() => {
+              setMenu(false);
+              setSheet({ kind: 'codes' });
+            }}
+          >
+            🏷️ Mis códigos
+          </button>
           <button type="button" className="mar-menu__link" onClick={openLogros}>
             🏆 Logros{readyToClaim > 0 ? ` · ${readyToClaim} por reclamar` : ''}
           </button>
@@ -919,6 +1319,16 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
           <Link className="mar-menu__link" href="/juego">
             🗺️ Versión clásica 2D
           </Link>
+          <p className="mar-menu__label">Mundos</p>
+          <div className="mar-menu__mundos">
+            <MundosPicker
+              worlds={worlds.list()}
+              current={worldId ?? ''}
+              pending={worldPending}
+              catalog={shipCatalog}
+              onChoose={chooseWorld}
+            />
+          </div>
           <p className="mar-menu__help">
             Arrastra para navegar · Pellizca o usa la rueda para el zoom · Toca el mar o una isla
             para fijar rumbo · Teclado: flechas, +/−, M mapa, T turbo.
@@ -958,6 +1368,22 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
           </button>
         ) : null}
       </div>
+
+      {invitations.reason && !inviteBlocked ? (
+        <CarnetInvite
+          className="mar-invite"
+          reason={invitations.reason}
+          create={{ href: '/carnet' }}
+          onLater={invitations.decline}
+        />
+      ) : null}
+
+      {/* Un cambio de mundo: el agujero negro se ve en el lienzo; esto lo anuncia. */}
+      {switching ? (
+        <p className="mar-switch" data-testid="cambio-mundo" role="status">
+          Entre dos mundos…
+        </p>
+      ) : null}
 
       {/* Rumbo, circuito y misión */}
       <div className="mar-chips">
@@ -1039,7 +1465,10 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         aria-label="Turbo"
         data-testid="mar-turbo"
         onClick={() => {
-          if (engineRef.current?.turbo()) navigator.vibrate?.(20);
+          if (engineRef.current?.turbo()) {
+            navigator.vibrate?.(20);
+            whoosh();
+          }
         }}
       >
         <span>⚡</span>
@@ -1109,6 +1538,8 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       {status === 'ready' ? (
         <div
           className={`mar-tickets${trip ? ' is-sailing' : ''}`}
+          data-testid="mar-viaje"
+          data-lugar={trip?.placeId}
           style={{ '--lift': `${sheetLift}px` } as CSSProperties}
         >
           {trip ? (
@@ -1116,7 +1547,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
               type="button"
               className="mar-tickets__skip"
               data-testid="mar-entradas-saltar"
-              onClick={() => openCheckout(trip.eventId)}
+              onClick={() => finishTrip(trip, 'skip')}
             >
               Saltar ›
             </button>
@@ -1126,7 +1557,11 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
             className="mar-tickets__btn"
             data-testid="mar-entradas"
             aria-label={
-              trip ? `Entradas: rumbo a ${trip.placeName}. Toca para comprar ya` : 'Entradas'
+              trip
+                ? trip.then === 'sheet'
+                  ? `Rumbo a ${trip.placeName}. Toca para llegar ya`
+                  : `Entradas: rumbo a ${trip.placeName}. Toca para comprar ya`
+                : 'Entradas'
             }
             onClick={onTickets}
           >
@@ -1151,6 +1586,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
           onFly={flyTo}
           onBuy={(id) => setCheckoutFor(id)}
           onSteerEvent={steerToEvent}
+          onGoToIsland={goToIsland}
         />
       ) : null}
 
@@ -1180,8 +1616,14 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       {checkoutFor ? (
         <SandboxCheckout
           eventId={checkoutFor}
-          onClose={() => setCheckoutFor(null)}
+          onClose={() => {
+            setCheckoutFor(null);
+            // Después de comprar, la invitación a crear el Carnet (REQ-IDE-008).
+            if (purchasedRef.current) inviteTrigger('purchase');
+            purchasedRef.current = false;
+          }}
           onConfirmed={(o, s) => {
+            purchasedRef.current = true;
             for (const n of purchaseNotices(o, s.event.name)) push(n);
           }}
           carnet={{ href: '/carnet' }}

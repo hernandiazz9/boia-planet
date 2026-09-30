@@ -123,7 +123,8 @@ export const GLOBE_COLORS = {
   route: '#ffd23f',
   island: '#fff4e2',
   islandEdge: 'rgba(27, 20, 64, 0.85)',
-  accent: '#f26a1b',
+  // Naranja de la marca (T50, `C.orange`).
+  accent: '#ec4f24',
   ship: '#ffffff',
   course: '#ffd23f',
 } as const;

@@ -21,3 +21,17 @@ export {
   type ShipInput,
   type ShipState,
 } from './ship/controller';
+// Cambio de mundo por agujero negro (T41), sin Pixi: el reloj y quién cambia
+// el mundo. /mar pinta el mismo vórtice con three.js (T51).
+export {
+  FADE_MS,
+  IDLE_POSE,
+  SwitchTimeline,
+  VORTEX_IN_MS,
+  VORTEX_OUT_MS,
+  vortexPose,
+  type SwitchMode,
+  type SwitchPhase,
+  type VortexPose,
+} from './transition/timeline';
+export { WorldSwitcher, type SwitchScene, type SwitcherHooks } from './transition/switcher';

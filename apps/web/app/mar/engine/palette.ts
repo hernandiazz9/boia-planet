@@ -6,9 +6,10 @@ import { Color } from 'three';
  * morado de la gorra de la mascota, rocas lila). Todo `muestra`.
  */
 export const C = {
-  orange: '#f26a1b',
+  // Marca (T50): naranja del wordmark y azul del gorro de la mascota (globals.css).
+  orange: '#ec4f24',
   orangeDeep: '#d9531a',
-  purple: '#3b2a8f',
+  purple: '#36278a',
   purpleSoft: '#6a4fc4',
   navy: '#12233f',
   cream: '#fff4e2',

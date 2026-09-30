@@ -314,7 +314,7 @@ function allday(R: number, rnd: () => number): IslandBuild {
 
   const animated: Object3D[] = [];
   // Pantalla LED con el nombre (se desplaza el color).
-  const screenTex = textTexture(['BOIA'], { w: 512, h: 192, bg: '#1b0f4a', fg: '#ff8a3d' });
+  const screenTex = textTexture(['BOIA'], { w: 512, h: 192, bg: '#1b0f4a', fg: '#ff5219' });
   const screen = new Mesh(new PlaneGeometry(5.6, 2.1), new MeshBasicMaterial({ map: screenTex }));
   screen.position.set(0, top + 2.6, sz - 1.12);
   animated.push(screen);

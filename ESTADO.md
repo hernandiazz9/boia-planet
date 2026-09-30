@@ -4,6 +4,35 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-30 — plan 004 T51: /mar al día con /juego (todo lo del plan 004) y el arte que faltaba tras el agujero negro
+
+Qué existe:
+- **Arreglo de `agujero-negro.spec.ts:77` en escritorio** (`packages/engine/src/game.ts`): el arte que faltaba no era del cambio de mundo, sino de antes. Junto al borde de abajo la cámara no baja más que una franja de tierra, así que en una pantalla ancha asoma más mundo por arriba del que el cargador por sectores (T47) pedía alrededor del barco (la boia de «Espacio», nueva de T45, sobre el puerto). Ahora el centro de la pantalla (con la cámara ya limitada) es también un punto de carga en cada fotograma, al arrancar, en un salto (`moveShip`) y al montar el mundo nuevo de un cambio de mundo. `data-arte-faltante` queda en 0 antes y después del vórtice.
+- **Descuentos (T43) en /mar**: la ficha del código encontrado usa la `DiscountCard` de /juego (estado activo/usado/caducado, copiar, «Ir a la isla» / «Ir a la tienda» / «Ver el evento»). «Ir a la isla» hace `startVoyage` a la isla del evento del código (turbo, se puede «Saltar» o tomar el timón; con movimiento reducido llega de un salto) y al llegar abre la ficha del evento con «Tienes un código de descuento para este evento» (`EventDiscountBanner`) junto a «Comprar entrada»; el checkout de prueba lo aplica. Menú → **🏷️ Mis códigos** (ficha `codes`). Lógica sin React en `app/mar/voyage.ts` (`islandTrip`, `tripOutcome`); el viaje publica `data-testid="mar-viaje"` con `data-lugar`.
+- **Ficha de isla y de evento (T42)** (`app/mar/sheet.tsx`, con las piezas exportadas de `juego/place-panels.tsx`): estado del evento con su etiqueta y su aviso (agotado, pospuesto, cancelado, recuerdo con cartel), «Ver el evento» (`/eventos/<slug>`), **«Ver fotos de la isla»** (`/fotos#<isla>`), recuerdos de la isla, «Próximos eventos» con los satélites sin isla («Calienta para el próximo All Day») y «Rumbo a su isla». El Puerto de Fotos lleva a `/fotos` (antes `/#fotos`). La vista previa de una isla también ofrece la ficha y sus fotos. La ficha publica `data-tipo`, `data-lugar` y `data-estado`.
+- **Cambio de mundo por agujero negro (T41)**: menú → **Mundos** (el `MundosPicker` de /juego) y el mundo activo del Admin desde otra pestaña. `Mar3D.setWorld` usa `WorldSwitcher`/`SwitchTimeline` del motor (exportados ahora también por `@boia/engine/headless`) y `engine/vortex.ts` pinta la misma pose con three.js (la escena a una textura y un cuadro con el sombreador del vórtice centrado en el barco; con movimiento reducido, fundido de 300 ms con la foto del mundo de antes). Mismos lugares (D-20.7): cambian el runtime (nombres, diálogos), el color del mar, los rótulos y, si no hay barco elegido, el barco del mundo (propuesta de T40). Entrada bloqueada y barco quieto mientras dura; la misión sigue (`setWorld`). `main.mar` publica `data-mundo` y `data-cambio-mundo` (`vortice`/`fundido`); «Entre dos mundos…» mientras dura.
+- **Boies informativas, delfín guía y «Explorar la isla» (T45)**: una boia nueva avisa «Boia encontrada · n de 6» (`recordBuoy`); el delfín es el `DolphinGuide` de /juego (2–4 min de mar abierto, `?delfin=<s>`, `data-delfin="guiando"`, premio si se le sigue); las islas ya descubiertas abren recogidas con «Explorar la isla».
+- **Sonido (T46)**: `installAudioLifecycle` (desbloqueo en el primer gesto, pausa con la pestaña oculta) y el loop de ambiente del mundo (cambia con el mundo); whoosh al turbo, a «Entradas» y a «Ir a la isla»; golpe con `bump` según lo fuerte del choque (`Mar3D` → `onImpact`) y salpicadura en la proa (`Splash`).
+- **Modelos de Blender por distancia (T47, T39)** (`engine/models.ts`): la mascota de BOIA como cada boia (primera, informativas, WhatsApp) y la Boia Fiestera se cargan cerca del barco con `planObjects` de `@boia/engine/streaming` (pide a 1600 u, suelta a 2600 u, `muestra`) y se descargan lejos (recuento de usos); mientras tanto y si fallan, la mascota hecha a mano. `data-modelos` cuenta los puestos.
+- **Colores de la marca (T50)**: `palette.ts` y los tokens de `mar.css` son los de `globals.css` (#EC4F24, #FF5219, #36278A); texto negro sobre naranja en los botones (como la landing).
+- **Posición e invitaciones (T44)**: la posición del barco de /mar se guarda aparte (`boia.mar.barco.posicion`, otra escala del mapa) con las funciones de `ship-position.ts` y se restaura al recargar; invitación al Carnet (`CarnetInvite`, `useCarnetInvitations`) tras comprar, al cerrar la galería y por progreso, nunca sobre ficha, diálogo, carrera, compra, viaje o cambio de mundo.
+- «Ir en nave» y el vuelo de «Entradas» siguen igual.
+- Pruebas: `app/mar/engine/models.test.ts`, `app/mar/voyage.test.ts`, `app/mar/engine/palette.test.ts`; e2e `mar-paridad.spec.ts` (390×844, móvil y escritorio): código del náufrago → «Ir a la isla» → aviso → compra con descuento → invitación → «Mis códigos» usado; «Saltar»; ficha de isla con «Ver fotos de la isla» hasta `/fotos#cala`; «Mundos» con vórtice y barco quieto, y fundido con movimiento reducido; boia informativa con su diálogo, «Boia encontrada» y modelo de Blender; delfín; posición al recargar. Capturas `docs/informes/img/p004-t51-*.png` (`RECORD_T51=1`).
+
+Comandos:
+```
+pnpm test --testTimeout=30000 && pnpm typecheck && pnpm lint   # exit 0; 99 archivos, 910 pruebas
+E2E_PORT=<libre> pnpm e2e --workers=2   # 198 pasan, 36 saltadas, 2 fallan (ver abajo)
+RECORD_T51=1 E2E_PORT=<libre> pnpm e2e mar-paridad --project=mobile   # capturas
+```
+
+Pendiente / para otros encargos:
+- `mar-3d.spec.ts:332` («la cámara en un móvil en vertical… también navegando») falla en móvil y escritorio **también en el plan-004 sin tocar** (probado: con el código de 277a440 da dy 0,12–0,13 > 0,1): con el vuelo de «Entradas» (experimento fuera del plan) el barco no queda centrado mientras vuela. No es de T51; hay que decidir si el vuelo se queda y ajustar la prueba o el encuadre del vuelo.
+- Los secretos de /mar siguen con su arte hecho a mano (ánfora, círculo, destellos); el `secreto.glb` de T39 no se usa.
+- El Admin en la misma pestaña no dispara el vórtice (como en /juego, propuesta de T41).
+- Las animaciones declaradas por los comportamientos (T46) no se pintan en /mar; la sensibilidad de Ajustes no se aplica a /mar (no tiene Ajustes).
+- El marco de la invitación al Carnet en /mar lleva a `/carnet` (no hay Carnet dentro del mar 3D).
+
 ## 2026-09-30 — plan 004 T40: economía de barcos, tienda «Barco» con monedas y barco por puntos
 
 Qué existe:

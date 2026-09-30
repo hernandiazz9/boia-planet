@@ -330,6 +330,18 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   const index = await atlasIndex;
   const extent = () => viewExtent(app.screen.width, app.screen.height);
   /**
+   * Centro de la pantalla (en u de mundo) con la cámara sobre `p`. Junto al
+   * borde de abajo no coinciden: la cámara no baja más que una franja de
+   * tierra, así que por arriba asoma más mundo del que rodea al barco (en
+   * una pantalla ancha, la boia de «Espacio» sobre el puerto). Se carga
+   * también alrededor de ese centro.
+   */
+  const screenCenterFor = (p: Vec2, bottom: number): Vec2 => {
+    const s = worldToScreen(p);
+    const maxY = worldToScreen({ x: 0, y: bottom }).y + BOTTOM_LAND_PX - app.screen.height / 2;
+    return { x: s.x, y: Math.min(s.y, maxY) / GROUND_Y_SCALE };
+  };
+  /**
    * Un mundo listo para pintar alrededor de `at` (T47): sus costas enteras y
    * el arte de los sectores y objetos a la vista; lo demás llega por el camino.
    */
@@ -366,7 +378,11 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
       },
     };
   };
-  let built = await buildWorld(world, runtime, [spawn, ...(opts.preload ?? [])]);
+  let built = await buildWorld(world, runtime, [
+    spawn,
+    screenCenterFor(spawn, world.bounds.bottom),
+    ...(opts.preload ?? []),
+  ]);
   let coasts = built.coasts;
 
   const water = surface?.water ?? new Water(opts.sea);
@@ -499,7 +515,13 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
   };
 
   /** Pide el arte de lo que se ve y de lo que viene; suelta lo lejano. */
-  const streamWorld = (rx: number, ry: number, dt: number, states: ObjectRuntimeState[]) => {
+  const streamWorld = (
+    rx: number,
+    ry: number,
+    dt: number,
+    states: ObjectRuntimeState[],
+    center: Vec2,
+  ) => {
     const dx = rx - seen.x;
     const dy = ry - seen.y;
     if (dt > 0 && Math.hypot(dx, dy) < TELEPORT_DISTANCE) {
@@ -524,6 +546,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
         built.streamer.tuning.lookahead,
       ),
       ...pins.map((p) => p.at),
+      center,
     ];
     built.streamer.update(points, view, states);
   };
@@ -566,14 +589,14 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
 
     bottles.animate(time);
     const states = runtime.objectStates();
-    streamWorld(rx, ry, dt, states);
+    const center = { x: cam.x, y: cam.y / GROUND_Y_SCALE };
+    streamWorld(rx, ry, dt, states, center);
     for (const s of states) {
       const v = built.streamer.view(s.id);
       if (!v) continue;
       v.sync(s);
       v.animate(time);
     }
-    const center = { x: cam.x, y: cam.y / GROUND_Y_SCALE };
     if (built.streamer.missingOnScreen(center, extent(), states) > 0) artMissingFrames++;
 
     const sp = worldToScreen({ x: rx, y: ry });
@@ -627,7 +650,10 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
       // del barco está antes de que el vórtice se abra (T47).
       return switcher.switchTo(async () => {
         const rt = new WorldRuntime(next, runtimeOpts);
-        const b = await buildWorld(next, rt, [{ x: ship.x, y: ship.y }]);
+        const b = await buildWorld(next, rt, [
+          { x: ship.x, y: ship.y },
+          screenCenterFor(ship, next.bounds.bottom),
+        ]);
         return { world: next, runtime: rt, built: b, sea: worldOpts.sea, destroy: b.destroy };
       }, worldOpts.transition ?? 'vortex');
     },
@@ -640,7 +666,8 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
         // Un salto: la imagen espera al arte del destino (como mucho HOLD_MAX_MS).
         const h = { until: performance.now() + HOLD_MAX_MS, done: false };
         hold = h;
-        void built.streamer.settle([p], extent(), runtime.objectStates()).then(() => {
+        const at = [p, screenCenterFor(p, world.bounds.bottom)];
+        void built.streamer.settle(at, extent(), runtime.objectStates()).then(() => {
           h.done = true;
         });
       }
