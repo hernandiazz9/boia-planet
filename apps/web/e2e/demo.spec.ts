@@ -28,17 +28,22 @@ const shipRoot = JSON.parse(readFileSync(path.join(ROOT, 'art/barco/manifest.jso
   skins: string[];
   style_variants: { id: string }[];
 };
-const DEFAULT_STYLE = shipRoot.style;
-// Otro estilo libre: los que se ganan con un logro (T36) van con candado en el menú.
+// Estilos que se compran, se ganan o se desbloquean con puntos van con candado
+// en la tienda (T36, T40); de base, sólo los barcos de los dos mundos iniciales.
 const LOCKED_STYLES = new Set(
-  SAMPLE_COSMETICS.filter((c) => c.slot === 'ship').map((c) => c.assetKey ?? c.id),
+  SAMPLE_COSMETICS.filter((c) => c.slot === 'ship' && !c.base).map((c) => c.assetKey ?? c.id),
 );
-const OTHER_STYLE = shipRoot.style_variants.filter((v) => !LOCKED_STYLES.has(v.id)).at(-1)!.id;
 const THEMED_SKIN = shipRoot.skins.find((s) => s !== 'base')!;
+const SKIN_PRICE = SAMPLE_COSMETICS.find((c) => c.slot === 'skin')!.priceCoins!;
 
 // El mundo por defecto (Arcilla desde T20) trae su barco y su isla de evento.
 const defaultWorld = WORLD_REGISTRY.get(WORLD_REGISTRY.defaultId);
 const WORLD_SHIP_STYLE = defaultWorld.theme.ship.style;
+// El otro barco de base (el del otro mundo inicial): libre desde el principio.
+const OTHER_STYLE = SAMPLE_COSMETICS.find(
+  (c) => c.slot === 'ship' && c.base && c.assetKey !== WORLD_SHIP_STYLE,
+)!.assetKey!;
+const LOCKED_STYLE = shipRoot.style_variants.find((v) => LOCKED_STYLES.has(v.id))!.id;
 const EVENT_ID = 'ev-all-day-primavera';
 const eventIsland = defaultWorld.config.objects.find((o) =>
   o.behaviors.some(
@@ -199,7 +204,7 @@ test('`/` → mini-mundo → «Zarpar» → landing → EXPLORAR → /juego con 
   await shot(page, info, '4-isla');
 });
 
-test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobreviven a recargar', async ({
+test('«Barco»: otro barco de base cambia el barco al momento y sobrevive a recargar; lo bloqueado no se pone', async ({
   page,
 }, info) => {
   test.setTimeout(120_000);
@@ -212,7 +217,7 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
   // Un enlace directo a /juego empieza en limpio en el puerto del mundo activo (T28).
   await expectShipAtPort(page);
 
-  // Otro estilo: se aplica sin recargar.
+  // El otro barco de base: se aplica sin recargar.
   let menu = await openBarco(page);
   await page.evaluate(() => ((window as Window & { __sinRecarga?: boolean }).__sinRecarga = true));
   await menu.getByTestId(`barco-estilo-${OTHER_STYLE}`).click();
@@ -224,6 +229,21 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
   expect(
     await page.evaluate(() => (window as Window & { __sinRecarga?: boolean }).__sinRecarga),
   ).toBe(true);
+  // Lo que no se tiene va con candado y su condición (T40): un barco y las skins.
+  await expect(menu.getByTestId(`barco-estilo-${LOCKED_STYLE}`)).toHaveAttribute(
+    'data-bloqueado',
+    'si',
+  );
+  await expect(menu.getByTestId(`barco-skin-${THEMED_SKIN}`)).toHaveAttribute(
+    'data-bloqueado',
+    'si',
+  );
+  await expect(menu.getByTestId(`barco-skin-item-${THEMED_SKIN}`)).toContainText(
+    `te faltan ${SKIN_PRICE} monedas`,
+  );
+  // Tocar lo bloqueado no cambia el barco.
+  await menu.getByTestId(`barco-skin-${THEMED_SKIN}`).click({ force: true });
+  await expect(game(page)).toHaveAttribute('data-ship-skin', 'base');
   await shot(page, info, '5-barco-menu');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('menu')).toBeHidden();
@@ -232,32 +252,22 @@ test('«Barco»: otro estilo y otra skin cambian el barco al momento y sobrevive
   await page.reload();
   await gameRunning(page);
   await expect(game(page)).toHaveAttribute('data-ship-style', OTHER_STYLE);
+  await expect(game(page)).toHaveAttribute('data-ship-skin', 'base');
 
-  // El estilo por defecto del arte con una skin temática; el otro estilo no la ofrece.
-  menu = await openBarco(page);
-  await expect(menu.getByTestId(`barco-skin-${THEMED_SKIN}`)).toHaveCount(0);
-  await menu.getByTestId(`barco-estilo-${DEFAULT_STYLE}`).click();
-  await expect(game(page)).toHaveAttribute('data-ship-style', DEFAULT_STYLE);
-  await menu.getByTestId(`barco-skin-${THEMED_SKIN}`).click();
-  await expect(game(page)).toHaveAttribute('data-ship-skin', THEMED_SKIN);
-  await page.keyboard.press('Escape');
-  await expect(page.getByTestId('menu')).toBeHidden();
-  await shot(page, info, '7-barco-skin');
-
-  await page.reload();
+  // ?estilo= sigue mandando (T11) si el barco es tuyo, y el menú lo refleja.
+  await page.goto(`/juego?estilo=${WORLD_SHIP_STYLE}`);
   await gameRunning(page);
-  await expect(game(page)).toHaveAttribute('data-ship-style', DEFAULT_STYLE);
-  await expect(game(page)).toHaveAttribute('data-ship-skin', THEMED_SKIN);
-
-  // ?estilo= sigue mandando (T11) y el menú lo refleja.
-  await page.goto(`/juego?estilo=${OTHER_STYLE}`);
-  await gameRunning(page);
-  await expect(game(page)).toHaveAttribute('data-ship-style', OTHER_STYLE);
+  await expect(game(page)).toHaveAttribute('data-ship-style', WORLD_SHIP_STYLE);
   menu = await openBarco(page);
-  await expect(menu.getByTestId(`barco-estilo-${OTHER_STYLE}`)).toHaveAttribute(
+  await expect(menu.getByTestId(`barco-estilo-${WORLD_SHIP_STYLE}`)).toHaveAttribute(
     'aria-checked',
     'true',
   );
+  await page.keyboard.press('Escape');
+  // Uno bloqueado no: queda lo equipado.
+  await page.goto(`/juego?estilo=${LOCKED_STYLE}`);
+  await gameRunning(page);
+  await expect(game(page)).toHaveAttribute('data-ship-style', WORLD_SHIP_STYLE);
 });
 
 test('«Ver todos los artistas» enseña los 26 artistas', async ({ page }, info) => {

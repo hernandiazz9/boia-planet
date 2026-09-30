@@ -100,6 +100,11 @@ export class Wake {
     this.mesh.renderOrder = 2;
   }
 
+  /** Color de la espuma: el cosmético de estela (T40); null, blanca. */
+  setTint(color: number | null): void {
+    ((this.mesh.material as ShaderMaterial).uniforms.uColor!.value as Color).set(color ?? 0xffffff);
+  }
+
   /** Avanza la estela: `x, z` la popa, `heading` el rumbo, `speed01` 0..1 (más con turbo). */
   update(dt: number, x: number, z: number, heading: number, speed01: number, time: number): void {
     (this.mesh.material as ShaderMaterial).uniforms.uTime!.value = time;

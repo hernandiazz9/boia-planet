@@ -54,6 +54,7 @@ import type {
   RankingView,
   RepositoryChange,
   ShipUnlock,
+  ShopItem,
   StampView,
   TrashItem,
 } from './repository';
@@ -81,6 +82,7 @@ import {
   type Bottle,
   type CarnetModeration,
   type ContentArea,
+  type Cosmetic,
   type DraftArea,
   type EntityArea,
   type Identity,
@@ -517,6 +519,57 @@ class LocalRepository implements BoiaRepository {
       cosmeticKey: def.cosmeticKey ?? null,
       shipStyle,
     };
+  }
+
+  /**
+   * La tienda «Barco» de una cuenta (T40): cada cosmético activo con lo que
+   * cuesta y si ya se tiene. Tener: de base, con fila vigente en el libro
+   * (comprado o ganado) o con los puntos del umbral. Todo se deriva del libro.
+   */
+  private shopItems(doc: StoreDoc, userId: string | null): ShopItem[] {
+    const bought = new Set(
+      (userId ? activeEntries(doc.ledger, userId, 'cosmetic') : []).map((e) => e.cosmeticKey),
+    );
+    const b = userId ? deriveBalances(doc.ledger, userId) : { points: 0, coins: 0 };
+    const equipped = (userId && doc.players[userId]?.equipped) || {};
+    const defs = this.resolved('achievements', doc);
+    const catalog = this.resolved('cosmetics', doc);
+    const owns = (c: Cosmetic) =>
+      c.base || bought.has(c.id) || (c.unlockPoints !== undefined && b.points >= c.unlockPoints);
+    return catalog
+      .filter((c) => c.active || bought.has(c.id))
+      .map((c): ShopItem => {
+        const owned = owns(c);
+        const achievementId = defs.find((a) => a.cosmeticKey === c.id)?.id ?? null;
+        const unlock: ShopItem['unlock'] = c.base
+          ? { kind: 'base' }
+          : c.unlockPoints !== undefined
+            ? { kind: 'points', points: c.unlockPoints }
+            : c.priceCoins !== null && c.active
+              ? { kind: 'coins', price: c.priceCoins }
+              : achievementId
+                ? { kind: 'achievement', achievementId }
+                : { kind: 'none' };
+        const ship = c.forShip ? catalog.find((x) => x.id === c.forShip) : undefined;
+        const shipOwned = !c.forShip || (ship !== undefined && owns(ship));
+        const missing = owned
+          ? 0
+          : unlock.kind === 'coins'
+            ? Math.max(0, unlock.price - b.coins)
+            : unlock.kind === 'points'
+              ? Math.max(0, unlock.points - b.points)
+              : 0;
+        return {
+          cosmetic: clone(c),
+          owned,
+          equipped: equipped[c.slot] === c.id,
+          unlock,
+          achievementId,
+          forShip: c.forShip ?? null,
+          missing,
+          canBuy: !owned && unlock.kind === 'coins' && missing === 0 && shipOwned,
+        };
+      });
   }
 
   /** La fila del libro de un logro de esta cuenta (vigente o compensada). */
@@ -1089,23 +1142,20 @@ class LocalRepository implements BoiaRepository {
         const id = myId();
         return id ? this.badgeViews(this.doc, id) : [];
       },
-      ships: async () => {
-        const id = myId();
-        const owned = new Set(
-          (id ? activeEntries(this.doc.ledger, id, 'cosmetic') : []).map((e) => e.cosmeticKey),
-        );
-        const defs = this.resolved('achievements');
-        return this.resolved('cosmetics')
-          .filter((c) => c.slot === 'ship' && c.active)
-          .map((c): ShipUnlock => ({
-            style: c.assetKey ?? c.id,
-            cosmeticId: c.id,
-            name: c.name,
-            owned: owned.has(c.id),
-            achievementId: defs.find((a) => a.cosmeticKey === c.id)?.id ?? null,
-            priceCoins: c.priceCoins,
-          }));
-      },
+      ships: async () =>
+        this.shopItems(this.doc, myId())
+          .filter((i) => i.cosmetic.slot === 'ship' && i.cosmetic.active)
+          .map((i): ShipUnlock => ({
+            style: i.cosmetic.assetKey ?? i.cosmetic.id,
+            cosmeticId: i.cosmetic.id,
+            name: i.cosmetic.name,
+            owned: i.owned,
+            achievementId: i.achievementId,
+            priceCoins: i.cosmetic.priceCoins,
+            unlockPoints: i.cosmetic.unlockPoints ?? null,
+            base: i.cosmetic.base,
+          })),
+      shop: async () => this.shopItems(this.doc, myId()),
       buyCosmetic: async (cosmeticId) =>
         grant((d, me) => {
           const c = this.resolved('cosmetics', d).find((x) => x.id === cosmeticId);
@@ -1114,8 +1164,16 @@ class LocalRepository implements BoiaRepository {
             (e) => e.cosmeticKey === c.id,
           );
           if (owned) return { granted: false, reason: 'duplicate', entry: clone(owned) };
-          if (!c.active || c.priceCoins === null)
+          const item = this.shopItems(d, me.id).find((i) => i.cosmetic.id === c.id);
+          // De base o por puntos ya es suyo: no se cobra.
+          if (item?.owned) return { granted: false, reason: 'duplicate', entry: null };
+          if (!c.active || c.priceCoins === null || item?.unlock.kind !== 'coins')
             throw new StoreError('forbidden', `cosmético no a la venta: ${c.id}`);
+          if (
+            c.forShip &&
+            !this.shopItems(d, me.id).some((i) => i.cosmetic.id === c.forShip && i.owned)
+          )
+            throw new StoreError('forbidden', `${c.id} necesita el barco ${c.forShip}`);
           const base = ledgerId('cosmetic', c.id);
           let id = base;
           for (let n = 2; d.ledger.some((e) => e.id === id); n++) id = `${base}#${n}`;
@@ -1148,13 +1206,25 @@ class LocalRepository implements BoiaRepository {
           const p = this.player(d, me.id);
           if (cosmeticId === null) delete p.equipped[slot];
           else {
-            const owned = activeEntries(d.ledger, me.id, 'cosmetic').some(
+            const item = this.shopItems(d, me.id).find((i) => i.cosmetic.id === cosmeticId);
+            // Una fila vigente en el libro cuenta aunque el cosmético ya no esté en el catálogo.
+            const inLedger = activeEntries(d.ledger, me.id, 'cosmetic').some(
               (e) => e.cosmeticKey === cosmeticId,
             );
-            if (!owned) throw new StoreError('forbidden', `no tienes ${cosmeticId}`);
-            const c = this.resolved('cosmetics', d).find((x) => x.id === cosmeticId);
+            if (!item?.owned && !inLedger)
+              throw new StoreError('forbidden', `no tienes ${cosmeticId}`);
+            const c = item?.cosmetic;
             if (c && c.slot !== slot) invalid(`${cosmeticId} va en ${c.slot}, no en ${slot}`);
             p.equipped[slot] = cosmeticId;
+            // Una skin lleva su barco; un barco nuevo no se queda con la skin de otro.
+            if (slot === 'skin' && c?.forShip) p.equipped.ship = c.forShip;
+            if (slot === 'ship') {
+              const skin = p.equipped.skin;
+              const skinOf = skin
+                ? this.resolved('cosmetics', d).find((x) => x.id === skin)?.forShip
+                : undefined;
+              if (skin && skinOf !== cosmeticId) delete p.equipped.skin;
+            }
           }
           return { ...p.equipped };
         }),

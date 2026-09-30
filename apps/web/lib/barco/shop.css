@@ -1,0 +1,178 @@
+/* Tienda «Barco» (T40): la misma en el Menú de a bordo de /juego y en /mar. */
+
+.tienda {
+  position: relative;
+  color: #12233f;
+}
+.tienda h3 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+}
+.tienda-intro {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.tienda-saldo {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #fff4e2;
+  font-size: 14px;
+}
+.tienda-mensaje {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #e5f7ea;
+  font-size: 14px;
+  font-weight: 700;
+}
+.tienda ul {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.tienda ul.tienda-barcos {
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+}
+.tienda ul.tienda-skins {
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+}
+.tienda ul.tienda-cosmeticos {
+  grid-template-columns: 1fr;
+}
+.tienda li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tienda-opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 4px 8px;
+  border: 2px solid rgb(18 35 63 / 0.15);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.tienda-opcion img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.tienda-skins .tienda-opcion img {
+  width: 56px;
+  height: 56px;
+}
+.tienda-opcion:hover,
+.tienda-opcion:focus-visible {
+  border-color: rgb(242 106 27 / 0.6);
+}
+.tienda-barco.is-active .tienda-opcion,
+.tienda-opcion.is-active {
+  border-color: #f26a1b;
+  background: #fff1e6;
+  font-weight: 700;
+}
+.tienda-barco.is-locked .tienda-opcion,
+.tienda-opcion.is-locked {
+  cursor: not-allowed;
+  background: rgb(18 35 63 / 0.06);
+  border-style: dashed;
+}
+.tienda-barco.is-locked img,
+.tienda-opcion.is-locked img {
+  filter: grayscale(1) brightness(0.8);
+  opacity: 0.55;
+}
+.tienda-nombre {
+  font-weight: 700;
+}
+.tienda-estado {
+  font-size: 11px;
+  line-height: 1.25;
+  opacity: 0.85;
+}
+.tienda-estado.is-owned {
+  color: #1d7a3a;
+  opacity: 1;
+}
+.tienda-fila {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.tienda-fila .tienda-estado {
+  margin-left: auto;
+}
+.tienda-muestra {
+  flex: none;
+  width: 22px;
+  height: 16px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgb(18 35 63 / 0.35);
+}
+.tienda-comprar,
+.tienda-cancelar {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #ec4f24;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tienda-comprar:disabled {
+  background: rgb(18 35 63 / 0.25);
+  cursor: not-allowed;
+}
+.tienda-cancelar {
+  background: #fff;
+  color: #12233f;
+  box-shadow: inset 0 0 0 2px rgb(18 35 63 / 0.2);
+}
+.tienda-descripcion {
+  font-size: 14px;
+}
+.tienda[aria-busy='true'] .tienda-opcion {
+  cursor: progress;
+}
+.tienda-confirmar {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 50;
+  width: min(360px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fffaf2;
+  box-shadow: 0 10px 30px rgb(10 6 40 / 0.35);
+  color: #12233f;
+  font-size: 15px;
+}
+.tienda-confirmar p {
+  margin: 0 0 10px;
+}
+.tienda-confirmar-botones {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

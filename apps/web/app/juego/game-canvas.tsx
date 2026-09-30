@@ -112,7 +112,8 @@ import { ExpandedMap, Minimap } from './minimap';
 import { discoveryNotice } from './notice-copy';
 import { NoticeToast, useNoticeQueue } from './notices';
 import { gameRepository, useRepoData } from './repo';
-import { type ShipLook, rememberLook, requestedLook, syncStyleParam } from './ship-look';
+import { type ShipDressing, dressingFor, dressingKey } from '../../lib/barco/dressing';
+import { type ShipLook, equipLook, rememberLook, storedLook, syncStyleParam } from './ship-look';
 import { feedbackFor } from './feedback';
 import {
   applyAudioSettings,
@@ -186,6 +187,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
   // Aspecto del barco aplicado por el motor (T12) y si la superficie vino de la landing.
   const [shipLook, setShipLook] = useState<ShipLook | null>(null);
   const [shipPending, setShipPending] = useState(false);
+  // Bandera y estela equipadas (T40): lo que se pintó con el barco que se ve.
+  const [shipDress, setShipDress] = useState<Record<string, string>>({});
+  const dressingRef = useRef<ShipDressing>({ flag: null, wakeTint: null });
+  const equippedRef = useRef<Record<string, string>>({});
+  const { data: equippedNow } = useRepoData((r) => r.progress.equipped());
+  if (equippedNow) equippedRef.current = equippedNow;
   const [adopted, setAdopted] = useState<boolean | null>(null);
   const [menuPulse, setMenuPulse] = useState(0);
   const [minimapPulse, setMinimapPulse] = useState(0);
@@ -691,21 +698,21 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       const { createGame, loadShipStyle } = await import('@boia/engine');
       // `?barco=provisional` fuerza el barco dibujado por código, para comparar.
       const forceProvisional = query.get('barco') === 'provisional';
-      // `?estilo=<id>` (o el último elegido) y la skin guardada eligen el aspecto (T11, T12);
-      // si no hay ninguno, el barco del mundo (T17).
-      const want = requestedLook(window.location.search, shipCatalog);
+      // `?estilo=<id>`, lo equipado en la tienda (T40) o lo último elegido eligen el
+      // aspecto (T11, T12), sólo si es tuyo; si no, el barco del mundo (T17).
+      const want = await storedLook(progressApi(), initial.theme.ship, window.location.search);
+      dressingRef.current = dressingFor(want.equipped);
       const styled = forceProvisional
         ? null
-        : await loadShipStyle(
-            MANIFEST_URL,
-            want.style ?? initial.theme.ship.style,
-            want.skin ?? initial.theme.ship.skin ?? null,
-          );
-      const manifest = styled?.loaded ?? null;
+        : await loadShipStyle(MANIFEST_URL, want.style, want.skin);
+      const manifest = styled?.loaded ? { ...styled.loaded, dressing: dressingRef.current } : null;
       if (cancelled) return;
-      // Un ?estilo= válido queda guardado; uno desconocido no pisa lo guardado.
       const look = styled?.style && manifest ? { style: styled.style.id, skin: styled.skin } : null;
-      if (look && want.style === look.style) rememberLook(look);
+      // Un ?estilo= tuyo queda equipado; uno desconocido o bloqueado no pisa lo guardado.
+      if (look && want.source === 'url' && look.style === want.style) {
+        rememberLook(look);
+        void equipLook(progressApi(), look);
+      }
       handed = true;
       // Dónde empieza el barco, antes de crear el juego: lo primero que se
       // carga es el arte de ese sector (T47, REQ-ARQ-014), no el del puerto.
@@ -770,6 +777,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       gameRef.current = created;
       setGame(created);
       setShipLook(created.stats().shipSource === 'manifest' ? look : null);
+      setShipDress(created.stats().shipSource === 'manifest' ? want.equipped : {});
       setAdopted(created.adoptedSurface);
       // Por si los ajustes cambiaron mientras cargaba.
       created.setKeyboardMode(settingsRef.current.keyboardMode);
@@ -963,14 +971,18 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
     if (!g) return;
     const request = ++shipRequest.current;
     setShipPending(true);
+    const dressing = dressingRef.current;
+    const dressIds = { ...equippedRef.current };
     (async () => {
       const { loadShipStyle } = await import('@boia/engine');
       const r = await loadShipStyle(MANIFEST_URL, want.style, want.skin);
       if (!r.loaded || !r.style) return;
-      const ok = await g.setShip(r.loaded);
+      // Bandera y estela (T40) van con el barco: se pintan encima, no navegan.
+      const ok = await g.setShip(Object.assign({ dressing }, r.loaded));
       if (!ok || request !== shipRequest.current || gameRef.current !== g) return;
       const look = { style: r.style.id, skin: r.skin };
       setShipLook(look);
+      setShipDress(dressIds);
       if (!remember) return;
       rememberLook(look);
       syncStyleParam(look.style);
@@ -980,6 +992,18 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         if (request === shipRequest.current) setShipPending(false);
       });
   };
+
+  // Equipar en la tienda (T40): un barco o una skin llegan por `choose`; si
+  // cambia la bandera o la estela (también desde otra pestaña), se repinta el
+  // barco que se lleva con ellas.
+  useEffect(() => {
+    if (!game || !equippedNow || !shipLook) return;
+    const next = dressingFor(equippedNow);
+    if (dressingKey(next) === dressingKey(dressingRef.current)) return;
+    dressingRef.current = next;
+    chooseShip(shipLook, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game, equippedNow]);
 
   // Las botellas del repositorio, en el agua (T22).
   useEffect(() => {
@@ -1030,14 +1054,12 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
         // La misión sigue (mismo paso, mismo destino guardado) con la piel del mundo nuevo.
         missionRef.current?.setWorld(next.config);
         void g.setCrewArt(rescueMissionOf(next.config)?.crewAsset ?? null);
-        // Sin barco elegido (ni en la URL ni guardado), el del mundo nuevo.
-        const want = requestedLook(window.location.search, shipCatalog);
-        if (want.style === null && shipLook) {
-          chooseShip(
-            { style: next.theme.ship.style, skin: next.theme.ship.skin ?? shipLook.skin },
-            false,
-          );
-        }
+        // Sin barco elegido (ni en la URL ni equipado), el del mundo nuevo.
+        void storedLook(progressApi(), next.theme.ship, window.location.search).then((want) => {
+          if (!shipLook || want.source !== 'world') return;
+          if (want.style !== shipLook.style || want.skin !== shipLook.skin)
+            chooseShip({ style: want.style, skin: want.skin }, false);
+        });
       })
       .catch((err: unknown) => {
         console.warn('[boia] no se pudo cambiar de mundo', err);
@@ -1254,6 +1276,8 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       data-world={adopted === null ? undefined : adopted ? 'adoptado' : 'nuevo'}
       data-ship-style={shipLook?.style}
       data-ship-skin={shipLook?.skin}
+      data-ship-flag={shipLook ? shipDress.flag : undefined}
+      data-ship-wake={shipLook ? shipDress.wake : undefined}
       data-mundo={world.id}
       data-mision={missionPhase ?? undefined}
       data-delfin={dolphinOut ? 'guiando' : undefined}

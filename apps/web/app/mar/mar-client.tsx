@@ -15,13 +15,7 @@ import {
   type RescuePhase,
   rescueMissionOf,
 } from '@boia/engine/mission';
-import {
-  type Notice,
-  SHIP_STYLE_STORAGE_KEY,
-  browserStore,
-  loadSettings,
-  requestedShipStyle,
-} from '@boia/engine/ui';
+import { type Notice, browserStore, loadSettings } from '@boia/engine/ui';
 import { CIRCUIT_ID, type ComposedWorld, type WorldConfig } from '@boia/world';
 import Link from 'next/link';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -29,7 +23,10 @@ import { liveWorld } from '../../lib/admin/live-world';
 import { SandboxCheckout } from '../../lib/ticketing/checkout';
 import { purchaseNotices } from '../../lib/ticketing/notices';
 import { ClaimBadge, claimLabel } from '../../lib/logros/claim-badge';
-import { lockedShipText, useReadyCount, useShipLocks } from '../../lib/logros/use-logros';
+import { useReadyCount } from '../../lib/logros/use-logros';
+import type { ShipCatalog } from '../../lib/barco/catalog';
+import { dressingFor } from '../../lib/barco/dressing';
+import type { ShipLook } from '../../lib/barco/shop-model';
 import {
   TIME_PLAYED_TICK_S,
   onAchievementNotices,
@@ -45,6 +42,7 @@ import { boardedNotice, deliveredNotice, loadMission, persistMissionEvent } from
 import { useNoticeQueue } from '../juego/notices';
 import { gameRepository, useRepoData } from '../juego/repo';
 import { chime, fanfare, plop } from '../juego/sound';
+import { equipLook, rememberLook, storedLook, syncStyleParam } from '../juego/ship-look';
 import { adminWorldId, currentWorld } from '../juego/world-choice';
 import {
   type ProgressOutcome,
@@ -57,6 +55,7 @@ import type { CourseInfo, Mar3D, PinSpec, Stats, VoyageEnd } from './engine/mar3
 import { MOOD_IDS, MOOD_LABEL, type MoodId } from './engine/palette';
 import { type ShipModelEntry, loadShipManifest, loadShipModel } from './engine/ship-model';
 import { MarLogros } from './logros';
+import { MarTienda } from './tienda';
 import { MarMinimap } from './minimap';
 import { raceCheckpoint } from './race';
 import {
@@ -165,7 +164,7 @@ function pinsOf(world: WorldConfig, phase: RescuePhase | null): PinSpec[] {
 
 type Status = 'loading' | 'ready' | 'error';
 
-export function MarClient() {
+export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -209,7 +208,11 @@ export function MarClient() {
   const [menu, setMenu] = useState(false);
   const [worldName, setWorldName] = useState('');
   const [ships, setShips] = useState<ShipModelEntry[]>([]);
-  const [shipId, setShipId] = useState<string | null>(null);
+  // El barco que se lleva (estilo y skin) y la tienda «Barco» (T40).
+  const [shipLook, setShipLook] = useState<ShipLook | null>(null);
+  const [shipPending, setShipPending] = useState(false);
+  const [tienda, setTienda] = useState(false);
+  const { data: equippedNow } = useRepoData((r) => r.progress.equipped());
   const [settings] = useState(() =>
     typeof window === 'undefined' ? null : loadSettings(browserStore()),
   );
@@ -217,7 +220,6 @@ export function MarClient() {
   // Logros (T37): el icono del HUD con su número y el panel para reclamar.
   const [logros, setLogros] = useState(false);
   const readyToClaim = useReadyCount();
-  const shipLocks = useShipLocks() ?? [];
 
   // Avisos con tiempo de lectura (D-22): al menos 3 s, más si el texto es largo.
   const notices = useNoticeQueue(
@@ -539,14 +541,15 @@ export function MarClient() {
         import('./engine/mar3d'),
         loadShipManifest(),
       ]);
-      // El barco del 2D: el elegido en «Barco» (o ?estilo=), si no el del mundo.
-      const want = requestedShipStyle(window.location.search, window.localStorage);
+      // El barco del 2D: ?estilo= o lo equipado en la tienda (T40), si es tuyo;
+      // si no, el del mundo.
+      const want = await storedLook(progressApi(), live.theme.ship, window.location.search);
       const entry =
-        shipList.find((b) => b.id === want) ??
+        shipList.find((b) => b.id === want.style) ??
         shipList.find((b) => b.id === live.theme.ship.style) ??
         shipList.find((b) => b.id === 'arcilla') ??
         shipList[0];
-      const shipModel = entry ? await loadShipModel(entry).catch(() => null) : null;
+      const shipModel = entry ? await loadShipModel(entry, want.skin).catch(() => null) : null;
       if (cancelled) return;
       worldRef.current = world;
       liveRef.current = live;
@@ -593,9 +596,15 @@ export function MarClient() {
         },
       });
       engineRef.current = engine;
+      engine.setShipDressing(dressingFor(want.equipped));
       if (shipModel) engine.setShipModel(shipModel);
       setShips(shipList);
-      setShipId(shipModel?.id ?? null);
+      const look = shipModel ? { style: shipModel.id, skin: shipModel.skin } : null;
+      setShipLook(look);
+      if (look && want.source === 'url' && look.style === want.style) {
+        rememberLook(look);
+        void equipLook(progressApi(), look);
+      }
       const near = new URLSearchParams(window.location.search).get('cerca');
       if (near) engine.startNear(near);
       setPhase(mission?.phase ?? null);
@@ -671,9 +680,15 @@ export function MarClient() {
   useEffect(() => {
     const g = engineRef.current;
     if (!g) return;
-    g.inputEnabled = !checkoutFor && !minigameOpen && !logros;
+    g.inputEnabled = !checkoutFor && !minigameOpen && !logros && !tienda;
     g.paused = minigameOpen;
-  }, [checkoutFor, minigameOpen, logros, status]);
+  }, [checkoutFor, minigameOpen, logros, tienda, status]);
+
+  // Bandera y estela equipadas (T40), también si cambian desde otra pestaña.
+  useEffect(() => {
+    if (status !== 'ready' || !equippedNow) return;
+    engineRef.current?.setShipDressing(dressingFor(equippedNow));
+  }, [equippedNow, status]);
 
   /** Abre el panel de logros; como cualquier panel, anula la vuelta en curso (REQ-AVE-032). */
   const openLogros = () => {
@@ -698,12 +713,34 @@ export function MarClient() {
     engineRef.current?.setMood(m);
   };
 
-  const chooseShip = (entry: ShipModelEntry) => {
-    setShipId(entry.id);
-    writePref(SHIP_STYLE_STORAGE_KEY, entry.id);
-    loadShipModel(entry)
-      .then((m) => engineRef.current?.setShipModel(m))
-      .catch((err: unknown) => console.warn('[boia] no se pudo cargar el barco', err));
+  /** Equipar en la tienda (T40): el modelo de ese estilo en esa skin, en el agua. */
+  const shipRequest = useRef(0);
+  const chooseShip = (look: ShipLook) => {
+    const entry = ships.find((b) => b.id === look.style);
+    if (!entry) return;
+    const request = ++shipRequest.current;
+    setShipPending(true);
+    loadShipModel(entry, look.skin)
+      .then((m) => {
+        if (request !== shipRequest.current || !engineRef.current) return;
+        engineRef.current.setShipModel(m);
+        const applied = { style: m.id, skin: m.skin };
+        setShipLook(applied);
+        rememberLook(applied);
+        syncStyleParam(applied.style);
+      })
+      .catch((err: unknown) => console.warn('[boia] no se pudo cargar el barco', err))
+      .finally(() => {
+        if (request === shipRequest.current) setShipPending(false);
+      });
+  };
+
+  /** Abre la tienda «Barco»; como cualquier panel, anula la vuelta en curso. */
+  const openTienda = () => {
+    const r = raceRef.current;
+    if (r?.race.active) raceEvents([r.race.invalidate('panel')!].filter(Boolean));
+    setMenu(false);
+    setTienda(true);
   };
 
   const courseTo = (placeId: string) => {
@@ -772,6 +809,10 @@ export function MarClient() {
       data-status={status}
       data-mood={mood}
       data-flight={stats?.flight ?? undefined}
+      data-ship-style={shipLook?.style}
+      data-ship-skin={shipLook?.skin}
+      data-ship-flag={shipLook ? equippedNow?.flag : undefined}
+      data-ship-wake={shipLook ? equippedNow?.wake : undefined}
     >
       <canvas
         ref={canvasRef}
@@ -854,53 +895,17 @@ export function MarClient() {
             ))}
           </div>
           {ships.length ? (
-            <>
-              <p className="mar-menu__label">Barco</p>
-              <div className="mar-menu__moods" data-testid="mar-barcos">
-                {ships.map((b) => {
-                  // Los que se ganan con un logro, con candado hasta tenerlos (T37).
-                  const lock = shipLocks.find((l) => l.style === b.id && !l.owned);
-                  if (lock && b.id !== shipId) {
-                    return (
-                      <button
-                        key={b.id}
-                        type="button"
-                        className="mar-chip is-locked"
-                        data-testid={`mar-barco-${b.id}`}
-                        data-bloqueado="si"
-                        aria-disabled="true"
-                        aria-label={`${b.label}: bloqueado. ${lockedShipText(lock)}`}
-                        title={lockedShipText(lock)}
-                      >
-                        🔒 {b.label}
-                      </button>
-                    );
-                  }
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      className={`mar-chip${b.id === shipId ? ' is-on' : ''}`}
-                      data-testid={`mar-barco-${b.id}`}
-                      onClick={() => chooseShip(b)}
-                    >
-                      {b.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {shipLocks.some((l) => !l.owned && ships.some((b) => b.id === l.style)) ? (
-                <ul className="mar-menu__locks" data-testid="mar-barcos-bloqueados">
-                  {shipLocks
-                    .filter((l) => !l.owned && ships.some((b) => b.id === l.style))
-                    .map((l) => (
-                      <li key={l.style}>
-                        🔒 <strong>{l.name}</strong>: {lockedShipText(l)}
-                      </li>
-                    ))}
-                </ul>
-              ) : null}
-            </>
+            <button
+              type="button"
+              className="mar-menu__link"
+              data-testid="mar-barco"
+              onClick={openTienda}
+            >
+              ⛵ Barco
+              {shipLook
+                ? ` · ${shipCatalog?.styles.find((st) => st.id === shipLook.style)?.name ?? shipLook.style}`
+                : ''}
+            </button>
           ) : null}
           <button type="button" className="mar-menu__link" onClick={openLogros}>
             🏆 Logros{readyToClaim > 0 ? ` · ${readyToClaim} por reclamar` : ''}
@@ -1162,6 +1167,15 @@ export function MarClient() {
       ) : null}
 
       {logros ? <MarLogros onClose={() => setLogros(false)} /> : null}
+      {tienda ? (
+        <MarTienda
+          catalog={shipCatalog}
+          current={shipLook}
+          pending={shipPending}
+          onEquip={chooseShip}
+          onClose={() => setTienda(false)}
+        />
+      ) : null}
 
       {checkoutFor ? (
         <SandboxCheckout

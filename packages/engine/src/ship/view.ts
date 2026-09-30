@@ -10,6 +10,7 @@ import { Assets, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { LoadedShipManifest } from '../manifest-loader';
 import { shipArtScale } from '../world/visual';
 import { DirectionPicker } from './direction';
+import { type DressedShip, type ShipDressing, flagPieces, flagQuad } from './dressing';
 import {
   BOIA_NAVY,
   BOIA_ORANGE,
@@ -69,14 +70,18 @@ export class ShipSprite {
   private passenger = false;
   private crewArt: CrewArt | null = null;
   private crew: Sprite | null = null;
+  /** Cosméticos pintados (T40): bandera en el mástil y tinte de la estela. */
+  readonly dressing: ShipDressing;
 
   private constructor(
     frames: Map<Direction, Frame>,
     source: 'manifest' | 'provisional',
     heading: number,
+    dressing: ShipDressing = { flag: null, wakeTint: null },
   ) {
     this.frames = frames;
     this.source = source;
+    this.dressing = dressing;
     this.picker = new DirectionPicker(heading);
     this.view.addChild(this.body);
     for (const f of frames.values()) {
@@ -128,11 +133,18 @@ export class ShipSprite {
     return new ShipSprite(frames, 'provisional', heading);
   }
 
-  /** Carga las 8 vistas de la skin; `null` si falta alguna imagen. */
+  /**
+   * Carga las 8 vistas de la skin; `null` si falta alguna imagen. Con
+   * `dressing` (T40), la bandera va en el tope del mástil de cada vista.
+   */
   static async fromManifest(
-    loaded: LoadedShipManifest,
+    loaded: LoadedShipManifest | DressedShip,
     heading: number,
   ): Promise<ShipSprite | null> {
+    const dressing: ShipDressing = ('dressing' in loaded && loaded.dressing) || {
+      flag: null,
+      wakeTint: null,
+    };
     const skin = loaded.skin ?? 'base';
     const scale = loaded.displayScale ?? shipArtScale(loaded.manifest);
     const m = loaded.manifest;
@@ -156,8 +168,26 @@ export class ShipSprite {
           s.anchor.set(a.pivot.x / texture!.width, a.pivot.y / texture!.height);
           s.scale.set(scale);
           const rel = (p: Vec2) => ({ x: (p.x - a.pivot.x) * scale, y: (p.y - a.pivot.y) * scale });
+          // La vista es el sprite y, encima, la bandera del cosmético si la hay.
+          const node = new Container();
+          node.addChild(s);
+          if (dressing.flag) {
+            const stern = rel(a.wake_origin);
+            const bow = a.bow ? rel(a.bow) : { x: 0, y: 0 };
+            const quad = flagQuad(
+              rel(a.mast_top),
+              { x: stern.x - bow.x, y: stern.y - bow.y },
+              scale,
+            );
+            const flag = new Graphics();
+            for (const piece of flagPieces(quad, dressing.flag))
+              flag.poly(piece.points).fill(piece.color);
+            flag.poly(quad).stroke({ width: Math.max(1, 2 * scale), color: 0x1a1446 });
+            flag.label = 'bandera';
+            node.addChild(flag);
+          }
           frames.set(d, {
-            node: s,
+            node,
             sprite: s,
             still: texture!,
             withPassenger: passengerTexture,
@@ -172,7 +202,12 @@ export class ShipSprite {
       console.warn('[boia] sprites del barco incompletos; se usa el provisional', err);
       return null;
     }
-    return new ShipSprite(frames, 'manifest', heading);
+    return new ShipSprite(frames, 'manifest', heading, dressing);
+  }
+
+  /** Tinte de la estela del cosmético equipado (0xffffff: espuma blanca). */
+  get wakeTint(): number {
+    return this.dressing.wakeTint ?? 0xffffff;
   }
 
   get direction(): Direction {

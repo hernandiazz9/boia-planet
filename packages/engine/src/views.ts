@@ -68,7 +68,8 @@ export class WakeView {
   private readonly pool: Sprite[] = [];
   private readonly texture = dotTexture();
 
-  sync(wake: WakeSystem): void {
+  /** `tint`: color de la espuma (el cosmético de estela, T40); blanca por defecto. */
+  sync(wake: WakeSystem, tint = 0xffffff): void {
     const ps = wake.particles;
     while (this.pool.length < ps.length) {
       const s = new Sprite(this.texture);
@@ -90,6 +91,7 @@ export class WakeView {
       const size = (p.size * (1 + k * 1.6)) / 16;
       s.scale.set(size, size * 0.5);
       s.alpha = (1 - k) * 0.75;
+      s.tint = tint;
     }
   }
 }

@@ -29,7 +29,7 @@ import { STABLE_KEY, STABLE_KEY_MAX } from './ids';
  * Subir `SCHEMA_VERSION` exige añadir la migración en `migrations.ts` con su
  * prueba.
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 const iso = z.string().min(1);
 const stableKey = z.string().max(STABLE_KEY_MAX).regex(STABLE_KEY);
@@ -347,15 +347,26 @@ export type AchievementDefinition = z.infer<typeof achievementDefinitionSchema>;
 export const COSMETIC_SLOTS = ['flag', 'accessory', 'skin', 'wake', 'ship'] as const;
 export type CosmeticSlot = (typeof COSMETIC_SLOTS)[number];
 
-/** Cosmético del barco (REQ-IDE-030 a REQ-IDE-032): nunca cambia cómo navega. */
+/**
+ * Cosmético del barco (REQ-IDE-030 a REQ-IDE-032): nunca cambia cómo navega.
+ * Cómo se consigue (T40, D-23 punto 1 y O5), por orden: `base` (lo tiene todo
+ * el mundo desde el principio), `unlockPoints` (umbral de puntos: los puntos
+ * no se gastan), un logro que lo conceda o `priceCoins` en la tienda.
+ */
 export const cosmeticSchema = z.object({
   id: stableKey,
   name: z.string().min(1),
   slot: z.enum(COSMETIC_SLOTS),
-  /** Precio en monedas; null: sólo se consigue con un logro. */
+  /** Precio en monedas; null: no se vende (logro, umbral de puntos o base). */
   priceCoins: z.number().int().nonnegative().nullable(),
-  /** Clave de arte (la resuelve el motor). */
+  /** Clave de arte (la resuelve el motor): el estilo en `ship`, la skin en `skin`. */
   assetKey: z.string().optional(),
+  /** Desbloqueado para todos desde el principio (B05 Arcilla y B02 Acuarela). */
+  base: z.boolean().default(false),
+  /** Se desbloquea solo al llegar a estos puntos (umbral; no se gastan). */
+  unlockPoints: z.number().int().positive().optional(),
+  /** Skin de un barco: el id del cosmético `ship` al que va (hace falta tenerlo). */
+  forShip: stableKey.optional(),
   active: z.boolean().default(true),
   sample: z.boolean().default(false),
 });

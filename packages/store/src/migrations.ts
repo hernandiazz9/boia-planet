@@ -272,6 +272,107 @@ function v5ToV6(doc: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
+/**
+ * Barcos que eran libres antes de la economía (T40) y ahora se compran o se
+ * desbloquean con puntos: estilo → cosmético `ship`. Los de logro ya estaban
+ * bloqueados (T36) y los de base siguen siendo de todos. Copia fija.
+ */
+export const V7_WERE_FREE_SHIPS: Readonly<Record<string, string>> = {
+  'low-poly': 'barco-low-poly',
+  'cartoon-30': 'barco-cartoon-30',
+  'semi-realista': 'barco-semi-realista',
+};
+/** Barcos con skins noche y fiesta a la venta desde T40: estilo → cosmético `ship`. */
+export const V7_SKIN_SHIPS: Readonly<Record<string, string>> = {
+  arcilla: 'barco-arcilla',
+  acuarela: 'barco-acuarela',
+  ...V7_WERE_FREE_SHIPS,
+  'cel-shaded': 'barco-cel-shaded',
+  'pixel-art': 'barco-pixel-art',
+};
+export const V7_SKINS: readonly string[] = ['noche', 'fiesta'];
+const V7_BASE_SHIPS = new Set(['barco-arcilla', 'barco-acuarela']);
+/** Preferencia donde /juego guarda el barco que se lleva (`SHIP_PREF` de apps/web). */
+export const V7_SHIP_PREF = 'barco';
+export const V7_SOURCE = 'migration:v7';
+
+/**
+ * v6 → v7 (T40): los barcos y las skins se compran. Lo que el visitante ya
+ * llevaba (la preferencia `barco` de /juego: estilo y skin) sigue siendo
+ * suyo: una fila `cosmetic` sin coste por el barco, si era libre y ahora no,
+ * y por la skin, si no es la base; y queda equipado. Los saldos no cambian.
+ */
+function v6ToV7(doc: Record<string, unknown>): Record<string, unknown> {
+  const ledger = Array.isArray(doc.ledger) ? [...(doc.ledger as unknown[])] : [];
+  const players: Record<string, unknown> = isObject(doc.players) ? { ...doc.players } : {};
+  const compensated = new Set(
+    ledger.flatMap((e) =>
+      isObject(e) && e.kind === 'compensation' && typeof e.compensatesId === 'string'
+        ? [e.compensatesId]
+        : [],
+    ),
+  );
+  const ids = new Set(
+    ledger.flatMap((e) => (isObject(e) && typeof e.id === 'string' ? [e.id] : [])),
+  );
+  const owns = (userId: string, key: string) =>
+    V7_BASE_SHIPS.has(key) ||
+    ledger.some(
+      (e) =>
+        isObject(e) &&
+        e.kind === 'cosmetic' &&
+        e.userId === userId &&
+        e.cosmeticKey === key &&
+        !compensated.has(String(e.id)),
+    );
+  const identity = isObject(doc.identity) ? doc.identity : null;
+  const at =
+    identity && typeof identity.createdAt === 'string'
+      ? identity.createdAt
+      : '2026-09-30T00:00:00.000Z';
+  const give = (userId: string, key: string) => {
+    if (owns(userId, key)) return;
+    let id = `cosmetic:${key}`;
+    for (let n = 2; ids.has(id); n++) id = `cosmetic:${key}#${n}`;
+    ids.add(id);
+    ledger.push({
+      id,
+      userId,
+      kind: 'cosmetic',
+      pointsDelta: 0,
+      coinsDelta: 0,
+      seasonId: null,
+      cosmeticKey: key,
+      sourceRef: V7_SOURCE,
+      metadata: { migratedFrom: 6 },
+      createdAt: at,
+    });
+  };
+  for (const [userId, raw] of Object.entries(players)) {
+    if (!isObject(raw)) continue;
+    const prefs = isObject(raw.prefs) ? raw.prefs : {};
+    const pref = prefs[V7_SHIP_PREF];
+    if (!isObject(pref) || typeof pref.style !== 'string') continue;
+    const style = pref.style;
+    const skin = typeof pref.skin === 'string' ? pref.skin : 'base';
+    const equipped: Record<string, unknown> = isObject(raw.equipped) ? { ...raw.equipped } : {};
+    const freeShip = V7_WERE_FREE_SHIPS[style];
+    if (freeShip) {
+      give(userId, freeShip);
+      equipped.ship = freeShip;
+    }
+    const ship = V7_SKIN_SHIPS[style];
+    if (ship && V7_SKINS.includes(skin) && owns(userId, ship)) {
+      const key = `skin-${style}-${skin}`;
+      give(userId, key);
+      equipped.ship = ship;
+      equipped.skin = key;
+    }
+    players[userId] = { ...raw, equipped };
+  }
+  return { ...doc, players, ledger };
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, name: 'logros que se reclaman (T36)', up: v1ToV2 },
   { from: 2, to: 3, name: 'eventos con formato, precio y estado por fechas (T42)', up: v2ToV3 },
@@ -287,6 +388,12 @@ export const MIGRATIONS: readonly Migration[] = [
     to: 6,
     name: 'reportes y moderación de Carnets, destino de misión por mundo (T45)',
     up: v5ToV6,
+  },
+  {
+    from: 6,
+    to: 7,
+    name: 'barcos y skins que se compran; lo que se llevaba sigue siendo suyo (T40)',
+    up: v6ToV7,
   },
 ];
 

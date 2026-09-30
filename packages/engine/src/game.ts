@@ -580,7 +580,7 @@ export async function createGame(canvas: HTMLCanvasElement, opts: GameOptions): 
     sprite.view.position.set(sp.x, sp.y);
     sprite.view.zIndex = ry;
     sprite.update(rh, time, shipSpeed(ship));
-    wakeView.sync(wake);
+    wakeView.sync(wake, sprite.wakeTint);
 
     const d = runtime.dialogue();
     const speaker = d ? built.streamer.view(d.objectId) : undefined;

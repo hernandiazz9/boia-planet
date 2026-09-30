@@ -3,21 +3,19 @@ import {
   SHIP_STYLE_PARAM,
   SHIP_STYLE_STORAGE_KEY,
   requestedShipSkin,
-  requestedShipStyle,
 } from '@boia/engine/ui';
-import type { ShipCatalog } from '../../lib/barco/catalog';
+import type { ProgressApi } from '@boia/store';
+import { BASE_SKIN, type ShipLook, resolveLook, styleOf } from '../../lib/barco/shop-model';
 
 /**
- * Aspecto del barco (estilo + skin) en /juego (T12). Qué se carga al entrar:
- * `?estilo=<id>` si viene en la URL (T11), si no el último elegido en este
- * navegador; la skin, la guardada si ese estilo la ofrece, si no `base`.
- * Elegir en la sección «Barco» lo aplica al momento y lo guarda aquí.
+ * Aspecto del barco (estilo + skin) en /juego y /mar (T12, T40). Qué se
+ * carga al entrar (`resolveLook`): `?estilo=<id>` si viene en la URL y es
+ * tuyo, si no lo equipado en el repositorio, si no lo último elegido en este
+ * navegador antes de la tienda y, si no, el barco del mundo. Equipar en la
+ * tienda lo guarda en el repositorio y, por compatibilidad, aquí también.
  */
 
-export interface ShipLook {
-  style: string;
-  skin: string;
-}
+export type { ShipLook };
 
 function storage(): Storage | null {
   try {
@@ -27,18 +25,54 @@ function storage(): Storage | null {
   }
 }
 
-/** Lo pedido para esta carga (URL o guardado); la validación final la hace el motor. */
-export function requestedLook(
-  search: string,
-  catalog: ShipCatalog | null,
-): { style: string | null; skin: string | null } {
+/** Lo último elegido en este navegador (claves de T11/T12, anteriores a la tienda). */
+export function legacyLook(): { style: string | null; skin: string | null } {
   const s = storage();
-  const style = requestedShipStyle(search, s);
-  let skin = requestedShipSkin(s);
-  // Una skin que el catálogo no ofrece para ese estilo (p. ej. por sus notas) no se pide.
-  const entry = catalog?.styles.find((e) => e.id === (style ?? catalog.defaultId));
-  if (skin && entry && !entry.skins.some((k) => k.id === skin)) skin = null;
-  return { style, skin };
+  let style: string | null = null;
+  try {
+    style = s?.getItem(SHIP_STYLE_STORAGE_KEY) ?? null;
+  } catch {
+    style = null;
+  }
+  return { style, skin: requestedShipSkin(s) };
+}
+
+/**
+ * El aspecto que toca ahora, con lo equipado (bandera y estela incluidas):
+ * lee la tienda del repositorio y la URL.
+ */
+export async function storedLook(
+  progress: ProgressApi,
+  world: { style: string; skin?: string | undefined },
+  search: string,
+): Promise<ShipLook & { source: string; equipped: Record<string, string> }> {
+  const [items, equipped] = await Promise.all([progress.shop(), progress.equipped()]);
+  const urlStyle = new URLSearchParams(search).get(SHIP_STYLE_PARAM);
+  const look = resolveLook({ urlStyle, equipped, legacy: legacyLook(), items, world });
+  return { ...look, equipped };
+}
+
+/**
+ * Equipa en el repositorio un aspecto que ya es tuyo (p. ej. el de
+ * `?estilo=`): el barco y su skin, o la base. Lo que no es tuyo no se toca.
+ */
+export async function equipLook(progress: ProgressApi, look: ShipLook): Promise<void> {
+  const items = await progress.shop();
+  const ship = items.find((i) => i.cosmetic.slot === 'ship' && styleOf(i) === look.style);
+  if (!ship?.owned) return;
+  const skin = items.find(
+    (i) =>
+      i.cosmetic.slot === 'skin' &&
+      i.forShip === ship.cosmetic.id &&
+      i.cosmetic.assetKey === look.skin &&
+      i.owned,
+  );
+  if (skin) {
+    await progress.equip('skin', skin.cosmetic.id);
+    return;
+  }
+  await progress.equip('ship', ship.cosmetic.id);
+  if (look.skin === BASE_SKIN) await progress.equip('skin', null);
 }
 
 /** Guarda la elección en este navegador; sin almacenamiento vale sólo para esta visita. */

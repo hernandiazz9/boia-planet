@@ -1,5 +1,20 @@
-import type { Mesh } from 'three';
-import { Box3, Group, MeshLambertMaterial, type MeshStandardMaterial, type Object3D } from 'three';
+import type { BufferGeometry, Mesh } from 'three';
+import {
+  Box3,
+  CanvasTexture,
+  DoubleSide,
+  Group,
+  Matrix4,
+  MeshBasicMaterial,
+  MeshLambertMaterial,
+  type MeshStandardMaterial,
+  Mesh as ThreeMesh,
+  type Object3D,
+  PlaneGeometry,
+  SRGBColorSpace,
+  Vector3,
+} from 'three';
+import type { FlagLook } from '../../../lib/barco/dressing';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 /**
@@ -18,10 +33,14 @@ export interface ShipModelEntry {
   label: string;
   /** Hueco de la pasajera en cubierta (x, y de Blender). */
   slot: [number, number];
+  /** Archivo de cada skin (`base`, `noche`, `fiesta`…), T39. */
+  skins?: Record<string, string>;
 }
 
 export interface ShipModel {
   id: string;
+  /** Skin cargada (`base` si el estilo no tiene la pedida). */
+  skin: string;
   object: Object3D;
   /** Hueco de la pasajera en coordenadas del modelo (three, y arriba). */
   slot: { x: number; y: number; z: number };
@@ -38,8 +57,11 @@ export async function loadShipManifest(): Promise<ShipModelEntry[]> {
   }
 }
 
-export async function loadShipModel(entry: ShipModelEntry): Promise<ShipModel> {
-  const gltf = await new GLTFLoader().loadAsync(`${SHIP_MODELS_URL}/${entry.file}`);
+/** El modelo de un estilo en una skin (T39, T40); sin esa skin, el de base. */
+export async function loadShipModel(entry: ShipModelEntry, skin = 'base'): Promise<ShipModel> {
+  const file = entry.skins?.[skin] ?? entry.file;
+  const used = entry.skins?.[skin] ? skin : 'base';
+  const gltf = await new GLTFLoader().loadAsync(`${SHIP_MODELS_URL}/${file}`);
   const root = new Group();
   root.add(gltf.scene);
   const cache = new Map<string, MeshLambertMaterial>();
@@ -64,6 +86,7 @@ export async function loadShipModel(entry: ShipModelEntry): Promise<ShipModel> {
   const deck = Math.max(0.3, box.max.y * 0.32);
   return {
     id: entry.id,
+    skin: used,
     object: root,
     slot: { x: entry.slot[0], y: deck, z: -entry.slot[1] },
   };
@@ -73,4 +96,61 @@ export async function loadShipModel(entry: ShipModelEntry): Promise<ShipModel> {
 export function modelLength(o: Object3D): { length: number; minX: number; maxX: number } {
   const box = new Box3().setFromObject(o);
   return { length: box.max.x - box.min.x, minX: box.min.x, maxX: box.max.x };
+}
+
+/**
+ * El punto más alto del modelo (el tope del mástil o de la chimenea), en las
+ * coordenadas de `o`: ahí va la bandera del cosmético (T40).
+ */
+export function topPoint(o: Object3D): Vector3 {
+  o.updateMatrixWorld(true);
+  const toLocal = new Matrix4().copy(o.matrixWorld).invert();
+  const best = new Vector3(0, -Infinity, 0);
+  const v = new Vector3();
+  o.traverse((c) => {
+    const m = c as Mesh;
+    if (!m.isMesh) return;
+    const pos = (m.geometry as BufferGeometry).getAttribute('position');
+    if (!pos) return;
+    const k = new Matrix4().multiplyMatrices(toLocal, m.matrixWorld);
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(k);
+      if (v.y > best.y) best.copy(v);
+    }
+  });
+  return Number.isFinite(best.y) ? best : new Vector3();
+}
+
+const css = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
+
+/**
+ * La bandera del cosmético (T40) en 3D: un paño a dos caras con el dibujo de
+ * `FlagLook` (liso, dos franjas o cuadros), con el borde en el mástil (x = 0)
+ * y ondeando hacia -X (popa). `size`: ancho en unidades del mapa.
+ */
+export function createFlag(look: FlagLook, size: number): ThreeMesh {
+  const canvas = document.createElement('canvas');
+  canvas.width = 48;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const [a, b] = look.colors;
+    ctx.fillStyle = css(a);
+    ctx.fillRect(0, 0, 48, 32);
+    ctx.fillStyle = css(b);
+    if (look.pattern === 'stripes') ctx.fillRect(0, 16, 48, 16);
+    if (look.pattern === 'checker')
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 2; j++) if ((i + j) % 2) ctx.fillRect(i * 16, j * 16, 16, 16);
+    ctx.strokeStyle = '#1a1446';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(1.5, 1.5, 45, 29);
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  const geo = new PlaneGeometry(size, size * (2 / 3));
+  geo.translate(-size / 2, -size / 3, 0);
+  const flag = new ThreeMesh(geo, new MeshBasicMaterial({ map: tex, side: DoubleSide }));
+  flag.name = 'bandera';
+  return flag;
 }

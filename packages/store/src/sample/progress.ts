@@ -298,6 +298,23 @@ export const SAMPLE_ACHIEVEMENTS: AreaInput<'achievements'>[] = [
   },
 ];
 
+/** Precio de cada skin de barco (O5). muestra */
+export const SKIN_PRICE = 150;
+const SOLD_SKINS = [
+  ['noche', 'Noche'],
+  ['fiesta', 'Fiesta'],
+] as const;
+/** Barcos con skins a la venta: cosmético, estilo y nombre corto. */
+const SHIP_SKIN_OWNERS = [
+  ['barco-arcilla', 'arcilla', 'Arcilla'],
+  ['barco-acuarela', 'acuarela', 'Acuarela'],
+  ['barco-low-poly', 'low-poly', 'Low-poly'],
+  ['barco-semi-realista', 'semi-realista', 'Semi-realista'],
+  ['barco-cartoon-30', 'cartoon-30', 'Cartoon años 30'],
+  ['barco-cel-shaded', 'cel-shaded', 'Cel-shaded'],
+  ['barco-pixel-art', 'pixel-art', 'Pixel art'],
+] as const;
+
 export const SAMPLE_COSMETICS: AreaInput<'cosmetics'>[] = [
   { id: 'bandera-boia', name: 'Bandera BOIA', slot: 'flag', priceCoins: 30, sample: true },
   { id: 'estela-naranja', name: 'Estela naranja', slot: 'wake', priceCoins: 50, sample: true },
@@ -324,9 +341,8 @@ export const SAMPLE_COSMETICS: AreaInput<'cosmetics'>[] = [
     sample: true,
   },
   { id: 'estela-rayo', name: 'Estela de rayo', slot: 'wake', priceCoins: null, sample: true },
-  // Barcos de estilo que se ganan con un logro: bloqueados hasta reclamarlo.
-  // Semi-realista, Cartoon años 30 y Low-poly se venderán en la tienda del
-  // plan 004; Arcilla y Acuarela son libres.
+  // Barcos de estilo (T40, D-23 punto 1 y O5; precios `muestra`). Primero los
+  // que se ganan con un logro (D-22, T36: bloqueados hasta reclamarlo).
   {
     id: 'barco-cel-shaded',
     name: 'Cel-shaded cómic',
@@ -351,6 +367,65 @@ export const SAMPLE_COSMETICS: AreaInput<'cosmetics'>[] = [
     assetKey: 'pixel-art',
     sample: true,
   },
+  // Los dos de los mundos iniciales: de todos desde el principio.
+  {
+    id: 'barco-arcilla',
+    name: 'Arcilla, maqueta',
+    slot: 'ship',
+    priceCoins: null,
+    assetKey: 'arcilla',
+    base: true,
+    sample: true,
+  },
+  {
+    id: 'barco-acuarela',
+    name: 'Acuarela ilustrada',
+    slot: 'ship',
+    priceCoins: null,
+    assetKey: 'acuarela',
+    base: true,
+    sample: true,
+  },
+  // En la tienda, con monedas.
+  {
+    id: 'barco-low-poly',
+    name: 'Low-poly',
+    slot: 'ship',
+    priceCoins: 300,
+    assetKey: 'low-poly',
+    sample: true,
+  },
+  {
+    id: 'barco-cartoon-30',
+    name: 'Cartoon años 30',
+    slot: 'ship',
+    priceCoins: 400,
+    assetKey: 'cartoon-30',
+    sample: true,
+  },
+  // Con puntos: al llegar a 1500 (umbral; los puntos no se gastan).
+  {
+    id: 'barco-semi-realista',
+    name: 'Semi-realista «El Veterano»',
+    slot: 'ship',
+    priceCoins: null,
+    assetKey: 'semi-realista',
+    unlockPoints: 1500,
+    sample: true,
+  },
+  // Skins noche y fiesta de cada barco: 150 monedas cada una (B01 Boceto a
+  // lápiz es monocromo: sólo base).
+  ...SHIP_SKIN_OWNERS.flatMap(([ship, style, label]) =>
+    SOLD_SKINS.map(([skin, skinLabel]): AreaInput<'cosmetics'> => ({
+      id: `skin-${style}-${skin}`,
+      name: `${label} · ${skinLabel}`,
+      slot: 'skin',
+      priceCoins: SKIN_PRICE,
+      assetKey: skin,
+      forShip: ship,
+      sample: true,
+    })),
+  ),
 ];
 
 /** Rangos lúdicos, no jerarquía (REQ-IDE-012, REQ-IDE-028). */

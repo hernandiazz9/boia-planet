@@ -73,10 +73,8 @@ export const SKIN_RULES: ReadonlyArray<{
 }> = [
   // «Monocromo: no admite skins de color.»
   { barco: 'B01', note: /no admite skins de color/i, only: ['base'] },
-  // «Sin contorno; las skins temáticas piden modelado nuevo.»
-  { barco: 'B05', note: /skins temáticas piden modelado nuevo/i, only: ['base'] },
-  // «… una skin «fiesta» rompería el estilo.»
-  { barco: 'B06', note: /skin «fiesta» rompería/i, except: ['fiesta'] },
+  // B05 y B06 ya no se recortan: T39 les hizo sus skins noche y fiesta y la
+  // tienda (T40, O5) las vende, aunque sus notas del registro sigan escritas.
 ];
 
 interface RegistryColor {

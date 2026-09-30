@@ -4,8 +4,10 @@ import path from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { BarcoPicker } from '../../app/juego/menu/sections/barco';
+import { createLocalRepository } from '@boia/store';
 import { SKIN_RULES, allowedSkins, type ShipRegistry } from './catalog';
+import { BarcoShopView, readShop } from './shop';
+import { shopRows } from './shop-model';
 import { loadShipCatalog, repoRoot } from './load';
 import { resolveRef, scriptConstants, toHex } from './python-constants';
 
@@ -73,31 +75,45 @@ describe('catálogo de la sección «Barco»', () => {
         `${rule.barco}: ${rule.note}`,
       ).toBe(true);
     }
-    // B01 (monocromo) sólo base, B06 sin fiesta, B05 sin temáticas: aunque existieran.
+    // B01 (monocromo) sólo base, aunque existieran; B05 y B06 venden sus skins (T40).
     const all = ['base', 'fiesta', 'noche'];
     const entry = (id: string) => registry.barcos.find((b) => b.id === id);
     expect(allowedSkins(all, entry('B01'))).toEqual(['base']);
-    expect(allowedSkins(all, entry('B05'))).toEqual(['base']);
-    expect(allowedSkins(all, entry('B06'))).toEqual(['base', 'noche']);
+    expect(allowedSkins(all, entry('B05'))).toEqual(all);
+    expect(allowedSkins(all, entry('B06'))).toEqual(all);
     expect(allowedSkins(['noche', 'base', 'fiesta'], entry('B02'))).toEqual(all);
   });
 
-  it('la sección pinta cada estilo con miniatura y, del elegido, cada una de sus skins', () => {
-    for (const style of catalog.styles) {
+  it('la tienda pinta cada barco con miniatura y, del que se lleva, cada una de sus skins', async () => {
+    const repo = createLocalRepository({ storage: null, watch: false });
+    const data = await readShop(repo);
+    const rows = shopRows(catalog, data.items);
+    const noop = () => {};
+    const on = {
+      equipShip: noop,
+      equipSkin: noop,
+      equipSlot: noop,
+      ask: noop,
+      confirm: noop,
+      cancel: noop,
+    };
+    for (const row of rows.ships) {
       const html = renderToStaticMarkup(
-        createElement(BarcoPicker, {
-          catalog,
-          current: { style: style.id, skin: style.skins[0]!.id },
-          onChoose: () => {},
+        createElement(BarcoShopView, {
+          rows,
+          data,
+          current: { style: row.style, skin: 'base' },
+          on,
         }),
       );
-      for (const s of catalog.styles) {
-        expect(html).toContain(`data-testid="barco-estilo-${s.id}"`);
-        expect(html).toContain(s.name.replace(/&/g, '&amp;'));
+      for (const s of rows.ships) {
+        expect(html).toContain(`data-testid="barco-estilo-${s.style}"`);
+        expect(html).toContain(s.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;'));
       }
-      expect(html.match(/data-testid="barco-skin-/g)?.length).toBe(style.skins.length);
-      for (const k of style.skins) expect(html).toContain(`data-testid="barco-skin-${k.id}"`);
-      expect(html.match(/role="radio" aria-checked="true"/g)?.length).toBe(2);
+      expect(html.match(/data-testid="barco-skin-(?!item)/g)?.length).toBe(row.skins.length);
+      for (const k of row.skins) expect(html).toContain(`data-testid="barco-skin-${k.skin}"`);
+      // El barco y su skin base marcados; «Sin bandera» y «Espuma blanca», también.
+      expect(html.match(/role="radio" aria-checked="true"/g)?.length).toBe(4);
     }
   });
 });

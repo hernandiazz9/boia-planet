@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { loadShipCatalog } from '../../lib/barco/load';
 import { MarClient } from './mar-client';
 
 export const metadata: Metadata = { title: 'boia-planet · mar 3D' };
@@ -14,5 +15,6 @@ export const viewport: Viewport = {
 };
 
 export default function MarPage() {
-  return <MarClient />;
+  // Miniaturas y nombres de los barcos para la tienda «Barco» (T40), leídos de art/ al construir.
+  return <MarClient shipCatalog={loadShipCatalog()} />;
 }

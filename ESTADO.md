@@ -4,6 +4,32 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-30 — plan 004 T40: economía de barcos, tienda «Barco» con monedas y barco por puntos
+
+Qué existe:
+- **Todo bloqueado menos B05 Arcilla y B02 Acuarela** (D-23 punto 1, O5; precios `muestra`): el catálogo de cosméticos (`SAMPLE_COSMETICS`) tiene los 8 barcos de estilo (`barco-<estilo>`) y las skins noche y fiesta de 7 de ellos (`skin-<estilo>-<skin>`, 150 🪙; B01 Boceto sólo base). B03 Low-poly 300 🪙, B06 Cartoon años 30 400 🪙, B04 Semi-realista «El Veterano» al llegar a 1500 puntos (umbral: no se gastan ni se escribe nada en el libro), B07/B01/B08 por logro (T36, bloqueados hasta reclamar). Esquema del cosmético con `base`, `unlockPoints` y `forShip` (la skin necesita su barco).
+- **Store v7** (migración v6 → v7): lo que el visitante llevaba (preferencia `barco` de /juego: estilo y skin) sigue siendo suyo con una fila `cosmetic` a 0 monedas (`sourceRef: migration:v7`) y queda equipado; los barcos de logro sin reclamar no se regalan. Saldos intactos.
+- **API**: `progress.shop()` (cada cosmético con `owned`, `equipped`, `unlock` base/points/achievement/coins, `missing` y `canBuy`), `ships()` con `base` y `unlockPoints`, `buyCosmetic` (una fila del libro, idempotente; `insufficient_coins`, `forbidden` si no se vende o la skin no tiene su barco), `equip` (una skin equipa su barco; un barco quita la skin de otro). Saldos siempre derivados del libro.
+- **Tienda «Barco»** (`lib/barco/shop.tsx`, `shop-model.ts`, `shop.css`), la misma en la sección ⛵ Barco del Menú de a bordo de /juego y en /mar (menú → «⛵ Barco» abre la hoja `mar-tienda`): cada barco con miniatura y su precio o condición («te faltan N monedas/puntos», «Se gana con el logro «…»»), comprar con confirmación (`barco-confirmar`, Escape cancela), equipar, lo propio marcado («De serie», «Tuyo», «Equipado»); skins del barco que se lleva, bandera y estela.
+- **Aspecto al entrar** (`resolveLook`, `app/juego/ship-look.ts`): `?estilo=` si es tuyo, lo equipado en el repositorio, lo elegido antes de la tienda (claves `boia:estilo-barco`/`boia:skin-barco`) si es tuyo, y si no el barco del mundo. Un `?estilo=` bloqueado no se pone. El estilo «muestra» (Toon de antes de T17) ya no se ofrece.
+- **Bandera y estela pintadas**: /juego (Pixi) pone la bandera en `mast_top` de cada vista ondeando hacia popa (`packages/engine/src/ship/dressing.ts`, `ShipSprite`) y tiñe la espuma (`WakeView.sync(wake, tint)`); /mar (three.js) cuelga la bandera del punto más alto del modelo y tiñe `Wake` (`setShipDressing`). /mar carga la skin del glTF (`loadShipModel(entry, skin)`). Colores en `lib/barco/dressing.ts` (`muestra`). `#juego` y `main.mar` publican `data-ship-style/skin/flag/wake`.
+- `catalog.ts`: B05 y B06 ya no recortan skins (T39 las hizo); B01 sigue sólo base.
+- Pruebas: `packages/store/src/economy.test.ts` (visitante nuevo = B05 + B02; doble confirmación cobra una vez; sin monedas no compra; B04 a los 1500 puntos sin gastarlos; skin sin barco; v6 → v7), `apps/web/lib/barco/shop-model.test.ts`, `physics.test.ts` (REQ-IDE-032: misma vuelta al circuito y mismos choques con cualquier barco, skin, bandera o estela), `catalog.test.ts` (render de la tienda). e2e `tienda.spec.ts` (gana «Primera boia», compra barco y bandera con confirmación, equipa, recarga; en /juego y /mar) y `demo.spec.ts` «Barco» otra vez en verde. Capturas `docs/informes/img/p004-t40-tienda.png` y `p004-t40-barco-equipado.png` (`RECORD_T40=1`).
+
+Comandos:
+```
+pnpm test --testTimeout=30000 && pnpm typecheck && pnpm lint   # exit 0; 96 archivos, 896 pruebas
+E2E_PORT=<libre> pnpm e2e --workers=2
+RECORD_T40=1 E2E_PORT=<libre> pnpm e2e tienda --project=mobile -g juego   # capturas
+```
+
+Pendiente / para otros encargos:
+- El accesorio `farolillo` (40 🪙) sigue en el catálogo pero la tienda no lo ofrece: no hay arte ni sitio donde pintarlo.
+- REQ-IDE-030 pide además «cambiar el color desde el principio»: no hay cosmético de color todavía.
+- Banderas y estelas se pintan con colores de código (`muestra`); cuando haya arte de Blender, sustituir `FLAG_LOOKS`/`WAKE_TINTS`.
+- `lib/logros/use-logros.ts` (`useShipLocks`, `lockedShipText`) ya no lo usa nadie; se puede borrar.
+- Los precios salen de `muestra` y la economía entera espera el visto bueno de Álvaro (D-23).
+
 ## 2026-09-29 — plan 004 T45: ranking local, moderación de Carnets, seis boies, delfín guía, «Explorar la isla» y destino de la Fiestera
 
 Qué existe:

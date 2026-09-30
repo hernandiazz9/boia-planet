@@ -274,9 +274,41 @@ export type ClaimResult =
   | { claimed: false; reason: 'duplicate' | 'not_ready'; entry: LedgerEntry | null };
 
 /**
- * Barco de estilo que se gana (logro) o se compra (tienda): mientras está en
- * esta lista y no se tiene, su estilo está bloqueado en el selector. Los
- * estilos que no están aquí son libres.
+ * Cómo se consigue un cosmético (T40, D-23): de base, al llegar a unos puntos
+ * (umbral, no se gastan), con un logro o con monedas. `none`: no se puede
+ * conseguir ahora (desactivado o sin precio).
+ */
+export type CosmeticUnlock =
+  | { kind: 'base' }
+  | { kind: 'points'; points: number }
+  | { kind: 'achievement'; achievementId: string }
+  | { kind: 'coins'; price: number }
+  | { kind: 'none' };
+
+/** Un cosmético de la tienda «Barco» con su estado para este visitante. */
+export interface ShopItem {
+  cosmetic: Cosmetic;
+  owned: boolean;
+  /** Lo lleva puesto en su ranura. */
+  equipped: boolean;
+  unlock: CosmeticUnlock;
+  /** Logro que lo concede, aunque también se venda. */
+  achievementId: string | null;
+  /** Skin: el cosmético `ship` al que va; null en las demás ranuras. */
+  forShip: string | null;
+  /**
+   * Lo que falta para tenerlo: monedas (`coins`) o puntos (`points`); 0 si
+   * ya se tiene o si no se consigue así.
+   */
+  missing: number;
+  /** Se puede comprar ahora: a la venta, con saldo y (skin) con su barco. */
+  canBuy: boolean;
+}
+
+/**
+ * Barco de estilo de la tienda (T40): los de base (B05, B02) los tiene todo
+ * el mundo; el resto se compra, se gana con un logro o se desbloquea con
+ * puntos. Un estilo que no está en esta lista no se ofrece.
  */
 export interface ShipUnlock {
   /** Id del estilo (`art/barco/estilos/<id>`). */
@@ -286,8 +318,12 @@ export interface ShipUnlock {
   owned: boolean;
   /** Logro que lo desbloquea, si lo hay. */
   achievementId: string | null;
-  /** Precio en monedas; null si sólo se gana con un logro. */
+  /** Precio en monedas; null si no se vende. */
   priceCoins: number | null;
+  /** Umbral de puntos que lo desbloquea, si lo hay. */
+  unlockPoints: number | null;
+  /** De base: desbloqueado desde el principio. */
+  base: boolean;
 }
 
 export interface OwnedCosmetic {
@@ -357,12 +393,23 @@ export interface ProgressApi {
   achievements(): Promise<AchievementProgress[]>;
   /** Insignias de los logros reclamados (Mi Carnet). */
   badges(): Promise<BadgeView[]>;
-  /** Barcos de estilo bloqueables y si ya se tienen. */
+  /** Barcos de estilo de la tienda y si ya se tienen. */
   ships(): Promise<ShipUnlock[]>;
-  /** Compra un cosmético con monedas (nunca toca los puntos). */
+  /** La tienda «Barco» (T40): cada cosmético activo con su estado, precio o condición. */
+  shop(): Promise<ShopItem[]>;
+  /**
+   * Compra un cosmético con monedas (nunca toca los puntos): una sola fila
+   * del libro. Si ya se tiene, `duplicate` y no cobra otra vez; sin saldo,
+   * `insufficient_coins`; lo que no se vende o una skin sin su barco,
+   * `forbidden`.
+   */
   buyCosmetic(cosmeticId: string): Promise<GrantResult>;
+  /** Cosméticos con fila en el libro (comprados o ganados); los de base y umbral no. */
   cosmetics(): Promise<OwnedCosmetic[]>;
-  /** Equipa un cosmético propio en su ranura (null la vacía). */
+  /**
+   * Equipa un cosmético propio en su ranura (null la vacía). Una skin equipa
+   * también su barco; un barco quita la skin de otro barco.
+   */
   equip(slot: CosmeticSlot, cosmeticId: string | null): Promise<Record<string, string>>;
   equipped(): Promise<Record<string, string>>;
   stamps(): Promise<StampView[]>;
