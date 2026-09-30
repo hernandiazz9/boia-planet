@@ -37,7 +37,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: mascot boia in tools/blender/mascota.py (primera, info, WhatsApp, Fiestera with balloons; idle + talking) for Arcilla and Acuarela under `extras` in lugares.json, secret marker, noche/fiesta skins for 7 of 8 styles (B01 held base-only), mascot passenger on every ship, glTFs in art/barco/3d; 848 images, check.py green → e38c31a
 
 ## T40 — Ship economy: locked ships and skins, coins shop, points unlock
-- Status: running (attempt 1)
+- Status: done
 - Depends on: T39, plan 003 finished
 - Goal: First make `apps/web/e2e/demo.spec.ts:197` «Barco» pass again on mobile and desktop (it fails on plan-004 since the plan 003 T36 / T39 changes to ships and skins, found by T42). Then inventory §1.1 and O5 (as amended by D-23: B03/B06 by coins, B04 by 1500 points, B07/B01/B08 by achievements, skins 150): every ship style and skin is locked except B05 Arcilla and B02 Acuarela (base). Coins buy ships and skins at the `muestra` prices of O5; B04 Semi-realista unlocks at 1500 points (threshold, points are never spent); the achievement-reward ship of D-22/T36 stays locked until claimed. A «Barco» shop in the /juego menu and the /mar ship picker: each ship with its price or unlock condition and «te faltan N monedas/puntos», buy with confirmation, equip, owned marked. Flag and wake cosmetics are drawn on the ship (a flag overlay on the mast slot, wake tint) in both views. Balances stay derived from the ledger; a purchase is one idempotent ledger debit; physics identical whatever the ship or cosmetic (REQ-IDE-032 test). Saved choice restores on reload; a store migration keeps whatever the visitor has already equipped as owned.
 - Context: inventory §1.1, §2 O2/O5, §3 Identidad; docs/spec/05-identidad-y-comunidad.md (REQ-IDE-027, 030…033); packages/store (cosmetics, buyCosmetic/equip, ledger, T36 reward types); apps/web/app/juego/menu/sections (Barco), apps/web/lib/barco/**, apps/web/app/mar/** (ship picker, ship-model.ts); packages/engine/src/ship-style.ts; art from T39.
@@ -46,7 +46,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
   - `pnpm test && pnpm typecheck && pnpm lint` → exit 0; adds tests: a new visitor owns exactly B05 and B02; buying debits once even on double confirm; not enough coins refuses; B04 unlocks at 1500 points without spending them; cosmetics do not change lap times or collisions
   - `E2E_PORT=<free> pnpm e2e --workers=2` → exit 0; a spec earns coins, buys a ship, equips it, reloads and still has it, in /juego and /mar
   - Screenshots p004-t40-tienda.png and p004-t40-barco-equipado.png
-- Outcome:
+- Outcome: ship shop in /juego «Barco» and the /mar picker: only B05/B02 owned at start, B03 300 / B06 400 coins, B04 at 1500 points (not spent), achievement ships stay locked until claimed, skins 150; flag and wake tint drawn on the ship in both views; store v7 (saved ship kept as owned); physics identical per ship/cosmetic; «Barco» e2e fixed; 896 tests → 10a87fc
 
 ## T41 — World switch through a black hole
 - Status: done
@@ -143,9 +143,9 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: delete with impact + typed name, trash with 30-day retention and purge, achievements create/duplicate/version (trigger change bumps version), home/events draft with /admin/vista-previa and «Publicar» blocked by reasons, home CTAs and excluded events, PARAM_RANGES validation, music upload with licence, purchases/stamps audited, docs/manual-admin.md; store v5; 716 tests → f839789
 
 ## T51 — /mar parity with /juego for everything plan 004 added
-- Status: pending
-- Depends on: T40, plan 003 finished
-- Goal: Bring to `/mar` what plan 004 built for `/juego` while plan 003 owned `/mar` (each item is in the Proposals of this plan): discount cards with «Ir a la isla» through `startVoyage` and the discount banner in the island sheet (T43); island sheet with event state, «Ver fotos de la isla», memories, «Próximos eventos» and satellites, links to `/fotos` (T42); the black-hole vortex as a three.js pass reusing `SwitchTimeline.pose()` (T41); info boies, dolphin guide and «Explorar la isla» (T45); ambient loop, whoosh on turbo, bump and splash (T46); lazy glTF by distance reusing `@boia/engine/streaming` (T47); brand colours in palette.ts (T50); position restore and Carnet invitations (T44).
+- Status: running (attempt 1)
+- Depends on: T40
+- Goal: First fix `apps/web/e2e/agujero-negro.spec.ts:77` on desktop: after a world switch `data-arte-faltante` stays >0 (144–177 missing art), found by T40 on the untouched plan-004 (T41 vortex + T45 new boias/secrets + T47 streaming interplay). Then bring to `/mar` what plan 004 built for `/juego` while plan 003 owned `/mar` (each item is in the Proposals of this plan): discount cards with «Ir a la isla» through `startVoyage` and the discount banner in the island sheet (T43); island sheet with event state, «Ver fotos de la isla», memories, «Próximos eventos» and satellites, links to `/fotos` (T42); the black-hole vortex as a three.js pass reusing `SwitchTimeline.pose()` (T41); info boies, dolphin guide and «Explorar la isla» (T45); ambient loop, whoosh on turbo, bump and splash (T46); lazy glTF by distance reusing `@boia/engine/streaming` (T47); brand colours in palette.ts (T50); position restore and Carnet invitations (T44).
 - Context: this plan's Proposals and Outcomes of T41–T47, T50; apps/web/app/mar/** (mar-client.tsx, sheet.tsx, engine/mar3d.ts, effects.ts, palette.ts); plan 003 Outcomes.
 - Scope: may touch ESTADO.md (own section via .orchestrator/status), apps/web/app/mar/**, apps/web/e2e/mar*.spec.ts, shared components only by importing them / must not touch packages/store/** (API only), art/**.
 - Done when:
@@ -180,6 +180,8 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - Outcome: wordmark traced to SVG (tools/blender/intro/trazar_marca.py), intro letters rebuilt from it (orange faces, #36278A sides), logo in header/footer/icons/Admin, tokens #EC4F24/#FF5219/#36278A/#000, Titan One (OFL, 10.5 KB) for titles, landing 185.2 KB gzip (+4.3 KB CSS logos) → 8850a24
 
 ## Decisions
+- 2026-09-30 T40: store `equipped` is the source of truth (?estilo= only if owned, then equipped, then old pref if owned, then world ship); old «muestra» Toon style dropped; equipping a skin equips its ship; flag/wake colours placeholders in lib/barco/dressing.ts; one-line wake tint hook in game.ts/views.ts (agent)
+- 2026-09-30: agujero-negro desktop missing-art failure handed to T51 (orchestrator)
 - 2026-09-30: plan 003 finished; main merged into plan-004 (only ESTADO.md conflicted) and main fast-forwarded to plan-004 (Hernán: merge with main as soon as possible). From now on every integrated task is fast-forwarded into main right away (orchestrator)
 - 2026-09-30: new T51 gathers every /mar follow-up of T41–T47 and T50 (plan 003 owned /mar); T49 now depends on it (orchestrator)
 - 2026-09-30: T41 and T45 agents stalled (600 s watchdog) after committing their work clean; the machine had load ~57 (unit tests only failed by timeout). Integrated as orphans once load dropped: both merged green, then typecheck, lint and world:check pass (orchestrator)
@@ -210,6 +212,7 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-29: Álvaro's answers (inventory §6): the mascot is every 3D boia, incl. the Boia Fiestera; the wordmark drives the intro letters; first real event «BOIA Club · Halloween» at the Kiki García Bar, a BOIA Club night (satellite, series boia-club), not an All Day (Hernán); home shows Álvaro's photo selection; jokey invented legal data; full permission for Hernán (Álvaro via Hernán)
 
 ## Proposals (new scope)
+- 2026-09-30 T40: free hull colour (REQ-IDE-030) not built; `farolillo` accessory not drawn; unused useShipLocks/lockedShipText in lib/logros/use-logros.ts; /mar ship does not follow a world switch
 - 2026-09-30 T41: /mar vortex as a three.js ShaderPass reusing SwitchTimeline.pose(); Admin in the same tab does not trigger the vortex; «Entre dos mundos» notice shows while dark
 - 2026-09-30 T45: /mar info boies, dolphin guide and «Explorar la isla»; ranking/report copy in constants until T49; boia talking frame unused
 - 2026-09-29 T46: /mar follow-up — installAudioLifecycle + setAmbientWorld in mar-client.tsx, whoosh on turbo, bump + splash in mar3d.ts/effects.ts; declared animations not played yet (object-view.ts); Game.setSensitivity and impact through game.ts; Admin-uploaded music still not played
@@ -253,3 +256,4 @@ Agent notes: your base branch is `plan-004` (not main): start with `git merge --
 - 2026-09-30 00:51 RESUMED · T41 orphan (stalled, committed clean) → aea4663 · T45 orphan (stalled, committed clean) → 89a974b
 - 2026-09-30 01:29 main merged into plan-004 and main fast-forwarded to 3260a84 (plan 003 done)
 - 2026-09-30 01:31 T40 launched · attempt 1 · agent affb177c6a5c72516
+- 2026-09-30 02:20 T40 done · branch worktree-agent-affb177c6a5c72516 → 10a87fc
