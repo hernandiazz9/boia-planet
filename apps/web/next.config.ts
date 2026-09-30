@@ -1,6 +1,7 @@
 import { networkInterfaces } from 'node:os';
 import path from 'node:path';
 import type { NextConfig } from 'next';
+import { RENAMED_ROUTES, securityHeaders } from './lib/security-headers';
 
 /** IPs de la red local del Mac, para abrir el servidor de desarrollo desde el móvil. */
 function lanHosts(): string[] {
@@ -21,6 +22,17 @@ const config: NextConfig = {
   allowedDevOrigins: ['127.0.0.1', ...lanHosts()],
   // ESLint corre una vez en la raíz (`pnpm lint`), no dentro de `next build`.
   eslint: { ignoreDuringBuilds: true },
+  // CSP y demás cabeceras de seguridad en todas las rutas (REQ-ARQ-012).
+  async headers() {
+    const headers = securityHeaders({
+      dev: process.env.NODE_ENV !== 'production',
+      analyticsHost: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com',
+    });
+    return [{ source: '/:path*', headers }];
+  },
+  async redirects() {
+    return RENAMED_ROUTES;
+  },
 };
 
 export default config;

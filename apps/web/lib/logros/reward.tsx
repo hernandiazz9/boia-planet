@@ -4,7 +4,7 @@ import type { AchievementReward } from '@boia/store';
 import { useEffect } from 'react';
 import { type CosmeticNames, REWARD_MS } from './model';
 import { useCountUp } from './use-logros';
-
+import { t as msg } from '../i18n';
 
 export interface ClaimedReward {
   /** Para volver a montar la animación con cada reclamo. */
@@ -42,7 +42,7 @@ export function ClaimReward({
       className={`logros-premio is-${reward.kind}`}
       data-testid="logro-premio"
       data-kind={reward.kind}
-      aria-label={`Premio de «${title}» reclamado. Toca para cerrar`}
+      aria-label={msg('logros.reward.premioDeReclamadoToca', { title })}
       onClick={onDone}
     >
       <span className="logros-premio__burst" aria-hidden="true">
@@ -50,7 +50,7 @@ export function ClaimReward({
           <i key={i} style={{ ['--i' as string]: i }} />
         ))}
       </span>
-      <span className="logros-premio__kicker">¡Premio!</span>
+      <span className="logros-premio__kicker">{msg('logros.reward.premio')}</span>
       <strong className="logros-premio__title">{title}</strong>
       {reward.points > 0 || reward.coins > 0 ? (
         <span className="logros-premio__nums" role="status">
@@ -66,7 +66,7 @@ export function ClaimReward({
           <span className="logros-premio__fly" aria-hidden="true">
             🎖️
           </span>
-          <span>Insignia a tu Carnet</span>
+          <span>{msg('logros.reward.insigniaATuCarnet')}</span>
         </span>
       ) : null}
       {reward.kind === 'ship' ? (
@@ -75,11 +75,15 @@ export function ClaimReward({
             <span>🔒</span>
             <span>⛵</span>
           </span>
-          <span>¡Barco desbloqueado{cosmetic ? `: ${cosmetic}` : ''}!</span>
+          <span>
+            {msg('logros.reward.barcoDesbloqueado', { v1: cosmetic ? `: ${cosmetic}` : '' })}
+          </span>
         </span>
       ) : null}
       {reward.kind === 'cosmetic' && cosmetic ? (
-        <span className="logros-premio__extra">✨ Nuevo para tu barco: {cosmetic}</span>
+        <span className="logros-premio__extra">
+          {msg('logros.reward.nuevoParaTuBarco', { cosmetic })}
+        </span>
       ) : null}
     </button>
   );

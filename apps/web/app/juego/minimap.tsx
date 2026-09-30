@@ -14,6 +14,7 @@ import {
 import type { WorldConfig } from '@boia/world';
 import { useEffect, useRef, useState } from 'react';
 import { FUNCTION_LABEL } from './notice-copy';
+import { t as msg } from '../../lib/i18n';
 
 /**
  * Minimapa (§10): toque = mapa ampliado con nombres y funciones de lo
@@ -143,7 +144,11 @@ function MapSvg({
                 className="juego-map-label"
                 onClick={() => onSelect?.(t.id)}
                 role="button"
-                aria-label={known ? `Señalar ${t.name}` : 'Señalar un punto sin descubrir'}
+                aria-label={
+                  known
+                    ? msg('juego.minimap.senalar', { name: t.name })
+                    : msg('juego.minimap.senalarUnPuntoSin')
+                }
               >
                 <circle cx={q.x} cy={q.y} r={16} fill="transparent" />
                 <text
@@ -255,8 +260,8 @@ export function Minimap({
       data-testid="minimapa"
       data-hud="minimapa"
       className={`juego-minimap${pulse ? ' juego-pulse-long' : ''}${dragging ? ' is-dragging' : ''}`}
-      aria-label="Minimapa: toca para ampliar, mantén pulsado para moverlo"
-      title="Toca para ampliar · mantén pulsado para mover"
+      aria-label={msg('hud.minimap.aria')}
+      title={msg('juego.minimap.tocaParaAmpliarManten')}
       style={{
         left: rect.x,
         top: rect.y,
@@ -309,7 +314,7 @@ export function ExpandedMap({
         tabIndex={-1}
         className="juego-map"
         role="dialog"
-        aria-label="Mapa"
+        aria-label={msg('juego.minimap.mapa')}
         data-testid="minimapa-ampliado"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
@@ -318,8 +323,13 @@ export function ExpandedMap({
         }}
       >
         <header className="juego-sheet-head">
-          <h2>Mapa</h2>
-          <button type="button" className="juego-close" onClick={onClose} aria-label="Cerrar">
+          <h2>{msg('juego.minimap.mapa')}</h2>
+          <button
+            type="button"
+            className="juego-close"
+            onClick={onClose}
+            aria-label={msg('juego.minimap.cerrar')}
+          >
             ×
           </button>
         </header>
@@ -343,13 +353,16 @@ export function ExpandedMap({
           ))}
           {unknown > 0 ? (
             <li className="juego-map-unknown">
-              {unknown === 1 ? 'Queda 1 sitio' : `Quedan ${unknown} sitios`} por descubrir.
+              {msg('juego.minimap.porDescubrir', {
+                v1:
+                  unknown === 1
+                    ? msg('juego.minimap.queda1Sitio')
+                    : msg('juego.minimap.quedanSitios', { unknown }),
+              })}
             </li>
           ) : null}
         </ul>
-        <p className="juego-map-hint">
-          Toca un sitio para que la brújula lo señale. Mantén pulsado el minimapa para moverlo.
-        </p>
+        <p className="juego-map-hint">{msg('juego.minimap.tocaUnSitioPara')}</p>
       </section>
     </div>
   );

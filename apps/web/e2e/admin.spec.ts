@@ -61,7 +61,8 @@ function seedReport(page: Page) {
   ];
   return page.addInitScript((json) => {
     try {
-      if (!window.localStorage.getItem('boia.store')) window.localStorage.setItem('boia.store', json);
+      if (!window.localStorage.getItem('boia.store'))
+        window.localStorage.setItem('boia.store', json);
     } catch {
       // sin almacenamiento: la prueba fallará más abajo, con su motivo
     }
@@ -131,10 +132,9 @@ test('Probar admin: los cambios se ven en la landing y en el mar', async ({ page
   await editor.getByTestId('lugar-x').fill(String(moved.x));
   await editor.getByTestId('lugar-y').fill(String(moved.y));
   await editor.getByTestId('lugar-guardar').click();
-  await expect(page.getByTestId('mapa-preview').locator(`[data-lugar="${island.id}"]`)).toHaveAttribute(
-    'data-x',
-    String(moved.x),
-  );
+  await expect(
+    page.getByTestId('mapa-preview').locator(`[data-lugar="${island.id}"]`),
+  ).toHaveAttribute('data-x', String(moved.x));
 
   // 5. Moderación: la botella reportada se retira del mar.
   await section(page, 'moderacion');

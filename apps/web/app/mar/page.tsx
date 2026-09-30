@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { loadShipCatalog } from '../../lib/barco/load';
 import { MarClient } from './mar-client';
+import { t } from '../../lib/i18n';
 
-export const metadata: Metadata = { title: 'boia-planet · mar 3D' };
+export const metadata: Metadata = { title: t('mar.mar.boiaPlanetMar3d') };
 
 // Como en /juego: en el mar un pellizco es el zoom de la cámara, no el de la página.
 export const viewport: Viewport = {

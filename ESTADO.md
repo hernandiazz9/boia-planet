@@ -4,6 +4,35 @@ Dónde quedó el repo al cerrar la última sesión. Una sección por encargo, la
 más nueva arriba: `## <fecha> — encargo NN: <título>`. Se lee después de los
 documentos base y se actualiza al cerrar cada sesión.
 
+## 2026-09-30 — plan 004 T49: entrega: estado por REQ, i18n, cabeceras de seguridad y documentos de traspaso
+
+Qué existe:
+- **La cámara de /mar vuelve a pasar** (`mar-3d.spec.ts:332`): `data-ship-screen` medía el barco a ras de agua mientras el vuelo de «Entradas» lo subía (y la cámara con él); ahora se proyecta a su altura de vuelo (`mar3d.ts`, `measure`). Comprobado: sin el cambio falla en móvil (dy 0,11), con él pasa en móvil y escritorio.
+- **i18n por claves (REQ-ARQ-020)**: todas las cadenas de interfaz de /juego, /mar, el Admin y los módulos de `lib/` (incluidas las constantes «hasta T49»: `RANKING_COPY`, `CARNET_REPORT_COPY`, `BOTTLE_COPY`, `EVENTOS_COPY`, `FOTOS_COPY`, `EVENT_CARD_COPY`, `SHOP_COPY`, `CHECKOUT_COPY`, `ACCESS_COPY`, `ADMIN_COPY`…) leen su texto del catálogo. Las constantes conservan su forma (nadie más cambia) y sus valores son `t(...)`. Catálogo en `apps/web/lib/i18n/`: `es-web.ts` (la web pública), `es-zonas*.ts` (GENERADOS desde `docs/propuestas/textos-zonas.md` con `pnpm --filter @boia/web i18n:zonas`: las 623 claves), `es-juego.ts`, `es-mar.ts`, `es-admin.ts`, `es-lib*.ts`; `es.ts` es el entero. Donde el código ya decía el texto de textos-zonas se usa su clave; lo demás lleva clave `<zona>.<archivo>.<texto>`. `grep` de literales `'Xxx ` en juego/admin: 136 → 0.
+- **La web pública traduce con su parte del catálogo** (`lib/i18n/web.ts`, y `lib/i18n/eventos.ts` para la ficha de evento y las fotos): el catálogo entero son ~35 kB gzip y la landing tiene 192 kB. Landing: 190,9 kB, OK. Las páginas (`page.tsx`, servidor) usan el entero. El generador decide qué claves de textos-zonas van a la web leyendo `app/(landing)`, `lib/landing` y `lib/ticketing`.
+- **Legales con los textos de textos-zonas** (datos inventados, D-23 O14): `/legal/aviso-legal`, `/legal/privacidad`, `/legal/cookies` (`lib/legal/docs.ts`), con `legal.sampleBanner` arriba; «Condiciones» pasa a «Aviso legal» en el pie y `/legal/condiciones` redirige (308).
+- **CSP y cabeceras de seguridad (REQ-ARQ-012)** en `next.config.ts` desde `lib/security-headers.ts`: CSP (`default-src 'self'`, imágenes https, PostHog, `frame-ancestors 'self'`, `object-src 'none'`…), nosniff, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP, HSTS. `script-src` lleva `'unsafe-inline'` (scripts en línea de Next) y `'unsafe-eval'` (PixiJS 8 compila con `new Function`; sin él /juego y la entrada no arrancan).
+- **Estado por REQ (REQ-PRO-017)**: `docs/spec/estado.md` (294 REQ: HECHO 155 · PARCIAL 59 · FALTA 33 · L2 28 · final 19) y `tools/spec/estado.py`, que exige que cada HECHO enlace una prueba que nombre el REQ o cuyo título «…» exista; `tools/spec/test_estado.py` lo prueba. Primera versión generada (`--generar --mapa`), desde aquí a mano. `check.py` admite `estado.md` en docs/spec.
+- **`pnpm test` corre también los comprobadores de Python** (`tools/spec/checks.sh`: `check.py`, `estado.py`, sus pruebas y `tools/blender/check.py`, REQ-MUN-031, ~1 min) cuando no se le pasa un filtro. `pnpm spec:estado`.
+- **Documentos de traspaso (REQ-ARQ-024)**: `.env.example` (ninguna variable obligatoria), `README.md` (probar, cabeceras, entrega), `docs/manual-alvaro.md` (el Admin en llano), `docs/entrega.md` (lista de entrega y lo que falta para publicar), `docs/matriz-dispositivos.md` (16 casos de REQ-ARQ-016: 7 con e2e, 5 parciales, 4 a mano; registro de móviles de REQ-ARQ-017).
+- «Textos y música» del Admin sigue listando sólo las claves de la landing (`LANDING_TEXT_KEYS`).
+- Pruebas nuevas: `lib/i18n/zonas.test.ts` (el documento y el catálogo coinciden; las partes de la web dicen lo mismo que el entero), `lib/security-headers.test.ts`, e2e `entrega.spec.ts` (cabeceras en `/`, `/juego`, `/mar`, `/admin`; legales y redirección).
+
+Comandos:
+```
+pnpm test --testTimeout=30000 && pnpm typecheck && pnpm lint && pnpm build   # exit 0; 101 archivos, 917 pruebas + checks de Python; landing 190,9 kB de 192
+python3 tools/spec/estado.py                 # exit 0; HECHO 155 · PARCIAL 59 · FALTA 33 · L2 28 · final 19
+E2E_PORT=<libre> pnpm e2e --workers=2          # exit 0; 204 passed, 36 skipped (14,7 min)
+node apps/web/scripts/i18n-zonas.mjs         # tras cambiar textos-zonas.md
+```
+
+Pendiente / para otros encargos:
+- Los diálogos de cada mundo (bocadillos de boies, Fiestera…) siguen en `packages/world/src/worlds/*/skin.ts`; sus claves `world.<mundo>.…` ya están en el catálogo, falta que el mundo las lea.
+- Quitar `'unsafe-eval'` de la CSP importando `pixi.js/unsafe-eval` en `@boia/engine`; límites de peticiones, origen y repetición llegan con el servidor (D-20).
+- Nombres de paletas de `/mar` (`app/mar/engine/palette.ts`) y textos de consola (`[boia] …`) no pasan por i18n.
+- `docs/spec/estado.md`: 59 PARCIAL y 33 FALTA para repasar; varios piden revisión o medición en móvil.
+- La matriz de dispositivos: áreas seguras, zoom, sin conexión y pérdida de contexto gráfico, a mano.
+
 ## 2026-09-30 — plan 004 T51: /mar al día con /juego (todo lo del plan 004) y el arte que faltaba tras el agujero negro
 
 Qué existe:

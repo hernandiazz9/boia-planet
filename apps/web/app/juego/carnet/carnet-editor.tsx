@@ -11,6 +11,7 @@ import { type BoiaRepository, type CarnetView, isStoreError } from '@boia/store'
 import { type FormEvent, useId, useState } from 'react';
 import { emitSignal } from '../achievements';
 import { Avatar, DEFAULT_AVATAR, NEUTRAL_AVATARS, shrinkPhoto } from './avatar';
+import { t } from '../../../lib/i18n';
 
 /**
  * Alta rápida y edición del Carnet (REQ-IDE-010, REQ-IDE-013, REQ-IDE-014):
@@ -23,12 +24,10 @@ import { Avatar, DEFAULT_AVATAR, NEUTRAL_AVATARS, shrinkPhoto } from './avatar';
  * En la versión de prueba nada se comparte (REQ-IDE-051, D-20): se dice en
  * pantalla. muestra
  */
-export const LOCAL_ONLY_NOTICE =
-  'Versión de prueba: todo se guarda sólo en este navegador y nadie más lo ve.';
+export const LOCAL_ONLY_NOTICE = t('juego.carnetEditor.versionDePruebaTodo');
 
 /** Qué será público (REQ-IDE-013) cuando haya servidor. muestra */
-export const PUBLIC_FIELDS_NOTICE =
-  'Cuando BOIA.PLANET abra, tu Carnet será público: apodo, foto o avatar, «Miembro de BOIA desde», tus respuestas, rango, puntos, logros, barco y sellos. No te pedimos email.';
+export const PUBLIC_FIELDS_NOTICE = t('juego.carnetEditor.cuandoBoiaPlanetAbra');
 
 export function CarnetForm({
   questions,
@@ -66,7 +65,7 @@ export function CarnetForm({
         </p>
       ) : null}
       <label className="juego-field">
-        <span>Apodo</span>
+        <span>{t('juego.carnetEditor.apodo')}</span>
         <input
           name="apodo"
           data-testid="carnet-apodo-input"
@@ -78,13 +77,17 @@ export function CarnetForm({
           onChange={(e) => set({ nickname: e.target.value })}
         />
         <small className="juego-muted">
-          De {NICKNAME_MIN} a {NICKNAME_MAX} caracteres. Es como te verán en BOIA.
+          {t('juego.carnetEditor.deACaracteresEs', { NICKNAME_MIN, NICKNAME_MAX })}
         </small>
       </label>
 
       <fieldset className="juego-field">
-        <legend>Foto o avatar</legend>
-        <div className="carnet-avatar-pick" role="radiogroup" aria-label="Avatar neutro">
+        <legend>{t('carnet.field.photo')}</legend>
+        <div
+          className="carnet-avatar-pick"
+          role="radiogroup"
+          aria-label={t('juego.carnetEditor.avatarNeutro')}
+        >
           {NEUTRAL_AVATARS.map((a) => {
             const checked = !draft.avatarImage && draft.avatarKey === a.key;
             return (
@@ -113,12 +116,14 @@ export function CarnetForm({
                   className="juego-link"
                   onClick={() => set({ avatarImage: null })}
                 >
-                  Quitar la foto
+                  {t('carnet.field.photo.remove')}
                 </button>
               </>
             ) : null}
             <label className="juego-link" htmlFor={`${id}-foto`}>
-              {draft.avatarImage ? 'Cambiar la foto' : 'Subir una foto del dispositivo'}
+              {draft.avatarImage
+                ? t('carnet.field.photo.change')
+                : t('juego.carnetEditor.subirUnaFotoDel')}
             </label>
             <input
               id={`${id}-foto`}
@@ -132,7 +137,7 @@ export function CarnetForm({
                 setPhotoError(null);
                 onPhoto(file).then(
                   (url) => set({ avatarImage: url }),
-                  () => setPhotoError('No hemos podido usar esa foto. Prueba con otra.'),
+                  () => setPhotoError(t('carnet.error.photo')),
                 );
               }}
             />
@@ -142,8 +147,8 @@ export function CarnetForm({
       </fieldset>
 
       <fieldset className="juego-field">
-        <legend>Tus 5 preguntas</legend>
-        <p className="juego-muted">Contesta las que quieras; puedes cambiarlas cuando quieras.</p>
+        <legend>{t('carnet.questions.heading')}</legend>
+        <p className="juego-muted">{t('juego.carnetEditor.contestaLasQueQuieras')}</p>
         {questions.map((q) => (
           <label key={q.id} className="carnet-q">
             <span>{q.prompt}</span>
@@ -165,11 +170,11 @@ export function CarnetForm({
       ) : null}
       <div className="carnet-actions">
         <button type="submit" className="juego-button" disabled={busy} data-testid="carnet-guardar">
-          {creating ? 'Crear mi Carnet' : 'Guardar'}
+          {creating ? t('carnet.create') : t('juego.carnetEditor.guardar')}
         </button>
         {onCancel ? (
           <button type="button" className="juego-button is-quiet" onClick={onCancel}>
-            Cancelar
+            {t('carnet.cancel')}
           </button>
         ) : null}
       </div>
@@ -208,11 +213,12 @@ export function draftFrom(carnet: CarnetView | null): CarnetDraft {
 export function carnetErrorText(e: unknown): string {
   if (isStoreError(e, 'conflict')) {
     return /apodo/.test((e as Error).message)
-      ? 'Ese apodo ya lo lleva otro miembro de BOIA. Prueba con otro.'
-      : 'Ya tienes un Carnet en este navegador.';
+      ? t('carnet.error.nicknameTaken')
+      : t('juego.carnetEditor.yaTienesUnCarnet');
   }
-  if (isStoreError(e, 'invalid')) return `Revisa esto: ${(e as Error).message}.`;
-  return 'No se ha podido guardar. Vuelve a intentarlo.';
+  if (isStoreError(e, 'invalid'))
+    return t('juego.carnetEditor.revisaEsto', { message: (e as Error).message });
+  return t('carnet.error.save');
 }
 
 /** Guarda el borrador: crea o actualiza y contesta las preguntas que cambiaron. */
@@ -295,7 +301,11 @@ export function CarnetEditor({
         saveCarnet(repo, before, draft, questions)
           .then(onDone, (e: unknown) => {
             const invalidLocal = (e as { code?: string }).code === 'invalid';
-            setError(invalidLocal ? `Revisa esto: ${(e as Error).message}.` : carnetErrorText(e));
+            setError(
+              invalidLocal
+                ? t('juego.carnetEditor.revisaEsto', { message: (e as Error).message })
+                : carnetErrorText(e),
+            );
           })
           .finally(() => setBusy(false));
       }}

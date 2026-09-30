@@ -2,6 +2,7 @@ import type { Album, Artist, BoiaEvent, Discount, HomeBlock, Photo } from '@boia
 import type { AchievementDefinition, Cosmetic, EntityArea } from '@boia/store';
 import type { Place, SharedMap } from '@boia/world';
 import { discountHidingPlaces, eventIslands } from './world';
+import { t } from '../i18n';
 
 /**
  * Quién nombra a quién en el contenido del Admin (REQ-ADM-029, REQ-ADM-014),
@@ -78,13 +79,16 @@ export function referencesTo(area: EntityArea, id: string, data: ReferenceData):
       const event = data.events.find((e) => e.id === id);
       for (const b of data.homeBlocks) {
         if (b.type === 'priority_event' && b.eventId === id)
-          add('Página principal', 'es el evento prioritario');
+          add(t('admin.references.paginaPrincipal'), t('admin.references.esElEventoPrioritario'));
         if (b.type === 'upcoming_events' && b.excludeEventIds.includes(id))
-          add('Página principal', 'está excluido de «Próximos eventos»');
+          add(t('admin.references.paginaPrincipal'), t('admin.references.estaExcluidoDeProximos'));
       }
       if (event?.islandId) {
         const island = data.map.places.find((p) => p.id === event.islandId);
-        add('Mapa', `la isla «${island ? placeName(island) : event.islandId}» deja de abrirlo`);
+        add(
+          t('admin.references.mapa'),
+          t('admin.references.laIslaDejaDe', { v1: island ? placeName(island) : event.islandId }),
+        );
       }
       for (const p of mapRefs(
         data.map,
@@ -92,39 +96,52 @@ export function referencesTo(area: EntityArea, id: string, data: ReferenceData):
           (b.type === 'ticket' && b.params.eventId === id) ||
           (b.type === 'content' && b.params.target === 'event' && b.params.ref === id),
       ))
-        add('Mapa', `«${placeName(p)}» lo abre o vende`);
+        add(
+          t('admin.references.mapa'),
+          t('admin.references.loAbreOVende', { placeName: placeName(p) }),
+        );
       for (const d of data.discounts.filter((x) => x.eventId === id))
-        add('Descuentos', `el código «${d.code}» es de este evento`);
+        add(t('admin.references.descuentos'), t('admin.references.elCodigoEsDe', { code: d.code }));
       for (const a of data.albums.filter((x) => x.eventId === id))
-        add('Fotos', `el álbum «${a.title}» es de este evento`);
+        add(t('admin.references.fotos'), t('admin.references.elAlbumEsDe', { title: a.title }));
       const bought = data.visitor?.purchaseEventIds.filter((e) => e === id).length ?? 0;
-      if (bought) add('Compras', `${bought} compra(s) y su sello en este navegador (se conservan)`);
+      if (bought)
+        add(
+          t('admin.references.compras'),
+          `${bought} compra(s) y su sello en este navegador (se conservan)`,
+        );
       break;
     }
     case 'artists':
       for (const e of data.events.filter((x) => x.artistIds.includes(id)))
-        add('Eventos', `está en el cartel de «${e.name}»`);
+        add(t('admin.references.eventos'), t('admin.references.estaEnElCartel', { name: e.name }));
       for (const p of mapRefs(
         data.map,
         (b) => b.type === 'content' && b.params.target === 'artist' && b.params.ref === id,
       ))
-        add('Mapa', `«${placeName(p)}» abre su ficha`);
+        add(
+          t('admin.references.mapa'),
+          t('admin.references.abreSuFicha', { placeName: placeName(p) }),
+        );
       break;
     case 'albums':
       for (const ph of data.photos.filter((x) => x.albumId === id))
-        add('Fotos', `la foto «${ph.alt}» es de este álbum`);
+        add(t('admin.references.fotos'), t('admin.references.laFotoEsDe', { alt: ph.alt }));
       for (const b of data.homeBlocks)
         if (b.type === 'photos' && b.albumId === id)
-          add('Página principal', 'el bloque de fotos lo usa');
+          add(t('admin.references.paginaPrincipal'), t('admin.references.elBloqueDeFotos'));
       for (const p of mapRefs(
         data.map,
         (b) => b.type === 'content' && b.params.target === 'photos' && b.params.ref === id,
       ))
-        add('Mapa', `«${placeName(p)}» abre sus fotos`);
+        add(
+          t('admin.references.mapa'),
+          t('admin.references.abreSusFotos', { placeName: placeName(p) }),
+        );
       break;
     case 'photos':
       for (const a of data.albums.filter((x) => x.coverPhotoId === id))
-        add('Fotos', `es la portada del álbum «${a.title}»`);
+        add(t('admin.references.fotos'), t('admin.references.esLaPortadaDel', { title: a.title }));
       break;
     case 'discounts': {
       const d = data.discounts.find((x) => x.id === id);
@@ -132,13 +149,19 @@ export function referencesTo(area: EntityArea, id: string, data: ReferenceData):
         data.map,
         (b) => b.type === 'reward' && b.params.kind === 'discount' && b.params.ref === id,
       ))
-        add('Mapa', `«${placeName(p)}» entrega este código`);
+        add(
+          t('admin.references.mapa'),
+          t('admin.references.entregaEsteCodigo', { placeName: placeName(p) }),
+        );
       if (d?.hiddenAt) {
         const p = data.map.places.find((x) => x.id === d.hiddenAt);
-        add('Mapa', `se esconde en «${p ? placeName(p) : d.hiddenAt}»`);
+        add(
+          t('admin.references.mapa'),
+          t('admin.references.seEscondeEn', { v1: p ? placeName(p) : d.hiddenAt }),
+        );
       }
       if (data.visitor?.foundDiscountIds.includes(id))
-        add('Visitantes', 'ya lo encontró alguien en este navegador (lo verá como no disponible)');
+        add(t('admin.references.visitantes'), t('admin.references.yaLoEncontroAlguien'));
       break;
     }
     case 'achievements':
@@ -146,15 +169,18 @@ export function referencesTo(area: EntityArea, id: string, data: ReferenceData):
         data.map,
         (b) => b.type === 'reward' && b.params.kind === 'achievement' && b.params.ref === id,
       ))
-        add('Mapa', `«${placeName(p)}» lo concede`);
+        add(
+          t('admin.references.mapa'),
+          t('admin.references.loConcede', { placeName: placeName(p) }),
+        );
       if (data.visitor?.achievementIds.includes(id))
-        add('Visitantes', 'alguien lo tiene en este navegador (lo conserva)');
+        add(t('admin.references.visitantes'), t('admin.references.alguienLoTieneEn'));
       break;
     case 'cosmetics':
       for (const a of data.achievements.filter((x) => x.cosmeticKey === id))
-        add('Logros', `es el premio de «${a.title}»`);
+        add(t('admin.references.logros'), t('admin.references.esElPremioDe', { title: a.title }));
       if (data.visitor?.cosmeticIds.includes(id))
-        add('Visitantes', 'alguien lo tiene en este navegador (lo conserva)');
+        add(t('admin.references.visitantes'), t('admin.references.alguienLoTieneEn'));
       break;
     default:
       break;
@@ -183,39 +209,48 @@ export function danglingReferences(data: ReferenceData): string[] {
 
   for (const b of data.homeBlocks) {
     if (b.type === 'priority_event' && b.eventId && !events.has(b.eventId))
-      out.push(`Página principal: el evento prioritario «${b.eventId}» no existe`);
+      out.push(t('admin.references.paginaPrincipalElEvento', { eventId: b.eventId }));
     if (b.type === 'photos' && b.albumId && !albums.has(b.albumId))
-      out.push(`Página principal: el álbum «${b.albumId}» del bloque de fotos no existe`);
+      out.push(t('admin.references.paginaPrincipalElAlbum', { albumId: b.albumId }));
   }
   for (const e of data.events) {
     const missing = e.artistIds.filter((a) => !artists.has(a));
     if (missing.length)
-      out.push(`Evento «${e.name}»: no existen los artistas ${missing.join(', ')}`);
+      out.push(
+        t('admin.references.eventoNoExistenLos', { name: e.name, missing: missing.join(', ') }),
+      );
     if (e.islandId && !islands.has(e.islandId))
-      out.push(`Evento «${e.name}»: la isla «${e.islandId}» no existe o no admite eventos`);
+      out.push(t('admin.references.eventoLaIslaNo', { name: e.name, islandId: e.islandId }));
   }
   for (const d of data.discounts) {
     if (d.eventId && !events.has(d.eventId))
-      out.push(`Descuento «${d.code}»: el evento «${d.eventId}» no existe`);
+      out.push(t('admin.references.descuentoElEventoNo', { code: d.code, eventId: d.eventId }));
     if (d.hiddenAt && !hiding.has(d.hiddenAt))
-      out.push(`Descuento «${d.code}»: el escondite «${d.hiddenAt}» no existe`);
+      out.push(
+        t('admin.references.descuentoElEsconditeNo', { code: d.code, hiddenAt: d.hiddenAt }),
+      );
   }
   for (const a of data.albums) {
     if (a.eventId && !events.has(a.eventId))
-      out.push(`Álbum «${a.title}»: el evento «${a.eventId}» no existe`);
+      out.push(t('admin.references.albumElEventoNo', { title: a.title, eventId: a.eventId }));
     if (a.islandId && !places.has(a.islandId))
-      out.push(`Álbum «${a.title}»: la isla «${a.islandId}» no existe`);
+      out.push(t('admin.references.albumLaIslaNo', { title: a.title, islandId: a.islandId }));
     if (a.coverPhotoId && !photos.has(a.coverPhotoId))
-      out.push(`Álbum «${a.title}»: la portada «${a.coverPhotoId}» no existe`);
+      out.push(
+        t('admin.references.albumLaPortadaNo', { title: a.title, coverPhotoId: a.coverPhotoId }),
+      );
   }
   for (const p of data.photos) {
-    if (!albums.has(p.albumId)) out.push(`Foto «${p.alt}»: el álbum «${p.albumId}» no existe`);
+    if (!albums.has(p.albumId))
+      out.push(t('admin.references.fotoElAlbumNo', { alt: p.alt, albumId: p.albumId }));
   }
   for (const a of data.achievements) {
     if (a.cosmeticKey && !cosmetics.has(a.cosmeticKey))
-      out.push(`Logro «${a.title}»: el premio «${a.cosmeticKey}» no existe`);
+      out.push(
+        t('admin.references.logroElPremioNo', { title: a.title, cosmeticKey: a.cosmeticKey }),
+      );
     if (a.scope === 'season' && a.seasonId && !worlds.has(a.seasonId))
-      out.push(`Logro «${a.title}»: la temporada «${a.seasonId}» no existe`);
+      out.push(t('admin.references.logroLaTemporadaNo', { title: a.title, seasonId: a.seasonId }));
   }
   for (const p of data.map.places) {
     for (const b of p.behaviors) {
@@ -225,23 +260,32 @@ export function danglingReferences(data: ReferenceData): string[] {
         b.params.ref &&
         !discounts.has(b.params.ref)
       )
-        out.push(`Mapa: «${placeName(p)}» entrega el código «${b.params.ref}», que no existe`);
+        out.push(
+          t('admin.references.mapaEntregaElCodigo', { placeName: placeName(p), ref: b.params.ref }),
+        );
       if (
         b.type === 'reward' &&
         b.params.kind === 'achievement' &&
         b.params.ref &&
         !achievements.has(b.params.ref)
       )
-        out.push(`Mapa: «${placeName(p)}» concede el logro «${b.params.ref}», que no existe`);
+        out.push(
+          t('admin.references.mapaConcedeElLogro', { placeName: placeName(p), ref: b.params.ref }),
+        );
       if (b.type === 'ticket' && !events.has(b.params.eventId))
-        out.push(`Mapa: «${placeName(p)}» vende el evento «${b.params.eventId}», que no existe`);
+        out.push(
+          t('admin.references.mapaVendeElEvento', {
+            placeName: placeName(p),
+            eventId: b.params.eventId,
+          }),
+        );
       if (b.type === 'content' && b.params.ref) {
         const ref = b.params.ref;
         const broken =
           (b.params.target === 'event' && !events.has(ref)) ||
           (b.params.target === 'artist' && !artists.has(ref)) ||
           (b.params.target === 'photos' && !albums.has(ref) && !places.has(ref));
-        if (broken) out.push(`Mapa: «${placeName(p)}» abre «${ref}», que no existe`);
+        if (broken) out.push(t('admin.references.mapaAbreQueNo', { placeName: placeName(p), ref }));
       }
     }
   }

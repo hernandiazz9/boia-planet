@@ -5,11 +5,12 @@ import { useState } from 'react';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
 import { SectionHead, StatusLine } from '../ui';
+import { t } from '../../../lib/i18n';
 
 const STATUS_LABELS: Record<string, string> = {
-  active: 'en el mar',
-  retired: 'retirada por su autor',
-  removed: 'retirada por moderación',
+  active: t('admin.moderation.enElMar'),
+  retired: t('admin.moderation.retiradaPorSuAutor'),
+  removed: t('admin.moderation.retiradaPorModeracion'),
 };
 
 function BottleRow({ ctx, b }: { ctx: AdminContext; b: AdminBottleView }) {
@@ -20,17 +21,19 @@ function BottleRow({ ctx, b }: { ctx: AdminContext; b: AdminBottleView }) {
     <li className="admin-card" data-testid={`botella-${b.id}`} data-estado={b.status}>
       <p>«{b.message}»</p>
       <p className="admin-meta">
-        {b.authorNickname ?? 'sin apodo'}
-        {b.isSample ? ' · muestra' : ''} · {STATUS_LABELS[b.status] ?? b.status} ·{' '}
+        {b.authorNickname ?? t('admin.moderation.sinApodo')}
+        {b.isSample ? t('admin.moderation.muestra') : ''} · {STATUS_LABELS[b.status] ?? b.status} ·{' '}
         {b.reports.length} {b.reports.length === 1 ? 'reporte' : 'reportes'}
         {open.length ? ` (${open.length} sin revisar)` : ''}
-        {b.moderationReason ? ` · motivo: ${b.moderationReason}` : ''}
+        {b.moderationReason
+          ? t('admin.moderation.motivo', { moderationReason: b.moderationReason })
+          : ''}
       </p>
       {b.reports.length ? (
         <ul className="admin-reports">
           {b.reports.map((r) => (
             <li key={r.id}>
-              {r.reason ?? 'sin motivo'} ·{' '}
+              {r.reason ?? t('admin.moderation.sinMotivo')} ·{' '}
               {r.resolution ? `resuelto: ${r.resolution}` : 'pendiente'}
               {!r.resolvedAt ? (
                 <button
@@ -40,11 +43,11 @@ function BottleRow({ ctx, b }: { ctx: AdminContext; b: AdminBottleView }) {
                   onClick={() =>
                     void run(
                       () => ctx.repo.admin.resolveReport(r.id, 'descartado'),
-                      'Reporte descartado.',
+                      t('admin.moderation.reporteDescartado'),
                     )
                   }
                 >
-                  descartar
+                  {t('admin.moderation.descartar')}
                 </button>
               ) : null}
             </li>
@@ -54,7 +57,7 @@ function BottleRow({ ctx, b }: { ctx: AdminContext; b: AdminBottleView }) {
       {b.status === 'active' ? (
         <div className="admin-row admin-row--end">
           <label className="admin-field">
-            <span className="admin-field__label">Motivo</span>
+            <span className="admin-field__label">{t('admin.moderation.motivo2')}</span>
             <input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -67,10 +70,13 @@ function BottleRow({ ctx, b }: { ctx: AdminContext; b: AdminBottleView }) {
             disabled={busy}
             data-testid={`botella-retirar-${b.id}`}
             onClick={() =>
-              void run(() => ctx.actions.removeBottle(b.id, reason), 'Botella retirada del mar.')
+              void run(
+                () => ctx.actions.removeBottle(b.id, reason),
+                t('admin.moderation.botellaRetiradaDelMar'),
+              )
             }
           >
-            Retirar del mar
+            {t('bottle.retire')}
           </button>
         </div>
       ) : null}
@@ -81,13 +87,13 @@ function BottleRow({ ctx, b }: { ctx: AdminContext; b: AdminBottleView }) {
 
 /** Textos de la moderación de Carnets (textos-zonas, zona 18). muestra */
 const CARNET_MOD = {
-  heading: 'Carnets reportados',
-  empty: 'No hay Carnets reportados. Buena señal.',
-  hideAnswer: 'Ocultar respuesta',
-  hidePhoto: 'Ocultar foto',
-  resetNickname: 'Restablecer apodo',
-  dismiss: 'Descartar el reporte',
-  reason: 'Motivo (queda en la auditoría)',
+  heading: t('admin.moderation.carnets.heading'),
+  empty: t('admin.moderation.carnets.empty'),
+  hideAnswer: t('admin.moderation.hideAnswer'),
+  hidePhoto: t('admin.moderation.hidePhoto'),
+  resetNickname: t('admin.moderation.resetNickname'),
+  dismiss: t('admin.moderation.dismiss'),
+  reason: t('admin.moderation.reason'),
 } as const;
 
 /** Un Carnet reportado: sus reportes y lo que se le puede retirar (REQ-ADM-040). */
@@ -106,18 +112,19 @@ function CarnetRow({ ctx, row }: { ctx: AdminContext; row: AdminCarnetView }) {
     >
       <p>
         <strong>{carnet.nickname}</strong>
-        {carnet.isSample ? ' · muestra' : ''}
-        {moderation?.nickname ? ' · apodo restablecido' : ''}
-        {moderation?.photo ? ' · foto retirada' : ''}
+        {carnet.isSample ? t('admin.moderation.muestra') : ''}
+        {moderation?.nickname ? t('admin.moderation.apodoRestablecido') : ''}
+        {moderation?.photo ? t('admin.moderation.fotoRetirada') : ''}
       </p>
       <p className="admin-meta">
         {row.reports.length} {row.reports.length === 1 ? 'reporte' : 'reportes'}
-        {row.open ? ` (${row.open} sin revisar)` : ' · revisado'}
+        {row.open ? ` (${row.open} sin revisar)` : t('admin.moderation.revisado')}
       </p>
       <ul className="admin-reports">
         {row.reports.map((r) => (
           <li key={r.id}>
-            {r.reason ?? 'sin motivo'} · {r.resolution ? `resuelto: ${r.resolution}` : 'pendiente'}
+            {r.reason ?? t('admin.moderation.sinMotivo')} ·{' '}
+            {r.resolution ? `resuelto: ${r.resolution}` : 'pendiente'}
             {!r.resolvedAt ? (
               <button
                 type="button"
@@ -127,7 +134,7 @@ function CarnetRow({ ctx, row }: { ctx: AdminContext; row: AdminCarnetView }) {
                 onClick={() =>
                   void run(
                     () => ctx.actions.dismissCarnetReport(r.id, reason),
-                    'Reporte descartado.',
+                    t('admin.moderation.reporteDescartado'),
                   )
                 }
               >
@@ -155,7 +162,7 @@ function CarnetRow({ ctx, row }: { ctx: AdminContext; row: AdminCarnetView }) {
                   <span className="admin-meta">{a.question}</span>
                   <br />
                   {a.answer}
-                  {hidden ? ' · oculta' : ''}
+                  {hidden ? t('admin.moderation.oculta') : ''}
                 </span>
                 {hidden ? null : (
                   <button
@@ -164,7 +171,10 @@ function CarnetRow({ ctx, row }: { ctx: AdminContext; row: AdminCarnetView }) {
                     disabled={busy}
                     data-testid={`carnet-ocultar-${row.userId}-${a.questionId}`}
                     onClick={() =>
-                      act({ kind: 'hide_answer', questionId: a.questionId }, 'Respuesta oculta.')
+                      act(
+                        { kind: 'hide_answer', questionId: a.questionId },
+                        t('admin.moderation.respuestaOculta'),
+                      )
                     }
                   >
                     {CARNET_MOD.hideAnswer}
@@ -181,7 +191,7 @@ function CarnetRow({ ctx, row }: { ctx: AdminContext; row: AdminCarnetView }) {
           className="admin-button admin-button--ghost"
           disabled={busy || !hasPhoto || !!moderation?.photo}
           data-testid={`carnet-ocultar-foto-${row.userId}`}
-          onClick={() => act({ kind: 'hide_photo' }, 'Foto oculta.')}
+          onClick={() => act({ kind: 'hide_photo' }, t('admin.moderation.fotoOculta'))}
         >
           {CARNET_MOD.hidePhoto}
         </button>
@@ -190,7 +200,7 @@ function CarnetRow({ ctx, row }: { ctx: AdminContext; row: AdminCarnetView }) {
           className="admin-button admin-button--danger"
           disabled={busy || moderation?.nickname === carnet.nickname}
           data-testid={`carnet-restablecer-apodo-${row.userId}`}
-          onClick={() => act({ kind: 'reset_nickname' }, 'Apodo restablecido.')}
+          onClick={() => act({ kind: 'reset_nickname' }, t('admin.moderation.apodoRestablecido2'))}
         >
           {CARNET_MOD.resetNickname}
         </button>
@@ -203,7 +213,7 @@ function CarnetRow({ ctx, row }: { ctx: AdminContext; row: AdminCarnetView }) {
 /** Carnets reportados (REQ-ADM-040, O9): se retira algo sin borrar el Carnet. */
 function CarnetReports({ ctx }: { ctx: AdminContext }) {
   const rows = useRead(ctx, (r) => r.admin.carnetReports());
-  if (!rows) return <p>Cargando…</p>;
+  if (!rows) return <p>{t('empty.loading')}</p>;
   return (
     <>
       <h3>{CARNET_MOD.heading}</h3>
@@ -229,7 +239,7 @@ export function ModerationSection({ ctx }: { ctx: AdminContext }) {
   const [onlyReported, setOnlyReported] = useState(false);
   const [why, setWhy] = useState('');
   const { status, busy, run } = useRun();
-  if (!bottles) return <p>Cargando…</p>;
+  if (!bottles) return <p>{t('empty.loading')}</p>;
   const reported = (b: AdminBottleView) => b.reports.length > 0;
   const list = [...bottles]
     .sort((a, b) => Number(reported(b)) - Number(reported(a)))
@@ -243,40 +253,43 @@ export function ModerationSection({ ctx }: { ctx: AdminContext }) {
   return (
     <section>
       <SectionHead
-        title="Moderación"
-        lead="Carnets y botellas reportados. En la versión de prueba sólo están los de muestra y los de este navegador."
+        title={t('admin.moderation.moderacion')}
+        lead={t('admin.moderation.carnetsYBotellasReportados')}
       />
       <CarnetReports ctx={ctx} />
-      <h3>Botellas</h3>
+      <h3>{t('admin.moderation.botellas')}</h3>
       <label className="admin-check">
         <input
           type="checkbox"
           checked={onlyReported}
           onChange={(e) => setOnlyReported(e.target.checked)}
         />
-        Sólo las reportadas
+        {t('admin.moderation.soloLasReportadas')}
       </label>
       <ul className="admin-list" data-testid="botellas">
         {list.map((b) => (
           <BottleRow key={`${b.id}|${b.status}|${b.reports.length}`} ctx={ctx} b={b} />
         ))}
       </ul>
-      <h3>Recompensas de este navegador</h3>
-      <p className="admin-lead">
-        Retirar a mano una recompensa implausible: queda una compensación en el libro y en la
-        auditoría.
-      </p>
+      <h3>{t('admin.moderation.recompensasDeEsteNavegador')}</h3>
+      <p className="admin-lead">{t('admin.moderation.retirarAManoUna')}</p>
       <label className="admin-field">
-        <span className="admin-field__label">Motivo</span>
+        <span className="admin-field__label">{t('admin.moderation.motivo2')}</span>
         <input value={why} onChange={(e) => setWhy(e.target.value)} />
       </label>
       <ul className="admin-list">
-        {rewards.length === 0 ? <li className="admin-meta">Sin recompensas todavía.</li> : null}
+        {rewards.length === 0 ? (
+          <li className="admin-meta">{t('admin.moderation.sinRecompensasTodavia')}</li>
+        ) : null}
         {rewards.map((e) => (
           <li key={e.id} className="admin-row admin-row--between">
             <span>
-              {e.sourceRef ?? e.achievementId ?? e.id} · {e.pointsDelta} puntos · {e.coinsDelta}{' '}
-              monedas
+              {t('admin.moderation.puntosMonedas', {
+                v1: e.sourceRef ?? e.achievementId ?? e.id,
+                pointsDelta: e.pointsDelta,
+                coinsDelta: e.coinsDelta,
+                v4: ' ',
+              })}
             </span>
             <button
               type="button"
@@ -286,10 +299,10 @@ export function ModerationSection({ ctx }: { ctx: AdminContext }) {
                 void run(async () => {
                   if (!why.trim()) throw new Error('hace falta un motivo');
                   await ctx.repo.admin.compensate(e.id, why.trim());
-                }, 'Recompensa retirada.')
+                }, t('admin.moderation.recompensaRetirada'))
               }
             >
-              Retirar
+              {t('admin.moderation.retirar')}
             </button>
           </li>
         ))}

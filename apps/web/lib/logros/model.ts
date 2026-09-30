@@ -6,6 +6,7 @@ import {
   type AchievementGoal,
   achievementGoal,
 } from '../../app/juego/achievements';
+import { t } from '../i18n';
 
 /**
  * El panel de logros (T37, D-22 punto 5), sin React: de lo que devuelve
@@ -18,11 +19,11 @@ import {
 /** Título de un logro oculto sin completar. */
 export const HIDDEN_TITLE = '???';
 /** Línea de un oculto: no dice qué pide. muestra */
-export const HIDDEN_HINT = 'Logro oculto. Sigue explorando…';
+export const HIDDEN_HINT = t('logros.model.logroOcultoSigueExplorando');
 /** Línea de un logro listo para reclamar (la del aviso de T36). muestra */
-export const READY_HINT = '¡Completado! Reclama tu premio';
-export const CLAIMED_HINT = 'Reclamado';
-export const CLAIM_LABEL = 'Reclamar';
+export const READY_HINT = t('logros.model.completadoReclamaTuPremio');
+export const CLAIMED_HINT = t('achievements.state.claimed');
+export const CLAIM_LABEL = t('achievements.claim');
 /** Lo que dura la animación del premio antes de irse sola (ms). muestra */
 export const REWARD_MS = 2600;
 
@@ -47,7 +48,7 @@ export interface LogroRow {
 const NOUNS: Partial<Record<AchievementDefinition['trigger'], [string, string]>> = {
   find_buoy: ['boia', 'boies'],
   visit_island: ['isla', 'islas'],
-  win_minigame: ['partida ganada', 'partidas ganadas'],
+  win_minigame: [t('logros.model.partidaGanada'), t('logros.model.partidasGanadas')],
   read_bottle: ['botella', 'botellas'],
   throw_bottle: ['botella', 'botellas'],
   answer_question: ['pregunta', 'preguntas'],
@@ -77,18 +78,25 @@ const asTask = (d: string) => d.replace(/\.$/, '').replace(/^\p{Lu}/u, (c) => c.
 /** Cuánto le falta a un logro en curso, en una línea. */
 export function remainingText(def: AchievementDefinition, goal: AchievementGoal): string {
   if (goal.unit === 'ms') {
-    if (goal.have <= 0) return `Te queda una vuelta en menos de ${formatRaceTime(goal.need)}`;
-    return `Tu mejor vuelta: ${formatRaceTime(goal.have)} · te quedan ${formatRaceTime(
-      goal.have - goal.need,
-    )}`;
+    if (goal.have <= 0)
+      return t('logros.model.teQuedaUnaVuelta', { formatRaceTime: formatRaceTime(goal.need) });
+    return t('logros.model.tuMejorVueltaTe', {
+      formatRaceTime: formatRaceTime(goal.have),
+      formatRaceTime2: formatRaceTime(goal.have - goal.need),
+    });
   }
   const left = Math.max(0, goal.need - goal.have);
   if (goal.unit === 'minutos') {
-    return left === 1 ? 'Te queda 1 minuto a bordo' : `Te quedan ${left} minutos a bordo`;
+    return left === 1
+      ? t('logros.model.teQueda1Minuto')
+      : t('logros.model.teQuedanMinutosA', { left });
   }
   // Una sola cosa concreta (rescatar, el atajo…): qué hay que hacer.
-  if (goal.need === 1 && def.description) return `Te queda: ${asTask(def.description)}`;
-  return left === 1 ? `Te queda 1 ${noun(def, 1)}` : `Te quedan ${left} ${noun(def, left)}`;
+  if (goal.need === 1 && def.description)
+    return t('logros.model.teQueda', { asTask: asTask(def.description) });
+  return left === 1
+    ? t('logros.model.teQueda1', { noun: noun(def, 1) })
+    : t('logros.model.teQuedan', { left, noun: noun(def, left) });
 }
 
 /** Cuánto va, en 0…1 (en `ms`, lo cerca que está la mejor vuelta del tiempo pedido). */
@@ -113,8 +121,8 @@ export function rewardText(reward: AchievementReward, names: CosmeticNames = {})
   if (reward.points > 0) parts.push(`+${reward.points} ★`);
   if (reward.coins > 0) parts.push(`+${reward.coins} 🪙`);
   const cosmetic = reward.cosmeticKey ? (names[reward.cosmeticKey] ?? reward.cosmeticKey) : null;
-  if (reward.kind === 'ship' && cosmetic) parts.push(`Barco ${cosmetic}`);
-  else if (reward.kind === 'badge') parts.push('Insignia del Carnet');
+  if (reward.kind === 'ship' && cosmetic) parts.push(t('logros.model.barco', { cosmetic }));
+  else if (reward.kind === 'badge') parts.push(t('logros.model.insigniaDelCarnet'));
   else if (cosmetic) parts.push(cosmetic);
   return parts.join(' · ');
 }

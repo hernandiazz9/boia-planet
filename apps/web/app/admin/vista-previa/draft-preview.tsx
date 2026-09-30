@@ -7,6 +7,7 @@ import { type HomeView, resolveHome } from '../../../lib/landing/resolve';
 import { setTextOverrides } from '../../../lib/landing/texts';
 import { gameRepository } from '../../../lib/repo';
 import { HomeBlocks } from '../../(landing)/components/blocks';
+import { t } from '../../../lib/i18n';
 
 /**
  * La home del borrador: `admin.draftHome()` y `admin.draftTexts()` resueltos
@@ -56,9 +57,10 @@ export function DraftPreview() {
           fontSize: 14,
         }}
       >
-        Vista previa del borrador ({pending === 1 ? '1 cambio' : `${pending} cambios`} sin
-        publicar): así quedará la home al pulsar «Publicar».{' '}
-        <Link href={ADMIN_PATH}>Volver al Admin</Link>
+        {t('admin.draftPreview.vistaPreviaDelBorrador')}
+        {pending === 1 ? t('admin.draftPreview.n1Cambio') : `${pending} cambios`}{' '}
+        {t('admin.draftPreview.sinPublicarAsiQuedara')}{' '}
+        <Link href={ADMIN_PATH}>{t('admin.draftPreview.volverAlAdmin')}</Link>
       </p>
       {view ? (
         <>
@@ -68,7 +70,7 @@ export function DraftPreview() {
           <HomeBlocks blocks={view.footer} artists={view.artists} buyable={new Set(view.buyable)} />
         </>
       ) : (
-        <p style={{ padding: 16 }}>Cargando el borrador…</p>
+        <p style={{ padding: 16 }}>{t('admin.draftPreview.cargandoElBorrador')}</p>
       )}
     </div>
   );

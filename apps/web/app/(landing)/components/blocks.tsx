@@ -1,7 +1,7 @@
 import type { Artist } from '@boia/contracts';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
+import { ADMIN_PATH } from '../../../lib/admin/paths';
 import {
   ACCESS_COPY,
   CARNET_CREATE_HREF,
@@ -427,8 +427,8 @@ export function BlockView({
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal/condiciones" prefetch={false}>
-                    {t('footer.terms')}
+                  <Link href="/legal/aviso-legal" prefetch={false}>
+                    {t('footer.legalNotice')}
                   </Link>
                 </li>
                 <li>
@@ -449,9 +449,9 @@ export function BlockView({
                 href={ADMIN_PATH}
                 prefetch={false}
                 data-testid="probar-admin"
-                title={ADMIN_COPY.tryAdminHint}
+                title={t('footer.tryAdmin.hint')}
               >
-                {ADMIN_COPY.tryAdmin}
+                {t('footer.tryAdmin')}
               </Link>
             </p>
             <p className="site-footer__small">{t('footer.copyright')}</p>

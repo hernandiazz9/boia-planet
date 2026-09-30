@@ -12,6 +12,7 @@ import type { ComposedWorld } from '@boia/world';
 import { useEffect, useRef, useState } from 'react';
 import { emitSignal } from './achievements';
 import { gameRepository } from './repo';
+import { t } from '../../lib/i18n';
 
 /**
  * Punto de montaje de los minijuegos (T23) en /juego. El juego vive en
@@ -113,11 +114,11 @@ export function MinigameLayer({
             type="button"
             className="juego-panel-close"
             onClick={onDismiss}
-            aria-label="Cerrar"
+            aria-label={t('juego.minigameLayer.cerrar')}
           >
             ×
           </button>
-          <p className="juego-panel-kicker">Minijuego · muestra</p>
+          <p className="juego-panel-kicker">{t('juego.minigameLayer.minijuegoMuestra')}</p>
           <h2>{def.title}</h2>
           <p>{def.summary}</p>
           <button
@@ -135,7 +136,7 @@ export function MinigameLayer({
               onDismiss();
             }}
           >
-            Jugar
+            {t('juego.minigameLayer.jugar')}
           </button>
         </section>
       ) : null}

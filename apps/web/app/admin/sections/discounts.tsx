@@ -16,11 +16,16 @@ import {
   StatusLine,
   TrashInline,
 } from '../ui';
+import { t } from '../../../lib/i18n';
 
 /** Valor del selector de destino: la tienda o un evento. */
 const STORE = 'tienda';
 
-const STATUS_LABEL = { active: 'vigente', upcoming: 'todavía no vale', expired: 'caducado' };
+const STATUS_LABEL = {
+  active: 'vigente',
+  upcoming: t('admin.discounts.todaviaNoVale'),
+  expired: 'caducado',
+};
 
 interface Draft {
   code: string;
@@ -95,21 +100,21 @@ function DiscountFields({
   const places = discountHidingPlaces(ctx.registry.map);
   return (
     <div className="admin-grid">
-      <Field label="Código" hint="En mayúsculas, como se copia.">
+      <Field label={t('admin.discounts.codigo')} hint={t('admin.discounts.enMayusculasComoSe')}>
         <input
           value={draft.code}
           onChange={(e) => set({ code: e.target.value.toUpperCase() })}
           data-testid={`${prefix}-codigo`}
         />
       </Field>
-      <Field label="Texto de la tarjeta">
+      <Field label={t('admin.discounts.textoDeLaTarjeta')}>
         <input
           value={draft.label}
           onChange={(e) => set({ label: e.target.value })}
           data-testid={`${prefix}-texto`}
         />
       </Field>
-      <Field label="Para" hint="Un evento (lleva «Ir a la isla») o la tienda externa.">
+      <Field label={t('admin.discounts.para')} hint={t('admin.discounts.unEventoLlevaIr')}>
         <select
           value={draft.target}
           onChange={(e) => set({ target: e.target.value })}
@@ -117,23 +122,27 @@ function DiscountFields({
         >
           {events.map((e) => (
             <option key={e.id} value={e.id}>
-              Entradas · {e.name}
+              {t('admin.discounts.entradas', { name: e.name })}
             </option>
           ))}
-          <option value={STORE}>Tienda</option>
+          <option value={STORE}>{t('admin.discounts.tienda')}</option>
         </select>
       </Field>
-      <Field label="Tipo">
+      <Field label={t('admin.discounts.tipo')}>
         <select
           value={draft.kind}
           onChange={(e) => set({ kind: e.target.value as Draft['kind'] })}
           data-testid={`${prefix}-tipo`}
         >
-          <option value="percent">Porcentaje (%)</option>
-          <option value="amount">Importe (€)</option>
+          <option value="percent">{t('admin.discounts.porcentaje')}</option>
+          <option value="amount">{t('admin.discounts.importe')}</option>
         </select>
       </Field>
-      <Field label={draft.kind === 'percent' ? 'Porcentaje' : 'Euros'}>
+      <Field
+        label={
+          draft.kind === 'percent' ? t('admin.discounts.porcentaje2') : t('admin.discounts.euros')
+        }
+      >
         <input
           inputMode="decimal"
           value={draft.value}
@@ -141,7 +150,7 @@ function DiscountFields({
           data-testid={`${prefix}-valor`}
         />
       </Field>
-      <Field label="Prioridad" hint="Si valen varios en una compra, gana la más alta (0–100).">
+      <Field label={t('admin.discounts.prioridad')} hint={t('admin.discounts.siValenVariosEn')}>
         <input
           type="number"
           min={0}
@@ -151,14 +160,14 @@ function DiscountFields({
           data-testid={`${prefix}-prioridad`}
         />
       </Field>
-      <Field label="Desde (opcional)">
+      <Field label={t('admin.discounts.desdeOpcional')}>
         <input
           type="datetime-local"
           value={draft.startsAt}
           onChange={(e) => set({ startsAt: e.target.value })}
         />
       </Field>
-      <Field label="Hasta (opcional)">
+      <Field label={t('admin.discounts.hastaOpcional')}>
         <input
           type="datetime-local"
           value={draft.endsAt}
@@ -166,13 +175,16 @@ function DiscountFields({
           data-testid={`${prefix}-hasta`}
         />
       </Field>
-      <Field label="Escondido en" hint="Dónde lo encuentra quien navega.">
+      <Field
+        label={t('admin.discounts.escondidoEn')}
+        hint={t('admin.discounts.dondeLoEncuentraQuien')}
+      >
         <select
           value={draft.hiddenAt}
           onChange={(e) => set({ hiddenAt: e.target.value })}
           data-testid={`${prefix}-escondite`}
         >
-          <option value="">Donde diga el mapa</option>
+          <option value="">{t('admin.discounts.dondeDigaElMapa')}</option>
           {places.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} ({p.id})
@@ -180,11 +192,11 @@ function DiscountFields({
           ))}
         </select>
       </Field>
-      <Field label="Condiciones (opcional)">
+      <Field label={t('admin.discounts.condicionesOpcional')}>
         <input value={draft.conditions} onChange={(e) => set({ conditions: e.target.value })} />
       </Field>
       {draft.target === STORE ? (
-        <Field label="Enlace de la tienda (opcional)" hint="Sin él, el de la tienda de la home.">
+        <Field label={t('admin.discounts.enlaceDeLaTienda')} hint={t('admin.discounts.sinElElDe')}>
           <input type="url" value={draft.url} onChange={(e) => set({ url: e.target.value })} />
         </Field>
       ) : null}
@@ -210,14 +222,17 @@ function DiscountRow({
   const target =
     discount.scope === 'store'
       ? 'tienda'
-      : (events.find((e) => e.id === discount.eventId)?.name ?? 'cualquier evento');
+      : (events.find((e) => e.id === discount.eventId)?.name ??
+        t('admin.discounts.cualquierEvento'));
   return (
     <li className="admin-card" data-testid={`descuento-${discount.id}`} data-estado={state}>
       <p className="admin-meta">
-        <strong>{discount.code}</strong> · {target} · {STATUS_LABEL[state]} · prioridad{' '}
-        {discount.priority}
-        {discount.hiddenAt ? ` · escondido en ${discount.hiddenAt}` : ''}
-        {discount.sample ? ' · muestra' : ''} <Changed on={changed} />
+        <strong>{discount.code}</strong> · {target} · {STATUS_LABEL[state]}{' '}
+        {t('admin.discounts.prioridad2')} {discount.priority}
+        {discount.hiddenAt
+          ? t('admin.discounts.escondidoEn2', { hiddenAt: discount.hiddenAt })
+          : ''}
+        {discount.sample ? t('admin.discounts.muestra') : ''} <Changed on={changed} />
       </p>
       <DiscountFields
         ctx={ctx}
@@ -232,10 +247,15 @@ function DiscountRow({
           className="admin-button"
           disabled={busy}
           onClick={() =>
-            void run(() => ctx.actions.saveDiscount(inputOf(draft, discount), 'editar descuento'))
+            void run(() =>
+              ctx.actions.saveDiscount(
+                inputOf(draft, discount),
+                t('admin.discounts.editarDescuento'),
+              ),
+            )
           }
         >
-          Guardar
+          {t('admin.discounts.guardar')}
         </button>
         <button
           type="button"
@@ -246,10 +266,10 @@ function DiscountRow({
             void run(async () => {
               const next = await ctx.actions.expireDiscount(discount.id);
               setDraft(draftOf(next, events));
-            }, 'Caducado: quien lo tenga lo verá caducado.')
+            }, t('admin.discounts.caducadoQuienLoTenga'))
           }
         >
-          Caducar ya
+          {t('admin.discounts.caducarYa')}
         </button>
         <DeleteButton ctx={ctx} area="discounts" id={discount.id} />
       </div>
@@ -271,15 +291,15 @@ export function DiscountsSection({ ctx }: { ctx: AdminContext }) {
   const changed = useRead(ctx, (r) => r.admin.overridden('discounts'));
   const [draft, setDraft] = useState<Draft | null>(null);
   const { status, busy, run } = useRun();
-  if (!discounts || !events) return <p>Cargando…</p>;
+  if (!discounts || !events) return <p>{t('empty.loading')}</p>;
   const listed = events.filter((e) => e.state !== 'draft');
   const form = draft ?? draftOf(null, listed);
   const changedSet = new Set(changed ?? []);
   return (
     <section>
       <SectionHead
-        title="Descuentos"
-        lead={`${discounts.length} códigos. Se esconden en el mar; el de un evento lleva «Ir a la isla» y se aplica en la compra de prueba; el de la tienda se copia y lo valida la tienda. Inventados hasta tener los reales.`}
+        title={t('admin.discounts.descuentos')}
+        lead={t('admin.discounts.codigosSeEscondenEn', { length: discounts.length })}
       >
         <ResetButton ctx={ctx} areas={['discounts']} />
       </SectionHead>
@@ -289,12 +309,15 @@ export function DiscountsSection({ ctx }: { ctx: AdminContext }) {
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
-            await ctx.actions.saveDiscount(inputOf(form, null), 'nuevo descuento');
+            await ctx.actions.saveDiscount(
+              inputOf(form, null),
+              t('admin.discounts.nuevoDescuento'),
+            );
             setDraft(null);
-          }, 'Descuento creado.');
+          }, t('admin.discounts.descuentoCreado'));
         }}
       >
-        <h3>Nuevo descuento</h3>
+        <h3>{t('admin.discounts.nuevoDescuento2')}</h3>
         <DiscountFields
           ctx={ctx}
           draft={form}
@@ -308,7 +331,7 @@ export function DiscountsSection({ ctx }: { ctx: AdminContext }) {
           disabled={busy}
           data-testid="descuento-nuevo-crear"
         >
-          Crear
+          {t('admin.discounts.crear')}
         </button>
         <StatusLine status={status} />
       </form>

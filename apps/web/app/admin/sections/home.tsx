@@ -9,27 +9,28 @@ import { es } from '../../../lib/i18n/es';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
 import { Changed, DraftBar, Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import { t } from '../../../lib/i18n';
 
 const BLOCK_LABELS: Record<HomeBlock['type'], string> = {
-  hero: 'Portada (hero)',
-  priority_event: 'Evento prioritario',
-  upcoming_events: 'Próximos eventos',
-  artists: 'Artistas',
-  philosophy: 'Filosofía',
-  photos: 'Fotos',
-  store: 'Tienda',
-  contact: 'Contacto',
-  footer: 'Pie',
+  hero: t('admin.home.portadaHero'),
+  priority_event: t('admin.home.eventoPrioritario'),
+  upcoming_events: t('island.upcoming.heading'),
+  artists: t('admin.home.artistas'),
+  philosophy: t('philosophy.heading'),
+  photos: t('admin.home.fotos'),
+  store: t('admin.home.tienda'),
+  contact: t('admin.home.contacto'),
+  footer: t('admin.home.pie'),
 };
 
 const CTA_DEFAULTS = { explore: es[HOME_CTA_KEYS.explore], tickets: es[HOME_CTA_KEYS.tickets] };
-const SAVED_DRAFT = 'Guardado en el borrador: se ve al publicar.';
+const SAVED_DRAFT = t('admin.home.guardadoEnElBorrador');
 
 /** Marca de «en borrador, sin publicar». */
 function InDraft({ on }: { on: boolean }) {
   return on ? (
-    <span className="admin-badge admin-badge--draft" title="Cambiado en el borrador: aún no se ve">
-      borrador
+    <span className="admin-badge admin-badge--draft" title={t('admin.home.cambiadoEnElBorrador')}>
+      {t('admin.home.borrador')}
     </span>
   ) : null;
 }
@@ -40,9 +41,9 @@ function Schedule({ ctx, block }: { ctx: AdminContext; block: HomeBlock }) {
   const { status, busy, run } = useRun();
   return (
     <details className="admin-details">
-      <summary>Programar</summary>
+      <summary>{t('admin.home.programar')}</summary>
       <div className="admin-row">
-        <Field label="Desde">
+        <Field label={t('admin.home.desde')}>
           <input
             type="datetime-local"
             value={from}
@@ -50,7 +51,7 @@ function Schedule({ ctx, block }: { ctx: AdminContext; block: HomeBlock }) {
             data-testid={`bloque-desde-${block.id}`}
           />
         </Field>
-        <Field label="Hasta">
+        <Field label={t('admin.home.hasta')}>
           <input
             type="datetime-local"
             value={until}
@@ -74,7 +75,7 @@ function Schedule({ ctx, block }: { ctx: AdminContext; block: HomeBlock }) {
             )
           }
         >
-          Guardar programación
+          {t('admin.home.guardarProgramacion')}
         </button>
       </div>
       <StatusLine status={status} />
@@ -99,21 +100,24 @@ function HeroTexts({
   const { status, busy, run } = useRun();
   return (
     <details className="admin-details" data-testid="portada">
-      <summary>Titular, subtítulo y botones</summary>
-      <Field label="Titular">
+      <summary>{t('admin.home.titularSubtituloYBotones')}</summary>
+      <Field label={t('admin.home.titular')}>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           data-testid="portada-titular"
         />
       </Field>
-      <Field label="Subtítulo">
+      <Field label={t('admin.home.subtitulo')}>
         <input value={positioning} onChange={(e) => setPositioning(e.target.value)} />
       </Field>
       <div className="admin-grid">
         <Field
-          label="Botón Explorar"
-          hint={`Hasta ${HOME_CTA_MAX} caracteres. Vacío: «${CTA_DEFAULTS.explore}».`}
+          label={t('admin.home.botonExplorar')}
+          hint={t('admin.home.hastaCaracteresVacio', {
+            HOME_CTA_MAX,
+            explore: CTA_DEFAULTS.explore,
+          })}
         >
           <input
             value={explore}
@@ -123,8 +127,11 @@ function HeroTexts({
           />
         </Field>
         <Field
-          label="Botón Tickets"
-          hint={`Hasta ${HOME_CTA_MAX} caracteres. Vacío: «${CTA_DEFAULTS.tickets}».`}
+          label={t('admin.home.botonTickets')}
+          hint={t('admin.home.hastaCaracteresVacio2', {
+            HOME_CTA_MAX,
+            tickets: CTA_DEFAULTS.tickets,
+          })}
         >
           <input
             value={tickets}
@@ -146,7 +153,7 @@ function HeroTexts({
           }, SAVED_DRAFT)
         }
       >
-        Guardar en el borrador
+        {t('admin.home.guardarEnElBorrador')}
       </button>
       <StatusLine status={status} />
     </details>
@@ -167,7 +174,7 @@ function Exclusions({
   const excluded = new Set(block.excludeEventIds);
   return (
     <details className="admin-details" data-testid="excluir-eventos">
-      <summary>Excluir eventos ({excluded.size})</summary>
+      <summary>{t('admin.home.excluirEventos', { size: excluded.size })}</summary>
       <ul className="admin-checklist">
         {events.map((e) => (
           <li key={e.id}>
@@ -209,7 +216,7 @@ function Preview({ revision }: { revision: number }) {
           data-testid="vista-movil"
           onClick={() => setMode(mode === 'movil' ? null : 'movil')}
         >
-          Vista previa móvil
+          {t('admin.home.vistaPreviaMovil')}
         </button>
         <button
           type="button"
@@ -218,7 +225,7 @@ function Preview({ revision }: { revision: number }) {
           data-testid="vista-escritorio"
           onClick={() => setMode(mode === 'escritorio' ? null : 'escritorio')}
         >
-          Vista previa escritorio
+          {t('admin.home.vistaPreviaEscritorio')}
         </button>
       </div>
       {mode ? (
@@ -228,7 +235,7 @@ function Preview({ revision }: { revision: number }) {
         >
           <iframe
             key={`${mode}-${revision}`}
-            title={`Vista previa ${mode}`}
+            title={t('admin.home.vistaPrevia', { mode })}
             src={ADMIN_PREVIEW_PATH}
             width={size.w}
             height={size.h}
@@ -253,7 +260,7 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
   const changed = useRead(ctx, (r) => r.admin.overridden('homeBlocks'));
   const pending = useRead(ctx, (r) => r.admin.pendingDrafts());
   const { status, busy, run } = useRun();
-  if (!blocks || !events || !texts) return <p>Cargando…</p>;
+  if (!blocks || !events || !texts) return <p>{t('empty.loading')}</p>;
   const priority = blocks.find((b) => b.type === 'priority_event');
   const changedSet = new Set(changed ?? []);
   const drafted = new Set(
@@ -264,14 +271,14 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
   return (
     <section aria-labelledby="admin-h-home">
       <SectionHead
-        title="Página principal"
-        lead="Ordena, muestra u oculta y programa los bloques de la home, con formularios y sin HTML. Los cambios van al borrador: se ven en la vista previa y, en la web, al pulsar «Publicar»."
+        title={t('admin.home.paginaPrincipal')}
+        lead={t('admin.home.ordenaMuestraUOculta')}
       >
         <ResetButton ctx={ctx} areas={['homeBlocks']} />
       </SectionHead>
       <DraftBar ctx={ctx} />
       <h3 id="admin-h-home" className="visually-hidden">
-        Bloques
+        {t('admin.home.bloques')}
       </h3>
       <ol className="admin-list" data-testid="bloques">
         {blocks.map((b, i) => (
@@ -295,12 +302,12 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
                       )
                     }
                   />
-                  Visible
+                  {t('admin.home.visible')}
                 </label>
                 <button
                   type="button"
                   className="admin-icon"
-                  aria-label={`Subir ${BLOCK_LABELS[b.type]}`}
+                  aria-label={t('admin.home.subir', { v1: BLOCK_LABELS[b.type] })}
                   disabled={busy || i === 0}
                   data-testid={`bloque-subir-${b.id}`}
                   onClick={() => void run(() => ctx.actions.moveBlock(b.id, -1), SAVED_DRAFT)}
@@ -310,7 +317,7 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
                 <button
                   type="button"
                   className="admin-icon"
-                  aria-label={`Bajar ${BLOCK_LABELS[b.type]}`}
+                  aria-label={t('admin.home.bajar', { v1: BLOCK_LABELS[b.type] })}
                   disabled={busy || i === blocks.length - 1}
                   data-testid={`bloque-bajar-${b.id}`}
                   onClick={() => void run(() => ctx.actions.moveBlock(b.id, 1), SAVED_DRAFT)}
@@ -321,15 +328,15 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
             </div>
             {b.showFrom || b.showUntil ? (
               <p className="admin-meta">
-                Programado {b.showFrom ? `desde ${isoToLocal(b.showFrom).replace('T', ' ')}` : ''}{' '}
-                {b.showUntil ? `hasta ${isoToLocal(b.showUntil).replace('T', ' ')}` : ''}
+                {t('admin.home.programado', {
+                  v1: b.showFrom ? `desde ${isoToLocal(b.showFrom).replace('T', ' ')}` : '',
+                  v2: ' ',
+                  v3: b.showUntil ? `hasta ${isoToLocal(b.showUntil).replace('T', ' ')}` : '',
+                })}
               </p>
             ) : null}
             {b.type === 'priority_event' ? (
-              <Field
-                label="Evento prioritario"
-                hint="Si deja de estar vigente, la home elige otro (REQ-COM-009)."
-              >
+              <Field label={t('admin.home.eventoPrioritario')} hint={t('admin.home.siDejaDeEstar')}>
                 <select
                   value={priority?.type === 'priority_event' ? (priority.eventId ?? '') : ''}
                   disabled={busy}
@@ -341,7 +348,7 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
                     )
                   }
                 >
-                  <option value="">El próximo a la venta</option>
+                  <option value="">{t('admin.home.elProximoALa')}</option>
                   {listed.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.name}
@@ -367,7 +374,7 @@ export function HomeSection({ ctx }: { ctx: AdminContext }) {
         ))}
       </ol>
       <StatusLine status={status} />
-      <h3>Vista previa del borrador</h3>
+      <h3>{t('admin.home.vistaPreviaDelBorrador')}</h3>
       <Preview revision={ctx.revision} />
     </section>
   );

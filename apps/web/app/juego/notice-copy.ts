@@ -1,5 +1,6 @@
 import type { WorldEvent } from '@boia/engine';
 import type { DiscoveryTarget, Notice, TargetFunction } from '@boia/engine/ui';
+import { t as msg } from '../../lib/i18n';
 
 /**
  * Textos de los avisos y del mapa ampliado (borrador, pendiente Álvaro). Van
@@ -8,30 +9,33 @@ import type { DiscoveryTarget, Notice, TargetFunction } from '@boia/engine/ui';
 
 /** Nombre de cada logro del catálogo de triggers; los que falten, genérico. */
 const ACHIEVEMENTS: Record<string, string> = {
-  find_boia: 'Primera boia encontrada',
-  visit_island: 'Isla visitada',
+  find_boia: msg('juego.noticeCopy.primeraBoiaEncontrada'),
+  visit_island: msg('juego.noticeCopy.islaVisitada'),
 };
 
 const REWARDS: Record<string, (n: number) => string> = {
   coins: (n) => `+${n} ${n === 1 ? 'moneda' : 'monedas'}`,
   points: (n) => `+${n} ${n === 1 ? 'punto' : 'puntos'}`,
-  discount: () => 'Descuento encontrado',
-  item: () => 'Objeto encontrado',
-  achievement: () => 'Logro conseguido',
+  discount: () => msg('discount.found.title'),
+  item: () => msg('juego.noticeCopy.objetoEncontrado'),
+  achievement: () => msg('juego.noticeCopy.logroConseguido'),
 };
 
 export const FUNCTION_LABEL: Record<TargetFunction, string> = {
-  event: 'Evento',
-  tickets: 'Entradas',
-  guide: 'Guía',
-  reward: 'Premio',
-  teleport: 'Atajo',
-  minigame: 'Minijuego',
-  circuit: 'Circuito',
+  event: msg('juego.noticeCopy.evento'),
+  tickets: msg('hud.tickets'),
+  guide: msg('juego.noticeCopy.guia'),
+  reward: msg('juego.noticeCopy.premio'),
+  teleport: msg('juego.noticeCopy.atajo'),
+  minigame: msg('minigame.kicker'),
+  circuit: msg('ranking.tab.circuit'),
 };
 
 export function discoveryNotice(t: DiscoveryTarget): Notice {
-  const what = t.kind === 'island' ? 'Isla descubierta' : 'Descubierto';
+  const what =
+    t.kind === 'island'
+      ? msg('juego.noticeCopy.islaDescubierta')
+      : msg('juego.noticeCopy.descubierto');
   const fns = t.functions.map((f) => FUNCTION_LABEL[f]).join(' · ');
   return {
     id: `descubierto:${t.id}`,
@@ -50,11 +54,11 @@ export function noticeFromWorldEvent(e: WorldEvent): Notice | null {
     return {
       id: `logro:${e.trigger}:${e.objectId}`,
       kind: 'achievement',
-      title: ACHIEVEMENTS[e.trigger] ?? 'Logro conseguido',
+      title: ACHIEVEMENTS[e.trigger] ?? msg('juego.noticeCopy.logroConseguido'),
     };
   }
   if (e.type === 'reward') {
-    const text = REWARDS[e.kind]?.(e.amount) ?? 'Recompensa';
+    const text = REWARDS[e.kind]?.(e.amount) ?? msg('juego.noticeCopy.recompensa');
     return {
       // Las repetibles no tienen clave: cada una es un aviso nuevo.
       id: e.key ?? `premio:${e.objectId}:${Math.random().toString(36).slice(2)}`,

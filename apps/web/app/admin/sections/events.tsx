@@ -28,22 +28,23 @@ import {
   StatusLine,
   TrashInline,
 } from '../ui';
+import { t } from '../../../lib/i18n';
 
 export const STATE_LABELS: Record<EventState, string> = {
-  draft: 'Borrador',
-  coming_soon: 'Próximamente',
-  on_sale: 'A la venta',
-  sold_out: 'Agotado',
-  postponed: 'Pospuesto',
-  cancelled: 'Cancelado',
-  finished: 'Finalizado',
+  draft: t('admin.events.borrador'),
+  coming_soon: t('admin.events.proximamente'),
+  on_sale: t('admin.events.aLaVenta'),
+  sold_out: t('admin.events.agotado'),
+  postponed: t('admin.events.pospuesto'),
+  cancelled: t('admin.events.cancelado'),
+  finished: t('admin.events.finalizado'),
 };
 
 const SANDBOX_TICKETS = 'https://example.com/boia-sandbox/tickets';
 
 export const SOURCE_LABELS: Record<EventStateSource, string> = {
-  dates: 'Por fechas',
-  manual: 'A mano',
+  dates: t('admin.events.porFechas'),
+  manual: t('admin.events.aMano'),
 };
 
 interface Draft {
@@ -79,7 +80,7 @@ const EMPTY: Draft = {
   startsAt: '',
   endsAt: '',
   saleOpensAt: '',
-  placeLabel: 'Alicante',
+  placeLabel: t('admin.events.alicante'),
   state: 'draft',
   stateSource: 'dates',
   stateNote: '',
@@ -163,7 +164,7 @@ function EventForm({
         const startsAt = localToIso(d.startsAt, DEFAULT_TIME_ZONE);
         if (!startsAt) throw new Error('falta la fecha y hora del evento');
         const endsAt = optionalIso(d.endsAt, 'fin');
-        const saleOpensAt = optionalIso(d.saleOpensAt, 'apertura de la venta');
+        const saleOpensAt = optionalIso(d.saleOpensAt, t('admin.events.aperturaDeLaVenta'));
         const priceCents = d.price.trim() ? centsOf(d.price) : undefined;
         if (priceCents === null)
           throw new Error('precio: escribe un importe en euros, p. ej. 12,50');
@@ -201,14 +202,14 @@ function EventForm({
           ...(d.islandId ? { islandId: d.islandId } : {}),
           ...(d.sample !== undefined ? { sample: d.sample } : {}),
         };
-        const why = d.id ? 'editar evento' : 'nuevo evento';
+        const why = d.id ? t('admin.events.editarEvento') : t('admin.events.nuevoEvento');
         if (mode === 'draft') await ctx.actions.saveEventDraft(input, why);
         else await ctx.actions.saveEvent(input, why);
         onDone();
       },
       mode === 'draft'
-        ? 'Guardado en el borrador: se ve al publicar.'
-        : 'Evento guardado y publicado.',
+        ? t('admin.events.guardadoEnElBorrador')
+        : t('admin.events.eventoGuardadoYPublicado'),
     );
 
   return (
@@ -220,9 +221,11 @@ function EventForm({
         void save();
       }}
     >
-      <h3>{d.id ? `Editar «${initial.name}»` : 'Nuevo evento'}</h3>
+      <h3>
+        {d.id ? t('admin.events.editar', { name: initial.name }) : t('admin.events.nuevoEvento2')}
+      </h3>
       <div className="admin-grid">
-        <Field label="Nombre">
+        <Field label={t('admin.events.nombre')}>
           <input
             required
             value={d.name}
@@ -230,7 +233,7 @@ function EventForm({
             data-testid="evento-nombre"
           />
         </Field>
-        <Field label="Formato" hint="Un satélite sin isla sale en la isla del próximo All Day.">
+        <Field label={t('admin.events.formato')} hint={t('admin.events.unSateliteSinIsla')}>
           <select
             value={d.format}
             onChange={(e) => set('format', e.target.value as EventFormat)}
@@ -243,7 +246,7 @@ function EventForm({
             ))}
           </select>
         </Field>
-        <Field label="Serie" hint="Clave en minúsculas: boia-club, noche… Sale en las tarjetas.">
+        <Field label={t('admin.events.serie')} hint={t('admin.events.claveEnMinusculasBoia')}>
           <input
             value={d.series}
             pattern="[a-z0-9]+(-[a-z0-9]+)*"
@@ -251,7 +254,7 @@ function EventForm({
             data-testid="evento-serie"
           />
         </Field>
-        <Field label="Fecha y hora (Alicante)">
+        <Field label={t('admin.events.fechaYHoraAlicante')}>
           <input
             type="datetime-local"
             required
@@ -260,7 +263,7 @@ function EventForm({
             data-testid="evento-fecha"
           />
         </Field>
-        <Field label="Fin (opcional)" hint="Sin fin: 12 h después del inicio. Pasado, finaliza.">
+        <Field label={t('admin.events.finOpcional')} hint={t('admin.events.sinFin12H')}>
           <input
             type="datetime-local"
             value={d.endsAt}
@@ -268,7 +271,10 @@ function EventForm({
             data-testid="evento-fin"
           />
         </Field>
-        <Field label="Apertura de la venta (opcional)" hint="Antes: «Próximamente».">
+        <Field
+          label={t('admin.events.aperturaDeLaVenta2')}
+          hint={t('admin.events.antesProximamente')}
+        >
           <input
             type="datetime-local"
             value={d.saleOpensAt}
@@ -276,14 +282,14 @@ function EventForm({
             data-testid="evento-apertura"
           />
         </Field>
-        <Field label="Lugar público" hint="Nunca la dirección de una ubicación secreta.">
+        <Field label={t('admin.events.lugarPublico')} hint={t('admin.events.nuncaLaDireccionDe')}>
           <input
             required
             value={d.placeLabel}
             onChange={(e) => set('placeLabel', e.target.value)}
           />
         </Field>
-        <Field label="Estado">
+        <Field label={t('admin.events.estado')}>
           <select
             value={d.state}
             onChange={(e) => set('state', e.target.value as EventState)}
@@ -297,8 +303,8 @@ function EventForm({
           </select>
         </Field>
         <Field
-          label="Cambio de estado"
-          hint="Por fechas: próximamente → a la venta → finalizado solos. A mano: no cambia."
+          label={t('admin.events.cambioDeEstado')}
+          hint={t('admin.events.porFechasProximamenteA')}
         >
           <select
             value={d.stateSource}
@@ -312,16 +318,19 @@ function EventForm({
             ))}
           </select>
         </Field>
-        <Field label="Nota del estado" hint="Para pospuesto o cancelado.">
+        <Field
+          label={t('admin.events.notaDelEstado')}
+          hint={t('admin.events.paraPospuestoOCancelado')}
+        >
           <input value={d.stateNote} onChange={(e) => set('stateNote', e.target.value)} />
         </Field>
-        <Field label="Isla del evento" hint={ADMIN_COPY.islandKeepsMemories}>
+        <Field label={t('admin.events.islaDelEvento')} hint={ADMIN_COPY.islandKeepsMemories}>
           <select
             value={d.islandId}
             onChange={(e) => set('islandId', e.target.value)}
             data-testid="evento-isla"
           >
-            <option value="">Sin isla</option>
+            <option value="">{t('admin.events.sinIsla')}</option>
             {islands.map((p) => (
               <option key={p.id} value={p.id}>
                 {worldName(p.id)}
@@ -329,7 +338,7 @@ function EventForm({
             ))}
           </select>
         </Field>
-        <Field label="Precio (€)" hint="Precio de la compra de prueba.">
+        <Field label={t('admin.events.precio')} hint={t('admin.events.precioDeLaCompra')}>
           <input
             inputMode="decimal"
             value={d.price}
@@ -338,14 +347,14 @@ function EventForm({
             data-testid="evento-precio"
           />
         </Field>
-        <Field label="Precio de muestra">
+        <Field label={t('admin.events.precioDeMuestra')}>
           <input
             type="checkbox"
             checked={d.priceSample}
             onChange={(e) => set('priceSample', e.target.checked)}
           />
         </Field>
-        <Field label="Cartel (URL)" hint="Vacío: «Cartel próximamente».">
+        <Field label={t('admin.events.cartelUrl')} hint={t('admin.events.vacioCartelProximamente')}>
           <input
             value={d.posterUrl}
             placeholder="https://… o /…"
@@ -353,7 +362,10 @@ function EventForm({
             data-testid="evento-cartel"
           />
         </Field>
-        <Field label="Enlace de entradas" hint="Sandbox hasta que haya ticketera (D-06, D-20).">
+        <Field
+          label={t('admin.events.enlaceDeEntradas')}
+          hint={t('admin.events.sandboxHastaQueHaya')}
+        >
           <input
             type="url"
             value={d.ticketUrl}
@@ -363,14 +375,14 @@ function EventForm({
           />
         </Field>
       </div>
-      <Field label="Descripción">
+      <Field label={t('admin.events.descripcion')}>
         <textarea
           rows={3}
           value={d.description}
           onChange={(e) => set('description', e.target.value)}
         />
       </Field>
-      <Field label="Actividades" hint="Una por línea.">
+      <Field label={t('admin.events.actividades')} hint={t('admin.events.unaPorLinea')}>
         <textarea
           rows={3}
           value={d.activities}
@@ -379,7 +391,7 @@ function EventForm({
         />
       </Field>
       <details className="admin-details">
-        <summary>Cartel ({d.artistIds.length} artistas)</summary>
+        <summary>{t('admin.events.cartelArtistas', { length: d.artistIds.length })}</summary>
         <ul className="admin-checklist">
           {(artists ?? []).map((a) => (
             <li key={a.id}>
@@ -404,7 +416,7 @@ function EventForm({
       </details>
       <div className="admin-row">
         <button type="submit" className="admin-button" disabled={busy} data-testid="evento-guardar">
-          Guardar y publicar
+          {t('admin.events.guardarYPublicar')}
         </button>
         <button
           type="button"
@@ -413,10 +425,10 @@ function EventForm({
           data-testid="evento-borrador"
           onClick={() => void save('draft')}
         >
-          Guardar borrador
+          {t('admin.events.guardarBorrador')}
         </button>
         <button type="button" className="admin-button admin-button--ghost" onClick={onDone}>
-          Cancelar
+          {t('carnet.cancel')}
         </button>
         {!d.id && !d.ticketUrl && d.name ? (
           <button
@@ -429,7 +441,7 @@ function EventForm({
               )
             }
           >
-            Usar enlace sandbox
+            {t('admin.events.usarEnlaceSandbox')}
           </button>
         ) : null}
       </div>
@@ -446,7 +458,7 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
   const pending = useRead(ctx, (r) => r.admin.pendingDrafts());
   const [editing, setEditing] = useState<Draft | null>(null);
   const { status, busy, run } = useRun();
-  if (!events) return <p>Cargando…</p>;
+  if (!events) return <p>{t('empty.loading')}</p>;
   const changedSet = new Set(changed ?? []);
   const drafts = new Map(
     (pending ?? []).flatMap((c) => (c.area === 'events' && c.id ? [[c.id, c.isNew]] : [])),
@@ -459,17 +471,14 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
 
   return (
     <section>
-      <SectionHead
-        title="Eventos"
-        lead="Cada evento tiene uno de los siete estados: por fechas (próximamente → a la venta → finalizado) o fijado a mano, con auditoría. Puede ir a una isla."
-      >
+      <SectionHead title={t('admin.events.eventos')} lead={t('admin.events.cadaEventoTieneUno')}>
         <button
           type="button"
           className="admin-button"
           data-testid="evento-nuevo"
           onClick={() => setEditing({ ...EMPTY })}
         >
-          Nuevo evento
+          {t('admin.events.nuevoEvento2')}
         </button>
         <ResetButton ctx={ctx} areas={['events']} />
       </SectionHead>
@@ -492,23 +501,32 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
                   <span
                     className="admin-badge admin-badge--draft"
                     data-testid={`evento-en-borrador-${e.id}`}
-                    title="Con cambios sin publicar: la web y el mar aún no los ven"
+                    title={t('admin.events.conCambiosSinPublicar')}
                   >
-                    {drafts.get(e.id) ? 'borrador sin publicar' : 'cambios en borrador'}
+                    {drafts.get(e.id)
+                      ? t('admin.events.borradorSinPublicar')
+                      : t('admin.events.cambiosEnBorrador')}
                   </span>
                 ) : null}
                 <p className="admin-meta">
-                  {isoToLocal(e.startsAt, e.timeZone).replace('T', ' ')} · {e.placeLabel} · isla:{' '}
-                  {islandName(e.islandId)} · {EVENT_FORMAT_LABELS[e.format]}
-                  {e.sample ? ' · muestra' : ''}
+                  {t('admin.events.isla', {
+                    v1: isoToLocal(e.startsAt, e.timeZone).replace('T', ' '),
+                    placeLabel: e.placeLabel,
+                    v3: ' ',
+                    islandName: islandName(e.islandId),
+                    v5: EVENT_FORMAT_LABELS[e.format],
+                    v6: e.sample ? t('admin.events.muestra') : '',
+                  })}
                 </p>
                 <p className="admin-meta" data-testid={`evento-ahora-${e.id}`}>
-                  Ahora: {STATE_LABELS[eventState(e, now)]} (
-                  {SOURCE_LABELS[e.stateSource].toLowerCase()})
+                  {t('admin.events.ahora', {
+                    v1: STATE_LABELS[eventState(e, now)],
+                    v2: SOURCE_LABELS[e.stateSource].toLowerCase(),
+                  })}
                 </p>
               </div>
               <label className="admin-field admin-field--inline">
-                <span className="admin-field__label">Estado</span>
+                <span className="admin-field__label">{t('admin.events.estado')}</span>
                 <select
                   value={e.state}
                   disabled={busy}
@@ -535,17 +553,20 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
                 onClick={() => setEditing(draftOf(e))}
                 data-testid={`evento-editar-${e.id}`}
               >
-                Editar
+                {t('admin.events.editar2')}
               </button>
               <button
                 type="button"
                 className="admin-button admin-button--ghost"
                 disabled={busy}
                 onClick={() =>
-                  void run(() => ctx.actions.duplicateEvent(e.id), 'Duplicado como borrador.')
+                  void run(
+                    () => ctx.actions.duplicateEvent(e.id),
+                    t('admin.events.duplicadoComoBorrador'),
+                  )
                 }
               >
-                Duplicar
+                {t('admin.events.duplicar')}
               </button>
               {drafts.has(e.id) && !drafts.get(e.id) ? (
                 <button
@@ -556,18 +577,22 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
                   onClick={() =>
                     void run(
                       () => ctx.actions.discardDrafts({ area: 'events', id: e.id }),
-                      'Borrador descartado: queda lo publicado.',
+                      t('admin.events.borradorDescartadoQuedaLo'),
                     )
                   }
                 >
-                  Descartar borrador
+                  {t('admin.events.descartarBorrador')}
                 </button>
               ) : null}
               <DeleteButton
                 ctx={ctx}
                 area="events"
                 id={e.id}
-                label={drafts.get(e.id) ? 'Borrar borrador' : 'A la papelera'}
+                label={
+                  drafts.get(e.id)
+                    ? t('admin.events.borrarBorrador')
+                    : t('admin.events.aLaPapelera')
+                }
               />
             </div>
           </li>
@@ -575,7 +600,7 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
       </ul>
       <TrashInline ctx={ctx} area="events" />
       <StatusLine status={status} />
-      <h3>Islas y eventos</h3>
+      <h3>{t('admin.events.islasYEventos')}</h3>
       <p className="admin-lead">{ADMIN_COPY.islandKeepsMemories}</p>
       <ul className="admin-list" data-testid="islas-eventos">
         {eventIslands(ctx.registry.map).map((p) => {
@@ -585,11 +610,17 @@ export function EventsSection({ ctx }: { ctx: AdminContext }) {
             <li key={p.id} className="admin-card" data-testid={`isla-${p.id}`}>
               <strong>{islandName(p.id)}</strong>
               <p className="admin-meta">
-                Abre ahora: {opens ? opens.name : 'su panel de isla (sin evento vigente)'}
+                {t('admin.events.abreAhora', {
+                  v1: opens ? opens.name : t('admin.events.suPanelDeIsla'),
+                })}
               </p>
               <p className="admin-meta">
-                Recuerdos:{' '}
-                {memories.length ? memories.map((m) => m.name).join(' · ') : 'ninguno todavía'}
+                {t('admin.events.recuerdos', {
+                  v1: ' ',
+                  v2: memories.length
+                    ? memories.map((m) => m.name).join(' · ')
+                    : t('admin.events.ningunoTodavia'),
+                })}
               </p>
             </li>
           );

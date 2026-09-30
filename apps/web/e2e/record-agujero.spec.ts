@@ -75,7 +75,15 @@ test('grabación y tira del agujero negro', async ({ baseURL }) => {
   const j2 = p2.getByTestId('juego');
   for (let i = 0; i < 200; i++) {
     await p2.clock.runFor(100);
-    if (/\d+ fps/.test((await p2.getByTestId('hud').textContent().catch(() => '')) ?? '')) break;
+    if (
+      /\d+ fps/.test(
+        (await p2
+          .getByTestId('hud')
+          .textContent()
+          .catch(() => '')) ?? '',
+      )
+    )
+      break;
   }
   await p2.clock.runFor(2500);
   await p2.getByTestId('menu-ancla').click();
@@ -112,7 +120,9 @@ test('grabación y tira del agujero negro', async ({ baseURL }) => {
 
   const dest = path.join(OUT, 'p004-t41-agujero-negro.png');
   const layout = frames
-    .map((_, i) => (i === 0 ? '0_0' : `${Array.from({ length: i }, (_, k) => `w${k}`).join('+')}_0`))
+    .map((_, i) =>
+      i === 0 ? '0_0' : `${Array.from({ length: i }, (_, k) => `w${k}`).join('+')}_0`,
+    )
     .join('|');
   try {
     execFileSync('ffmpeg', [

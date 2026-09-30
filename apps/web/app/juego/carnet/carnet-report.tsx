@@ -3,16 +3,17 @@
 import { CARNET_REPORT_REASON_MAX, type CarnetView } from '@boia/store';
 import { useState } from 'react';
 import { gameRepository } from '../repo';
+import { t } from '../../../lib/i18n';
 
 /** Textos del reporte de Carnets (textos-zonas, zona 18; D-23 O9). muestra */
 export const CARNET_REPORT_COPY = {
-  report: 'Reportar este Carnet',
-  reason: '¿Qué pasa con este Carnet? (opcional)',
-  send: 'Enviar reporte',
-  cancel: 'Cancelar',
-  done: 'Gracias. El equipo de BOIA lo revisará.',
-  again: 'Ya lo habías reportado. Gracias.',
-  failed: 'No se pudo enviar el reporte. Prueba otra vez.',
+  report: t('carnet.report'),
+  reason: t('carnet.report.reason'),
+  send: t('bottle.report.send'),
+  cancel: t('carnet.cancel'),
+  done: t('carnet.report.done'),
+  again: t('carnet.report.again'),
+  failed: t('juego.carnetReport.noSePudoEnviar'),
 } as const;
 
 type State =

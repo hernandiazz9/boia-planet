@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { formatEventDate } from '../i18n';
+import { formatEventDate } from '../i18n/web';
 import type { CheckoutEvent, CheckoutSession, PurchaseOutcome, TicketingAdapter } from './adapter';
 import './checkout.css';
 import { CHECKOUT_COPY as C } from './copy';

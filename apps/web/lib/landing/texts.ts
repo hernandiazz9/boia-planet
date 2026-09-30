@@ -1,7 +1,7 @@
-import { t as baseT, type MessageKey } from '../i18n';
+import { t as baseT, type WebKey as MessageKey } from '../i18n/web';
 
-export type { MessageKey } from '../i18n';
-export { formatEventDate } from '../i18n';
+export type { WebKey as MessageKey } from '../i18n/web';
+export { formatEventDate } from '../i18n/web';
 
 /**
  * Textos de la landing con los cambios del Admin de la demo encima (T26,

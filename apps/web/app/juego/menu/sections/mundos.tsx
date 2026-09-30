@@ -1,6 +1,7 @@
 import type { WorldSummary } from '@boia/world';
 import type { ShipCatalog } from '../../../../lib/barco/catalog';
 import type { MenuSection } from '../types';
+import { t } from '../../../../lib/i18n';
 
 /**
  * 🌍 Mundos (T24, D-20): los mundos del mapa compartido, cada uno con su
@@ -27,10 +28,8 @@ export function MundosPicker({
 }) {
   return (
     <div className="mundos" data-testid="mundos" aria-busy={pending}>
-      <p>
-        Los mismos lugares con otra piel, otra historia y otro barco. Tu progreso viaja contigo.
-      </p>
-      <ul className="mundos-lista" role="radiogroup" aria-label="Mundos">
+      <p>{t('worlds.intro')}</p>
+      <ul className="mundos-lista" role="radiogroup" aria-label={t('juego.mundos.mundos')}>
         {worlds.map((w) => {
           const checked = w.id === current;
           const ship = catalog?.styles.find((s) => s.id === w.shipStyle);
@@ -57,11 +56,13 @@ export function MundosPicker({
                 <span className="mundo-texto">
                   <span className="mundo-nombre">
                     {w.name}
-                    {checked ? <span className="mundo-actual"> · navegando</span> : null}
+                    {checked ? (
+                      <span className="mundo-actual"> {t('juego.mundos.navegando')}</span>
+                    ) : null}
                   </span>
                   {w.tagline ? <span className="mundo-historia">{w.tagline}</span> : null}
                   <span className="mundo-barco" data-testid={`mundo-${w.id}-barco`}>
-                    Barco: {ship?.name ?? w.shipStyle}
+                    {t('worlds.ship', { ship: ship?.name ?? w.shipStyle })}
                   </span>
                 </span>
               </button>
@@ -69,9 +70,7 @@ export function MundosPicker({
           );
         })}
       </ul>
-      <p className="juego-muted">
-        Si eliges un barco en «Barco», lo llevas en todos los mundos. Todo es de muestra.
-      </p>
+      <p className="juego-muted">{t('juego.mundos.siEligesUnBarco')}</p>
     </div>
   );
 }
@@ -79,7 +78,7 @@ export function MundosPicker({
 export const mundosSection: MenuSection = {
   id: 'mundos',
   icon: '🌍',
-  label: 'Mundos',
+  label: t('juego.mundos.mundos'),
   group: 'progress',
   Component: function Mundos({ ctx }) {
     return (

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { AchievementsPanel } from '../../lib/logros/panel';
+import { t } from '../../lib/i18n';
 
 /**
  * El panel de logros en /mar (T37), abierto desde el icono 🏆 del HUD o
@@ -21,7 +22,7 @@ export function MarLogros({ onClose }: { onClose: () => void }) {
         className="mar-logros__sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="Logros"
+        aria-label={t('mar.logros.logros')}
         data-testid="mar-logros-panel"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
@@ -30,15 +31,15 @@ export function MarLogros({ onClose }: { onClose: () => void }) {
         }}
       >
         <header className="mar-logros__head">
-          <h2>🏆 Logros</h2>
+          <h2>{t('mar.logros.logros2')}</h2>
           <Link className="mar-logros__carnet" href="/carnet" prefetch={false}>
-            🪪 Mi Carnet
+            {t('mar.logros.miCarnet')}
           </Link>
           <button
             type="button"
             className="mar-logros__x"
             data-testid="mar-logros-cerrar"
-            aria-label="Cerrar logros"
+            aria-label={t('mar.logros.cerrarLogros')}
             onClick={onClose}
           >
             ×

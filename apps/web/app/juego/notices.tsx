@@ -2,6 +2,7 @@
 
 import { type Notice, NoticeQueue, type Rect, type ShownNotice } from '@boia/engine/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '../../lib/i18n';
 
 /**
  * Cola de avisos en React: la lógica es `NoticeQueue` (uno a la vez; con
@@ -48,10 +49,10 @@ export function useNoticeQueue(onShow: (n: Notice) => void, opts: { readable?: b
 }
 
 const KIND_LABEL: Record<Notice['kind'], string> = {
-  discovery: 'Descubrimiento',
-  achievement: 'Logro',
-  reward: 'Recompensa',
-  info: 'Aviso',
+  discovery: t('juego.notices.descubrimiento'),
+  achievement: t('juego.notices.logro'),
+  reward: t('juego.notices.recompensa'),
+  info: t('juego.notices.aviso'),
 };
 
 /**
@@ -97,7 +98,7 @@ export function NoticeToast({
           type="button"
           className="juego-notice-x"
           data-testid="aviso-cerrar"
-          aria-label="Cerrar aviso"
+          aria-label={t('juego.notices.cerrarAviso')}
           onClick={onDismiss}
         >
           ×

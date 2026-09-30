@@ -108,6 +108,7 @@ import {
 } from './sheet';
 import { islandTrip, marPositionStore, tripOutcome } from './voyage';
 import './mar.css';
+import { t as msg } from '../../lib/i18n';
 
 /**
  * /mar: el mar de BOIA en 3D, la otra forma de explorar junto a /juego. Mismo
@@ -374,8 +375,8 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
           push({
             id: `circuito:anulada:${Date.now()}`,
             kind: 'info',
-            title: 'Vuelta anulada',
-            body: 'Vuelve a pasar por la salida.',
+            title: msg('circuit.void'),
+            body: msg('circuit.void.retry'),
           });
           break;
       }
@@ -413,7 +414,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
                 push({
                   id: `descubierta:${e.objectId}`,
                   kind: 'discovery',
-                  title: `Isla descubierta: ${o.identity.name}`,
+                  title: msg('island.firstVisit', { place: o.identity.name }),
                 });
             })
             .catch(() => undefined);
@@ -1173,8 +1174,9 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
 
   const courseName = (c: CourseInfo) =>
     c.placeId
-      ? (world?.objects.find((o) => o.identity.id === c.placeId)?.identity.name ?? 'Destino')
-      : 'Punto marcado';
+      ? (world?.objects.find((o) => o.identity.id === c.placeId)?.identity.name ??
+        msg('mar.client.destino'))
+      : msg('mar.client.puntoMarcado');
 
   const aboard = phase === 'aboard' || phase === 'boarding';
   const destinationId = missionRef.current?.destination ?? null;
@@ -1207,7 +1209,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         ref={canvasRef}
         className="mar-canvas"
         data-testid="mar-canvas"
-        aria-label="El mar de BOIA en 3D"
+        aria-label={msg('mar.client.elMarDeBoia')}
       />
       <div ref={overlayRef} className="mar-overlay" />
       {/* Líneas de velocidad del vuelo de «Entradas» (sólo se ven en crucero). */}
@@ -1217,16 +1219,16 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         <div className="mar-splash" role="status">
           {status === 'error' ? (
             <>
-              <p className="mar-splash__title">Este móvil no puede con el 3D</p>
-              <p>Prueba la versión clásica: el mismo mar, en 2D.</p>
+              <p className="mar-splash__title">{msg('error.3d.title')}</p>
+              <p>{msg('error.3d.body')}</p>
               <Link className="mar-btn mar-btn--primary" href="/juego">
-                Ir al mar 2D
+                {msg('error.3d.cta')}
               </Link>
             </>
           ) : (
             <>
               <div className="mar-splash__boia" aria-hidden="true" />
-              <p className="mar-splash__title">Preparando el mar…</p>
+              <p className="mar-splash__title">{msg('mar.client.preparandoElMar')}</p>
             </>
           )}
         </div>
@@ -1234,7 +1236,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
 
       {/* Barra de arriba */}
       <header className="mar-top">
-        <Link className="mar-round" href="/" aria-label="Volver a BOIA">
+        <Link className="mar-round" href="/" aria-label={msg('mar.client.volverABoia')}>
           ←
         </Link>
         <button
@@ -1243,13 +1245,19 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
           onClick={() => setMenu((m) => !m)}
           aria-expanded={menu}
         >
-          <span className="mar-brand__logo">BOIA</span>
-          <span className="mar-brand__sub">Mar 3D{worldName ? ` · ${worldName}` : ''}</span>
+          <span className="mar-brand__logo">{msg('mar.client.boia')}</span>
+          <span className="mar-brand__sub">
+            {msg('mar.client.mar3d', { v1: worldName ? ` · ${worldName}` : '' })}
+          </span>
           <span aria-hidden="true">▾</span>
         </button>
-        <div className="mar-balances" data-testid="mar-saldos" aria-label="Saldos">
-          <span title="Puntos">★ {balances?.points ?? '–'}</span>
-          <span title="Monedas">🪙 {balances?.coins ?? '–'}</span>
+        <div
+          className="mar-balances"
+          data-testid="mar-saldos"
+          aria-label={msg('mar.client.saldos')}
+        >
+          <span title={msg('mar.client.puntos')}>★ {balances?.points ?? '–'}</span>
+          <span title={msg('mar.client.monedas')}>🪙 {balances?.coins ?? '–'}</span>
         </div>
         {/* Logros (T37): arriba a la derecha, sobre el minimapa; nunca junto a «Entradas». */}
         <button
@@ -1257,10 +1265,10 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
           className="mar-round mar-logros-btn"
           data-testid="mar-logros"
           data-por-reclamar={readyToClaim}
-          aria-label={claimLabel('Logros', readyToClaim)}
+          aria-label={claimLabel(msg('mar.client.logros'), readyToClaim)}
           aria-expanded={logros}
           aria-haspopup="dialog"
-          title={claimLabel('Logros', readyToClaim)}
+          title={claimLabel(msg('mar.client.logros'), readyToClaim)}
           onClick={() => (logros ? setLogros(false) : openLogros())}
         >
           <span aria-hidden="true">🏆</span>
@@ -1269,8 +1277,8 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       </header>
 
       {menu ? (
-        <nav className="mar-menu" aria-label="Menú">
-          <p className="mar-menu__label">Momento del día</p>
+        <nav className="mar-menu" aria-label={msg('mar.client.menu')}>
+          <p className="mar-menu__label">{msg('mar.client.momentoDelDia')}</p>
           <div className="mar-menu__moods">
             {MOOD_IDS.map((m) => (
               <button
@@ -1290,10 +1298,11 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
               data-testid="mar-barco"
               onClick={openTienda}
             >
-              ⛵ Barco
-              {shipLook
-                ? ` · ${shipCatalog?.styles.find((st) => st.id === shipLook.style)?.name ?? shipLook.style}`
-                : ''}
+              {msg('mar.client.barco', {
+                v1: shipLook
+                  ? ` · ${shipCatalog?.styles.find((st) => st.id === shipLook.style)?.name ?? shipLook.style}`
+                  : '',
+              })}
             </button>
           ) : null}
           <button
@@ -1305,21 +1314,23 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
               setSheet({ kind: 'codes' });
             }}
           >
-            🏷️ Mis códigos
+            {msg('mar.client.misCodigos')}
           </button>
           <button type="button" className="mar-menu__link" onClick={openLogros}>
-            🏆 Logros{readyToClaim > 0 ? ` · ${readyToClaim} por reclamar` : ''}
+            {msg('mar.client.logros2', {
+              v1: readyToClaim > 0 ? msg('mar.client.porReclamar', { readyToClaim }) : '',
+            })}
           </button>
           <Link className="mar-menu__link" href="/#tickets">
-            🎟️ Entradas
+            {msg('mar.client.entradas')}
           </Link>
           <Link className="mar-menu__link" href="/carnet">
-            🪪 Mi Carnet
+            {msg('mar.client.miCarnet')}
           </Link>
           <Link className="mar-menu__link" href="/juego">
-            🗺️ Versión clásica 2D
+            {msg('mar.client.versionClasica2d')}
           </Link>
-          <p className="mar-menu__label">Mundos</p>
+          <p className="mar-menu__label">{msg('mar.client.mundos')}</p>
           <div className="mar-menu__mundos">
             <MundosPicker
               worlds={worlds.list()}
@@ -1329,10 +1340,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
               onChoose={chooseWorld}
             />
           </div>
-          <p className="mar-menu__help">
-            Arrastra para navegar · Pellizca o usa la rueda para el zoom · Toca el mar o una isla
-            para fijar rumbo · Teclado: flechas, +/−, M mapa, T turbo.
-          </p>
+          <p className="mar-menu__help">{msg('mar.client.arrastraParaNavegarPellizca')}</p>
         </nav>
       ) : null}
 
@@ -1361,7 +1369,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
             type="button"
             className="mar-x mar-notices__x"
             data-testid="mar-aviso-cerrar"
-            aria-label="Cerrar aviso"
+            aria-label={msg('mar.client.cerrarAviso')}
             onClick={notices.dismiss}
           >
             ×
@@ -1381,7 +1389,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       {/* Un cambio de mundo: el agujero negro se ve en el lienzo; esto lo anuncia. */}
       {switching ? (
         <p className="mar-switch" data-testid="cambio-mundo" role="status">
-          Entre dos mundos…
+          {msg('mar.client.entreDosMundos')}
         </p>
       ) : null}
 
@@ -1389,8 +1397,10 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
       <div className="mar-chips">
         {race ? (
           <div className="mar-chip mar-chip--race" data-testid="mar-crono">
-            ⏱ {race.ms !== null ? formatRaceTime(race.ms) : 'Preparados…'}
-            {race.phase === 'racing' ? <span className="mar-chip__sub">CP {race.next}</span> : null}
+            ⏱ {race.ms !== null ? formatRaceTime(race.ms) : msg('mar.client.preparados')}
+            {race.phase === 'racing' ? (
+              <span className="mar-chip__sub">{msg('mar.client.cp', { next: race.next })}</span>
+            ) : null}
           </div>
         ) : null}
         {stats?.course ? (
@@ -1399,7 +1409,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
             <button
               type="button"
               className="mar-chip__x"
-              aria-label="Quitar rumbo"
+              aria-label={msg('mission.route.clear')}
               onClick={() => engineRef.current?.setCourse(null)}
             >
               ×
@@ -1412,23 +1422,25 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
             className="mar-chip mar-chip--mission"
             onClick={() => courseTo(destinationId)}
           >
-            🎈 Lleva a la Fiestera a {destinationName ?? 'su isla'} · rumbo
+            {msg('mar.client.llevaALaFiestera', {
+              v1: destinationName ?? msg('mar.client.suIsla'),
+            })}
           </button>
         ) : null}
       </div>
 
       {countdown !== null ? (
         <div className="mar-countdown" aria-live="assertive" key={countdown}>
-          {countdown > 0 ? countdown : '¡Ya!'}
+          {countdown > 0 ? countdown : msg('mar.client.ya')}
         </div>
       ) : null}
 
       {/* Controles de la derecha */}
-      <div className="mar-rail" aria-label="Zoom">
+      <div className="mar-rail" aria-label={msg('mar.client.zoom')}>
         <button
           type="button"
           className="mar-round"
-          aria-label="Acercar"
+          aria-label={msg('mar.client.acercar')}
           onClick={() => engineRef.current?.zoomBy(-0.14)}
         >
           +
@@ -1439,7 +1451,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         <button
           type="button"
           className="mar-round"
-          aria-label="Alejar"
+          aria-label={msg('mar.client.alejar')}
           onClick={() => engineRef.current?.zoomBy(0.14)}
         >
           −
@@ -1462,7 +1474,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         type="button"
         className={`mar-turbo${turboReady ? ' is-ready' : ''}${(stats?.turbo ?? 0) > 0 ? ' is-on' : ''}`}
         style={{ '--p': stats?.turboReady ?? 1 } as CSSProperties}
-        aria-label="Turbo"
+        aria-label={msg('mar.client.turbo')}
         data-testid="mar-turbo"
         onClick={() => {
           if (engineRef.current?.turbo()) {
@@ -1472,24 +1484,24 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
         }}
       >
         <span>⚡</span>
-        <small>{turboReady ? 'Turbo' : '…'}</small>
+        <small>{turboReady ? msg('mar.client.turbo') : '…'}</small>
       </button>
 
       <div className="mar-speed" aria-hidden="true">
         <strong>{stats?.knots ?? 0}</strong>
-        <small>nudos</small>
+        <small>{msg('mar.client.nudos')}</small>
       </div>
 
       {stats?.mapMode && !sheet ? (
         <div className="mar-maphint">
-          <p>Toca una isla para ver qué hay · arrastra para mover el mapa</p>
+          <p>{msg('mar.client.tocaUnaIslaPara')}</p>
           <button
             type="button"
             className="mar-maphint__close"
             data-testid="mar-mapa-cerrar"
             onClick={() => engineRef.current?.backToBoat()}
           >
-            ✕ Cerrar
+            {msg('mar.client.cerrar')}
           </button>
         </div>
       ) : null}
@@ -1500,9 +1512,9 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
             👆
           </span>
           <p>
-            <strong>Toca y arrastra</strong> para navegar
+            <strong>{msg('mar.client.tocaYArrastra')}</strong> {msg('mar.client.paraNavegar')}
             <br />
-            Pellizca para el zoom · toca una isla para ir
+            {msg('mar.client.pellizcaParaElZoom')}
           </p>
         </div>
       ) : null}
@@ -1518,13 +1530,13 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
             }}
           >
             <span>{dialogue.text}</span>
-            {!dialogue.last ? <small>Toca para seguir ▸</small> : null}
+            {!dialogue.last ? <small>{msg('mar.client.tocaParaSeguir')}</small> : null}
           </button>
           <button
             type="button"
             className="mar-x mar-bubble__x"
             data-testid="mar-bocadillo-cerrar"
-            aria-label="Cerrar diálogo"
+            aria-label={msg('mar.client.cerrarDialogo')}
             onClick={() => {
               engineRef.current?.runtime.skipDialogue();
               window.setTimeout(syncDialogue, 0);
@@ -1549,7 +1561,7 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
               data-testid="mar-entradas-saltar"
               onClick={() => finishTrip(trip, 'skip')}
             >
-              Saltar ›
+              {msg('mar.client.saltar')}
             </button>
           ) : null}
           <button
@@ -1559,17 +1571,20 @@ export function MarClient({ shipCatalog = null }: { shipCatalog?: ShipCatalog | 
             aria-label={
               trip
                 ? trip.then === 'sheet'
-                  ? `Rumbo a ${trip.placeName}. Toca para llegar ya`
-                  : `Entradas: rumbo a ${trip.placeName}. Toca para comprar ya`
-                : 'Entradas'
+                  ? msg('mar.client.rumboATocaPara', { placeName: trip.placeName })
+                  : msg('mar.client.entradasRumboAToca', { placeName: trip.placeName })
+                : msg('hud.tickets')
             }
             onClick={onTickets}
           >
             <span aria-hidden="true">🎟️</span>
-            <strong>Entradas</strong>
+            <strong>{msg('hud.tickets')}</strong>
             {trip ? (
               <small>
-                {stats?.flight ? 'Volando' : 'Rumbo'} a {trip.placeName}…
+                {msg('mar.client.a', {
+                  v1: stats?.flight ? msg('mar.client.volando') : msg('mar.client.rumbo'),
+                  placeName: trip.placeName,
+                })}
               </small>
             ) : null}
           </button>

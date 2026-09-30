@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import { ADMIN_COPY } from '../../lib/admin/copy';
 import { AdminApp } from './admin-app';
 import './admin.css';
+import { t } from '../../lib/i18n';
 
 export const metadata: Metadata = {
-  title: `${ADMIN_COPY.bannerTitle} · boia-planet`,
+  title: t('admin.admin.boiaPlanet', { bannerTitle: ADMIN_COPY.bannerTitle }),
   robots: { index: false, follow: false },
 };
 

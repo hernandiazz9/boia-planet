@@ -9,6 +9,7 @@ import {
   isStoreError,
 } from '@boia/store';
 import type { WorldConfig } from '@boia/world';
+import { t } from '../../lib/i18n';
 
 /**
  * Logros del juego (T21, T36; REQ-IDE-024…027, D-22 punto 5): un solo sistema
@@ -65,7 +66,7 @@ export const TIME_PLAYED_COUNTER = 'tiempo-jugado-s';
 export const TIME_PLAYED_TICK_S = 15;
 
 /** Texto del aviso al completar un logro (D-22, catálogo punto 9). muestra */
-export const ACHIEVEMENT_READY_BODY = '¡Logro completado! Reclama tu premio';
+export const ACHIEVEMENT_READY_BODY = t('achievements.notice.ready');
 
 /** Claves de progreso de cada huella, por id estable (nunca coordenadas). */
 const KEY = {
@@ -397,7 +398,7 @@ export function worldBuoys(world: Pick<WorldConfig, 'objects'>): string[] {
 
 /** «Boia encontrada · {n} de 6» (textos-zonas, zona 23). muestra */
 export function buoyFoundTitle(n: number, total: number): string {
-  return `Boia encontrada · ${n} de ${total}`;
+  return t('juego.achievements.boiaEncontradaDe', { n, total });
 }
 
 /**

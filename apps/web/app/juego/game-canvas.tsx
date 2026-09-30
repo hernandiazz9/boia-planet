@@ -128,6 +128,7 @@ import {
 import { useViewport } from './use-viewport';
 import { adminWorldId, currentWorld, syncWorldParam, visitorWorldChoice } from './world-choice';
 import { EventPanel } from './world-ui';
+import { t as msg } from '../../lib/i18n';
 
 const MANIFEST_URL = '/api/art/barco/manifest.json?optional=1';
 
@@ -828,7 +829,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
       setWorldReady(true);
     })().catch((err: unknown) => {
       console.error(err);
-      if (!cancelled) setError('No se pudo arrancar el motor en este navegador.');
+      if (!cancelled) setError(msg('juego.gameCanvas.noSePudoArrancar'));
     });
 
     return () => {
@@ -1326,7 +1327,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
               height: layout.home.h,
             }}
           >
-            Inicio
+            {msg('juego.gameCanvas.inicio')}
           </Link>
           {layout.balances ? <BalancesChip rect={layout.balances} /> : null}
           {/* Datos del motor: caja visible sólo con `?debug` (O11). Sin él quedan
@@ -1349,12 +1350,15 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
             }
           >
             <div>
-              {stats ? stats.fps.toFixed(0) : '–'} fps · {stats ? stats.speed.toFixed(0) : '–'} u/s
-              {stats?.drifting ? ' · drift' : ''}
+              {msg('juego.gameCanvas.fpsUS', {
+                v1: stats ? stats.fps.toFixed(0) : '–',
+                v2: stats ? stats.speed.toFixed(0) : '–',
+                v3: stats?.drifting ? msg('juego.gameCanvas.drift') : '',
+              })}
             </div>
             <div style={{ opacity: 0.65 }}>
               {stats
-                ? `${stats.direction} · ${stats.shipSource === 'manifest' ? 'sprites 01' : 'provisional'}`
+                ? `${stats.direction} · ${stats.shipSource === 'manifest' ? msg('juego.gameCanvas.sprites01') : 'provisional'}`
                 : ''}
             </div>
           </div>
@@ -1409,7 +1413,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
               type="button"
               className="juego-sr-only"
               data-testid="bocadillo-cerrar"
-              aria-label="Cerrar diálogo"
+              aria-label={msg('juego.gameCanvas.cerrarDialogo')}
               onClick={() => gameRef.current?.skipDialogue()}
             >
               ×
@@ -1427,7 +1431,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
               data-lugar={voyage.placeId}
             >
               <span>
-                Rumbo a <strong>{voyage.name}</strong>…
+                {msg('juego.gameCanvas.rumboA')} <strong>{voyage.name}</strong>…
               </span>
               <button
                 type="button"
@@ -1435,7 +1439,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
                 data-testid="rumbo-saltar"
                 onClick={() => endVoyage(true)}
               >
-                Saltar
+                {msg('juego.gameCanvas.saltar')}
               </button>
             </div>
           ) : null}
@@ -1530,7 +1534,7 @@ export function GameCanvas({ shipCatalog = null }: { shipCatalog?: ShipCatalog |
           role="status"
           onPointerDownCapture={(e) => e.preventDefault()}
         >
-          <span className="juego-sr-only">Cambiando de mundo…</span>
+          <span className="juego-sr-only">{msg('juego.gameCanvas.cambiandoDeMundo')}</span>
         </div>
       ) : null}
       {error && (

@@ -20,6 +20,7 @@ import { eventHref, galleryAnchor, photosHref } from '../../lib/landing/eventos'
 import { liveContent } from '../../lib/landing/live-content';
 import { voyageHref } from './autopilot';
 import './place-panels.css';
+import { t as msg } from '../../lib/i18n';
 
 /**
  * Paneles de los lugares que no son de evento (T20): la isla con su relato y
@@ -44,7 +45,7 @@ export interface PlacePanelState {
 }
 
 /** «Explorar la isla» (textos-zonas, zona 11). muestra */
-export const ISLAND_EXPLORE = 'Explorar la isla';
+export const ISLAND_EXPLORE = msg('island.explore');
 
 /** Bloques de la home con los cambios del Admin de la demo (T26). */
 const block = (type: string) => liveContent().blocks.find((b) => b.type === type);
@@ -80,7 +81,12 @@ function textOf(o: WorldObject | undefined, key: string): string | undefined {
 
 function Close({ onClose }: { onClose: () => void }) {
   return (
-    <button type="button" className="juego-panel-close" onClick={onClose} aria-label="Cerrar">
+    <button
+      type="button"
+      className="juego-panel-close"
+      onClick={onClose}
+      aria-label={msg('juego.placePanels.cerrar')}
+    >
       ×
     </button>
   );
@@ -125,7 +131,7 @@ export function IslandUpcoming({
             </Link>{' '}
             · {formatDate(e.startsAt, e.timeZone)}
             {e.series ? ` · ${eventKicker(e)}` : ''}
-            {e.sample ? ' · muestra' : ''} <StateTag event={e} />
+            {e.sample ? msg('juego.placePanels.muestra') : ''} <StateTag event={e} />
             {isIslandlessSatellite(e) ? (
               <span className="juego-panel-warmup" data-testid={`calienta-${e.id}`}>
                 {next ? (
@@ -239,10 +245,10 @@ export function PlacePanel({
     return (
       <section className="juego-panel" data-testid="panel-fotos" aria-label={name}>
         <Close onClose={onClose} />
-        <p className="juego-panel-kicker">Puerto de Fotos · muestra</p>
+        <p className="juego-panel-kicker">{msg('juego.placePanels.puertoDeFotosMuestra')}</p>
         <h2>{name}</h2>
-        <p>{textOf(object, 'body') ?? 'Todas las fotos de BOIA se revelan aquí.'}</p>
-        <ul className="juego-panel-photos" aria-label="Galería">
+        <p>{textOf(object, 'body') ?? msg('juego.placePanels.todasLasFotosDe')}</p>
+        <ul className="juego-panel-photos" aria-label={msg('juego.placePanels.galeria')}>
           {photos.map((p) => (
             <li key={p.id} role="img" aria-label={p.alt} title={p.alt}>
               📷
@@ -255,7 +261,7 @@ export function PlacePanel({
           prefetch={false}
           data-testid="panel-fotos-galeria"
         >
-          Ver «Fotos y eventos»
+          {msg('juego.placePanels.verFotosYEventos')}
         </Link>
       </section>
     );
@@ -267,9 +273,9 @@ export function PlacePanel({
     return (
       <section className="juego-panel" data-testid="panel-tienda" aria-label={name}>
         <Close onClose={onClose} />
-        <p className="juego-panel-kicker">Tienda · muestra</p>
+        <p className="juego-panel-kicker">{msg('juego.placePanels.tiendaMuestra')}</p>
         <h2>{name}</h2>
-        <p>{textOf(object, 'body') ?? 'Camisetas, tote bags y pegatinas.'}</p>
+        <p>{textOf(object, 'body') ?? msg('juego.placePanels.camisetasToteBagsY')}</p>
         {products.length ? <p className="juego-panel-meta">{products.join(' · ')}</p> : null}
         {url ? (
           <a
@@ -279,7 +285,7 @@ export function PlacePanel({
             rel="noopener noreferrer"
             data-testid="panel-tienda-enlace"
           >
-            Ir a la tienda ↗
+            {msg('discount.goToStore')}
           </a>
         ) : null}
       </section>
@@ -294,12 +300,12 @@ export function PlacePanel({
     return (
       <section className="juego-panel" data-testid="panel-whatsapp" aria-label={name}>
         <Close onClose={onClose} />
-        <p className="juego-panel-kicker">Provisional · muestra</p>
+        <p className="juego-panel-kicker">{msg('juego.placePanels.provisionalMuestra')}</p>
         <h2>{textOf(object, 'title') ?? name}</h2>
-        <p>{textOf(object, 'body') ?? 'El grupo de WhatsApp de BOIA, si te apetece.'}</p>
+        <p>{textOf(object, 'body') ?? msg('juego.placePanels.elGrupoDeWhatsapp')}</p>
         {wa ? (
           <a className="juego-panel-cta" href={wa.url} target="_blank" rel="noopener noreferrer">
-            Abrir WhatsApp ↗
+            {msg('whatsapp.cta')}
           </a>
         ) : null}
       </section>
@@ -315,7 +321,11 @@ export function PlacePanel({
         aria-label={name}
       >
         <Close onClose={onClose} />
-        <p className="juego-panel-kicker">{textOf(object, 'kicker') ?? 'Isla'} · muestra</p>
+        <p className="juego-panel-kicker">
+          {msg('juego.placePanels.muestra2', {
+            v1: textOf(object, 'kicker') ?? msg('juego.placePanels.isla'),
+          })}
+        </p>
         <h2>{name}</h2>
         <button
           type="button"
@@ -337,7 +347,11 @@ export function PlacePanel({
       aria-label={name}
     >
       <Close onClose={onClose} />
-      <p className="juego-panel-kicker">{textOf(object, 'kicker') ?? 'Isla'} · muestra</p>
+      <p className="juego-panel-kicker">
+        {msg('juego.placePanels.muestra2', {
+          v1: textOf(object, 'kicker') ?? msg('juego.placePanels.isla'),
+        })}
+      </p>
       <h2>{name}</h2>
       {textOf(object, 'body') ? <p>{textOf(object, 'body')}</p> : null}
       <IslandMemories placeId={state.objectId} />
@@ -349,10 +363,10 @@ export function PlacePanel({
 
 /** Estado de un código en «Mis códigos» (T43): activo, usado o caducado. */
 export const DISCOUNT_STATE_LABEL: Record<FoundDiscountState, string> = {
-  active: 'Activo',
-  used: 'Usado',
-  upcoming: 'Todavía no vale',
-  expired: 'Caducado',
+  active: msg('juego.placePanels.activo'),
+  used: msg('juego.placePanels.usado'),
+  upcoming: msg('discount.state.pending'),
+  expired: msg('discount.state.expired'),
 };
 
 /** Copia un texto con un toque; `true` si pudo. */
@@ -421,16 +435,21 @@ export function DiscountCard({
           {event.name} · {formatDate(event.startsAt, event.timeZone)}
         </p>
       ) : d.scope === 'store' ? (
-        <p className="juego-panel-meta">Tienda de BOIA</p>
+        <p className="juego-panel-meta">{msg('juego.placePanels.tiendaDeBoia')}</p>
       ) : null}
       {d.endsAt ? (
         <p className="juego-panel-pending">
-          {expired ? 'Caducó' : 'Vale hasta'} el {formatDate(d.endsAt, 'Europe/Madrid')}
+          {msg('juego.placePanels.el', {
+            v1: expired ? msg('juego.placePanels.caduco') : msg('juego.placePanels.valeHasta'),
+            formatDate: formatDate(d.endsAt, 'Europe/Madrid'),
+          })}
         </p>
       ) : null}
       {found.usedAt ? (
         <p className="juego-panel-pending">
-          Usado en tu compra del {formatDate(found.usedAt, 'Europe/Madrid')}
+          {msg('juego.placePanels.usadoEnTuCompra', {
+            formatDate: formatDate(found.usedAt, 'Europe/Madrid'),
+          })}
         </p>
       ) : null}
       {d.conditions ? <p className="juego-panel-pending">{d.conditions}</p> : null}
@@ -443,12 +462,12 @@ export function DiscountCard({
           onClick={() => void copyText(d.code).then((ok) => setCopied(ok ? 'ok' : 'fail'))}
         >
           {expired
-            ? 'Caducado: ya no vale'
+            ? msg('juego.placePanels.caducadoYaNoVale')
             : copied === 'ok'
-              ? 'Copiado ✓'
+              ? msg('discount.copied')
               : copied === 'fail'
-                ? `Cópialo a mano: ${d.code}`
-                : 'Copiar código'}
+                ? msg('discount.copyManual', { code: d.code })
+                : msg('discount.copy')}
         </button>
         {expired || state === 'used' ? null : shop ? (
           <a
@@ -458,7 +477,7 @@ export function DiscountCard({
             rel="noopener noreferrer"
             data-testid="descuento-ir-tienda"
           >
-            Ir a la tienda ↗
+            {msg('discount.goToStore')}
           </a>
         ) : event?.islandId ? (
           onGoToIsland ? (
@@ -468,7 +487,7 @@ export function DiscountCard({
               data-testid="descuento-ir-isla"
               onClick={() => onGoToIsland(event.id)}
             >
-              Ir a la isla
+              {msg('discount.goToIsland')}
             </button>
           ) : (
             <a
@@ -476,7 +495,7 @@ export function DiscountCard({
               href={voyageHref(event.id)}
               data-testid="descuento-ir-isla"
             >
-              Ir a la isla
+              {msg('discount.goToIsland')}
             </a>
           )
         ) : event ? (
@@ -486,7 +505,7 @@ export function DiscountCard({
             prefetch={false}
             data-testid="descuento-ver-evento"
           >
-            Ver el evento
+            {msg('juego.placePanels.verElEvento')}
           </Link>
         ) : null}
       </div>
@@ -507,14 +526,12 @@ export function DiscountPanel({
     <section
       className="juego-panel"
       data-testid="panel-descuento"
-      aria-label="Descuento encontrado"
+      aria-label={msg('discount.found.title')}
     >
       <Close onClose={onClose} />
-      <p className="juego-panel-kicker">Descuento encontrado · muestra</p>
+      <p className="juego-panel-kicker">{msg('juego.placePanels.descuentoEncontradoMuestra')}</p>
       <DiscountCard found={found} onGoToIsland={onGoToIsland} />
-      <p className="juego-panel-pending">
-        Lo tienes guardado en el Menú de a bordo, en Mis códigos.
-      </p>
+      <p className="juego-panel-pending">{msg('juego.placePanels.loTienesGuardadoEn')}</p>
     </section>
   );
 }

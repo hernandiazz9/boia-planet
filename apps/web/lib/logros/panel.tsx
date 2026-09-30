@@ -6,6 +6,7 @@ import { CLAIM_LABEL, logroRows, obtainedCount } from './model';
 import { type ClaimedReward, ClaimReward } from './reward';
 import { useCountUp, useLogros } from './use-logros';
 import './logros.css';
+import { t } from '../i18n';
 
 /**
  * El panel de logros (T37, D-22 punto 5, REQ-IDE-024…028), el mismo en /mar
@@ -24,7 +25,7 @@ export function AchievementsPanel() {
   const coins = useCountUp(data?.balances.coins ?? 0);
   const hide = useCallback(() => setShown(null), []);
 
-  if (data === undefined || !repo) return <p className="juego-muted">Cargando…</p>;
+  if (data === undefined || !repo) return <p className="juego-muted">{t('empty.loading')}</p>;
   const rows = logroRows(data.list, data.facts, data.names);
 
   const claim = async (id: string, title: string) => {
@@ -45,15 +46,17 @@ export function AchievementsPanel() {
     <div className="logros" data-testid="logros-panel">
       <p className="logros-saldos" data-testid="logros-saldos">
         <span data-testid="logros-puntos" data-value={data.balances.points}>
-          ★ {points} puntos
+          {t('logros.panel.puntos', { points })}
         </span>
         <span data-testid="logros-monedas" data-value={data.balances.coins}>
-          🪙 {coins} monedas
+          {t('logros.panel.monedas', { coins })}
         </span>
-        {data.rank ? <span data-testid="logros-rango">Rango: {data.rank}</span> : null}
+        {data.rank ? (
+          <span data-testid="logros-rango">{t('balances.rank', { rank: data.rank })}</span>
+        ) : null}
       </p>
       <h3 className="logros-cabecera" data-testid="logros-cabecera">
-        {obtainedCount(data.list)} de {data.list.length} logros
+        {t('achievements.counter', { got: obtainedCount(data.list), total: data.list.length })}
       </h3>
       <ul className="logros-lista" data-testid="logros">
         {rows.map((row) => (
@@ -84,7 +87,7 @@ export function AchievementsPanel() {
                 <span
                   className="logro__bar"
                   role="progressbar"
-                  aria-label={`Progreso de ${row.title}`}
+                  aria-label={t('logros.panel.progresoDe', { title: row.title })}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={Math.round(row.progress * 100)}
@@ -98,7 +101,7 @@ export function AchievementsPanel() {
               </span>
               {row.reward ? (
                 <span className="logro__reward">
-                  {row.state === 'claimed' ? 'Ganaste: ' : 'Premio: '}
+                  {row.state === 'claimed' ? t('logros.panel.ganaste') : t('logros.panel.premio')}
                   {row.reward}
                 </span>
               ) : null}
@@ -109,7 +112,7 @@ export function AchievementsPanel() {
                 className="logro__claim"
                 data-testid={`logro-reclamar-${row.id}`}
                 disabled={claiming !== null}
-                aria-label={`${CLAIM_LABEL} el premio de «${row.title}»`}
+                aria-label={t('logros.panel.elPremioDe', { CLAIM_LABEL, title: row.title })}
                 onClick={() => void claim(row.id, row.title)}
               >
                 {CLAIM_LABEL}

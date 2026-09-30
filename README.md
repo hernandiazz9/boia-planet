@@ -18,12 +18,31 @@ pnpm demo         # igual, e imprime la URL de la Wi-Fi para abrirla en el móvi
 PORT=3100 pnpm demo
 ```
 
-Comprobaciones (las mismas que corren los encargos):
+No hace falta ninguna variable de entorno; las opcionales están en
+[`.env.example`](.env.example) (se copian a `apps/web/.env.local`).
+
+## Probar
+
+Comprobaciones (las mismas que corren los encargos; se leen por el código de
+salida y los conteos):
 
 ```sh
 pnpm test && pnpm typecheck && pnpm lint && pnpm build
-E2E_PORT=3107 pnpm e2e --workers=2      # ~6 min; la primera vez: pnpm --filter @boia/web exec playwright install chromium
+E2E_PORT=3107 pnpm e2e --workers=2      # ~15 min; la primera vez: pnpm --filter @boia/web exec playwright install chromium
 ```
+
+- `pnpm test` corre vitest y, si no se le pasa un filtro, después
+  `tools/spec/checks.sh`: la coherencia de la spec (`tools/spec/check.py`),
+  el estado por requisito (`tools/spec/estado.py`, REQ-PRO-017), sus pruebas
+  y todo el arte de `art/` (`tools/blender/check.py`, ~1 min). Necesita
+  `python3` del sistema. `pnpm test apps/web/lib` corre sólo esas pruebas.
+- El estado de cada requisito (HECHO, PARCIAL, FALTA, L2, final) y su prueba
+  está en [`docs/spec/estado.md`](docs/spec/estado.md); `pnpm spec:estado`
+  lo comprueba y cuenta.
+- Los textos de la interfaz viven en `apps/web/lib/i18n/` por clave
+  (REQ-ARQ-020). Los de [`docs/propuestas/textos-zonas.md`](docs/propuestas/textos-zonas.md)
+  se copian con `pnpm --filter @boia/web i18n:zonas`; una prueba avisa si el
+  catálogo y el documento no coinciden.
 
 ## Desplegar la versión de prueba
 
@@ -87,3 +106,16 @@ pnpm dlx vercel --prod      # producción
 5. El recorrido completo para el móvil está en `ESTADO.md` (plan 002 T30, «Guía de la demo»).
 
 `/sphere-probe` da 404 en producción (sólo existe con `BOIA_SPHERE_PROBE=1`).
+
+Cada respuesta lleva la CSP y las cabeceras de seguridad
+(`apps/web/lib/security-headers.ts`, REQ-ARQ-012): `curl -I https://<dominio>/`
+enseña `content-security-policy`.
+
+## Entrega
+
+- [`docs/entrega.md`](docs/entrega.md): la lista de entrega (REQ-ARQ-024) y
+  lo que falta para publicar de verdad.
+- [`docs/manual-alvaro.md`](docs/manual-alvaro.md): cómo usar el Admin, para
+  BOIA; [`docs/manual-admin.md`](docs/manual-admin.md), los detalles.
+- [`docs/matriz-dispositivos.md`](docs/matriz-dispositivos.md): los 16 casos
+  de accesibilidad y fallos (REQ-ARQ-016) y el registro de móviles físicos.

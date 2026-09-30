@@ -1,5 +1,6 @@
 import { BarcoShop } from '../../../../lib/barco/shop';
 import type { MenuSection } from '../types';
+import { t } from '../../../../lib/i18n';
 
 /**
  * ⛵ Barco (REQ-IDE-030/031, T12, T40): la tienda del barco. Los estilos de
@@ -11,7 +12,7 @@ import type { MenuSection } from '../types';
 export const barcoSection: MenuSection = {
   id: 'barco',
   icon: '⛵',
-  label: 'Barco',
+  label: t('juego.barco.barco'),
   group: 'progress',
   Component: function Barco({ ctx }) {
     return (

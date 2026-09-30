@@ -7,6 +7,7 @@ import { eventHref } from '../../lib/landing/eventos';
 import { CHECKOUT_COPY } from '../../lib/ticketing/copy';
 import { EventDiscountBanner } from '../../lib/ticketing/discount-banner';
 import { IslandMemories, IslandPhotosLink, IslandUpcoming } from './place-panels';
+import { t } from '../../lib/i18n';
 
 /**
  * Panel de evento que abre la isla por proximidad (T04). No es modal: el
@@ -77,12 +78,17 @@ export function EventPanel({
       data-estado={event.state}
       aria-label={event.name}
     >
-      <button type="button" className="juego-panel-close" onClick={onClose} aria-label="Cerrar">
+      <button
+        type="button"
+        className="juego-panel-close"
+        onClick={onClose}
+        aria-label={t('juego.worldUi.cerrar')}
+      >
         ×
       </button>
       <p className="juego-panel-kicker">
         {eventKicker(event)}
-        {event.sample ? ' · muestra' : ''}
+        {event.sample ? t('juego.worldUi.muestra') : ''}
         {event.state !== 'on_sale' ? (
           <span className={`juego-estado is-${event.state}`} data-testid="panel-evento-estado">
             {EVENTOS_COPY.state[event.state]}

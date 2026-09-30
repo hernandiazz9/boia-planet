@@ -1,3 +1,5 @@
+import { t } from '../i18n/web';
+
 /**
  * Invitaciones a crear el Carnet (REQ-IDE-008) y su ritmo (REQ-IDE-009), T44.
  *
@@ -168,25 +170,24 @@ export const INVITE_COPY: Record<InviteReason, { title: string; body: string }> 
   label: string;
 } = {
   purchase: {
-    title: '¿Guardamos esta entrada en tu Carnet?',
-    body: 'Con tu Carnet, el sello de este evento se queda contigo. Tardas un momento y no te pedimos email.',
+    title: t('invite.purchase.title'),
+    body: t('invite.purchase.body'),
   },
   gallery: {
-    title: '¿Te has visto en alguna?',
-    body: 'Con tu Carnet guardas los recuerdos de tus fiestas y los sellos de cada evento.',
+    title: t('invite.gallery.title'),
+    body: t('invite.gallery.body'),
   },
   progress: {
-    title: 'Llevas un buen rato navegando',
-    body: 'Hazte el Carnet y ponle nombre a tu barco: tus logros y tus monedas tendrán dueño.',
+    title: t('invite.progress.title'),
+    body: t('invite.progress.body'),
   },
   achievements: {
-    title: 'Tres logros ya. Esto va en serio.',
-    body: 'Con tu Carnet, los demás verán lo que has conseguido. Y tú también.',
+    title: t('invite.achievements.title'),
+    body: t('invite.achievements.body'),
   },
-  create: 'Crear mi Carnet',
-  later: 'Ahora no',
-  label: 'Invitación a crear tu Carnet',
+  create: t('carnet.create'),
+  later: t('invite.later'),
+  label: t('landing.invitations.invitacionACrearTu'),
   /** REQ-IDE-007: los límites del progreso local, antes de registrarse. */
-  localLimit:
-    'Tu progreso se guarda sólo en este navegador: si borras sus datos, se pierde, y todavía no cuenta para ningún ranking compartido.',
+  localLimit: t('invite.localLimit'),
 };

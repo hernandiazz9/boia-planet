@@ -57,7 +57,11 @@ async function sailFrom(page: Page, near?: string) {
   await page.goto(near ? `/juego?cerca=${near}` : '/juego');
   await gameRunning(page);
   // El foco en el mar: el teclado mueve el barco.
-  await page.locator('canvas:visible').first().focus().catch(() => {});
+  await page
+    .locator('canvas:visible')
+    .first()
+    .focus()
+    .catch(() => {});
 }
 
 /** Rumbo norte hasta que se cumpla `until`. */
@@ -154,7 +158,8 @@ test('circuito: al llegar a la salida se ve el récord y al cruzarla empieza la 
   page,
 }) => {
   const start = objects.find(
-    (o) => o.identity.category === 'circuito' && paramsOf(o, 'checkpoint').some((p) => p.order === 0),
+    (o) =>
+      o.identity.category === 'circuito' && paramsOf(o, 'checkpoint').some((p) => p.order === 0),
   )!;
   await sailFrom(page, start.identity.id);
   const timer = page.getByTestId('circuito-crono');

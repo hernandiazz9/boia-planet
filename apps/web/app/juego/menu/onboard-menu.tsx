@@ -5,6 +5,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { ADMIN_COPY, ADMIN_PATH } from '../../../lib/admin/copy';
 import { orderedSections } from './sections';
 import type { MenuContext } from './types';
+import { t } from '../../../lib/i18n';
 
 /**
  * Menú de a bordo (§19, REQ-IDE-034): barra superior de iconos grandes, con
@@ -30,7 +31,7 @@ export function OnboardMenu({ ctx, initial }: { ctx: MenuContext; initial?: stri
         tabIndex={-1}
         className="juego-menu"
         role="dialog"
-        aria-label="Menú de a bordo"
+        aria-label={t('menu.aria')}
         data-testid="menu"
         onClick={(e) => e.stopPropagation()}
         // El teclado del menú no mueve el barco ni avanza bocadillos.
@@ -39,7 +40,11 @@ export function OnboardMenu({ ctx, initial }: { ctx: MenuContext; initial?: stri
           if (e.key === 'Escape') ctx.close();
         }}
       >
-        <nav className="juego-menu-bar" role="tablist" aria-label="Secciones del menú">
+        <nav
+          className="juego-menu-bar"
+          role="tablist"
+          aria-label={t('juego.onboardMenu.seccionesDelMenu')}
+        >
           {sections.map((s, i) => (
             <Fragment key={s.id}>
               {i === firstTool && i > 0 ? (
@@ -74,7 +79,7 @@ export function OnboardMenu({ ctx, initial }: { ctx: MenuContext; initial?: stri
               type="button"
               className="juego-close"
               onClick={ctx.close}
-              aria-label="Cerrar menú"
+              aria-label={t('menu.close')}
             >
               ×
             </button>

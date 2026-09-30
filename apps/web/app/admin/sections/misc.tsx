@@ -13,21 +13,19 @@ import { itemName } from '../../../lib/admin/references';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
 import { Field, SectionHead, StatusLine } from '../ui';
+import { t as msg } from '../../../lib/i18n';
 
 /** Temporadas (REQ-ADM-032, D-20): cada mundo es una temporada; una activa. */
 export function SeasonsSection({ ctx }: { ctx: AdminContext }) {
   const active = useRead(ctx, (r) => r.content.activeWorldId());
   const { status, busy, run } = useRun();
-  if (active === undefined) return <p>Cargando…</p>;
+  if (active === undefined) return <p>{msg('empty.loading')}</p>;
   const current = active ?? ctx.registry.defaultId;
   return (
     <section>
-      <SectionHead
-        title="Temporadas"
-        lead="Cada mundo es una temporada. El activo es el que ve por defecto quien llega a /juego sin haber elegido otro en el menú. Duplicar temporadas llega en L2."
-      />
+      <SectionHead title={msg('admin.misc.temporadas')} lead={msg('admin.misc.cadaMundoEsUna')} />
       <fieldset className="admin-card">
-        <legend>Mundo activo</legend>
+        <legend>{msg('admin.misc.mundoActivo')}</legend>
         {ctx.registry.list().map((w) => (
           <label key={w.id} className="admin-check" data-testid={`temporada-${w.id}`}>
             <input
@@ -36,13 +34,16 @@ export function SeasonsSection({ ctx }: { ctx: AdminContext }) {
               checked={current === w.id}
               disabled={busy}
               onChange={() =>
-                void run(() => ctx.actions.setActiveWorld(w.id), `Temporada activa: ${w.name}.`)
+                void run(
+                  () => ctx.actions.setActiveWorld(w.id),
+                  msg('admin.misc.temporadaActiva', { name: w.name }),
+                )
               }
             />
             <span>
               <strong>{w.name}</strong>
-              {w.tagline ? ` · ${w.tagline}` : ''} · barco {w.shipStyle}
-              {w.id === ctx.registry.defaultId ? ' · por defecto' : ''}
+              {w.tagline ? ` · ${w.tagline}` : ''} {msg('admin.misc.barco')} {w.shipStyle}
+              {w.id === ctx.registry.defaultId ? msg('admin.misc.porDefecto') : ''}
             </span>
           </label>
         ))}
@@ -57,37 +58,37 @@ export function UsersSection() {
   return (
     <section>
       <SectionHead
-        title="Usuarios de administración"
-        lead="Sólo lectura en la versión de prueba: aquí no hay cuentas ni login (D-20). Con Supabase: una cuenta por persona con email, contraseña y TOTP."
+        title={msg('admin.misc.usuariosDeAdministracion')}
+        lead={msg('admin.misc.soloLecturaEnLa')}
       />
       <table className="admin-table" data-testid="usuarios">
         <thead>
           <tr>
-            <th>Rol</th>
-            <th>Puede</th>
-            <th>Cuentas</th>
+            <th>{msg('admin.misc.rol')}</th>
+            <th>{msg('admin.misc.puede')}</th>
+            <th>{msg('admin.misc.cuentas')}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Propietario</td>
-            <td>Todo, permisos e integraciones</td>
-            <td>Álvaro (pendiente)</td>
+            <td>{msg('admin.misc.propietario')}</td>
+            <td>{msg('admin.misc.todoPermisosEIntegraciones')}</td>
+            <td>{msg('admin.misc.alvaroPendiente')}</td>
           </tr>
           <tr>
-            <td>Administrador</td>
-            <td>Todo menos transferir la propiedad</td>
+            <td>{msg('admin.misc.administrador')}</td>
+            <td>{msg('admin.misc.todoMenosTransferirLa')}</td>
             <td>—</td>
           </tr>
           <tr>
-            <td>Editor</td>
-            <td>Edita borradores, no publica</td>
+            <td>{msg('admin.misc.editor')}</td>
+            <td>{msg('admin.misc.editaBorradoresNoPublica')}</td>
             <td>—</td>
           </tr>
           <tr>
-            <td>Esta demo</td>
-            <td>Todo, sin login, sólo en este navegador</td>
-            <td>admin-demo</td>
+            <td>{msg('admin.misc.estaDemo')}</td>
+            <td>{msg('admin.misc.todoSinLoginSolo')}</td>
+            <td>{msg('admin.misc.adminDemo')}</td>
           </tr>
         </tbody>
       </table>
@@ -98,17 +99,17 @@ export function UsersSection() {
 /** Integraciones: sólo lectura en la demo. */
 export function IntegrationsSection() {
   const rows: [string, string][] = [
-    [
-      'Ticketera',
-      'Sandbox de prueba: «Comprar» da el sello directamente (D-20). La real, cuando Álvaro la elija (D-06).',
-    ],
-    ['Datos', 'En este navegador (repositorio local). Supabase la sustituye sin cambiar la web.'],
-    ['Correo', 'Sin correo en la versión de prueba.'],
-    ['Analítica', 'Eventos del embudo en la consola; PostHog sin conectar.'],
+    [msg('admin.misc.ticketera'), msg('admin.misc.sandboxDePruebaComprar')],
+    [msg('admin.misc.datos'), msg('admin.misc.enEsteNavegadorRepositorio')],
+    [msg('admin.misc.correo'), msg('admin.misc.sinCorreoEnLa')],
+    [msg('admin.misc.analitica'), msg('admin.misc.eventosDelEmbudoEn')],
   ];
   return (
     <section>
-      <SectionHead title="Integraciones" lead="Sólo lectura en la versión de prueba." />
+      <SectionHead
+        title={msg('admin.misc.integraciones')}
+        lead={msg('admin.misc.soloLecturaEnLa2')}
+      />
       <table className="admin-table" data-testid="integraciones">
         <tbody>
           {rows.map(([k, v]) => (
@@ -124,29 +125,29 @@ export function IntegrationsSection() {
 }
 
 const AREA_LABELS: Partial<Record<string, string>> = {
-  events: 'Eventos',
-  homeBlocks: 'Página principal',
-  artists: 'Artistas',
-  albums: 'Álbumes',
-  photos: 'Fotos',
-  promotions: 'Promociones',
-  discounts: 'Descuentos',
-  achievements: 'Logros',
-  cosmetics: 'Cosméticos',
-  ranks: 'Rangos',
-  places: 'Mundo (mapa)',
-  skins: 'Mundo (pieles)',
-  texts: 'Textos',
-  activeWorld: 'Temporada',
-  bottles: 'Moderación',
-  ledger: 'Recompensas y sellos',
-  purchases: 'Compras',
-  music: 'Música',
-  settings: 'Ajustes',
-  publish: 'Publicación',
-  missionDestinations: 'Destino de la Fiestera',
-  missions: 'Partidas (migración)',
-  carnets: 'Moderación de Carnets',
+  events: msg('admin.misc.eventos'),
+  homeBlocks: msg('admin.misc.paginaPrincipal'),
+  artists: msg('admin.misc.artistas'),
+  albums: msg('admin.misc.albumes'),
+  photos: msg('admin.misc.fotos'),
+  promotions: msg('admin.misc.promociones'),
+  discounts: msg('admin.misc.descuentos'),
+  achievements: msg('admin.misc.logros'),
+  cosmetics: msg('admin.misc.cosmeticos'),
+  ranks: msg('admin.misc.rangos'),
+  places: msg('admin.misc.mundoMapa'),
+  skins: msg('admin.misc.mundoPieles'),
+  texts: msg('admin.misc.textos'),
+  activeWorld: msg('admin.misc.temporada'),
+  bottles: msg('admin.misc.moderacion'),
+  ledger: msg('admin.misc.recompensasYSellos'),
+  purchases: msg('admin.misc.compras'),
+  music: msg('admin.misc.musica'),
+  settings: msg('admin.misc.ajustes'),
+  publish: msg('admin.misc.publicacion'),
+  missionDestinations: msg('admin.misc.destinoDeLaFiestera'),
+  missions: msg('admin.misc.partidasMigracion'),
+  carnets: msg('admin.misc.moderacionDeCarnets'),
 };
 
 /**
@@ -161,28 +162,28 @@ export function TrashSection({ ctx }: { ctx: AdminContext }) {
   const [purging, setPurging] = useState<TrashItem | null>(null);
   const [typed, setTyped] = useState('');
   const { status, busy, run } = useRun();
-  if (!trash || !settings) return <p>Cargando…</p>;
+  if (!trash || !settings) return <p>{msg('empty.loading')}</p>;
   const expired = trash.filter((t) => t.expired).length;
   const day = (iso: string) => new Date(iso).toLocaleDateString('es-ES');
   return (
     <section>
-      <SectionHead
-        title="Papelera"
-        lead="Lo borrado se puede recuperar hasta que pasa el plazo; después se purga solo. Purgar a mano no se puede deshacer."
-      />
+      <SectionHead title={msg('admin.misc.papelera')} lead={msg('admin.misc.loBorradoSePuede')} />
       <form
         className="admin-card admin-row admin-row--end"
         onSubmit={(e) => {
           e.preventDefault();
           void run(
             () => ctx.actions.setTrashRetention(Number(days ?? settings.trashRetentionDays)),
-            'Plazo guardado.',
+            msg('admin.misc.plazoGuardado'),
           );
         }}
       >
         <Field
-          label="Plazo de la papelera (días)"
-          hint={`De ${TRASH_RETENTION_MIN_DAYS} a ${TRASH_RETENTION_MAX_DAYS}. Pendiente de Álvaro.`}
+          label={msg('admin.misc.plazoDeLaPapelera')}
+          hint={msg('admin.misc.deAPendienteDe', {
+            TRASH_RETENTION_MIN_DAYS,
+            TRASH_RETENTION_MAX_DAYS,
+          })}
         >
           <input
             inputMode="numeric"
@@ -197,7 +198,7 @@ export function TrashSection({ ctx }: { ctx: AdminContext }) {
           disabled={busy}
           data-testid="papelera-plazo-guardar"
         >
-          Guardar plazo
+          {msg('admin.misc.guardarPlazo')}
         </button>
         <button
           type="button"
@@ -208,21 +209,25 @@ export function TrashSection({ ctx }: { ctx: AdminContext }) {
               !window.confirm(`¿Purgar ${expired} elemento(s) caducado(s)? No se puede deshacer.`)
             )
               return;
-            void run(() => ctx.actions.purgeExpired(), 'Caducados purgados.');
+            void run(() => ctx.actions.purgeExpired(), msg('admin.misc.caducadosPurgados'));
           }}
         >
-          Purgar lo caducado ({expired})
+          {msg('admin.misc.purgarLoCaducado', { expired })}
         </button>
       </form>
       <StatusLine status={status} />
       {purging ? (
         <div className="admin-card admin-delete__panel" role="group" data-testid="purgar-panel">
           <p>
-            Vas a purgar <strong>«{itemName(purging.area, purging.value)}»</strong> (
-            {AREA_LABELS[purging.area] ?? purging.area}). <strong>No se puede deshacer.</strong>
+            {msg('admin.misc.vasAPurgar')}{' '}
+            <strong>«{itemName(purging.area, purging.value)}»</strong> (
+            {AREA_LABELS[purging.area] ?? purging.area}).{' '}
+            <strong>{msg('admin.misc.noSePuedeDeshacer')}</strong>
           </p>
           <Field
-            label={`Para confirmar otra vez, escribe «${itemName(purging.area, purging.value)}»`}
+            label={msg('admin.misc.paraConfirmarOtraVez', {
+              itemName: itemName(purging.area, purging.value),
+            })}
           >
             <input
               value={typed}
@@ -241,17 +246,17 @@ export function TrashSection({ ctx }: { ctx: AdminContext }) {
                 void run(async () => {
                   await ctx.actions.purgeItem(purging.area, purging.id, typed);
                   setPurging(null);
-                }, 'Purgado para siempre.')
+                }, msg('admin.misc.purgadoParaSiempre'))
               }
             >
-              Purgar para siempre
+              {msg('admin.misc.purgarParaSiempre')}
             </button>
             <button
               type="button"
               className="admin-button admin-button--ghost"
               onClick={() => setPurging(null)}
             >
-              Cancelar
+              {msg('carnet.cancel')}
             </button>
           </div>
         </div>
@@ -264,11 +269,11 @@ export function TrashSection({ ctx }: { ctx: AdminContext }) {
             data-testid={`papelera-${t.area}-${t.id}`}
           >
             <span>
-              <strong>{itemName(t.area, t.value)}</strong> · {AREA_LABELS[t.area] ?? t.area} ·
-              borrado el {day(t.deletedAt)} ·{' '}
+              <strong>{itemName(t.area, t.value)}</strong> · {AREA_LABELS[t.area] ?? t.area}{' '}
+              {msg('admin.misc.borradoEl')} {day(t.deletedAt)} ·{' '}
               {t.expired
-                ? 'plazo cumplido: se purga en el próximo cambio'
-                : `se purga el ${day(t.expiresAt)}`}
+                ? msg('admin.misc.plazoCumplidoSePurga')
+                : msg('admin.misc.sePurgaEl', { day: day(t.expiresAt) })}
             </span>
             <span className="admin-row">
               <button
@@ -276,9 +281,11 @@ export function TrashSection({ ctx }: { ctx: AdminContext }) {
                 className="admin-button admin-button--ghost"
                 disabled={busy}
                 data-testid={`papelera-recuperar-${t.id}`}
-                onClick={() => void run(() => ctx.repo.admin.restore(t.area, t.id), 'Recuperado.')}
+                onClick={() =>
+                  void run(() => ctx.repo.admin.restore(t.area, t.id), msg('admin.misc.recuperado'))
+                }
               >
-                Recuperar
+                {msg('admin.misc.recuperar')}
               </button>
               <button
                 type="button"
@@ -290,12 +297,14 @@ export function TrashSection({ ctx }: { ctx: AdminContext }) {
                   setPurging(t);
                 }}
               >
-                Purgar
+                {msg('admin.misc.purgar')}
               </button>
             </span>
           </li>
         ))}
-        {trash.length === 0 ? <li className="admin-meta">La papelera está vacía.</li> : null}
+        {trash.length === 0 ? (
+          <li className="admin-meta">{msg('admin.misc.laPapeleraEstaVacia')}</li>
+        ) : null}
       </ul>
     </section>
   );
@@ -309,14 +318,14 @@ export function AuditSection({ ctx }: { ctx: AdminContext }) {
   return (
     <section>
       <SectionHead
-        title="Auditoría y muestra"
-        lead="Cada cambio de este Admin queda aquí (autor, fecha, antes y después). Sólo crece."
+        title={msg('admin.misc.auditoriaYMuestra')}
+        lead={msg('admin.misc.cadaCambioDeEste')}
       />
       <div className="admin-card admin-row admin-row--end">
         <label className="admin-field">
-          <span className="admin-field__label">Área</span>
+          <span className="admin-field__label">{msg('admin.misc.area')}</span>
           <select value={area} onChange={(e) => setArea(e.target.value as ContentArea | '')}>
-            <option value="">Elige un área…</option>
+            <option value="">{msg('admin.misc.eligeUnArea')}</option>
             {CONTENT_AREAS.map((a) => (
               <option key={a} value={a}>
                 {AREA_LABELS[a] ?? a}
@@ -329,7 +338,7 @@ export function AuditSection({ ctx }: { ctx: AdminContext }) {
           className="admin-button admin-button--ghost"
           disabled={busy || !area}
           onClick={() =>
-            area && void run(() => ctx.actions.reset(area), 'Área vuelta a la muestra.')
+            area && void run(() => ctx.actions.reset(area), msg('admin.misc.areaVueltaALa'))
           }
         >
           {ADMIN_COPY.resetArea}
@@ -341,7 +350,7 @@ export function AuditSection({ ctx }: { ctx: AdminContext }) {
           data-testid="reset-todo"
           onClick={() => {
             if (!window.confirm(ADMIN_COPY.confirmResetAll)) return;
-            void run(() => ctx.actions.reset('all'), 'Todo vuelve a los datos de muestra.');
+            void run(() => ctx.actions.reset('all'), msg('admin.misc.todoVuelveALos'));
           }}
         >
           {ADMIN_COPY.resetAll}
@@ -357,7 +366,9 @@ export function AuditSection({ ctx }: { ctx: AdminContext }) {
             {e.reason ? ` · ${e.reason}` : ''} · {e.actor}
           </li>
         ))}
-        {audit && audit.length === 0 ? <li className="admin-meta">Sin cambios todavía.</li> : null}
+        {audit && audit.length === 0 ? (
+          <li className="admin-meta">{msg('admin.misc.sinCambiosTodavia')}</li>
+        ) : null}
       </ol>
     </section>
   );

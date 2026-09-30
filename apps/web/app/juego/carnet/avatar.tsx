@@ -1,4 +1,5 @@
 import { AVATAR_IMAGE_MAX } from '@boia/store';
+import { t } from '../../../lib/i18n';
 
 /**
  * Avatar del Carnet (REQ-IDE-010): uno neutro de una lista o una foto del
@@ -15,12 +16,12 @@ export interface NeutralAvatar {
 }
 
 export const NEUTRAL_AVATARS: readonly NeutralAvatar[] = [
-  { key: 'avatar-neutro-1', glyph: '🌊', label: 'Ola', bg: '#1f6f8b' },
-  { key: 'avatar-neutro-2', glyph: '🐚', label: 'Caracola', bg: '#f26a1b' },
-  { key: 'avatar-neutro-3', glyph: '⚓', label: 'Ancla', bg: '#12233f' },
-  { key: 'avatar-neutro-4', glyph: '🌙', label: 'Luna', bg: '#5b4b8a' },
-  { key: 'avatar-neutro-5', glyph: '☀️', label: 'Sol', bg: '#e0a526' },
-  { key: 'avatar-neutro-6', glyph: '🎧', label: 'Cascos', bg: '#2f8f6f' },
+  { key: 'avatar-neutro-1', glyph: '🌊', label: t('juego.avatar.ola'), bg: '#1f6f8b' },
+  { key: 'avatar-neutro-2', glyph: '🐚', label: t('juego.avatar.caracola'), bg: '#f26a1b' },
+  { key: 'avatar-neutro-3', glyph: '⚓', label: t('juego.avatar.ancla'), bg: '#12233f' },
+  { key: 'avatar-neutro-4', glyph: '🌙', label: t('juego.avatar.luna'), bg: '#5b4b8a' },
+  { key: 'avatar-neutro-5', glyph: '☀️', label: t('juego.avatar.sol'), bg: '#e0a526' },
+  { key: 'avatar-neutro-6', glyph: '🎧', label: t('juego.avatar.cascos'), bg: '#2f8f6f' },
 ];
 
 export const DEFAULT_AVATAR = NEUTRAL_AVATARS[0]!;
@@ -47,7 +48,7 @@ export function Avatar({
       <img
         className="carnet-avatar"
         src={image}
-        alt={`Foto de ${name}`}
+        alt={t('juego.avatar.fotoDe', { name })}
         width={size}
         height={size}
         style={{ width: size, height: size }}
@@ -59,7 +60,7 @@ export function Avatar({
     <span
       className="carnet-avatar"
       role="img"
-      aria-label={`Avatar de ${name}: ${a.label}`}
+      aria-label={t('juego.avatar.avatarDe', { name, label: a.label })}
       style={{ width: size, height: size, background: a.bg, fontSize: size * 0.5 }}
     >
       {a.glyph}

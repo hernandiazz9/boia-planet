@@ -17,6 +17,7 @@ import {
   unlockText,
 } from './shop-model';
 import './shop.css';
+import { t as msg } from '../i18n';
 
 /**
  * ⛵ La tienda «Barco» (T40, REQ-IDE-030/031, D-23 punto 1, O5), la misma en
@@ -48,17 +49,17 @@ export async function readShop(r: BoiaRepository): Promise<ShopData> {
 }
 
 export const SHOP_COPY = {
-  intro: 'Barcos, skins, bandera y estela. Sólo cambian cómo se ve tu barco, nunca cómo navega.',
-  noArt: 'El barco de muestra todavía no tiene estilos.',
-  loading: 'Cargando la tienda…',
-  buy: 'Comprar',
-  cancel: 'Cancelar',
-  bought: '¡Ya es tuyo! Equípalo cuando quieras.',
-  noCoins: 'No te llegan las monedas.',
-  failed: 'No se pudo comprar. Prueba otra vez.',
-  firstShip: 'Primero, el barco',
-  noFlag: 'Sin bandera',
-  plainWake: 'Espuma blanca',
+  intro: msg('barco.shop.barcosSkinsBanderaY'),
+  noArt: msg('barco.shop.elBarcoDeMuestra'),
+  loading: msg('barco.shop.cargandoLaTienda'),
+  buy: msg('barco.shop.comprar'),
+  cancel: msg('carnet.cancel'),
+  bought: msg('barco.shop.yaEsTuyoEquipalo'),
+  noCoins: msg('barco.shop.noTeLleganLas'),
+  failed: msg('barco.shop.noSePudoComprar'),
+  firstShip: msg('barco.shop.primeroElBarco'),
+  noFlag: msg('barco.shop.sinBandera'),
+  plainWake: msg('barco.shop.espumaBlanca'),
 } as const;
 
 export interface ShopHandlers {
@@ -115,7 +116,8 @@ export function BarcoShopView({
     <div className="tienda" data-testid="barco" aria-busy={pending || busy}>
       <p className="tienda-intro">{SHOP_COPY.intro}</p>
       <p className="tienda-saldo" data-testid="barco-saldo" data-coins={coins} data-points={points}>
-        Tienes <strong>🪙 {coins}</strong> monedas · <strong>★ {points}</strong> puntos
+        {msg('barco.shop.tienes')} <strong>🪙 {coins}</strong> {msg('barco.shop.monedas')}{' '}
+        <strong>★ {points}</strong> {msg('barco.shop.puntos')}
       </p>
       {message ? (
         <p className="tienda-mensaje" role="status" data-testid="barco-mensaje">
@@ -123,7 +125,7 @@ export function BarcoShopView({
         </p>
       ) : null}
 
-      <h3 id="tienda-barcos">Barcos</h3>
+      <h3 id="tienda-barcos">{msg('barco.shop.barcos')}</h3>
       <ul className="tienda-barcos" role="radiogroup" aria-labelledby="tienda-barcos">
         {rows.ships.map((row) => {
           const i = row.item;
@@ -160,7 +162,7 @@ export function BarcoShopView({
                   className={`tienda-estado${i.owned ? ' is-owned' : ''}`}
                   data-testid={i.owned ? `barco-estado-${row.style}` : `barco-candado-${row.style}`}
                 >
-                  {isOn ? 'Equipado' : why}
+                  {isOn ? msg('barco.shop.equipado') : why}
                 </span>
               </button>
               {buyButton(i, `barco-comprar-${row.style}`)}
@@ -176,18 +178,18 @@ export function BarcoShopView({
 
       {shown ? (
         <>
-          <h3 id="tienda-skins">Skins · {shown.name}</h3>
+          <h3 id="tienda-skins">{msg('barco.shop.skins', { name: shown.name })}</h3>
           <ul className="tienda-skins" role="radiogroup" aria-labelledby="tienda-skins">
             {shown.skins.map((k) => {
               const checked = shown.style === current?.style && k.skin === skin;
               const status = checked
-                ? 'Equipada'
+                ? msg('barco.shop.equipada')
                 : k.item
                   ? !shown.item.owned && !k.owned
                     ? SHOP_COPY.firstShip
                     : text(k.item)
                   : shown.item.owned
-                    ? 'De serie'
+                    ? msg('barco.shop.deSerie')
                     : SHOP_COPY.firstShip;
               return (
                 <li key={k.skin} className="tienda-skin" data-testid={`barco-skin-item-${k.skin}`}>
@@ -219,7 +221,7 @@ export function BarcoShopView({
       ) : null}
 
       <CosmeticList
-        title="Bandera"
+        title={msg('barco.shop.bandera')}
         slot="flag"
         none={SHOP_COPY.noFlag}
         items={rows.flags}
@@ -234,7 +236,7 @@ export function BarcoShopView({
         buy={buyButton}
       />
       <CosmeticList
-        title="Estela"
+        title={msg('barco.shop.estela')}
         slot="wake"
         none={SHOP_COPY.plainWake}
         items={rows.wakes}

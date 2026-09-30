@@ -6,6 +6,7 @@ import { ADMIN_COPY, ADMIN_PREVIEW_PATH } from '../../lib/admin/copy';
 import { type Reference, itemName } from '../../lib/admin/references';
 import type { AdminContext, Status } from './use-admin';
 import { useRead, useRun } from './use-admin';
+import { t as msg } from '../../lib/i18n';
 
 /** Resultado del último cambio de la sección (anunciado a lectores de pantalla). */
 export function StatusLine({ status }: { status: Status }) {
@@ -62,7 +63,7 @@ export function ResetButton({
         onClick={() =>
           void run(async () => {
             for (const a of areas) await ctx.actions.reset(a);
-          }, 'Vuelto a los datos de muestra.')
+          }, msg('admin.ui.vueltoALosDatos'))
         }
       >
         {label}
@@ -75,8 +76,8 @@ export function ResetButton({
 /** Marca de «cambiado en el Admin». */
 export function Changed({ on }: { on: boolean }) {
   return on ? (
-    <span className="admin-badge" title="Cambiado en el Admin (sólo en este navegador)">
-      cambiado
+    <span className="admin-badge" title={msg('admin.ui.cambiadoEnElAdmin')}>
+      {msg('admin.ui.cambiado')}
     </span>
   ) : null;
 }
@@ -108,7 +109,7 @@ export function DeleteButton({
   ctx,
   area,
   id,
-  label = 'A la papelera',
+  label = msg('admin.ui.aLaPapelera'),
 }: {
   ctx: AdminContext;
   area: EntityArea;
@@ -124,7 +125,7 @@ export function DeleteButton({
       setImpact(await ctx.actions.impact(area, id));
       setTyped('');
       setOpen(true);
-    }, 'Revisa lo que se queda sin él antes de borrar.');
+    }, msg('admin.ui.revisaLoQueSe'));
   return (
     <span className="admin-delete">
       <button
@@ -139,12 +140,14 @@ export function DeleteButton({
       {open && impact ? (
         <div className="admin-card admin-delete__panel" role="group" data-testid="borrar-panel">
           <p>
-            Vas a mandar a la papelera <strong>«{impact.name}»</strong>. Se puede recuperar hasta
-            que pase el plazo de la papelera.
+            {msg('admin.ui.vasAMandarA')} <strong>«{impact.name}»</strong>
+            {msg('admin.ui.sePuedeRecuperarHasta')}
           </p>
           {impact.references.length ? (
             <>
-              <p className="admin-meta">Lo nombran ({impact.references.length}):</p>
+              <p className="admin-meta">
+                {msg('admin.ui.loNombran', { length: impact.references.length })}
+              </p>
               <ul className="admin-impact" data-testid="borrar-impacto">
                 {impact.references.map((r, i) => (
                   <li key={i}>
@@ -155,10 +158,10 @@ export function DeleteButton({
             </>
           ) : (
             <p className="admin-meta" data-testid="borrar-impacto">
-              Nada lo nombra.
+              {msg('admin.ui.nadaLoNombra')}
             </p>
           )}
-          <Field label={`Para confirmar, escribe «${impact.name}»`}>
+          <Field label={msg('admin.ui.paraConfirmarEscribe', { name: impact.name })}>
             <input
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
@@ -176,17 +179,17 @@ export function DeleteButton({
                 void run(async () => {
                   await ctx.actions.trashItem(area, id, typed);
                   setOpen(false);
-                }, 'Enviado a la papelera.')
+                }, msg('admin.ui.enviadoALaPapelera'))
               }
             >
-              Borrar
+              {msg('admin.ui.borrar')}
             </button>
             <button
               type="button"
               className="admin-button admin-button--ghost"
               onClick={() => setOpen(false)}
             >
-              Cancelar
+              {msg('carnet.cancel')}
             </button>
           </div>
         </div>
@@ -204,16 +207,18 @@ export function TrashInline({ ctx, area }: { ctx: AdminContext; area: EntityArea
   if (items.length === 0) return null;
   return (
     <div className="admin-meta" data-testid={`papelera-${area}`}>
-      En la papelera:{' '}
+      {msg('admin.ui.enLaPapelera')}{' '}
       {items.map((t) => (
         <button
           key={t.id}
           type="button"
           className="admin-link"
           disabled={busy}
-          onClick={() => void run(() => ctx.repo.admin.restore(area, t.id), 'Recuperado.')}
+          onClick={() =>
+            void run(() => ctx.repo.admin.restore(area, t.id), msg('admin.ui.recuperado'))
+          }
         >
-          recuperar {itemName(area, t.value)}
+          {msg('admin.ui.recuperar', { itemName: itemName(area, t.value) })}
         </button>
       ))}
       <StatusLine status={status} />
@@ -246,11 +251,15 @@ export function DraftBar({ ctx }: { ctx: AdminContext }) {
       <div className="admin-row admin-row--between">
         <p>
           {n === 0 ? (
-            'Sin cambios en borrador: lo que ves es lo publicado.'
+            msg('admin.ui.sinCambiosEnBorrador')
           ) : (
             <>
-              <strong>{n === 1 ? '1 cambio sin publicar' : `${n} cambios sin publicar`}</strong> en
-              la home y los eventos. Nadie los ve hasta «Publicar».
+              <strong>
+                {n === 1
+                  ? msg('admin.ui.n1CambioSinPublicar')
+                  : msg('admin.ui.cambiosSinPublicar', { n })}
+              </strong>{' '}
+              {msg('admin.ui.enLaHomeY')}
             </>
           )}
         </p>
@@ -262,7 +271,7 @@ export function DraftBar({ ctx }: { ctx: AdminContext }) {
             rel="noreferrer"
             data-testid="borrador-vista-previa"
           >
-            Vista previa
+            {msg('admin.ui.vistaPrevia')}
           </a>
           <button
             type="button"
@@ -275,10 +284,10 @@ export function DraftBar({ ctx }: { ctx: AdminContext }) {
                 setProblems(found);
                 if (found.length) throw new Error('arregla lo de abajo antes de publicar');
                 await ctx.actions.publish();
-              }, 'Publicado: ya se ve en la web y en el mar.')
+              }, msg('admin.ui.publicadoYaSeVe'))
             }
           >
-            Publicar
+            {msg('admin.ui.publicar')}
           </button>
           <button
             type="button"
@@ -286,26 +295,26 @@ export function DraftBar({ ctx }: { ctx: AdminContext }) {
             disabled={busy || n === 0}
             data-testid="descartar-borrador"
             onClick={() => {
-              if (!window.confirm('¿Tirar todos los cambios sin publicar?')) return;
+              if (!window.confirm(msg('admin.ui.tirarTodosLosCambios'))) return;
               void run(async () => {
                 await ctx.actions.discardDrafts();
                 setProblems(null);
-              }, 'Borrador descartado.');
+              }, msg('admin.ui.borradorDescartado'));
             }}
           >
-            Descartar borrador
+            {msg('admin.ui.descartarBorrador')}
           </button>
         </span>
       </div>
       {n > 0 ? (
         <details className="admin-details">
-          <summary>Qué cambia</summary>
+          <summary>{msg('admin.ui.queCambia')}</summary>
           <ul className="admin-impact">
             {(pending ?? []).map((c, i) => (
               <li key={i}>
                 {c.area} · {CHANGE_LABELS[c.kind]}
                 {c.id ? ` · ${c.id}` : ''}
-                {c.isNew ? ' · nuevo' : ''}
+                {c.isNew ? msg('admin.ui.nuevo') : ''}
               </li>
             ))}
           </ul>

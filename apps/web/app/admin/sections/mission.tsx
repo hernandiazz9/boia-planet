@@ -12,6 +12,7 @@ import {
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
 import { Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import { t } from '../../../lib/i18n';
 
 /** Valor del selector para «el del mapa». */
 const MAP_DEFAULT = '';
@@ -60,8 +61,8 @@ export function MissionSection({ ctx }: { ctx: AdminContext }) {
     };
   }, [ctx.actions, ctx.revision, worldId, missionId, choice]);
 
-  if (!content) return <p>Cargando…</p>;
-  if (!missionId) return <p>El mapa no tiene ninguna misión.</p>;
+  if (!content) return <p>{t('empty.loading')}</p>;
+  if (!missionId) return <p>{t('admin.mission.elMapaNoTiene')}</p>;
 
   const live = {
     places: content.places,
@@ -85,13 +86,13 @@ export function MissionSection({ ctx }: { ctx: AdminContext }) {
   return (
     <section data-testid="admin-mision">
       <SectionHead
-        title="Destino de la Fiestera"
-        lead="A qué isla lleva cada mundo a la Boia Fiestera en las partidas nuevas. Las partidas ya terminadas no cambian nunca; las empezadas sólo si las migras."
+        title={t('admin.mission.destinoDeLaFiestera')}
+        lead={t('admin.mission.aQueIslaLleva')}
       >
         <ResetButton ctx={ctx} areas={['missionDestinations']} />
       </SectionHead>
       <div className="admin-row">
-        <Field label="Mundo">
+        <Field label={t('admin.mission.mundo')}>
           <select
             value={worldId}
             data-testid="mision-mundo"
@@ -105,8 +106,8 @@ export function MissionSection({ ctx }: { ctx: AdminContext }) {
           </select>
         </Field>
         <Field
-          label="Destino de las partidas nuevas"
-          hint="Sólo islas activas, visibles en este mundo y con radio de llegada."
+          label={t('admin.mission.destinoDeLasPartidas')}
+          hint={t('admin.mission.soloIslasActivasVisibles')}
         >
           <select
             value={choice}
@@ -114,7 +115,9 @@ export function MissionSection({ ctx }: { ctx: AdminContext }) {
             onChange={(e) => setChoice(e.target.value)}
           >
             <option value={MAP_DEFAULT}>
-              El del mapa{mapDefault ? ` (${nameOf(mapDefault.id)})` : ''}
+              {t('admin.mission.elDelMapa', {
+                v1: mapDefault ? ` (${nameOf(mapDefault.id)})` : '',
+              })}
             </option>
             {options.map((p) => (
               <option key={p.id} value={p.id}>
@@ -125,21 +128,26 @@ export function MissionSection({ ctx }: { ctx: AdminContext }) {
         </Field>
       </div>
       <p className="admin-meta" data-testid="mision-actual">
-        Ahora, en {worlds.find((w) => w.id === worldId)?.name ?? worldId}:{' '}
+        {t('admin.mission.ahoraEn')} {worlds.find((w) => w.id === worldId)?.name ?? worldId}:{' '}
         <strong>
-          {current ? nameOf(current) : `el del mapa (${nameOf(mapDefault?.id ?? '')})`}
+          {current
+            ? nameOf(current)
+            : t('admin.mission.elDelMapa2', { nameOf: nameOf(mapDefault?.id ?? '') })}
         </strong>
       </p>
       {impact ? (
         <div className="admin-card" data-testid="mision-impacto">
           <p>
             <strong data-testid="mision-empezadas">{impact.started}</strong>{' '}
-            {impact.started === 1 ? 'partida empezada' : 'partidas empezadas'} en este mundo
+            {impact.started === 1
+              ? t('admin.mission.partidaEmpezada')
+              : t('admin.mission.partidasEmpezadas')}{' '}
+            {t('admin.mission.enEsteMundo')}
             {impact.started > 0 && target
               ? ` (${impact.affected} ${impact.affected === 1 ? 'va' : 'van'} a otra isla que ${nameOf(target)})`
               : ''}
-            ; {impact.completed} {impact.completed === 1 ? 'terminada' : 'terminadas'}, que no
-            cambian.
+            ; {impact.completed} {impact.completed === 1 ? 'terminada' : 'terminadas'}
+            {t('admin.mission.queNoCambian')}
           </p>
           <label className="admin-check">
             <input
@@ -149,10 +157,10 @@ export function MissionSection({ ctx }: { ctx: AdminContext }) {
               data-testid="mision-migrar"
               onChange={(e) => setMigrate(e.target.checked)}
             />
-            Migrar también las partidas empezadas a este destino
+            {t('admin.mission.migrarTambienLasPartidas')}
           </label>
           {migrate ? (
-            <Field label="Motivo de la migración (queda en la auditoría)">
+            <Field label={t('admin.mission.motivoDeLaMigracion')}>
               <input
                 value={reason}
                 data-testid="mision-motivo"
@@ -176,12 +184,12 @@ export function MissionSection({ ctx }: { ctx: AdminContext }) {
                   reason,
                 }),
               migrate
-                ? 'Destino guardado y partidas migradas.'
-                : 'Destino guardado para las partidas nuevas.',
+                ? t('admin.mission.destinoGuardadoYPartidas')
+                : t('admin.mission.destinoGuardadoParaLas'),
             )
           }
         >
-          Guardar destino
+          {t('admin.mission.guardarDestino')}
         </button>
       </div>
       <StatusLine status={status} />

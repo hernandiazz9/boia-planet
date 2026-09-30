@@ -3,6 +3,7 @@ import type { MissionEvent, SavedRescue } from '@boia/engine/mission';
 import type { BoiaRepository, ProgressApi } from '@boia/store';
 import { recordSignal } from './achievements';
 import { rewardTitle } from './world-progress';
+import { t } from '../../lib/i18n';
 
 /**
  * La misión de la Boia Fiestera en el repositorio local (T21,
@@ -17,21 +18,21 @@ type Repo = Pick<BoiaRepository, 'progress' | 'content'>;
 
 /** El aviso del rescate (REQ-AVE-006), tal cual. */
 export const BOARDED_NOTICE = {
-  title: 'Nueva tripulante a bordo',
-  body: 'Boia Fiestera rescatada · Destino: última isla',
+  title: t('mission.rescued.title'),
+  body: t('juego.mission.boiaFiesteraRescatadaDestino'),
 } as const;
 
 /** La celebración de la entrega. muestra */
 export const DELIVERED_NOTICE = {
-  title: '¡Fiesta en la última isla!',
-  body: 'La Boia Fiestera ya está en casa. El mar sigue abierto.',
+  title: t('juego.mission.fiestaEnLaUltima'),
+  body: t('juego.mission.laBoiaFiesteraYa'),
 } as const;
 
 /** Reacción ocasional de la tripulante a un descubrimiento (REQ-AVE-007). muestra */
 export const CREW_REACTIONS = [
-  '🎈 La Fiestera: «¡Uy, qué sitio!»',
-  '🎈 La Fiestera: «¡Aquí montaba yo una fiesta!»',
-  '🎈 La Fiestera: «¿Esto sale en el mapa?»',
+  t('juego.mission.laFiesteraUyQue'),
+  t('juego.mission.laFiesteraAquiMontaba'),
+  t('juego.mission.laFiesteraEstoSale'),
 ] as const;
 
 export function crewReaction(n: number): string {

@@ -6,6 +6,7 @@ import { CarnetCard } from './carnet-card';
 import { CarnetReport } from './carnet-report';
 import { carnetPath } from './share';
 import { useCarnet } from './use-carnet';
+import { t } from '../../../lib/i18n';
 
 /**
  * El Carnet de otra persona sobre el mar (REQ-IDE-017): se abre desde su
@@ -22,7 +23,7 @@ export function CarnetSheet({ userId, onClose }: { userId: string; onClose: () =
         tabIndex={-1}
         className="juego-map juego-sheet"
         role="dialog"
-        aria-label="Carnet BOIA"
+        aria-label={t('juego.carnetSheet.carnetBoia')}
         data-testid="carnet-ajeno"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
@@ -31,25 +32,30 @@ export function CarnetSheet({ userId, onClose }: { userId: string; onClose: () =
         }}
       >
         <header className="juego-sheet-head">
-          <h2>Carnet BOIA</h2>
-          <button type="button" className="juego-close" onClick={onClose} aria-label="Cerrar">
+          <h2>{t('juego.carnetSheet.carnetBoia')}</h2>
+          <button
+            type="button"
+            className="juego-close"
+            onClick={onClose}
+            aria-label={t('juego.carnetSheet.cerrar')}
+          >
             ×
           </button>
         </header>
         {data === undefined ? (
-          <p className="juego-muted">Cargando…</p>
+          <p className="juego-muted">{t('empty.loading')}</p>
         ) : data.carnet ? (
           <>
             <CarnetCard carnet={data.carnet} extras={data.extras} />
             <CarnetReport carnet={data.carnet} />
             <p>
               <Link href={carnetPath(userId)} className="juego-link">
-                Ver a pantalla completa
+                {t('juego.carnetSheet.verAPantallaCompleta')}
               </Link>
             </p>
           </>
         ) : (
-          <p>Este Carnet ya no está disponible.</p>
+          <p>{t('juego.carnetSheet.esteCarnetYaNo')}</p>
         )}
       </section>
     </div>

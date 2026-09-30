@@ -6,7 +6,8 @@ Python del sistema, sin dependencias. Uso, desde la raíz del repo:
     python3 tools/spec/check.py
 
 Comprueba:
-  - que docs/spec/ tiene exactamente los 12 archivos previstos;
+  - que docs/spec/ tiene exactamente los 12 archivos previstos (más
+    estado.md, el estado por REQ que comprueba tools/spec/estado.py);
   - que cada definición de REQ en 01..08 está bien formada, en el archivo de su
     área y con alcance L1, L2 o diferido, y que ningún ID se define dos veces;
   - que cada REQ definido aparece exactamente una vez en 09-requisitos.md, con
@@ -41,6 +42,8 @@ EXPECTED_FILES = [
     "10-filosofia.md",
     "11-glosario.md",
 ]
+# Otros archivos permitidos, con su propio comprobador.
+OPTIONAL_FILES = ["estado.md"]  # tools/spec/estado.py (REQ-PRO-017, T49)
 # Área -> prefijo del archivo donde se definen sus REQ.
 AREAS = {
     "PRO": "01", "ENT": "02", "MUN": "03", "AVE": "04",
@@ -86,7 +89,7 @@ def main():
     err = errors.append
 
     # 1. Archivos.
-    present = sorted(p.name for p in SPEC.glob("*.md"))
+    present = sorted(p.name for p in SPEC.glob("*.md") if p.name not in OPTIONAL_FILES)
     if present != sorted(EXPECTED_FILES):
         missing = sorted(set(EXPECTED_FILES) - set(present))
         extra = sorted(set(present) - set(EXPECTED_FILES))

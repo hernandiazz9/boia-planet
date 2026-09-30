@@ -1,5 +1,6 @@
 import type { ShopItem } from '@boia/store';
 import { SKIN_LABELS, type ShipCatalog } from './catalog';
+import { t } from '../i18n';
 
 /**
  * La tienda «Barco» sin React (T40, D-23 punto 1, O5): de lo que devuelve
@@ -93,30 +94,39 @@ const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many
  */
 export function unlockText(item: ShopItem, titles: AchievementTitles = {}): string {
   if (item.owned) {
-    if (item.equipped) return 'Equipado';
-    return item.unlock.kind === 'base' ? 'De serie' : 'Tuyo';
+    if (item.equipped) return t('barco.shopModel.equipado');
+    return item.unlock.kind === 'base' ? t('barco.shopModel.deSerie') : t('barco.shopModel.tuyo');
   }
   const u = item.unlock;
   switch (u.kind) {
     case 'coins':
       return item.missing > 0
-        ? `${u.price} 🪙 · te faltan ${n(item.missing, 'moneda', 'monedas')}`
+        ? t('barco.shopModel.teFaltan', { price: u.price, n: n(item.missing, 'moneda', 'monedas') })
         : `${u.price} 🪙`;
     case 'points':
-      return `Con ${u.points} puntos · te faltan ${n(item.missing, 'punto', 'puntos')}`;
+      return t('barco.shopModel.conPuntosTeFaltan', {
+        points: u.points,
+        n: n(item.missing, 'punto', 'puntos'),
+      });
     case 'achievement': {
       const title = titles[u.achievementId];
-      return title ? `Se gana con el logro «${title}»` : 'Se gana con un logro oculto';
+      return title
+        ? t('shop.lockedAchievement', { achievement: title })
+        : t('barco.shopModel.seGanaConUn');
     }
     default:
-      return 'No disponible';
+      return t('barco.shopModel.noDisponible');
   }
 }
 
 /** La pregunta de la confirmación de compra. muestra */
 export function confirmText(item: ShopItem, coins: number): string {
   const price = item.unlock.kind === 'coins' ? item.unlock.price : 0;
-  return `¿Comprar ${item.cosmetic.name} por ${price} 🪙? Te quedarán ${coins - price}.`;
+  return t('barco.shopModel.comprarPorTeQuedaran', {
+    name: item.cosmetic.name,
+    price,
+    v3: coins - price,
+  });
 }
 
 /**

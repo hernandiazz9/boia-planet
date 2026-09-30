@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  FIRST_SECTOR_BUDGET,
-  readAtlasIndex,
-  worldBudgets,
-} from '../../../tools/atlas/budget';
+import { FIRST_SECTOR_BUDGET, readAtlasIndex, worldBudgets } from '../../../tools/atlas/budget';
 import { requestedQuality } from '../app/juego/streaming';
 
 /**

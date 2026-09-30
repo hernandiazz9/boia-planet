@@ -18,6 +18,7 @@ import {
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
 import { Changed, Field, ResetButton, SectionHead, StatusLine } from '../ui';
+import { t } from '../../../lib/i18n';
 
 type Selection = { kind: 'place'; id: string } | { kind: 'point'; key: MapPointKey };
 
@@ -34,9 +35,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const TEXT_KEYS = ['title', 'kicker', 'body'] as const;
 const TEXT_LABELS: Record<(typeof TEXT_KEYS)[number], string> = {
-  title: 'Título del panel',
-  kicker: 'Antetítulo',
-  body: 'Texto del panel',
+  title: t('admin.world.tituloDelPanel'),
+  kicker: t('admin.world.antetitulo'),
+  body: t('admin.world.textoDelPanel'),
 };
 
 /** Mapa compartido en miniatura: cada lugar es un punto; se elige tocándolo. */
@@ -69,7 +70,7 @@ function MapPreview({
       className="admin-map"
       viewBox={`${b.left} ${b.top} ${w} ${h}`}
       role="img"
-      aria-label="Mapa compartido con sus lugares"
+      aria-label={t('admin.world.mapaCompartidoConSus')}
       data-testid="mapa-preview"
     >
       <rect x={b.left} y={b.top} width={w} height={h} fill="#1f7a9c" />
@@ -190,8 +191,8 @@ function PlaceEditor({
       }
       if (Object.keys(p).length) next.params = p as PlacePatch['params'];
       if (Object.keys(next).length === 0) throw new Error('no hay cambios que guardar');
-      await ctx.actions.editPlace(place.id, next, 'editar lugar');
-    }, 'Guardado: el lugar cambia en todos los mundos.');
+      await ctx.actions.editPlace(place.id, next, t('admin.world.editarLugar'));
+    }, t('admin.world.guardadoElLugarCambia'));
 
   return (
     <form
@@ -203,7 +204,7 @@ function PlaceEditor({
       }}
     >
       <h3>
-        En el mapa compartido <Changed on={!!patch} />
+        {t('admin.world.enElMapaCompartido')} <Changed on={!!patch} />
       </h3>
       <p className="admin-lead">{ADMIN_COPY.sharedMapNote}</p>
       <div className="admin-grid">
@@ -223,7 +224,7 @@ function PlaceEditor({
             data-testid="lugar-y"
           />
         </Field>
-        <Field label="Radio de proximidad">
+        <Field label={t('admin.world.radioDeProximidad')}>
           <input
             inputMode="decimal"
             value={radius}
@@ -238,12 +239,12 @@ function PlaceEditor({
             onChange={(e) => setEnabled(e.target.checked)}
             data-testid="lugar-activo"
           />
-          Activo en todos los mundos
+          {t('admin.world.activoEnTodosLos')}
         </label>
       </div>
       <Field
-        label="Parámetros (JSON)"
-        hint="Vaivén, remolino, destino de misión… Rangos seguros de @boia/world."
+        label={t('admin.world.parametrosJson')}
+        hint={t('admin.world.vaivenRemolinoDestinoDe')}
       >
         <textarea
           rows={4}
@@ -255,7 +256,7 @@ function PlaceEditor({
       </Field>
       <div className="admin-row">
         <button type="submit" className="admin-button" disabled={busy} data-testid="lugar-guardar">
-          Guardar en todos los mundos
+          {t('admin.world.guardarEnTodosLos')}
         </button>
         {patch ? (
           <button
@@ -263,10 +264,10 @@ function PlaceEditor({
             className="admin-button admin-button--ghost"
             disabled={busy}
             onClick={() =>
-              void run(() => ctx.actions.clearPlace(place.id), 'El lugar vuelve a la muestra.')
+              void run(() => ctx.actions.clearPlace(place.id), t('admin.world.elLugarVuelveA'))
             }
           >
-            Volver a la muestra
+            {t('admin.world.volverALaMuestra')}
           </button>
         ) : null}
       </div>
@@ -305,11 +306,11 @@ function SkinEditor({
   return (
     <div className="admin-card admin-form" data-testid="piel-editor">
       <h3>
-        En el mundo {world.theme.name} <Changed on={!!patch} />
+        {t('admin.world.enElMundo')} {world.theme.name} <Changed on={!!patch} />
       </h3>
       <p className="admin-lead">{ADMIN_COPY.skinNote}</p>
       <div className="admin-row admin-row--end">
-        <Field label="Nombre">
+        <Field label={t('admin.world.nombre')}>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -323,7 +324,7 @@ function SkinEditor({
           data-testid="lugar-renombrar"
           onClick={() => setAsking(true)}
         >
-          Renombrar
+          {t('admin.world.renombrar')}
         </button>
       </div>
       {asking ? (
@@ -343,7 +344,7 @@ function SkinEditor({
                 setAsking(false);
                 void run(
                   () => ctx.actions.renamePlace(place.id, name, { world: world.id }),
-                  'Renombrado sólo en este mundo.',
+                  t('admin.world.renombradoSoloEnEste'),
                 );
               }}
             >
@@ -357,7 +358,7 @@ function SkinEditor({
                 setAsking(false);
                 void run(
                   () => ctx.actions.renamePlace(place.id, name, 'all'),
-                  'Renombrado en todos los mundos.',
+                  t('admin.world.renombradoEnTodosLos'),
                 );
               }}
             >
@@ -368,7 +369,7 @@ function SkinEditor({
               className="admin-button admin-button--ghost"
               onClick={() => setAsking(false)}
             >
-              Cancelar
+              {t('carnet.cancel')}
             </button>
           </div>
         </div>
@@ -401,7 +402,7 @@ function SkinEditor({
             )
           }
         >
-          Guardar textos
+          {t('admin.world.guardarTextos')}
         </button>
         <label className="admin-check">
           <input
@@ -413,7 +414,7 @@ function SkinEditor({
               void run(() => ctx.actions.setHiddenInWorld(world.id, place.id, e.target.checked))
             }
           />
-          Oculto en este mundo
+          {t('admin.world.ocultoEnEsteMundo')}
         </label>
       </div>
       <StatusLine status={status} />
@@ -448,19 +449,22 @@ function PointEditor({
           if (nx === undefined || ny === undefined)
             throw new Error('la posición necesita dos números');
           await ctx.actions.setMapPoint(pointKey, { x: nx, y: ny });
-        }, 'Guardado: vale en todos los mundos.');
+        }, t('admin.world.guardadoValeEnTodos'));
       }}
     >
       <h3>
         {MAP_POINT_LABELS[pointKey]} <Changed on={places[MAP_POINTS[pointKey]] !== undefined} />
       </h3>
       <p className="admin-lead">
-        {pointKey === 'spawn'
-          ? 'Donde aparece el barco al entrar en /juego.'
-          : pointKey === 'port'
-            ? 'El puerto de salida (El Varadero en Arcilla).'
-            : 'Donde aterriza la cámara de la entrada (la usa la entrada desde T28).'}{' '}
-        Nunca en tierra.
+        {t('admin.world.nuncaEnTierra', {
+          v1:
+            pointKey === 'spawn'
+              ? t('admin.world.dondeApareceElBarco')
+              : pointKey === 'port'
+                ? t('admin.world.elPuertoDeSalida')
+                : t('admin.world.dondeAterrizaLaCamara'),
+          v2: ' ',
+        })}
       </p>
       <div className="admin-grid">
         <Field label="x">
@@ -482,7 +486,7 @@ function PointEditor({
       </div>
       <div className="admin-row">
         <button type="submit" className="admin-button" disabled={busy} data-testid="punto-guardar">
-          Guardar punto
+          {t('admin.world.guardarPunto')}
         </button>
         {places[MAP_POINTS[pointKey]] ? (
           <button
@@ -492,11 +496,11 @@ function PointEditor({
             onClick={() =>
               void run(
                 () => ctx.actions.clearPlace(MAP_POINTS[pointKey]),
-                'El punto vuelve a la muestra.',
+                t('admin.world.elPuntoVuelveA'),
               )
             }
           >
-            Volver a la muestra
+            {t('admin.world.volverALaMuestra')}
           </button>
         ) : null}
       </div>
@@ -530,7 +534,7 @@ export function WorldSection({ ctx }: { ctx: AdminContext }) {
     }
   }, [ctx.registry, content, worldId]);
 
-  if (!content || !view) return <p>Cargando…</p>;
+  if (!content || !view) return <p>{t('empty.loading')}</p>;
   const { map, world } = view;
   const patches = content.places;
   const skinPatches = content.skins;
@@ -550,11 +554,11 @@ export function WorldSection({ ctx }: { ctx: AdminContext }) {
 
   return (
     <section>
-      <SectionHead title="Mundo" lead={ADMIN_COPY.sharedMapNote}>
+      <SectionHead title={t('admin.world.mundo')} lead={ADMIN_COPY.sharedMapNote}>
         <ResetButton ctx={ctx} areas={['places', 'skins']} />
       </SectionHead>
       <div className="admin-row">
-        <Field label="Mundo (piel)">
+        <Field label={t('admin.world.mundoPiel')}>
           <select
             value={worldId}
             onChange={(e) => setWorldId(e.target.value)}
@@ -567,14 +571,14 @@ export function WorldSection({ ctx }: { ctx: AdminContext }) {
             ))}
           </select>
         </Field>
-        <Field label="Buscar lugar">
+        <Field label={t('admin.world.buscarLugar')}>
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="isla, cofre, faro…"
+            placeholder={t('admin.world.islaCofreFaro')}
           />
         </Field>
-        <Field label="Lugar">
+        <Field label={t('admin.world.lugar')}>
           <select
             value={selectValue}
             data-testid="lugar-selector"
@@ -586,19 +590,19 @@ export function WorldSection({ ctx }: { ctx: AdminContext }) {
               );
             }}
           >
-            <option value="">Elige un lugar…</option>
-            <optgroup label="Puntos del mapa">
+            <option value="">{t('admin.world.eligeUnLugar')}</option>
+            <optgroup label={t('admin.world.puntosDelMapa')}>
               {MAP_POINT_KEYS.map((k) => (
                 <option key={k} value={MAP_POINTS[k]}>
                   {MAP_POINT_LABELS[k]}
                 </option>
               ))}
             </optgroup>
-            <optgroup label="Lugares">
+            <optgroup label={t('admin.world.lugares')}>
               {list.map((p) => (
                 <option key={p.id} value={p.id}>
                   {nameOf(p.id)} · {p.id}
-                  {patches[p.id] ? ' · cambiado' : ''}
+                  {patches[p.id] ? t('admin.world.cambiado') : ''}
                 </option>
               ))}
             </optgroup>
@@ -643,7 +647,7 @@ export function WorldSection({ ctx }: { ctx: AdminContext }) {
               places={patches}
             />
           ) : (
-            <p className="admin-lead">Elige un lugar en la lista o tócalo en el mapa.</p>
+            <p className="admin-lead">{t('admin.world.eligeUnLugarEn')}</p>
           )}
         </div>
       </div>

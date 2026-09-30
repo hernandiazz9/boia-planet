@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { es, type MessageKey } from '../../../lib/i18n/es';
+import { es, LANDING_TEXT_KEYS, type MessageKey } from '../../../lib/i18n/es';
 import type { AdminContext } from '../use-admin';
 import { useRead, useRun } from '../use-admin';
 import {
@@ -13,21 +13,22 @@ import {
   StatusLine,
   TrashInline,
 } from '../ui';
+import { t as msg } from '../../../lib/i18n';
 
 /** Textos de la web que se pueden cambiar: los de la landing sin variables. */
-const KEYS = (Object.keys(es) as MessageKey[]).filter((k) => !es[k].includes('{'));
+const KEYS = LANDING_TEXT_KEYS.filter((k) => !es[k].includes('{'));
 
 const GROUPS: [string, string][] = [
-  ['hero.', 'Portada'],
-  ['nav.', 'Cabecera'],
-  ['tickets.', 'Tickets'],
-  ['event.', 'Eventos'],
-  ['artists.', 'Artistas'],
-  ['footer.', 'Pie'],
+  ['hero.', msg('admin.texts.portada')],
+  ['nav.', msg('admin.texts.cabecera')],
+  ['tickets.', msg('admin.texts.tickets')],
+  ['event.', msg('admin.texts.eventos')],
+  ['artists.', msg('admin.texts.artistas')],
+  ['footer.', msg('admin.texts.pie')],
 ];
 
 function groupOf(k: string): string {
-  return GROUPS.find(([p]) => k.startsWith(p))?.[1] ?? 'Otros';
+  return GROUPS.find(([p]) => k.startsWith(p))?.[1] ?? msg('admin.texts.otros');
 }
 
 function TextRow({
@@ -61,7 +62,7 @@ function TextRow({
           )
         }
       >
-        Guardar
+        {msg('admin.texts.guardar')}
       </button>
       <StatusLine status={status} />
     </li>
@@ -72,24 +73,21 @@ function TextRow({
 export function TextsSection({ ctx }: { ctx: AdminContext }) {
   const texts = useRead(ctx, (r) => r.content.texts());
   const [filter, setFilter] = useState('');
-  if (!texts) return <p>Cargando…</p>;
+  if (!texts) return <p>{msg('empty.loading')}</p>;
   const q = filter.trim().toLowerCase();
   const keys = KEYS.filter((k) => !q || k.includes(q) || es[k].toLowerCase().includes(q));
   const groups = [...new Set(keys.map(groupOf))];
   return (
     <section>
-      <SectionHead
-        title="Textos y música"
-        lead="Textos de la web. Los de cada lugar del mundo se cambian en Mundo, por mundo."
-      >
+      <SectionHead title={msg('admin.texts.textosYMusica')} lead={msg('admin.texts.textosDeLaWeb')}>
         <ResetButton ctx={ctx} areas={['texts']} />
       </SectionHead>
       <label className="admin-field">
-        <span className="admin-field__label">Buscar</span>
+        <span className="admin-field__label">{msg('admin.texts.buscar')}</span>
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="explorar, tickets…"
+          placeholder={msg('admin.texts.explorarTickets')}
         />
       </label>
       {groups.map((g) => (
@@ -137,18 +135,18 @@ function MusicPanel({ ctx }: { ctx: AdminContext }) {
   const { status, busy, run } = useRun();
   return (
     <>
-      <h3>Música</h3>
+      <h3>{msg('admin.texts.musica')}</h3>
       <p className="admin-lead">
-        Música de ambiente y efectos, cada pista con su licencia y su origen. Se guarda sólo en este
-        navegador (muestra). Ranura de cada mundo:{' '}
-        {ctx.registry
-          .ids()
-          .map((id) => {
-            const w = ctx.registry.get(id);
-            return `${w.theme.name}: ${w.theme.music ?? 'loop generado'}`;
-          })
-          .join(' · ')}
-        .
+        {msg('admin.texts.musicaDeAmbienteY', {
+          v1: ' ',
+          v2: ctx.registry
+            .ids()
+            .map((id) => {
+              const w = ctx.registry.get(id);
+              return `${w.theme.name}: ${w.theme.music ?? msg('admin.texts.loopGenerado')}`;
+            })
+            .join(' · '),
+        })}
       </p>
       <form
         className="admin-card admin-form"
@@ -172,11 +170,11 @@ function MusicPanel({ ctx }: { ctx: AdminContext }) {
             setLicence('');
             setOrigin('');
             setLicenceUrl('');
-          }, 'Pista guardada en este navegador (muestra).');
+          }, msg('admin.texts.pistaGuardadaEnEste'));
         }}
       >
         <div className="admin-grid">
-          <Field label="Archivo de audio" hint="mp3, ogg o wav; hasta ~1 MB en la demo.">
+          <Field label={msg('admin.texts.archivoDeAudio')} hint={msg('admin.texts.mp3OggOWav')}>
             <input
               type="file"
               accept="audio/*"
@@ -184,22 +182,22 @@ function MusicPanel({ ctx }: { ctx: AdminContext }) {
               data-testid="musica-archivo"
             />
           </Field>
-          <Field label="Título">
+          <Field label={msg('admin.texts.titulo')}>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               data-testid="musica-titulo"
             />
           </Field>
-          <Field label="Tipo">
+          <Field label={msg('admin.texts.tipo')}>
             <select value={kind} onChange={(e) => setKind(e.target.value as 'ambient' | 'effect')}>
-              <option value="ambient">Música de ambiente</option>
-              <option value="effect">Efecto de sonido</option>
+              <option value="ambient">{msg('settings.music')}</option>
+              <option value="effect">{msg('admin.texts.efectoDeSonido')}</option>
             </select>
           </Field>
-          <Field label="Mundo">
+          <Field label={msg('admin.texts.mundo')}>
             <select value={worldId} onChange={(e) => setWorldId(e.target.value)}>
-              <option value="">Todos</option>
+              <option value="">{msg('admin.texts.todos')}</option>
               {ctx.registry.list().map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
@@ -207,26 +205,26 @@ function MusicPanel({ ctx }: { ctx: AdminContext }) {
               ))}
             </select>
           </Field>
-          <Field label="Licencia" hint="CC BY 4.0, propia, cedida por…">
+          <Field label={msg('admin.texts.licencia')} hint={msg('admin.texts.ccBy40')}>
             <input
               value={licence}
               onChange={(e) => setLicence(e.target.value)}
               data-testid="musica-licencia"
             />
           </Field>
-          <Field label="Autor u origen">
+          <Field label={msg('admin.texts.autorUOrigen')}>
             <input
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
               data-testid="musica-origen"
             />
           </Field>
-          <Field label="Enlace de la licencia (opcional)">
+          <Field label={msg('admin.texts.enlaceDeLaLicencia')}>
             <input type="url" value={licenceUrl} onChange={(e) => setLicenceUrl(e.target.value)} />
           </Field>
         </div>
         <button type="submit" className="admin-button" disabled={busy} data-testid="musica-subir">
-          Subir pista
+          {msg('admin.texts.subirPista')}
         </button>
         <StatusLine status={status} />
       </form>
@@ -237,20 +235,20 @@ function MusicPanel({ ctx }: { ctx: AdminContext }) {
             <div className="admin-row admin-row--between">
               <div>
                 <strong>{t.title}</strong> · {t.kind === 'ambient' ? 'ambiente' : 'efecto'} ·{' '}
-                {t.worldId ?? 'todos los mundos'} · muestra
+                {t.worldId ?? msg('admin.texts.todosLosMundos')} {msg('admin.texts.muestra')}
                 <p className="admin-meta">
-                  Licencia: {t.licence}
+                  {msg('admin.texts.licencia2')} {t.licence}
                   {t.licenceUrl ? (
                     <>
                       {' '}
                       (
                       <a href={t.licenceUrl} target="_blank" rel="noreferrer">
-                        enlace
+                        {msg('admin.texts.enlace')}
                       </a>
                       )
                     </>
                   ) : null}{' '}
-                  · Origen: {t.origin}
+                  {msg('admin.texts.origen')} {t.origin}
                 </p>
               </div>
               <DeleteButton ctx={ctx} area="music" id={t.id} />
@@ -261,7 +259,7 @@ function MusicPanel({ ctx }: { ctx: AdminContext }) {
           </li>
         ))}
         {tracks && tracks.length === 0 ? (
-          <li className="admin-meta">Sin pistas subidas todavía.</li>
+          <li className="admin-meta">{msg('admin.texts.sinPistasSubidasTodavia')}</li>
         ) : null}
       </ul>
     </>

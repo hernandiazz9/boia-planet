@@ -2,6 +2,7 @@ import type { WorldEvent } from '@boia/engine';
 import type { Notice } from '@boia/engine/ui';
 import { type FoundDiscount, type ProgressApi, isStoreError } from '@boia/store';
 import { recordSignal } from './achievements';
+import { t } from '../../lib/i18n';
 
 /**
  * Del mar al repositorio local (T20, D-20): lo que el motor emite (premios,
@@ -22,8 +23,7 @@ export interface ProgressContext {
 }
 
 export type ProgressOutcome =
-  | { kind: 'notice'; notice: Notice }
-  | { kind: 'discount'; found: FoundDiscount; notice: Notice };
+  { kind: 'notice'; notice: Notice } | { kind: 'discount'; found: FoundDiscount; notice: Notice };
 
 /** Textos de los premios. muestra */
 export function rewardTitle(kind: 'coins' | 'points', n: number): string {
@@ -32,8 +32,9 @@ export function rewardTitle(kind: 'coins' | 'points', n: number): string {
 }
 
 export function discountTitle(f: FoundDiscount): string {
-  if (f.status === 'expired') return `Código caducado: ${f.discount.code}`;
-  return `Descuento encontrado: ${f.discount.code}`;
+  if (f.status === 'expired')
+    return t('juego.worldProgress.codigoCaducado', { code: f.discount.code });
+  return t('juego.worldProgress.descuentoEncontrado', { code: f.discount.code });
 }
 
 /** Origen estable de un premio del mundo: lugar, tipo y, si es por visita, la visita. */

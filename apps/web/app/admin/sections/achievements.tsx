@@ -30,6 +30,7 @@ import {
   StatusLine,
   TrashInline,
 } from '../ui';
+import { t as msg } from '../../../lib/i18n';
 
 const int = (s: string) => {
   const n = Number(s);
@@ -37,8 +38,8 @@ const int = (s: string) => {
 };
 
 const SCOPE_LABELS: Record<AchievementScope, string> = {
-  global: 'Global (todos los mundos)',
-  season: 'De una temporada (un mundo)',
+  global: msg('admin.achievements.globalTodosLosMundos'),
+  season: msg('admin.achievements.deUnaTemporadaUn'),
 };
 
 /** Lo que se escribe en el formulario de un logro (todo texto). */
@@ -171,12 +172,14 @@ function AchievementForm({
         };
         const saved = await ctx.actions.saveAchievement(
           input,
-          f.id ? 'editar logro' : 'nuevo logro',
+          f.id ? msg('admin.achievements.editarLogro') : msg('admin.achievements.nuevoLogro'),
         );
         onDone();
         return saved;
       },
-      conditionChanged ? 'Guardado como versión nueva.' : 'Logro guardado.',
+      conditionChanged
+        ? msg('admin.achievements.guardadoComoVersionNueva')
+        : msg('admin.achievements.logroGuardado'),
     );
 
   return (
@@ -188,9 +191,13 @@ function AchievementForm({
         void save();
       }}
     >
-      <h3>{f.id ? `Editar «${initial.title}»` : 'Nuevo logro'}</h3>
+      <h3>
+        {f.id
+          ? msg('admin.achievements.editar', { title: initial.title })
+          : msg('admin.achievements.nuevoLogro2')}
+      </h3>
       <div className="admin-grid">
-        <Field label="Título">
+        <Field label={msg('admin.achievements.titulo')}>
           <input
             required
             value={f.title}
@@ -198,7 +205,10 @@ function AchievementForm({
             data-testid="logro-titulo"
           />
         </Field>
-        <Field label="Condición" hint="Del catálogo: sin lógica libre.">
+        <Field
+          label={msg('admin.achievements.condicion')}
+          hint={msg('admin.achievements.delCatalogoSinLogica')}
+        >
           <select
             value={f.trigger}
             onChange={(e) => {
@@ -218,7 +228,11 @@ function AchievementForm({
           <Field
             key={p.key}
             label={p.label}
-            hint={p.kind === 'int' ? `De ${p.min} a ${p.max}.` : undefined}
+            hint={
+              p.kind === 'int'
+                ? msg('admin.achievements.deA', { min: p.min, max: p.max })
+                : undefined
+            }
           >
             {p.kind === 'choice' ? (
               <select
@@ -226,7 +240,11 @@ function AchievementForm({
                 onChange={(e) => set('params', { ...f.params, [p.key]: e.target.value })}
                 data-testid={`logro-param-${p.key}`}
               >
-                <option value="">{p.optional ? 'Cualquiera' : 'Elige…'}</option>
+                <option value="">
+                  {p.optional
+                    ? msg('admin.achievements.cualquiera')
+                    : msg('admin.achievements.elige')}
+                </option>
                 {choices[p.source].map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -243,7 +261,7 @@ function AchievementForm({
             )}
           </Field>
         ))}
-        <Field label="Puntos">
+        <Field label={msg('admin.achievements.puntos')}>
           <input
             inputMode="numeric"
             value={f.points}
@@ -251,7 +269,7 @@ function AchievementForm({
             data-testid="logro-puntos"
           />
         </Field>
-        <Field label="Monedas">
+        <Field label={msg('admin.achievements.monedas')}>
           <input
             inputMode="numeric"
             value={f.coins}
@@ -259,13 +277,13 @@ function AchievementForm({
             data-testid="logro-monedas"
           />
         </Field>
-        <Field label="Icono">
+        <Field label={msg('admin.achievements.icono')}>
           <select
             value={f.iconKey}
             onChange={(e) => set('iconKey', e.target.value)}
             data-testid="logro-icono"
           >
-            <option value="">Sin icono</option>
+            <option value="">{msg('admin.achievements.sinIcono')}</option>
             {ACHIEVEMENT_ICONS.map((i) => (
               <option key={i} value={i}>
                 {i}
@@ -273,9 +291,9 @@ function AchievementForm({
             ))}
           </select>
         </Field>
-        <Field label="Premio (cosmético o barco)">
+        <Field label={msg('admin.achievements.premioCosmeticoOBarco')}>
           <select value={f.cosmeticKey} onChange={(e) => set('cosmeticKey', e.target.value)}>
-            <option value="">Sólo puntos y monedas</option>
+            <option value="">{msg('admin.achievements.soloPuntosYMonedas')}</option>
             {cosmetics.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} ({c.slot})
@@ -283,7 +301,7 @@ function AchievementForm({
             ))}
           </select>
         </Field>
-        <Field label="Ámbito">
+        <Field label={msg('admin.achievements.ambito')}>
           <select
             value={f.scope}
             onChange={(e) => set('scope', e.target.value as AchievementScope)}
@@ -297,13 +315,13 @@ function AchievementForm({
           </select>
         </Field>
         {f.scope === 'season' ? (
-          <Field label="Temporada">
+          <Field label={msg('admin.achievements.temporada')}>
             <select
               value={f.seasonId}
               onChange={(e) => set('seasonId', e.target.value)}
               data-testid="logro-temporada"
             >
-              <option value="">Elige un mundo…</option>
+              <option value="">{msg('admin.achievements.eligeUnMundo')}</option>
               {ctx.registry.list().map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
@@ -312,7 +330,7 @@ function AchievementForm({
             </select>
           </Field>
         ) : null}
-        <Field label="Desde (opcional)">
+        <Field label={msg('admin.achievements.desdeOpcional')}>
           <input
             type="datetime-local"
             value={f.startsAt}
@@ -320,7 +338,7 @@ function AchievementForm({
             data-testid="logro-desde"
           />
         </Field>
-        <Field label="Hasta (opcional)">
+        <Field label={msg('admin.achievements.hastaOpcional')}>
           <input
             type="datetime-local"
             value={f.endsAt}
@@ -334,7 +352,7 @@ function AchievementForm({
             checked={f.active}
             onChange={(e) => set('active', e.target.checked)}
           />
-          Activo (desactivar sólo evita concesiones nuevas)
+          {msg('admin.achievements.activoDesactivarSoloEvita')}
         </label>
         <label className="admin-check">
           <input
@@ -342,24 +360,23 @@ function AchievementForm({
             checked={f.secret}
             onChange={(e) => set('secret', e.target.checked)}
           />
-          Secreto («???» hasta conseguirlo)
+          {msg('admin.achievements.secretoHastaConseguirlo')}
         </label>
       </div>
-      <Field label="Descripción">
+      <Field label={msg('admin.achievements.descripcion')}>
         <input value={f.description} onChange={(e) => set('description', e.target.value)} />
       </Field>
       {conditionChanged ? (
         <p className="admin-meta" data-testid="logro-version-aviso">
-          Cambias la condición: se guarda como una versión nueva. Quien ya lo tiene lo conserva
-          (REQ-ADM-022).
+          {msg('admin.achievements.cambiasLaCondicionSe')}
         </p>
       ) : null}
       <div className="admin-row">
         <button type="submit" className="admin-button" disabled={busy} data-testid="logro-guardar">
-          Guardar logro
+          {msg('admin.achievements.guardarLogro')}
         </button>
         <button type="button" className="admin-button admin-button--ghost" onClick={onDone}>
-          Cancelar
+          {msg('carnet.cancel')}
         </button>
       </div>
       <StatusLine status={status} />
@@ -385,17 +402,31 @@ function AchievementRow({
         <div>
           <strong>{a.title}</strong> <Changed on={changed} />
           <p className="admin-meta">
-            {a.id} · v{a.version} · {conditionText(a)}
+            {msg('admin.achievements.v', {
+              id: a.id,
+              version: a.version,
+              conditionText: conditionText(a),
+            })}
           </p>
           <p className="admin-meta">
-            {a.points} puntos · {a.coins} monedas
-            {a.cosmeticKey ? ` · premio ${a.cosmeticKey}` : ''}
-            {a.iconKey ? ` · icono ${a.iconKey}` : ''} ·{' '}
-            {a.scope === 'season' ? `temporada ${a.seasonId ?? '?'}` : 'global'}
-            {a.startsAt ? ` · desde ${isoToLocal(a.startsAt).replace('T', ' ')}` : ''}
-            {a.endsAt ? ` · hasta ${isoToLocal(a.endsAt).replace('T', ' ')}` : ''}
-            {a.secret ? ' · secreto' : ''}
-            {a.active ? '' : ' · desactivado'}
+            {msg('admin.achievements.puntosMonedas', {
+              points: a.points,
+              coins: a.coins,
+              v3: a.cosmeticKey
+                ? msg('admin.achievements.premio', { cosmeticKey: a.cosmeticKey })
+                : '',
+              v4: a.iconKey ? msg('admin.achievements.icono2', { iconKey: a.iconKey }) : '',
+              v5: ' ',
+              v6: a.scope === 'season' ? `temporada ${a.seasonId ?? '?'}` : 'global',
+              v7: a.startsAt
+                ? msg('admin.achievements.desde', { v1: isoToLocal(a.startsAt).replace('T', ' ') })
+                : '',
+              v8: a.endsAt
+                ? msg('admin.achievements.hasta', { v1: isoToLocal(a.endsAt).replace('T', ' ') })
+                : '',
+              v9: a.secret ? msg('admin.achievements.secreto') : '',
+              v10: a.active ? '' : msg('admin.achievements.desactivado'),
+            })}
           </p>
         </div>
         <span className="admin-row">
@@ -405,7 +436,7 @@ function AchievementRow({
             onClick={onEdit}
             data-testid={`logro-editar-${a.id}`}
           >
-            Editar
+            {msg('admin.achievements.editar2')}
           </button>
           <button
             type="button"
@@ -415,11 +446,11 @@ function AchievementRow({
             onClick={() =>
               void run(
                 () => ctx.actions.duplicateAchievement(a.id),
-                'Duplicado, desactivado hasta revisarlo.',
+                msg('admin.achievements.duplicadoDesactivadoHastaRevisarlo'),
               )
             }
           >
-            Duplicar
+            {msg('admin.achievements.duplicar')}
           </button>
           <DeleteButton ctx={ctx} area="achievements" id={a.id} />
         </span>
@@ -437,13 +468,16 @@ function CosmeticRow({ ctx, c, changed }: { ctx: AdminContext; c: Cosmetic; chan
   return (
     <li className="admin-card" data-testid={`cosmetico-${c.id}`}>
       <p className="admin-meta">
-        {c.id} · ranura {c.slot} <Changed on={changed} />
+        {c.id} {msg('admin.achievements.ranura')} {c.slot} <Changed on={changed} />
       </p>
       <div className="admin-grid">
-        <Field label="Nombre">
+        <Field label={msg('admin.achievements.nombre')}>
           <input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Precio en monedas" hint="Vacío: sólo con un logro.">
+        <Field
+          label={msg('admin.achievements.precioEnMonedas')}
+          hint={msg('admin.achievements.vacioSoloConUn')}
+        >
           <input
             inputMode="numeric"
             value={price}
@@ -453,7 +487,7 @@ function CosmeticRow({ ctx, c, changed }: { ctx: AdminContext; c: Cosmetic; chan
         </Field>
         <label className="admin-check">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-          Activo
+          {msg('admin.achievements.activo')}
         </label>
       </div>
       <button
@@ -472,7 +506,7 @@ function CosmeticRow({ ctx, c, changed }: { ctx: AdminContext; c: Cosmetic; chan
           })
         }
       >
-        Guardar
+        {msg('admin.achievements.guardar')}
       </button>
       <StatusLine status={status} />
     </li>
@@ -486,10 +520,10 @@ function RankRow({ ctx, r, changed }: { ctx: AdminContext; r: Rank; changed: boo
   return (
     <li className="admin-card" data-testid={`rango-${r.id}`}>
       <div className="admin-row admin-row--end">
-        <Field label="Rango">
+        <Field label={msg('admin.achievements.rango')}>
           <input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Desde (puntos)">
+        <Field label={msg('admin.achievements.desdePuntos')}>
           <input inputMode="numeric" value={min} onChange={(e) => setMin(e.target.value)} />
         </Field>
         <Changed on={changed} />
@@ -509,7 +543,7 @@ function RankRow({ ctx, r, changed }: { ctx: AdminContext; r: Rank; changed: boo
             })
           }
         >
-          Guardar
+          {msg('admin.achievements.guardar')}
         </button>
       </div>
       <StatusLine status={status} />
@@ -531,13 +565,13 @@ export function AchievementsSection({ ctx }: { ctx: AdminContext }) {
   const changedC = useRead(ctx, (r) => r.admin.overridden('cosmetics'));
   const changedR = useRead(ctx, (r) => r.admin.overridden('ranks'));
   const [editing, setEditing] = useState<Form | null>(null);
-  if (!achievements || !cosmetics || !ranks) return <p>Cargando…</p>;
+  if (!achievements || !cosmetics || !ranks) return <p>{msg('empty.loading')}</p>;
   const key = (x: object) => JSON.stringify(x);
   return (
     <section>
       <SectionHead
-        title="Logros y cosméticos"
-        lead="Las condiciones son del catálogo (sin lógica libre). Cambiar la condición de un logro es una versión nueva: quien ya lo tiene lo conserva (REQ-ADM-022). Desactivar sólo evita concesiones nuevas."
+        title={msg('admin.achievements.logrosYCosmeticos')}
+        lead={msg('admin.achievements.lasCondicionesSonDel')}
       >
         <button
           type="button"
@@ -545,7 +579,7 @@ export function AchievementsSection({ ctx }: { ctx: AdminContext }) {
           data-testid="logro-nuevo"
           onClick={() => setEditing({ ...EMPTY })}
         >
-          Nuevo logro
+          {msg('admin.achievements.nuevoLogro2')}
         </button>
         <ResetButton ctx={ctx} areas={['achievements', 'cosmetics', 'ranks']} />
       </SectionHead>
@@ -558,7 +592,7 @@ export function AchievementsSection({ ctx }: { ctx: AdminContext }) {
           onDone={() => setEditing(null)}
         />
       ) : null}
-      <h3>Logros</h3>
+      <h3>{msg('admin.achievements.logros')}</h3>
       <TrashInline ctx={ctx} area="achievements" />
       <ul className="admin-list" data-testid="logros-admin">
         {achievements.map((a) => (
@@ -571,13 +605,13 @@ export function AchievementsSection({ ctx }: { ctx: AdminContext }) {
           />
         ))}
       </ul>
-      <h3>Cosméticos del barco</h3>
+      <h3>{msg('admin.achievements.cosmeticosDelBarco')}</h3>
       <ul className="admin-list">
         {cosmetics.map((c) => (
           <CosmeticRow key={key(c)} ctx={ctx} c={c} changed={(changedC ?? []).includes(c.id)} />
         ))}
       </ul>
-      <h3>Rangos</h3>
+      <h3>{msg('admin.achievements.rangos')}</h3>
       <ul className="admin-list">
         {ranks.map((r) => (
           <RankRow key={key(r)} ctx={ctx} r={r} changed={(changedR ?? []).includes(r.id)} />

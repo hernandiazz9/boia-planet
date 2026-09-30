@@ -1,5 +1,5 @@
 import type { Photo } from '@boia/contracts';
-import { FOTOS_COPY } from '../../../lib/landing/eventos-copy';
+import { t } from '../../../lib/i18n/web';
 
 /** Una foto con su texto alternativo, o su marcador de muestra si aún no hay imagen. */
 export function PhotoTile({ photo, index }: { photo: Photo; index: number }) {
@@ -22,7 +22,7 @@ export function PhotoTile({ photo, index }: { photo: Photo; index: number }) {
       aria-label={photo.alt}
       style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
     >
-      <span aria-hidden="true">{FOTOS_COPY.placeholder}</span>
+      <span aria-hidden="true">{t('photos.placeholder')}</span>
     </div>
   );
 }

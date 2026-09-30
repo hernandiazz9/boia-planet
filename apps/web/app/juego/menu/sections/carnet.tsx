@@ -11,6 +11,7 @@ import { useCarnet } from '../../carnet/use-carnet';
 import { INVITE_COPY } from '../../../../lib/landing/invitations';
 import { useRepoData } from '../../repo';
 import type { MenuContext, MenuSection } from '../types';
+import { t } from '../../../../lib/i18n';
 
 /**
  * 🪪 Mi Carnet (REQ-IDE-011): al entrar se ve primero como lo ven otros, con
@@ -26,7 +27,7 @@ function Carnet({ ctx }: { ctx: MenuContext }) {
     document.getElementById('menu-panel')?.scrollTo({ top: 0 });
   }, [editing, data?.carnet?.userId]);
 
-  if (!data || !repo) return <p className="juego-muted">Cargando tu Carnet…</p>;
+  if (!data || !repo) return <p className="juego-muted">{t('juego.carnet.cargandoTuCarnet')}</p>;
   const { carnet, extras } = data;
 
   if (editing) {
@@ -44,19 +45,16 @@ function Carnet({ ctx }: { ctx: MenuContext }) {
   if (!carnet) {
     return (
       <div data-testid="carnet-invitacion">
-        <p>
-          Tu Carnet BOIA es tu identidad musical en el mar: tu apodo, tus respuestas, los sellos de
-          los eventos a los que vas, tu barco y tus logros. Con él puedes echar botellas.
-        </p>
+        <p>{t('juego.carnet.tuCarnetBoiaEs')}</p>
         <button
           type="button"
           className="juego-button"
           data-testid="carnet-crear"
           onClick={() => setEditing(true)}
         >
-          Crear mi Carnet
+          {t('carnet.create')}
         </button>
-        <p className="juego-muted">Sin email. {LOCAL_ONLY_NOTICE}</p>
+        <p className="juego-muted">{t('juego.carnet.sinEmail', { LOCAL_ONLY_NOTICE })}</p>
         {/* REQ-IDE-007 (T44): los límites del progreso local, antes de registrarse. */}
         <p className="juego-muted" data-testid="aviso-progreso-local">
           {INVITE_COPY.localLimit}
@@ -68,7 +66,7 @@ function Carnet({ ctx }: { ctx: MenuContext }) {
   return (
     <div data-testid="carnet-mio">
       <p className="juego-muted" data-testid="carnet-aviso-local">
-        Así lo verán los demás cuando BOIA.PLANET abra. {LOCAL_ONLY_NOTICE}
+        {t('juego.carnet.asiLoVeranLos', { LOCAL_ONLY_NOTICE })}
       </p>
       <CarnetCard carnet={carnet} extras={extras} />
       <div className="carnet-actions">
@@ -78,27 +76,27 @@ function Carnet({ ctx }: { ctx: MenuContext }) {
           data-testid="carnet-editar"
           onClick={() => setEditing(true)}
         >
-          Editar mi Carnet
+          {t('carnet.edit')}
         </button>
       </div>
       <p>
         <Link href={carnetPath(carnet.userId)} className="juego-link">
-          Ver mi Carnet a pantalla completa
+          {t('carnet.fullScreen')}
         </Link>
       </p>
-      <h3>Tu botella</h3>
+      <h3>{t('bottle.title.own')}</h3>
       {bottle ? (
         <p data-testid="carnet-botella">
           🍾 «{bottle.message}»{' '}
           <button type="button" className="juego-link" onClick={ctx.openBottles}>
-            Editar o retirar
+            {t('juego.carnet.editarORetirar')}
           </button>
         </p>
       ) : (
         <p>
-          Aún no has echado ninguna botella.{' '}
+          {t('bottle.empty')}{' '}
           <button type="button" className="juego-link" onClick={ctx.openBottles}>
-            Echar una botella
+            {t('juego.carnet.echarUnaBotella')}
           </button>
         </p>
       )}
@@ -109,7 +107,7 @@ function Carnet({ ctx }: { ctx: MenuContext }) {
 export const carnetSection: MenuSection = {
   id: 'carnet',
   icon: '🪪',
-  label: 'Mi Carnet',
+  label: t('nav.carnet'),
   group: 'progress',
   Component: Carnet,
 };

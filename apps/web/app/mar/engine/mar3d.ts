@@ -2522,9 +2522,10 @@ export class Mar3D {
         this.resize();
       }
     }
-    // Para las pruebas: dónde queda el barco en la pantalla (px del lienzo).
+    // Para las pruebas: dónde queda el barco en la pantalla (px del lienzo). En
+    // vuelo el barco está en el aire (y = altura del vuelo), no en el agua.
     const bp = this.boat.group.position;
-    this.project(bp.x, 0.6, bp.z, this.scr);
+    this.project(bp.x, bp.y + 0.6, bp.z, this.scr);
     this.opts.canvas.dataset.shipScreen = `${Math.round(this.scr.x)},${Math.round(this.scr.y)}`;
     const c = this.course;
     this.opts.onStats?.({

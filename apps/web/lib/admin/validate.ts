@@ -17,6 +17,7 @@ import {
   liveMap,
   mapPoint,
 } from './world';
+import { t } from '../i18n';
 
 /**
  * Validación de un cambio del mundo antes de guardarlo (REQ-ADM-013,
@@ -182,23 +183,35 @@ export interface ParamRange {
  * parámetro (`swirl.strength`). Los valores de la muestra caben con margen.
  */
 export const PARAM_RANGES: Readonly<Record<string, ParamRange>> = {
-  proximityRadius: { label: 'radio de proximidad', min: 1, max: 2000 },
-  'swirl.strength': { label: 'fuerza del remolino', min: 0, max: 400 },
-  'swirl.pull': { label: 'atracción del remolino', min: 0, max: 200 },
-  'patrol.period': { label: 'periodo del vaivén (s)', min: 1, max: 120 },
-  crocRadius: { label: 'radio de los cocodrilos', min: 1, max: 2000 },
-  'missionReward.points': { label: 'puntos de la entrega', min: 0, max: 1000, integer: true },
-  'missionReward.coins': { label: 'monedas de la entrega', min: 0, max: 1000, integer: true },
-  rewardCoins: { label: 'monedas del encuentro', min: 0, max: 500, integer: true },
-  version: { label: 'versión del circuito', min: 1, max: 1000, integer: true },
+  proximityRadius: { label: t('admin.validate.radioDeProximidad'), min: 1, max: 2000 },
+  'swirl.strength': { label: t('admin.validate.fuerzaDelRemolino'), min: 0, max: 400 },
+  'swirl.pull': { label: t('admin.validate.atraccionDelRemolino'), min: 0, max: 200 },
+  'patrol.period': { label: t('admin.validate.periodoDelVaivenS'), min: 1, max: 120 },
+  crocRadius: { label: t('admin.validate.radioDeLosCocodrilos'), min: 1, max: 2000 },
+  'missionReward.points': {
+    label: t('admin.validate.puntosDeLaEntrega'),
+    min: 0,
+    max: 1000,
+    integer: true,
+  },
+  'missionReward.coins': {
+    label: t('admin.validate.monedasDeLaEntrega'),
+    min: 0,
+    max: 1000,
+    integer: true,
+  },
+  rewardCoins: { label: t('admin.validate.monedasDelEncuentro'), min: 0, max: 500, integer: true },
+  version: { label: t('admin.validate.versionDelCircuito'), min: 1, max: 1000, integer: true },
 };
 
 /** Parámetros que son puntos del mar (listas de `{x, y}` o un punto). */
 const POINT_LISTS: Readonly<Record<string, { label: string; min: number; max: number }>> = {
-  'patrol.points': { label: 'puntos del vaivén', min: 2, max: 20 },
-  trail: { label: 'recorrido del encuentro', min: 1, max: 50 },
+  'patrol.points': { label: t('admin.validate.puntosDelVaiven'), min: 2, max: 20 },
+  trail: { label: t('admin.validate.recorridoDelEncuentro'), min: 1, max: 50 },
 };
-const POINTS: Readonly<Record<string, string>> = { missionDrop: 'punto de entrega de la misión' };
+const POINTS: Readonly<Record<string, string>> = {
+  missionDrop: t('admin.validate.puntoDeEntregaDe'),
+};
 
 function valueAt(params: Record<string, unknown>, path: string): unknown {
   let v: unknown = params;
@@ -224,10 +237,17 @@ export function paramProblem(
     const v = valueAt(params, path);
     if (v === undefined) continue;
     if (typeof v !== 'number' || !Number.isFinite(v))
-      return `«${name}»: ${r.label} no es un número`;
-    if (r.integer && !Number.isInteger(v)) return `«${name}»: ${r.label} tiene que ser entero`;
+      return t('admin.validate.noEsUnNumero', { name, label: r.label });
+    if (r.integer && !Number.isInteger(v))
+      return t('admin.validate.tieneQueSerEntero', { name, label: r.label });
     if (v < r.min || v > r.max) {
-      return `«${name}»: ${r.label} fuera de rango (${fmt(v)}; entre ${fmt(r.min)} y ${fmt(r.max)})`;
+      return t('admin.validate.fueraDeRangoEntre2', {
+        name,
+        label: r.label,
+        fmt: fmt(v),
+        fmt2: fmt(r.min),
+        fmt3: fmt(r.max),
+      });
     }
   }
   const inside = (p: unknown) => {
@@ -246,13 +266,18 @@ export function paramProblem(
     const v = valueAt(params, path);
     if (v === undefined) continue;
     if (!Array.isArray(v) || v.length < r.min || v.length > r.max) {
-      return `«${name}»: ${r.label} fuera de rango (entre ${r.min} y ${r.max} puntos)`;
+      return t('admin.validate.fueraDeRangoEntre', {
+        name,
+        label: r.label,
+        min: r.min,
+        max: r.max,
+      });
     }
-    if (!v.every(inside)) return `«${name}»: ${r.label} con puntos fuera del mapa`;
+    if (!v.every(inside)) return t('admin.validate.conPuntosFueraDel', { name, label: r.label });
   }
   for (const [path, label] of Object.entries(POINTS)) {
     const v = valueAt(params, path);
-    if (v !== undefined && !inside(v)) return `«${name}»: ${label} fuera del mapa`;
+    if (v !== undefined && !inside(v)) return t('admin.validate.fueraDelMapa', { name, label });
   }
   return null;
 }
@@ -269,12 +294,12 @@ export function missionProblem(world: WorldConfig): string | null {
     const mission = str(o.params?.mission);
     if (!mission) continue;
     const dest = active.find((x) => x.params?.missionDestination === mission);
-    if (!dest) return `la misión «${mission}» de «${o.identity.name}» no tendría destino`;
+    if (!dest) return t('admin.validate.laMisionDeNo', { mission, name: o.identity.name });
     if (
       dest.geometry.proximityRadius === undefined &&
       !dest.behaviors.some((b) => b.type === 'proximity')
     ) {
-      return `el destino de la misión «${mission}» («${dest.identity.name}») no tiene radio de llegada`;
+      return t('admin.validate.elDestinoDeLa', { mission, name: dest.identity.name });
     }
   }
   return null;
@@ -294,12 +319,12 @@ export function missionDestinationProblem(
   missionId: string,
   placeId: string | null,
 ): string | null {
-  if (!registry.has(worldId)) return `no existe el mundo «${worldId}»`;
+  if (!registry.has(worldId)) return t('admin.validate.noExisteElMundo', { worldId });
   const byMission = { ...(content.missionDestinations?.[worldId] ?? {}) };
   if (placeId === null) delete byMission[missionId];
   else {
     if (!registry.map.places.some((p) => p.id === placeId)) {
-      return `no existe el lugar «${placeId}» en el mapa: la misión se quedaría sin destino`;
+      return t('admin.validate.noExisteElLugar', { placeId });
     }
     byMission[missionId] = placeId;
   }
@@ -310,15 +335,15 @@ export function missionDestinationProblem(
       missionDestinations: { ...(content.missionDestinations ?? {}), [worldId]: byMission },
     }).config;
   } catch (err) {
-    return `el mundo «${worldId}» no sería válido: ${zodMessage(err)}`;
+    return t('admin.validate.elMundoNoSeria', { worldId, zodMessage: zodMessage(err) });
   }
   const spec = rescueMissionOf(world, missionId);
-  if (!spec) return `la misión «${missionId}» no tendría destino en «${worldId}»`;
+  if (!spec) return t('admin.validate.laMisionNoTendria', { missionId, worldId });
   if (placeId === null) return null;
   const o = world.objects.find((x) => x.identity.id === placeId);
   const name = o?.identity.name ?? placeId;
   if (spec.destination !== placeId || !missionDestination(world, placeId)) {
-    return `«${name}» no puede ser destino: tiene que ser una isla activa, visible en «${worldId}» y con radio de llegada`;
+    return t('admin.validate.noPuedeSerDestino', { name, worldId });
   }
   return null;
 }
@@ -350,10 +375,10 @@ export function circuitProblem(world: WorldConfig): string | null {
         ),
       );
     const unique = [...new Set(orders)].sort((a, b) => a - b);
-    if (!unique.includes(0)) return `el circuito «${id}» no tendría salida (arco 0)`;
-    if (orders.length < 2) return `el circuito «${id}» no tendría ruta: hacen falta dos arcos`;
+    if (!unique.includes(0)) return t('admin.validate.elCircuitoNoTendria', { id });
+    if (orders.length < 2) return t('admin.validate.elCircuitoNoTendria2', { id });
     const gap = unique.findIndex((n, i) => n !== i);
-    if (gap >= 0) return `el circuito «${id}» no tendría ruta válida: falta el arco ${gap}`;
+    if (gap >= 0) return t('admin.validate.elCircuitoNoTendria3', { id, gap });
   }
   return null;
 }
@@ -386,7 +411,7 @@ function withEverythingVisible(skin: WorldSkin): WorldSkin {
 export function worldProblem(registry: WorldRegistry, content: WorldContent): string | null {
   const known = new Map(registry.map.places.map((p) => [p.id, p]));
   for (const id of Object.keys(content.places)) {
-    if (!known.has(id) && !isMapPointId(id)) return `no existe el lugar «${id}» en el mapa`;
+    if (!known.has(id) && !isMapPointId(id)) return t('admin.validate.noExisteElLugar2', { id });
   }
   const b = registry.map.bounds;
   for (const [id, patch] of Object.entries(content.places)) {
@@ -395,7 +420,7 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
     const y = patch.y ?? base?.position.y;
     if (x === undefined || y === undefined) continue;
     if (x < b.left || x > b.right || y < b.top || y > b.bottom) {
-      return `«${base?.name ?? id}» quedaría fuera del mapa`;
+      return t('admin.validate.quedariaFueraDelMapa', { v1: base?.name ?? id });
     }
     if (patch.params && base) {
       const merged = { ...(base.params ?? {}), ...patch.params };
@@ -404,9 +429,9 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
     }
   }
   for (const [worldId, byPlace] of Object.entries(content.skins)) {
-    if (!registry.has(worldId)) return `no existe el mundo «${worldId}»`;
+    if (!registry.has(worldId)) return t('admin.validate.noExisteElMundo', { worldId });
     for (const id of Object.keys(byPlace)) {
-      if (!known.has(id)) return `no existe el lugar «${id}» en el mapa`;
+      if (!known.has(id)) return t('admin.validate.noExisteElLugar2', { id });
     }
   }
   // Esquema: cada mundo se compone sin errores, y cada misión que empieza en él
@@ -416,13 +441,13 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
     try {
       composed = composeLiveWorld(registry, id, content).config;
     } catch (err) {
-      return `el mundo «${id}» no sería válido: ${zodMessage(err)}`;
+      return t('admin.validate.elMundoNoSeria2', { id, zodMessage: zodMessage(err) });
     }
     for (const o of composed.objects) {
       const mission = str(o.params?.mission);
       if (!mission || !o.identity.active) continue;
       if (!rescueMissionOf(composed, mission)) {
-        return `la misión «${mission}» se quedaría sin destino en «${id}»`;
+        return t('admin.validate.laMisionSeQuedaria', { mission, id });
       }
     }
   }
@@ -436,7 +461,7 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
   for (const key of MAP_POINT_KEYS) {
     const p = mapPoint(registry.map, key, content.places);
     if (p && !isWater(world, obstacles, p)) {
-      return `${MAP_POINT_LABELS[key]}: quedaría en tierra o fuera del mar navegable`;
+      return t('admin.validate.quedariaEnTierraO', { v1: MAP_POINT_LABELS[key] });
     }
   }
   for (const o of world.objects) {
@@ -444,16 +469,17 @@ export function worldProblem(registry: WorldRegistry, content: WorldContent): st
     for (const beh of o.behaviors) {
       if (beh.type !== 'teleport') continue;
       if (!isWater(world, obstacles, beh.params)) {
-        return `el teletransporte de «${o.identity.name}» dejaría el barco en tierra`;
+        return t('admin.validate.elTeletransporteDeDejaria', { name: o.identity.name });
       }
     }
   }
   const blocked = unreachablePlaces(world, obstacles);
   if (blocked.length > 0) {
     const names = blocked.slice(0, 3).map((o) => `«${o.identity.name}»`);
-    return `una isla cortaría el paso: desde la salida no se llega a ${names.join(', ')}${
-      blocked.length > 3 ? ` y ${blocked.length - 3} más` : ''
-    }`;
+    return t('admin.validate.unaIslaCortariaEl', {
+      names: names.join(', '),
+      v2: blocked.length > 3 ? t('admin.validate.yMas', { v1: blocked.length - 3 }) : '',
+    });
   }
   return null;
 }

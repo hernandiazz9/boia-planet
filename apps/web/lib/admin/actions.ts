@@ -40,6 +40,7 @@ import {
   eventIslands,
   liveMap,
 } from './world';
+import { t as msg } from '../i18n';
 
 /**
  * Lo que hace el Admin de la demo (T26, REQ-ADM-008, REQ-ADM-039) sobre el
@@ -133,7 +134,7 @@ export type MusicInput = Omit<MusicTrack, 'id' | 'sample' | 'kind'> & {
 /** Segunda confirmación: el nombre escrito tiene que ser el del elemento, tal cual. */
 function confirmName(name: string, typed: string): void {
   if (typed.trim() !== name) {
-    throw new AdminError(`para confirmar, escribe el nombre exacto: «${name}»`);
+    throw new AdminError(msg('admin.actions.paraConfirmarEscribeEl', { name }));
   }
 }
 
@@ -168,7 +169,7 @@ export function createAdminActions(deps: AdminDeps) {
 
   const homeBlock = async (id: string): Promise<HomeBlock> => {
     const b = (await repo.admin.draftList('homeBlocks')).find((x) => x.id === id);
-    if (!b) throw new AdminError(`no existe el bloque «${id}»`);
+    if (!b) throw new AdminError(msg('admin.actions.noExisteElBloque', { id }));
     return b;
   };
 
@@ -182,11 +183,12 @@ export function createAdminActions(deps: AdminDeps) {
       ...(await repo.admin.draftList('events')).map((e) => e.id),
     ]);
     if (!input.id && known.has(id)) {
-      throw new AdminError(`ya hay un evento con el id «${id}»: cambia el nombre`);
+      throw new AdminError(msg('admin.actions.yaHayUnEvento', { id }));
     }
     if (input.islandId) {
       const ok = eventIslands(registry.map).some((p) => p.id === input.islandId);
-      if (!ok) throw new AdminError(`la isla «${input.islandId}» no existe o no admite eventos`);
+      if (!ok)
+        throw new AdminError(msg('admin.actions.laIslaNoExiste', { islandId: input.islandId }));
     }
     const artists = new Set((await repo.content.list('artists')).map((a) => a.id));
     const missing = input.artistIds.filter((a) => !artists.has(a));
@@ -198,7 +200,9 @@ export function createAdminActions(deps: AdminDeps) {
     const parsed = eventSchema.safeParse(candidate);
     if (!parsed.success) {
       const i = parsed.error.issues[0];
-      throw new AdminError(`evento: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válido'}`);
+      throw new AdminError(
+        `evento: ${i?.path.join('.') ?? ''} ${i?.message ?? msg('admin.actions.noValido')}`,
+      );
     }
     return parsed.data;
   };
@@ -279,7 +283,11 @@ export function createAdminActions(deps: AdminDeps) {
       const event = await prepareEvent(input);
       const events = await repo.admin.draftList('events');
       await checkWorld({ events: [...events.filter((e) => e.id !== event.id), event] });
-      return repo.admin.draftUpsert('events', event, opts(reason ?? 'borrador de evento'));
+      return repo.admin.draftUpsert(
+        'events',
+        event,
+        opts(reason ?? msg('admin.actions.borradorDeEvento')),
+      );
     },
 
     /**
@@ -295,7 +303,7 @@ export function createAdminActions(deps: AdminDeps) {
       )
         ? (await repo.admin.draftList('events')).find((e) => e.id === id)
         : undefined;
-      if (!published && !draft) throw new AdminError(`no existe el evento «${id}»`);
+      if (!published && !draft) throw new AdminError(msg('admin.actions.noExisteElEvento', { id }));
       const why = `estado a mano: ${state}`;
       if (published) {
         await api.saveEvent({ ...published, state, stateSource: 'manual' }, why);
@@ -313,7 +321,7 @@ export function createAdminActions(deps: AdminDeps) {
     async setEventState(id: string, state: EventState, note?: string | null) {
       if (!EVENT_STATES.includes(state)) throw new AdminError(`estado desconocido: ${state}`);
       const e = await repo.content.get('events', id);
-      if (!e) throw new AdminError(`no existe el evento «${id}»`);
+      if (!e) throw new AdminError(msg('admin.actions.noExisteElEvento', { id }));
       const next: BoiaEvent = { ...e, state };
       if (note) next.stateNote = note;
       else delete next.stateNote;
@@ -323,16 +331,16 @@ export function createAdminActions(deps: AdminDeps) {
     /** Liga (o suelta, con null) un evento a una isla. La isla se queda con sus recuerdos. */
     async linkEventToIsland(eventId: string, islandId: string | null) {
       const e = await repo.content.get('events', eventId);
-      if (!e) throw new AdminError(`no existe el evento «${eventId}»`);
+      if (!e) throw new AdminError(msg('admin.actions.noExisteElEvento2', { eventId }));
       const next: BoiaEvent = { ...e };
       if (islandId) next.islandId = islandId;
       else delete next.islandId;
-      return api.saveEvent(next, islandId ? `isla: ${islandId}` : 'sin isla');
+      return api.saveEvent(next, islandId ? `isla: ${islandId}` : msg('admin.actions.sinIsla'));
     },
 
     async duplicateEvent(id: string) {
       const e = await repo.content.get('events', id);
-      if (!e) throw new AdminError(`no existe el evento «${id}»`);
+      if (!e) throw new AdminError(msg('admin.actions.noExisteElEvento', { id }));
       const events = await repo.content.events();
       let n = 2;
       while (events.some((x) => x.id === `${id}-copia-${n}`)) n++;
@@ -345,7 +353,7 @@ export function createAdminActions(deps: AdminDeps) {
         sample: false,
       };
       delete copy.islandId;
-      return repo.admin.upsert('events', copy, opts(`duplicado de ${id}`));
+      return repo.admin.upsert('events', copy, opts(msg('admin.actions.duplicadoDe', { id })));
     },
 
     // --- Descuentos (T43, REQ-COM-020) --------------------------------------
@@ -358,15 +366,15 @@ export function createAdminActions(deps: AdminDeps) {
     async saveDiscount(input: DiscountFormInput, reason?: string | null): Promise<Discount> {
       const code = input.code.trim().toUpperCase();
       if (!DISCOUNT_CODE.test(code)) {
-        throw new AdminError('el código va en mayúsculas, con letras y cifras (3 a 24)');
+        throw new AdminError(msg('admin.actions.elCodigoVaEn'));
       }
       const id = input.id ?? `dto-${slugify(code)}`;
       const all = await repo.content.list('discounts');
       if (!input.id && all.some((d) => d.id === id)) {
-        throw new AdminError(`ya hay un descuento con el id «${id}»`);
+        throw new AdminError(msg('admin.actions.yaHayUnDescuento', { id }));
       }
       if (all.some((d) => d.id !== id && d.code.toUpperCase() === code)) {
-        throw new AdminError(`ya hay otro descuento con el código «${code}»`);
+        throw new AdminError(msg('admin.actions.yaHayOtroDescuento', { code }));
       }
       const scope = input.scope ?? 'event';
       const candidate: DiscountInput = {
@@ -384,28 +392,34 @@ export function createAdminActions(deps: AdminDeps) {
       if (!candidate.startsAt) delete candidate.startsAt;
       if (!candidate.endsAt) delete candidate.endsAt;
       if (candidate.eventId && !(await repo.content.get('events', candidate.eventId))) {
-        throw new AdminError(`no existe el evento «${candidate.eventId}»`);
+        throw new AdminError(
+          msg('admin.actions.noExisteElEvento2', { eventId: candidate.eventId }),
+        );
       }
       if (
         candidate.hiddenAt &&
         !discountHidingPlaces(registry.map).some((p) => p.id === candidate.hiddenAt)
       ) {
-        throw new AdminError(`«${candidate.hiddenAt}» no es un escondite de códigos`);
+        throw new AdminError(
+          msg('admin.actions.noEsUnEscondite', { hiddenAt: candidate.hiddenAt }),
+        );
       }
       if (candidate.kind === 'percent' && (candidate.value ?? 0) > 100) {
-        throw new AdminError('un porcentaje no pasa de 100');
+        throw new AdminError(msg('admin.actions.unPorcentajeNoPasa'));
       }
       if (
         candidate.startsAt &&
         candidate.endsAt &&
         new Date(candidate.startsAt) >= new Date(candidate.endsAt)
       ) {
-        throw new AdminError('el descuento caduca antes de empezar');
+        throw new AdminError(msg('admin.actions.elDescuentoCaducaAntes'));
       }
       const parsed = discountSchema.safeParse(candidate);
       if (!parsed.success) {
         const i = parsed.error.issues[0];
-        throw new AdminError(`descuento: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válido'}`);
+        throw new AdminError(
+          `descuento: ${i?.path.join('.') ?? ''} ${i?.message ?? msg('admin.actions.noValido')}`,
+        );
       }
       return repo.admin.upsert('discounts', parsed.data, opts(reason ?? 'descuento'));
     },
@@ -416,7 +430,7 @@ export function createAdminActions(deps: AdminDeps) {
      */
     async expireDiscount(id: string) {
       const d = await repo.content.get('discounts', id);
-      if (!d) throw new AdminError(`no existe el descuento «${id}»`);
+      if (!d) throw new AdminError(msg('admin.actions.noExisteElDescuento', { id }));
       const at = now();
       const next: Discount = { ...d, endsAt: at.toISOString() };
       if (next.startsAt && new Date(next.startsAt) >= at) delete next.startsAt;
@@ -430,7 +444,7 @@ export function createAdminActions(deps: AdminDeps) {
       const ids = (await repo.admin.draftList('homeBlocks')).map((b) => b.id);
       const i = ids.indexOf(id);
       const j = i + delta;
-      if (i < 0) throw new AdminError(`no existe el bloque «${id}»`);
+      if (i < 0) throw new AdminError(msg('admin.actions.noExisteElBloque', { id }));
       if (j < 0 || j >= ids.length) return;
       [ids[i], ids[j]] = [ids[j]!, ids[i]!];
       await repo.admin.draftReorder('homeBlocks', ids, opts(`mover ${id}`));
@@ -448,10 +462,10 @@ export function createAdminActions(deps: AdminDeps) {
     /** Titular y subtítulo de la portada. */
     async setHeroTexts(title: string, positioning: string) {
       const hero = (await repo.admin.draftList('homeBlocks')).find((b) => b.type === 'hero');
-      if (!hero || hero.type !== 'hero') throw new AdminError('la home no tiene portada');
+      if (!hero || hero.type !== 'hero') throw new AdminError(msg('admin.actions.laHomeNoTiene'));
       const t = title.trim();
       const p = positioning.trim();
-      if (!t || !p) throw new AdminError('la portada necesita titular y subtítulo');
+      if (!t || !p) throw new AdminError(msg('admin.actions.laPortadaNecesitaTitular'));
       await repo.admin.draftUpsert(
         'homeBlocks',
         { ...hero, title: t, positioning: p },
@@ -470,7 +484,7 @@ export function createAdminActions(deps: AdminDeps) {
         const text = v.trim();
         if (text.length > HOME_CTA_MAX) {
           throw new AdminError(
-            `el botón «${defaults[cta]}» admite hasta ${HOME_CTA_MAX} caracteres`,
+            msg('admin.actions.elBotonAdmiteHasta', { v1: defaults[cta], HOME_CTA_MAX }),
           );
         }
         await repo.admin.draftText(
@@ -487,7 +501,7 @@ export function createAdminActions(deps: AdminDeps) {
         (b) => b.type === 'upcoming_events',
       );
       if (!block || block.type !== 'upcoming_events') {
-        throw new AdminError('la home no tiene bloque de próximos eventos');
+        throw new AdminError(msg('admin.actions.laHomeNoTiene2'));
       }
       const known = new Set((await repo.admin.draftList('events')).map((e) => e.id));
       const missing = eventIds.filter((id) => !known.has(id));
@@ -495,7 +509,7 @@ export function createAdminActions(deps: AdminDeps) {
       await repo.admin.draftUpsert(
         'homeBlocks',
         { ...block, excludeEventIds: [...new Set(eventIds)] },
-        opts('excluir eventos'),
+        opts(msg('admin.actions.excluirEventos')),
       );
     },
 
@@ -503,7 +517,7 @@ export function createAdminActions(deps: AdminDeps) {
     async scheduleBlock(id: string, showFrom: string | null, showUntil: string | null) {
       const b = await homeBlock(id);
       if (showFrom && showUntil && new Date(showFrom) >= new Date(showUntil)) {
-        throw new AdminError('la programación termina antes de empezar');
+        throw new AdminError(msg('admin.actions.laProgramacionTerminaAntes'));
       }
       const next: HomeBlock = { ...b };
       if (showFrom) next.showFrom = showFrom;
@@ -519,15 +533,19 @@ export function createAdminActions(deps: AdminDeps) {
         (b) => b.type === 'priority_event',
       );
       if (!block || block.type !== 'priority_event') {
-        throw new AdminError('la home no tiene bloque de evento prioritario');
+        throw new AdminError(msg('admin.actions.laHomeNoTiene3'));
       }
       if (eventId && !(await repo.admin.draftList('events')).some((e) => e.id === eventId)) {
-        throw new AdminError(`no existe el evento «${eventId}»`);
+        throw new AdminError(msg('admin.actions.noExisteElEvento2', { eventId }));
       }
       const next = { ...block };
       if (eventId) next.eventId = eventId;
       else delete next.eventId;
-      await repo.admin.draftUpsert('homeBlocks', next, opts('evento prioritario'));
+      await repo.admin.draftUpsert(
+        'homeBlocks',
+        next,
+        opts(msg('admin.actions.eventoPrioritario')),
+      );
     },
 
     // --- Borrador y publicación (REQ-ADM-015, REQ-ADM-014) ------------------
@@ -543,18 +561,20 @@ export function createAdminActions(deps: AdminDeps) {
       out.push(...danglingReferences(data));
       const hero = data.homeBlocks.find((b) => b.type === 'hero');
       if (!hero || !hero.visible) {
-        out.push('Página principal: la portada (con «Explorar» y «Tickets») tiene que verse');
+        out.push(msg('admin.actions.paginaPrincipalLaPortada'));
       }
       const texts = await repo.admin.draftTexts();
       for (const key of Object.values(HOME_CTA_KEYS)) {
         if (texts[key] !== undefined && texts[key].trim() === '') {
-          out.push(`Página principal: el botón «${key}» está vacío`);
+          out.push(msg('admin.actions.paginaPrincipalElBoton', { key }));
         }
       }
       try {
         await checkWorld({ events: [...data.events] });
       } catch (err) {
-        out.push(`Mapa: ${err instanceof Error ? err.message : String(err)}`);
+        out.push(
+          msg('admin.actions.mapa', { v1: err instanceof Error ? err.message : String(err) }),
+        );
       }
       return out;
     },
@@ -562,7 +582,7 @@ export function createAdminActions(deps: AdminDeps) {
     /** Publica todo el borrador de una vez (una revisión nueva) si no hay problemas. */
     async publish(reason?: string | null) {
       if ((await repo.admin.pendingDrafts()).length === 0) {
-        throw new AdminError('no hay cambios sin publicar');
+        throw new AdminError(msg('admin.actions.noHayCambiosSin'));
       }
       const problems = await api.publishProblems();
       if (problems.length) {
@@ -573,7 +593,7 @@ export function createAdminActions(deps: AdminDeps) {
 
     /** Tira el borrador (todo, o el de un evento). */
     async discardDrafts(target?: { area: 'homeBlocks' | 'events' | 'texts'; id?: string }) {
-      await repo.admin.discardDrafts(target ?? null, opts('descartar borrador'));
+      await repo.admin.discardDrafts(target ?? null, opts(msg('admin.actions.descartarBorrador')));
     },
 
     // --- Borrar con impacto y papelera (REQ-ADM-029, REQ-ADM-030) -----------
@@ -581,7 +601,7 @@ export function createAdminActions(deps: AdminDeps) {
     /** Nombre del elemento y qué lo nombra: lo que se enseña antes de borrarlo. */
     async impact(area: EntityArea, id: string) {
       const item = await findItem(area, id);
-      if (!item) throw new AdminError(`no existe «${id}»`);
+      if (!item) throw new AdminError(msg('admin.actions.noExiste', { id }));
       const data = await referenceData({ draft: false });
       return { name: itemName(area, item), references: referencesTo(area, id, data) };
     },
@@ -593,11 +613,14 @@ export function createAdminActions(deps: AdminDeps) {
      */
     async trashItem(area: EntityArea, id: string, typedName: string, reason?: string | null) {
       const item = await findItem(area, id);
-      if (!item) throw new AdminError(`no existe «${id}»`);
+      if (!item) throw new AdminError(msg('admin.actions.noExiste', { id }));
       confirmName(itemName(area, item), typedName);
       const published = await repo.content.get(area, id);
       if (!published && (area === 'events' || area === 'homeBlocks')) {
-        await repo.admin.discardDrafts({ area, id }, opts(reason ?? 'borrar borrador'));
+        await repo.admin.discardDrafts(
+          { area, id },
+          opts(reason ?? msg('admin.actions.borrarBorrador')),
+        );
         return;
       }
       await repo.admin.remove(area, id, opts(reason ?? 'papelera'));
@@ -610,9 +633,9 @@ export function createAdminActions(deps: AdminDeps) {
      */
     async purgeItem(area: EntityArea, id: string, typedName: string) {
       const item = (await repo.admin.trash()).find((t) => t.area === area && t.id === id);
-      if (!item) throw new AdminError(`«${id}» no está en la papelera`);
+      if (!item) throw new AdminError(msg('admin.actions.noEstaEnLa', { id }));
       confirmName(itemName(area, item.value), typedName);
-      await repo.admin.purge(area, id, opts('purga confirmada escribiendo el nombre'));
+      await repo.admin.purge(area, id, opts(msg('admin.actions.purgaConfirmadaEscribiendoEl')));
     },
 
     /** Plazo de la papelera en días (REQ-ADM-030) [pendiente Álvaro]. */
@@ -623,14 +646,17 @@ export function createAdminActions(deps: AdminDeps) {
         days > TRASH_RETENTION_MAX_DAYS
       ) {
         throw new AdminError(
-          `el plazo de la papelera va de ${TRASH_RETENTION_MIN_DAYS} a ${TRASH_RETENTION_MAX_DAYS} días`,
+          msg('admin.actions.elPlazoDeLa', { TRASH_RETENTION_MIN_DAYS, TRASH_RETENTION_MAX_DAYS }),
         );
       }
-      return repo.admin.setSettings({ trashRetentionDays: days }, opts('plazo de la papelera'));
+      return repo.admin.setSettings(
+        { trashRetentionDays: days },
+        opts(msg('admin.actions.plazoDeLaPapelera')),
+      );
     },
 
     async purgeExpired() {
-      return repo.admin.purgeExpired(opts('plazo de la papelera cumplido'));
+      return repo.admin.purgeExpired(opts(msg('admin.actions.plazoDeLaPapelera2')));
     },
 
     // --- Logros (REQ-ADM-021, REQ-ADM-022) ----------------------------------
@@ -642,26 +668,28 @@ export function createAdminActions(deps: AdminDeps) {
      */
     async saveAchievement(input: AchievementInput, reason?: string | null) {
       const title = input.title.trim();
-      if (!title) throw new AdminError('un logro necesita título');
+      if (!title) throw new AdminError(msg('admin.actions.unLogroNecesitaTitulo'));
       const all = await repo.content.list('achievements');
       const id = input.id ?? (slugify(title) || 'logro');
-      if (!isStableKey(id)) throw new AdminError(`«${id}» no vale como id`);
+      if (!isStableKey(id)) throw new AdminError(msg('admin.actions.noValeComoId', { id }));
       if (!input.id && all.some((a) => a.id === id)) {
-        throw new AdminError(`ya hay un logro con el id «${id}»: cambia el título`);
+        throw new AdminError(msg('admin.actions.yaHayUnLogro', { id }));
       }
       const params = input.triggerParams ?? {};
       const why = triggerParamsProblem(input.trigger, params, triggerChoices());
       if (why) throw new AdminError(`condición: ${why}`);
       if (input.scope === 'season') {
         if (!input.seasonId || !registry.has(input.seasonId)) {
-          throw new AdminError('un logro de temporada necesita un mundo que exista');
+          throw new AdminError(msg('admin.actions.unLogroDeTemporada'));
         }
       }
       if (input.cosmeticKey && !(await repo.content.get('cosmetics', input.cosmeticKey))) {
-        throw new AdminError(`no existe el premio «${input.cosmeticKey}»`);
+        throw new AdminError(
+          msg('admin.actions.noExisteElPremio', { cosmeticKey: input.cosmeticKey }),
+        );
       }
       if (input.startsAt && input.endsAt && new Date(input.startsAt) >= new Date(input.endsAt)) {
-        throw new AdminError('el logro termina antes de empezar');
+        throw new AdminError(msg('admin.actions.elLogroTerminaAntes'));
       }
       if (input.iconKey && !(ACHIEVEMENT_ICONS as readonly string[]).includes(input.iconKey)) {
         throw new AdminError(`icono desconocido: ${input.iconKey}`);
@@ -680,7 +708,9 @@ export function createAdminActions(deps: AdminDeps) {
       const parsed = achievementDefinitionSchema.safeParse(candidate);
       if (!parsed.success) {
         const i = parsed.error.issues[0];
-        throw new AdminError(`logro: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válido'}`);
+        throw new AdminError(
+          `logro: ${i?.path.join('.') ?? ''} ${i?.message ?? msg('admin.actions.noValido')}`,
+        );
       }
       return repo.admin.upsert('achievements', parsed.data, opts(reason ?? 'logro'));
     },
@@ -688,14 +718,14 @@ export function createAdminActions(deps: AdminDeps) {
     /** Duplica un logro como uno nuevo, desactivado hasta revisarlo. */
     async duplicateAchievement(id: string) {
       const a = await repo.content.get('achievements', id);
-      if (!a) throw new AdminError(`no existe el logro «${id}»`);
+      if (!a) throw new AdminError(msg('admin.actions.noExisteElLogro', { id }));
       const all = await repo.content.list('achievements');
       let n = 2;
       while (all.some((x) => x.id === `${id}-copia-${n}`)) n++;
       return repo.admin.upsert(
         'achievements',
         { ...a, id: `${id}-copia-${n}`, title: `${a.title} (copia)`, active: false, sample: false },
-        opts(`duplicado de ${id}`),
+        opts(msg('admin.actions.duplicadoDe', { id })),
       );
     },
 
@@ -704,24 +734,25 @@ export function createAdminActions(deps: AdminDeps) {
     /** Sube una pista (data URL `muestra`) con su licencia y origen. */
     async saveMusic(input: MusicInput) {
       const title = input.title.trim();
-      if (!title) throw new AdminError('la pista necesita título');
-      if (!input.licence.trim()) throw new AdminError('falta la licencia de la pista');
-      if (!input.origin.trim()) throw new AdminError('falta el autor u origen de la pista');
-      if (!/^data:audio\//.test(input.src)) throw new AdminError('el archivo no es de audio');
+      if (!title) throw new AdminError(msg('admin.actions.laPistaNecesitaTitulo'));
+      if (!input.licence.trim()) throw new AdminError(msg('admin.actions.faltaLaLicenciaDe'));
+      if (!input.origin.trim()) throw new AdminError(msg('admin.actions.faltaElAutorU'));
+      if (!/^data:audio\//.test(input.src))
+        throw new AdminError(msg('admin.actions.elArchivoNoEs'));
       if (input.src.length > MUSIC_DATA_MAX) {
         throw new AdminError(
-          `el audio pesa demasiado para guardarlo en el navegador (hasta ${Math.floor(
-            (MUSIC_DATA_MAX * 3) / 4 / 1024,
-          )} KB)`,
+          msg('admin.actions.elAudioPesaDemasiado', {
+            Math: Math.floor((MUSIC_DATA_MAX * 3) / 4 / 1024),
+          }),
         );
       }
       if (input.worldId && !registry.has(input.worldId)) {
-        throw new AdminError(`no existe el mundo «${input.worldId}»`);
+        throw new AdminError(msg('admin.actions.noExisteElMundo', { worldId: input.worldId }));
       }
       const all = await repo.content.list('music');
       const id = input.id ?? `musica-${slugify(title) || 'pista'}`;
       if (!input.id && all.some((m) => m.id === id)) {
-        throw new AdminError(`ya hay una pista con el id «${id}»: cambia el título`);
+        throw new AdminError(msg('admin.actions.yaHayUnaPista', { id }));
       }
       const candidate: Record<string, unknown> = {
         ...input,
@@ -736,7 +767,9 @@ export function createAdminActions(deps: AdminDeps) {
       const parsed = musicTrackSchema.safeParse(candidate);
       if (!parsed.success) {
         const i = parsed.error.issues[0];
-        throw new AdminError(`pista: ${i?.path.join('.') ?? ''} ${i?.message ?? 'no válida'}`);
+        throw new AdminError(
+          `pista: ${i?.path.join('.') ?? ''} ${i?.message ?? msg('admin.actions.noValida')}`,
+        );
       }
       return repo.admin.upsert('music', parsed.data, opts('música'));
     },
@@ -764,7 +797,7 @@ export function createAdminActions(deps: AdminDeps) {
       const places = { ...(await repo.content.places()) };
       delete places[placeId];
       await checkWorld({ places });
-      await repo.admin.setPlace(placeId, null, opts('volver a la muestra'));
+      await repo.admin.setPlace(placeId, null, opts(msg('admin.actions.volverALaMuestra')));
     },
 
     /**
@@ -773,14 +806,17 @@ export function createAdminActions(deps: AdminDeps) {
      */
     async renamePlace(placeId: string, name: string, scope: RenameScope) {
       const trimmed = name.trim();
-      if (!trimmed) throw new AdminError('un lugar necesita nombre');
+      if (!trimmed) throw new AdminError(msg('admin.actions.unLugarNecesitaNombre'));
       if (!registry.map.places.some((p) => p.id === placeId)) {
-        throw new AdminError(`no existe el lugar «${placeId}»`);
+        throw new AdminError(msg('admin.actions.noExisteElLugar', { placeId }));
       }
       const worlds = scope === 'all' ? registry.ids() : [scope.world];
       for (const w of worlds)
-        if (!registry.has(w)) throw new AdminError(`no existe el mundo «${w}»`);
-      const why = scope === 'all' ? 'nombre en todos los mundos' : `nombre sólo en ${scope.world}`;
+        if (!registry.has(w)) throw new AdminError(msg('admin.actions.noExisteElMundo2', { w }));
+      const why =
+        scope === 'all'
+          ? msg('admin.actions.nombreEnTodosLos')
+          : msg('admin.actions.nombreSoloEn', { world: scope.world });
       for (const w of worlds) await repo.admin.setSkin(w, placeId, { name: trimmed }, opts(why));
     },
 
@@ -800,9 +836,10 @@ export function createAdminActions(deps: AdminDeps) {
 
     /** Oculta (o vuelve a mostrar) un lugar sólo en un mundo. */
     async setHiddenInWorld(worldId: string, placeId: string, hidden: boolean) {
-      if (!registry.has(worldId)) throw new AdminError(`no existe el mundo «${worldId}»`);
+      if (!registry.has(worldId))
+        throw new AdminError(msg('admin.actions.noExisteElMundo', { worldId }));
       if (!registry.map.places.some((p) => p.id === placeId)) {
-        throw new AdminError(`no existe el lugar «${placeId}»`);
+        throw new AdminError(msg('admin.actions.noExisteElLugar', { placeId }));
       }
       if (hidden) {
         // Ocultar el destino de una misión en un mundo la dejaría sin destino (REQ-AVE-010).
@@ -825,22 +862,22 @@ export function createAdminActions(deps: AdminDeps) {
      */
     async setActiveWorld(worldId: string | null) {
       if (worldId !== null && !registry.has(worldId)) {
-        throw new AdminError(`no existe el mundo «${worldId}»`);
+        throw new AdminError(msg('admin.actions.noExisteElMundo', { worldId }));
       }
-      await repo.admin.setActiveWorld(worldId, opts('temporada activa'));
+      await repo.admin.setActiveWorld(worldId, opts(msg('admin.actions.temporadaActiva')));
     },
 
     // --- Muestra ------------------------------------------------------------
 
     /** Vuelve un área (o todo) a los datos de muestra. Queda en la auditoría. */
     async reset(area: ContentArea | 'all') {
-      await repo.admin.reset(area, opts('volver a la muestra'));
+      await repo.admin.reset(area, opts(msg('admin.actions.volverALaMuestra')));
     },
 
     // --- Moderación ---------------------------------------------------------
 
     async removeBottle(id: string, reason: string) {
-      if (!reason.trim()) throw new AdminError('hace falta un motivo para retirar una botella');
+      if (!reason.trim()) throw new AdminError(msg('admin.actions.haceFaltaUnMotivo'));
       await repo.admin.removeBottle(id, opts(reason.trim()));
     },
 
@@ -849,7 +886,7 @@ export function createAdminActions(deps: AdminDeps) {
      * (REQ-ADM-040), sin borrarlo. El motivo queda en la auditoría.
      */
     async moderateCarnet(userId: string, action: CarnetModerationAction, reason: string) {
-      if (!reason.trim()) throw new AdminError('hace falta un motivo (queda en la auditoría)');
+      if (!reason.trim()) throw new AdminError(msg('admin.actions.haceFaltaUnMotivo2'));
       await repo.admin.moderateCarnet(userId, action, opts(reason.trim()));
     },
 
@@ -898,11 +935,11 @@ export function createAdminActions(deps: AdminDeps) {
       const impact = await repo.admin.missionImpact(worldId, missionId, placeId);
       const reason = o.reason?.trim() || null;
       if (o.migrate && impact.affected > 0 && !reason) {
-        throw new AdminError('para migrar partidas empezadas hace falta un motivo');
+        throw new AdminError(msg('admin.actions.paraMigrarPartidasEmpezadas'));
       }
       return repo.admin.setMissionDestination(worldId, missionId, placeId, {
         migrate: !!o.migrate,
-        reason: reason ?? (placeId ? `destino: ${placeId}` : 'destino del mapa'),
+        reason: reason ?? (placeId ? `destino: ${placeId}` : msg('admin.actions.destinoDelMapa')),
       });
     },
   };

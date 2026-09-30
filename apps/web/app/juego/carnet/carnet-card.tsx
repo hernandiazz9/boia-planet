@@ -1,5 +1,6 @@
 import type { CarnetView } from '@boia/store';
 import { Avatar } from './avatar';
+import { t } from '../../../lib/i18n';
 
 /**
  * El Carnet BOIA tal como lo ven los demás (REQ-IDE-010…022): identidad
@@ -14,7 +15,7 @@ import { Avatar } from './avatar';
  */
 
 /** Lo que se ve si la moderación retiró la foto (textos-zonas, zona 18). muestra */
-export const MODERATED_PHOTO = 'Foto retirada por moderación.';
+export const MODERATED_PHOTO = t('carnet.moderated.photo');
 
 export function memberSinceLabel(iso: string): string {
   const d = new Date(iso);
@@ -37,17 +38,25 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
   const since = memberSinceLabel(carnet.memberSince);
   const cosmetics = carnet.cosmeticIds.filter(Boolean);
   return (
-    <article className="carnet" data-testid="carnet" aria-label={`Carnet de ${carnet.nickname}`}>
+    <article
+      className="carnet"
+      data-testid="carnet"
+      aria-label={t('juego.carnetCard.carnetDe', { nickname: carnet.nickname })}
+    >
       <header className="carnet-head">
         <Avatar avatarKey={carnet.avatarKey} image={carnet.avatarImage} name={carnet.nickname} />
         <div>
           <p className="carnet-kicker">
-            Carnet BOIA{carnet.isSample ? ' · miembro de muestra' : ''}
+            {t('juego.carnetCard.carnetBoia', {
+              v1: carnet.isSample ? t('juego.carnetCard.miembroDeMuestra') : '',
+            })}
           </p>
           <h3 className="carnet-name" data-testid="carnet-apodo">
             {carnet.nickname}
           </h3>
-          {since ? <p className="carnet-since">Miembro de BOIA desde {since}</p> : null}
+          {since ? (
+            <p className="carnet-since">{t('carnet.memberSince', { date: since })}</p>
+          ) : null}
           {carnet.moderated.photo ? (
             <p className="carnet-moderated" data-testid="carnet-foto-retirada">
               {MODERATED_PHOTO}
@@ -58,23 +67,25 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
 
       <dl className="carnet-stats">
         <div>
-          <dt>Rango</dt>
+          <dt>{t('juego.carnetCard.rango')}</dt>
           <dd data-testid="carnet-rango">{carnet.rank?.name ?? '—'}</dd>
         </div>
         <div>
-          <dt>Puntos</dt>
+          <dt>{t('juego.carnetCard.puntos')}</dt>
           <dd data-testid="carnet-puntos">{carnet.points}</dd>
         </div>
         <div>
-          <dt>Sellos</dt>
+          <dt>{t('juego.carnetCard.sellos')}</dt>
           <dd>{carnet.stamps.length}</dd>
         </div>
       </dl>
 
-      <section aria-label="Respuestas">
+      <section aria-label={t('juego.carnetCard.respuestas')}>
         {carnet.answers.length === 0 ? (
           <p className="juego-muted">
-            {carnet.isMine ? 'Aún no has contestado ninguna pregunta.' : 'Aún sin respuestas.'}
+            {carnet.isMine
+              ? t('juego.carnetCard.aunNoHasContestado')
+              : t('juego.carnetCard.aunSinRespuestas')}
           </p>
         ) : (
           <ul className="carnet-answers" data-testid="carnet-respuestas">
@@ -90,12 +101,10 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
         )}
       </section>
 
-      <section aria-label="Sellos">
-        <h4>Sellos</h4>
+      <section aria-label={t('juego.carnetCard.sellos')}>
+        <h4>{t('juego.carnetCard.sellos')}</h4>
         {carnet.stamps.length === 0 ? (
-          <p className="juego-muted">
-            Aún sin sellos. Cada evento deja el suyo al comprar la entrada.
-          </p>
+          <p className="juego-muted">{t('juego.carnetCard.aunSinSellosCada')}</p>
         ) : (
           <ul className="carnet-stamps" data-testid="carnet-sellos">
             {carnet.stamps.map((s) => (
@@ -109,13 +118,13 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
       </section>
 
       {/* Insignias de los logros reclamados (REQ-IDE-052, T37). */}
-      <section aria-label="Insignias">
-        <h4>Insignias</h4>
+      <section aria-label={t('carnet.badges.heading')}>
+        <h4>{t('carnet.badges.heading')}</h4>
         {carnet.badges.length === 0 ? (
           <p className="juego-muted">
             {carnet.isMine
-              ? 'Aún sin insignias. Algunos logros dan una al reclamarlos.'
-              : 'Aún sin insignias.'}
+              ? t('juego.carnetCard.aunSinInsigniasAlgunos')
+              : t('juego.carnetCard.aunSinInsignias')}
           </p>
         ) : (
           <ul className="carnet-chips carnet-insignias" data-testid="carnet-insignias">
@@ -128,10 +137,10 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
         )}
       </section>
 
-      <section aria-label="Logros">
-        <h4>Logros</h4>
+      <section aria-label={t('juego.carnetCard.logros')}>
+        <h4>{t('juego.carnetCard.logros')}</h4>
         {carnet.achievements.length === 0 ? (
-          <p className="juego-muted">Aún sin logros.</p>
+          <p className="juego-muted">{t('juego.carnetCard.aunSinLogros')}</p>
         ) : (
           <ul className="carnet-chips" data-testid="carnet-logros">
             {carnet.achievements.map((a) => (
@@ -143,20 +152,20 @@ export function CarnetCard({ carnet, extras = {} }: { carnet: CarnetView; extras
         )}
       </section>
 
-      <section aria-label="Barco">
-        <h4>Barco</h4>
+      <section aria-label={t('juego.carnetCard.barco')}>
+        <h4>{t('juego.carnetCard.barco')}</h4>
         {extras.shipLabel ? <p data-testid="carnet-barco">⛵ {extras.shipLabel}</p> : null}
         {cosmetics.length > 0 ? (
           <ul className="carnet-chips" data-testid="carnet-cosmeticos">
             {cosmetics.map((id) => (
               <li key={id}>
                 {extras.cosmeticNames?.[id] ?? id}
-                {Object.values(carnet.equipped).includes(id) ? ' · equipado' : ''}
+                {Object.values(carnet.equipped).includes(id) ? t('juego.carnetCard.equipado') : ''}
               </li>
             ))}
           </ul>
         ) : !extras.shipLabel ? (
-          <p className="juego-muted">Barco de serie, sin cosméticos todavía.</p>
+          <p className="juego-muted">{t('carnet.empty.ship')}</p>
         ) : null}
       </section>
     </article>

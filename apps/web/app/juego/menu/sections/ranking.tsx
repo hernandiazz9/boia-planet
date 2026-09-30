@@ -7,26 +7,26 @@ import { carnetPath } from '../../carnet/share';
 import { useRepoData } from '../../repo';
 import type { MenuContext, MenuSection } from '../types';
 import './ranking.css';
+import { t } from '../../../../lib/i18n';
 
 /**
  * Textos del ranking (docs/propuestas/textos-zonas.md, zona 25). muestra
  * hasta que pasen a las claves de i18n (T49).
  */
 export const RANKING_COPY = {
-  heading: 'Ranking',
-  localLabel: 'Ranking local de este navegador',
-  localNotice:
-    'En esta versión de prueba compites contigo y con los miembros de muestra. El ranking de verdad llegará con las cuentas.',
-  allTime: 'De siempre',
-  season: (world: string) => `Esta temporada · ${world}`,
-  position: 'Puesto',
-  member: 'Miembro',
-  points: 'Puntos',
-  you: 'Tú',
-  yourPosition: (n: number, points: number) => `Vas ${n}.º con ${points} puntos.`,
-  pointsNote: 'Cuentan los puntos, nunca las monedas: gastar no te baja en la tabla.',
+  heading: t('juego.ranking.ranking'),
+  localLabel: t('ranking.localLabel'),
+  localNotice: t('ranking.localNotice'),
+  allTime: t('ranking.tab.allTime'),
+  season: (world: string) => t('ranking.tab.season', { world }),
+  position: t('juego.ranking.puesto'),
+  member: t('juego.ranking.miembro'),
+  points: t('juego.ranking.puntos'),
+  you: t('juego.ranking.tu'),
+  yourPosition: (n: number, points: number) => t('ranking.yourPosition', { n, points }),
+  pointsNote: t('ranking.pointsNote'),
   sampleTag: 'muestra',
-  openCarnet: (name: string) => `Ver el Carnet de ${name}`,
+  openCarnet: (name: string) => t('ranking.openCarnet.aria', { name }),
 } as const;
 
 type Scope = 'all' | 'season';
@@ -62,7 +62,11 @@ function Ranking({ ctx }: { ctx: MenuContext }) {
         {RANKING_COPY.localLabel}
       </p>
       <p className="juego-muted">{RANKING_COPY.localNotice}</p>
-      <div className="juego-ranking-tabs" role="group" aria-label="Qué ranking ver">
+      <div
+        className="juego-ranking-tabs"
+        role="group"
+        aria-label={t('juego.ranking.queRankingVer')}
+      >
         {(
           [
             ['all', RANKING_COPY.allTime],
@@ -82,7 +86,7 @@ function Ranking({ ctx }: { ctx: MenuContext }) {
         ))}
       </div>
       {!data || data.scope !== scope ? (
-        <p className="juego-muted">Cargando…</p>
+        <p className="juego-muted">{t('empty.loading')}</p>
       ) : (
         <>
           <p className="juego-ranking-mio" data-testid="ranking-mi-puesto">

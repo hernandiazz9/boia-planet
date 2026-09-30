@@ -5,6 +5,7 @@ import { WORLD_REGISTRY, type WorldRegistry } from '@boia/world';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { AdminError, type AdminActions, createAdminActions } from '../../lib/admin/actions';
 import { gameRepository } from '../../lib/repo';
+import { t } from '../../lib/i18n';
 
 /**
  * El Admin de la demo lee y escribe el mismo repositorio que la landing y
@@ -77,14 +78,17 @@ export function useRun(): {
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [busy, setBusy] = useState(false);
   const run = useCallback(
-    async (work: () => Promise<unknown>, ok = 'Guardado en este navegador.') => {
+    async (work: () => Promise<unknown>, ok = t('admin.useAdmin.guardadoEnEsteNavegador')) => {
       setBusy(true);
       try {
         await work();
         setStatus({ kind: 'ok', text: ok });
         return true;
       } catch (err) {
-        setStatus({ kind: 'error', text: `No se guardó: ${messageOf(err)}` });
+        setStatus({
+          kind: 'error',
+          text: t('admin.useAdmin.noSeGuardo', { messageOf: messageOf(err) }),
+        });
         return false;
       } finally {
         setBusy(false);

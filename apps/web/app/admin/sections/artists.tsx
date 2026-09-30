@@ -14,6 +14,7 @@ import {
   StatusLine,
   TrashInline,
 } from '../ui';
+import { t } from '../../../lib/i18n';
 
 const genresOf = (s: string) =>
   s
@@ -37,13 +38,16 @@ function ArtistRow({
   return (
     <li className="admin-card" data-testid={`artista-${artist.id}`}>
       <div className="admin-grid">
-        <Field label="Nombre">
+        <Field label={t('admin.artists.nombre')}>
           <input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Géneros (separados por comas)">
+        <Field label={t('admin.artists.generosSeparadosPorComas')}>
           <input value={genres} onChange={(e) => setGenres(e.target.value)} />
         </Field>
-        <Field label="Foto (URL, opcional)" hint="Sin foto aprobada, avatar neutro.">
+        <Field
+          label={t('admin.artists.fotoUrlOpcional')}
+          hint={t('admin.artists.sinFotoAprobadaAvatar')}
+        >
           <input type="url" value={photo} onChange={(e) => setPhoto(e.target.value)} />
         </Field>
       </div>
@@ -68,7 +72,7 @@ function ArtistRow({
             )
           }
         >
-          Guardar
+          {t('admin.artists.guardar')}
         </button>
         <DeleteButton ctx={ctx} area="artists" id={artist.id} />
       </div>
@@ -84,14 +88,14 @@ export function ArtistsSection({ ctx }: { ctx: AdminContext }) {
   const [name, setName] = useState('');
   const [genres, setGenres] = useState('');
   const { status, busy, run } = useRun();
-  if (!artists) return <p>Cargando…</p>;
+  if (!artists) return <p>{t('empty.loading')}</p>;
   const changedSet = new Set(changed ?? []);
   const ids = new Set(artists.map((a) => a.id));
   return (
     <section>
       <SectionHead
-        title="Artistas"
-        lead={`${artists.length} artistas. La home los rota de tres en tres.`}
+        title={t('admin.artists.artistas')}
+        lead={t('admin.artists.artistasLaHomeLos', { length: artists.length })}
       >
         <ResetButton ctx={ctx} areas={['artists']} />
       </SectionHead>
@@ -106,23 +110,23 @@ export function ArtistsSection({ ctx }: { ctx: AdminContext }) {
             await ctx.repo.admin.upsert(
               'artists',
               { id, name: name.trim(), genres: genresOf(genres) },
-              { reason: 'nuevo artista' },
+              { reason: t('admin.artists.nuevoArtista') },
             );
             setName('');
             setGenres('');
-          }, 'Artista añadido.');
+          }, t('admin.artists.artistaAnadido'));
         }}
       >
-        <h3>Nuevo artista</h3>
+        <h3>{t('admin.artists.nuevoArtista2')}</h3>
         <div className="admin-grid">
-          <Field label="Nombre">
+          <Field label={t('admin.artists.nombre')}>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               data-testid="artista-nombre"
             />
           </Field>
-          <Field label="Géneros (separados por comas)">
+          <Field label={t('admin.artists.generosSeparadosPorComas')}>
             <input
               value={genres}
               onChange={(e) => setGenres(e.target.value)}
@@ -131,7 +135,7 @@ export function ArtistsSection({ ctx }: { ctx: AdminContext }) {
           </Field>
         </div>
         <button type="submit" className="admin-button" disabled={busy} data-testid="artista-anadir">
-          Añadir
+          {t('admin.artists.anadir')}
         </button>
         <StatusLine status={status} />
       </form>

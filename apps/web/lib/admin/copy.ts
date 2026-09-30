@@ -1,30 +1,27 @@
+import { t } from '../i18n';
+
 /**
  * Textos del Admin de la demo (T26, D-20, REQ-ADM-039). Todo `muestra`
- * [pendiente Álvaro]. Sin dependencias: lo importan la landing y el menú de
- * /juego para el botón, sin cargar el Admin.
+ * [pendiente Álvaro]. Lo importa el menú de /juego para el botón, sin cargar
+ * el Admin; la landing usa `paths.ts` y sus propias claves (`footer.tryAdmin`)
+ * para no cargar el catálogo entero.
  */
 
-/** Ruta del Admin de la demo. */
-export const ADMIN_PATH = '/admin';
-/** Vista previa privada del borrador de la home (REQ-ADM-015). */
-export const ADMIN_PREVIEW_PATH = '/admin/vista-previa';
+export { ADMIN_PATH, ADMIN_PREVIEW_PATH } from './paths';
 
 export const ADMIN_COPY = {
-  tryAdmin: 'Probar admin',
-  tryAdminHint: 'Versión de prueba: sin login, los cambios se quedan en este navegador.',
-  bannerTitle: 'Admin de prueba',
-  banner:
-    'Esto es una demo sin login. Cada cambio se guarda sólo en este navegador (nadie más lo ve) y se puede volver a los datos de muestra.',
-  saved: 'Guardado en este navegador.',
-  resetArea: 'Volver a la muestra',
-  resetAll: 'Volver todo a la muestra',
-  confirmResetAll: '¿Seguro? Se pierden todos los cambios del Admin en este navegador.',
-  sharedMapNote:
-    'El mapa es compartido: cambiar la posición, los parámetros o si un lugar está activo lo cambia en todos los mundos.',
-  skinNote: 'Nombre, textos y si se ve: sólo en el mundo elegido.',
-  renameAsk: '¿Dónde cambia el nombre?',
-  renameThisWorld: 'Solo en este mundo',
-  renameAllWorlds: 'En todos los mundos',
-  islandKeepsMemories:
-    'La isla no es el evento: al quitar o terminar un evento, la isla se queda con sus recuerdos.',
+  tryAdmin: t('footer.tryAdmin'),
+  tryAdminHint: t('footer.tryAdmin.hint'),
+  bannerTitle: t('admin.copy.adminDePrueba'),
+  banner: t('admin.copy.estoEsUnaDemo'),
+  saved: t('admin.copy.guardadoEnEsteNavegador'),
+  resetArea: t('admin.copy.volverALaMuestra'),
+  resetAll: t('admin.copy.volverTodoALa'),
+  confirmResetAll: t('admin.copy.seguroSePierdenTodos'),
+  sharedMapNote: t('admin.copy.elMapaEsCompartido'),
+  skinNote: t('admin.copy.nombreTextosYSi'),
+  renameAsk: t('admin.copy.dondeCambiaElNombre'),
+  renameThisWorld: t('admin.copy.soloEnEsteMundo'),
+  renameAllWorlds: t('admin.copy.enTodosLosMundos'),
+  islandKeepsMemories: t('admin.copy.laIslaNoEs'),
 } as const;

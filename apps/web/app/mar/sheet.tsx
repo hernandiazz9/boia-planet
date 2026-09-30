@@ -10,7 +10,7 @@ import type { FoundDiscount } from '@boia/store';
 import type { WorldConfig, WorldObject } from '@boia/world';
 import Link from 'next/link';
 import { type CSSProperties, type ReactNode, useState } from 'react';
-import { formatEventDate } from '../../lib/i18n';
+import { t, formatEventDate } from '../../lib/i18n';
 import { EVENTOS_COPY } from '../../lib/landing/eventos-copy';
 import { eventHref, photosHref } from '../../lib/landing/eventos';
 import { liveContent } from '../../lib/landing/live-content';
@@ -152,20 +152,20 @@ export function Sheet({
   let estado: string | undefined;
 
   if (state.kind === 'discount') {
-    label = 'Descuento encontrado';
+    label = t('discount.found.title');
     body = (
       <>
-        <p className="mar-sheet__kicker">🎁 Descuento encontrado · muestra</p>
+        <p className="mar-sheet__kicker">{t('mar.sheet.descuentoEncontradoMuestra')}</p>
         <DiscountCard
           found={state.found}
           testId="mar-descuento"
           onGoToIsland={(id) => onGoToIsland(id)}
         />
-        <p className="mar-sheet__note">Lo tienes guardado en el menú, en «Mis códigos».</p>
+        <p className="mar-sheet__note">{t('mar.sheet.loTienesGuardadoEn')}</p>
       </>
     );
   } else if (state.kind === 'codes') {
-    label = 'Mis códigos';
+    label = t('menu.discounts');
     body = <MyCodes onGoToIsland={onGoToIsland} />;
   } else if (state.kind === 'event') {
     const e = findEvent(state.eventId);
@@ -180,7 +180,7 @@ export function Sheet({
       <>
         <p className="mar-sheet__kicker">
           {textOf(object, 'kicker') ?? kickerOf(object)}
-          {distance !== null ? ` · ${distance} m` : ''}
+          {distance !== null ? t('mar.sheet.m', { distance }) : ''}
           {e ? <StateTag event={e} /> : null}
         </p>
         <h2 className="mar-sheet__title">{e?.name ?? name}</h2>
@@ -207,7 +207,7 @@ export function Sheet({
             data-testid="mar-rumbo"
             onClick={() => onCourse(state.placeId)}
           >
-            {onFly ? '⛵ Navegar' : '🧭 Navegar aquí'}
+            {onFly ? t('mar.sheet.navegar') : t('mar.sheet.navegarAqui')}
           </button>
           {onFly ? (
             <button
@@ -216,12 +216,12 @@ export function Sheet({
               data-testid="mar-volar"
               onClick={() => onFly(state.placeId)}
             >
-              🛸 Ir en nave
+              {t('mar.sheet.irEnNave')}
             </button>
           ) : null}
           {e && EVENT_STATE_BEHAVIOR[e.state].purchasable ? (
             <button type="button" className="mar-btn" onClick={() => onBuy(e.id)}>
-              🎟️ Entradas
+              {t('mar.sheet.entradas')}
             </button>
           ) : null}
         </div>
@@ -231,10 +231,10 @@ export function Sheet({
     const photos = liveContent().photos.slice(0, 6);
     body = (
       <>
-        <p className="mar-sheet__kicker">📷 Puerto de Fotos · muestra</p>
+        <p className="mar-sheet__kicker">{t('mar.sheet.puertoDeFotosMuestra')}</p>
         <h2 className="mar-sheet__title">{name}</h2>
-        <p>{textOf(object, 'body') ?? 'Todas las fotos de BOIA se revelan aquí.'}</p>
-        <ul className="mar-sheet__photos" aria-label="Galería">
+        <p>{textOf(object, 'body') ?? t('mar.sheet.todasLasFotosDe')}</p>
+        <ul className="mar-sheet__photos" aria-label={t('mar.sheet.galeria')}>
           {photos.map((p, i) => (
             <li
               key={p.id}
@@ -252,7 +252,7 @@ export function Sheet({
             prefetch={false}
             data-testid="mar-fotos-galeria"
           >
-            Ver «Fotos y eventos»
+            {t('mar.sheet.verFotosYEventos')}
           </Link>
         </div>
       </>
@@ -263,9 +263,9 @@ export function Sheet({
     const products = sb?.type === 'store' ? sb.products : [];
     body = (
       <>
-        <p className="mar-sheet__kicker">🛍️ Tienda · muestra</p>
+        <p className="mar-sheet__kicker">{t('mar.sheet.tiendaMuestra')}</p>
         <h2 className="mar-sheet__title">{name}</h2>
-        <p>{textOf(object, 'body') ?? 'Camisetas, tote bags y pegatinas.'}</p>
+        <p>{textOf(object, 'body') ?? t('mar.sheet.camisetasToteBagsY')}</p>
         {products.length ? <p className="mar-sheet__meta">{products.join(' · ')}</p> : null}
         {url ? (
           <div className="mar-sheet__actions">
@@ -275,7 +275,7 @@ export function Sheet({
               target="_blank"
               rel="noopener noreferrer"
             >
-              Ir a la tienda ↗
+              {t('discount.goToStore')}
             </a>
           </div>
         ) : null}
@@ -286,9 +286,9 @@ export function Sheet({
     const wa = cb?.type === 'contact' ? cb.links.find((l) => /whatsapp/i.test(l.label)) : undefined;
     body = (
       <>
-        <p className="mar-sheet__kicker">💬 Provisional · muestra</p>
+        <p className="mar-sheet__kicker">{t('mar.sheet.provisionalMuestra')}</p>
         <h2 className="mar-sheet__title">{textOf(object, 'title') ?? name}</h2>
-        <p>{textOf(object, 'body') ?? 'El grupo de WhatsApp de BOIA, si te apetece.'}</p>
+        <p>{textOf(object, 'body') ?? t('mar.sheet.elGrupoDeWhatsapp')}</p>
         {wa ? (
           <div className="mar-sheet__actions">
             <a
@@ -297,7 +297,7 @@ export function Sheet({
               target="_blank"
               rel="noopener noreferrer"
             >
-              Abrir WhatsApp ↗
+              {t('whatsapp.cta')}
             </a>
           </div>
         ) : null}
@@ -322,9 +322,14 @@ export function Sheet({
       data-tipo={state.kind === 'content' ? state.target : state.kind}
       data-lugar={'placeId' in state ? state.placeId : undefined}
       data-estado={estado}
-      aria-label={label || 'Ficha'}
+      aria-label={label || t('mar.sheet.ficha')}
     >
-      <button type="button" className="mar-sheet__close" onClick={onClose} aria-label="Cerrar">
+      <button
+        type="button"
+        className="mar-sheet__close"
+        onClick={onClose}
+        aria-label={t('mar.sheet.cerrar')}
+      >
         ×
       </button>
       {body}
@@ -335,17 +340,17 @@ export function Sheet({
 function kickerOf(o: WorldObject | undefined): string {
   switch (o?.identity.category) {
     case 'isla':
-      return eventOfPlace(o) ? '🎤 Isla de evento' : '🏝️ Isla';
+      return eventOfPlace(o) ? t('mar.sheet.islaDeEvento') : t('mar.sheet.isla');
     case 'naufrago':
-      return '🆘 Encuentro';
+      return t('mar.sheet.encuentro');
     case 'encuentro':
-      return '🎈 Misión';
+      return t('mar.sheet.mision');
     case 'circuito':
-      return '🏁 Circuito';
+      return t('mar.sheet.circuito');
     case 'boia':
-      return '👋 Boia';
+      return t('mar.sheet.boia');
     default:
-      return 'Lugar';
+      return t('mar.sheet.lugar');
   }
 }
 
@@ -394,7 +399,7 @@ function EventBlock({
     <>
       <p className="mar-sheet__kicker">
         🎤 {eventKicker(e)}
-        {e.sample ? ' · muestra' : ''}
+        {e.sample ? t('mar.sheet.muestra') : ''}
         <StateTag event={e} />
       </p>
       <h2 className="mar-sheet__title">{e.name}</h2>
@@ -441,7 +446,7 @@ function EventBlock({
             aria-haspopup="dialog"
             onClick={() => onBuy(e.id)}
           >
-            🎟️ Comprar entrada
+            {t('mar.sheet.comprarEntrada')}
           </button>
         </div>
       ) : null}
@@ -470,7 +475,9 @@ function IslandBlock({
   const [explored, setExplored] = useState(!revisit);
   const name = object?.identity.name ?? '';
   const kicker = (
-    <p className="mar-sheet__kicker">🏝️ {textOf(object, 'kicker') ?? 'Isla'} · muestra</p>
+    <p className="mar-sheet__kicker">
+      {t('mar.sheet.muestra2', { v1: textOf(object, 'kicker') ?? t('mar.sheet.isla2') })}
+    </p>
   );
   if (!explored) {
     return (
@@ -515,15 +522,12 @@ function MyCodes({ onGoToIsland }: { onGoToIsland: (eventId: string) => void }) 
   const { data } = useRepoData((r) => r.progress.discounts());
   return (
     <>
-      <p className="mar-sheet__kicker">🏷️ Mis códigos · muestra</p>
-      <h2 className="mar-sheet__title">Mis códigos</h2>
+      <p className="mar-sheet__kicker">{t('mar.sheet.misCodigosMuestra')}</p>
+      <h2 className="mar-sheet__title">{t('menu.discounts')}</h2>
       {data === undefined ? (
-        <p>Cargando…</p>
+        <p>{t('empty.loading')}</p>
       ) : data.length === 0 ? (
-        <p data-testid="mar-codigos-vacio">
-          Aún no has encontrado ninguno. Hay códigos escondidos en el mar: náufragos, restos y
-          tesoros.
-        </p>
+        <p data-testid="mar-codigos-vacio">{t('discount.empty')}</p>
       ) : (
         <ul className="juego-descuentos mar-codes" data-testid="mar-codigos">
           {[...data]

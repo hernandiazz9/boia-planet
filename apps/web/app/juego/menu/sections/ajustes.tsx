@@ -1,5 +1,6 @@
 import { type AudioChannel, LANGUAGES, type Language, type Settings } from '@boia/engine/ui';
 import type { MenuSection } from '../types';
+import { t } from '../../../../lib/i18n';
 
 function ChannelControl({
   id,
@@ -26,7 +27,7 @@ function ChannelControl({
         <span>{onLabel}</span>
       </label>
       <label className="juego-range">
-        <span>Volumen</span>
+        <span>{t('juego.ajustes.volumen')}</span>
         <input
           type="range"
           min={0}
@@ -34,7 +35,7 @@ function ChannelControl({
           step={5}
           value={Math.round(value.volume * 100)}
           disabled={!value.enabled}
-          aria-label={`Volumen de ${label.toLowerCase()}`}
+          aria-label={t('juego.ajustes.volumenDe', { label: label.toLowerCase() })}
           onChange={(e) => onChange({ ...value, volume: Number(e.target.value) / 100 })}
         />
       </label>
@@ -46,14 +47,14 @@ function ChannelControl({
 export const ajustesSection: MenuSection = {
   id: 'ajustes',
   icon: '⚙️',
-  label: 'Ajustes',
+  label: t('juego.ajustes.ajustes'),
   group: 'tools',
   Component: function Ajustes({ ctx }) {
     const set = (patch: Partial<Settings>) => ctx.updateSettings((s) => ({ ...s, ...patch }));
     return (
       <>
         <label className="juego-field">
-          <span>Idioma</span>
+          <span>{t('juego.ajustes.idioma')}</span>
           <select
             value={ctx.settings.language}
             onChange={(e) => set({ language: e.target.value as Language })}
@@ -68,22 +69,19 @@ export const ajustesSection: MenuSection = {
         </label>
         <ChannelControl
           id="music"
-          label="Música"
-          onLabel="Activada"
+          label={t('juego.ajustes.musica')}
+          onLabel={t('settings.on')}
           value={ctx.settings.music}
           onChange={(music) => set({ music })}
         />
         <ChannelControl
           id="sfx"
-          label="Efectos de sonido"
-          onLabel="Activados"
+          label={t('settings.effects')}
+          onLabel={t('juego.ajustes.activados')}
           value={ctx.settings.sfx}
           onChange={(sfx) => set({ sfx })}
         />
-        <p className="juego-muted">
-          Los efectos siguen sonando aunque quites la música. La música es un ambiente de muestra,
-          uno por mundo, y empieza al primer toque. Todo se guarda en este dispositivo.
-        </p>
+        <p className="juego-muted">{t('juego.ajustes.losEfectosSiguenSonando')}</p>
       </>
     );
   },

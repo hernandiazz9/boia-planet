@@ -13,6 +13,7 @@ import {
   StatusLine,
   TrashInline,
 } from '../ui';
+import { t } from '../../../lib/i18n';
 
 function PhotoRow({
   ctx,
@@ -32,13 +33,16 @@ function PhotoRow({
   return (
     <li className="admin-card" data-testid={`foto-${photo.id}`}>
       <div className="admin-grid">
-        <Field label="Texto alternativo" hint="Obligatorio (REQ-COM-031).">
+        <Field
+          label={t('admin.photos.textoAlternativo')}
+          hint={t('admin.photos.obligatorioReqCom031')}
+        >
           <input value={alt} onChange={(e) => setAlt(e.target.value)} />
         </Field>
-        <Field label="Imagen (URL)" hint="Vacía: marcador de muestra.">
+        <Field label={t('admin.photos.imagenUrl')} hint={t('admin.photos.vaciaMarcadorDeMuestra')}>
           <input type="url" value={src} onChange={(e) => setSrc(e.target.value)} />
         </Field>
-        <Field label="Álbum">
+        <Field label={t('admin.photos.album')}>
           <select value={albumId} onChange={(e) => setAlbumId(e.target.value)}>
             {albums.map((a) => (
               <option key={a.id} value={a.id}>
@@ -61,7 +65,7 @@ function PhotoRow({
             void run(() => ctx.repo.admin.upsert('photos', next, { reason: 'foto' }));
           }}
         >
-          Guardar
+          {t('admin.photos.guardar')}
         </button>
         <DeleteButton ctx={ctx} area="photos" id={photo.id} />
       </div>
@@ -78,7 +82,7 @@ export function PhotosSection({ ctx }: { ctx: AdminContext }) {
   const [alt, setAlt] = useState('');
   const [albumTitle, setAlbumTitle] = useState('');
   const { status, busy, run } = useRun();
-  if (!photos || !albums) return <p>Cargando…</p>;
+  if (!photos || !albums) return <p>{t('empty.loading')}</p>;
   const changedSet = new Set(changed ?? []);
   const nextId = () => {
     let n = photos.length + 1;
@@ -87,10 +91,7 @@ export function PhotosSection({ ctx }: { ctx: AdminContext }) {
   };
   return (
     <section>
-      <SectionHead
-        title="Fotos y vídeos"
-        lead="Los vídeos y la subida de archivos llegan con el almacenamiento de Supabase; aquí, fotos por URL."
-      >
+      <SectionHead title={t('admin.photos.fotosYVideos')} lead={t('admin.photos.losVideosYLa')}>
         <ResetButton ctx={ctx} areas={['photos', 'albums']} />
       </SectionHead>
       <div className="admin-grid">
@@ -109,18 +110,18 @@ export function PhotosSection({ ctx }: { ctx: AdminContext }) {
                   width: 4,
                   height: 3,
                 },
-                { reason: 'nueva foto' },
+                { reason: t('admin.photos.nuevaFoto') },
               );
               setAlt('');
-            }, 'Foto añadida.');
+            }, t('admin.photos.fotoAnadida'));
           }}
         >
-          <h3>Nueva foto</h3>
-          <Field label="Texto alternativo">
+          <h3>{t('admin.photos.nuevaFoto2')}</h3>
+          <Field label={t('admin.photos.textoAlternativo')}>
             <input value={alt} onChange={(e) => setAlt(e.target.value)} data-testid="foto-alt" />
           </Field>
           <button type="submit" className="admin-button" disabled={busy} data-testid="foto-anadir">
-            Añadir
+            {t('admin.photos.anadir')}
           </button>
         </form>
         <form
@@ -134,23 +135,25 @@ export function PhotosSection({ ctx }: { ctx: AdminContext }) {
               await ctx.repo.admin.upsert(
                 'albums',
                 { id: `album-${n}`, title: albumTitle.trim() },
-                { reason: 'nuevo álbum' },
+                { reason: t('admin.photos.nuevoAlbum') },
               );
               setAlbumTitle('');
-            }, 'Álbum creado.');
+            }, t('admin.photos.albumCreado'));
           }}
         >
-          <h3>Nuevo álbum</h3>
-          <Field label="Título">
+          <h3>{t('admin.photos.nuevoAlbum2')}</h3>
+          <Field label={t('admin.photos.titulo')}>
             <input value={albumTitle} onChange={(e) => setAlbumTitle(e.target.value)} />
           </Field>
           <button type="submit" className="admin-button" disabled={busy}>
-            Crear
+            {t('admin.photos.crear')}
           </button>
         </form>
       </div>
       <StatusLine status={status} />
-      <p className="admin-meta">Álbumes: {albums.map((a) => a.title).join(' · ')}</p>
+      <p className="admin-meta">
+        {t('admin.photos.albumes', { v1: albums.map((a) => a.title).join(' · ') })}
+      </p>
       <TrashInline ctx={ctx} area="photos" />
       <ul className="admin-list">
         {photos.map((p) => (

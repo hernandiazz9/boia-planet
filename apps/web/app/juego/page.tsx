@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { loadShipCatalog } from '../../lib/barco/load';
 import { GameCanvas } from './game-canvas';
+import { t } from '../../lib/i18n';
 
-export const metadata: Metadata = { title: 'boia-planet · juego' };
+export const metadata: Metadata = { title: t('juego.juego.boiaPlanetJuego') };
 
 // Sólo aquí se bloquea el zoom: en el juego un pellizco es un segundo dedo.
 export const viewport: Viewport = {

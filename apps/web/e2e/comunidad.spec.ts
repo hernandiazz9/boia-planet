@@ -76,7 +76,10 @@ test('el ranking local enseña al visitante entre los miembros de muestra', asyn
 
   // La temporada es el mundo que se juega.
   await ranking.getByTestId('ranking-tab-temporada').click();
-  await expect(ranking.getByTestId('ranking-tab-temporada')).toHaveAttribute('aria-pressed', 'true');
+  await expect(ranking.getByTestId('ranking-tab-temporada')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await expect(ranking.getByTestId('ranking-tab-temporada')).toContainText(world.theme.name);
   await expect(ranking.getByTestId('ranking-fila-mia')).toBeVisible();
 

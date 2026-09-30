@@ -1,3 +1,5 @@
+import { t } from '../i18n/web';
+
 /**
  * Los pocos textos de T42 que pinta la landing (tarjeta de evento y «Ver
  * todas» de las fotos), aparte de `eventos-copy.ts` para no cargar el resto en
@@ -6,25 +8,24 @@
 export const EVENT_CARD_COPY = {
   /** Nombre de cada estado (los siete de REQ-COM-003). */
   state: {
-    draft: 'Borrador',
-    coming_soon: 'Próximamente',
-    on_sale: 'A la venta',
-    sold_out: 'Agotado',
-    postponed: 'Pospuesto',
-    cancelled: 'Cancelado',
-    finished: 'Finalizado',
+    draft: t('landing.cardCopy.borrador'),
+    coming_soon: t('event.state.coming_soon'),
+    on_sale: t('event.state.on_sale'),
+    sold_out: t('event.state.sold_out'),
+    postponed: t('event.state.postponed'),
+    cancelled: t('event.state.cancelled'),
+    finished: t('landing.cardCopy.finalizado'),
   },
   /** `event.postponed.body`, `event.cancelled.body`. */
-  postponed: 'Hemos cambiado la fecha. En cuanto esté cerrada, la verás aquí.',
-  cancelled: 'Este evento no se hace. Lo sentimos mucho; aquí tienes los próximos.',
+  postponed: t('event.postponed.body'),
+  cancelled: t('event.cancelled.body'),
   /** `tickets.satellite.*` (D-23, O7). */
-  warmup: 'Calienta para el próximo All Day',
-  warmupNone:
-    'El próximo All Day todavía no tiene fecha. Entérate antes que nadie en el WhatsApp de BOIA.',
+  warmup: t('tickets.satellite.warmup'),
+  warmupNone: t('tickets.satellite.noAllDay'),
 } as const;
 
 /** `photos.home.all` (zona 30). */
 export const PHOTOS_HOME_COPY = {
-  all: 'Ver todas',
-  allAria: 'Ver todas las fotos en «Fotos y eventos»',
+  all: t('photos.home.all'),
+  allAria: t('landing.cardCopy.verTodasLasFotos'),
 } as const;

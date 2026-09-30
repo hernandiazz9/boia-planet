@@ -2,6 +2,7 @@
 
 import type { Rect } from '@boia/engine/ui';
 import { useRepoData } from './repo';
+import { t } from '../../lib/i18n';
 
 /**
  * Puntos y monedas en el HUD (REQ-IDE-027): dos saldos separados, derivados
@@ -19,10 +20,10 @@ export function BalancesChip({ rect }: { rect: Rect }) {
       data-coins={data?.coins}
       style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
     >
-      <span title="Puntos" aria-label={`${data?.points ?? 0} puntos`}>
+      <span title={t('juego.balances.puntos')} aria-label={`${data?.points ?? 0} puntos`}>
         ★ {data?.points ?? '–'}
       </span>
-      <span title="Monedas" aria-label={`${data?.coins ?? 0} monedas`}>
+      <span title={t('juego.balances.monedas')} aria-label={`${data?.coins ?? 0} monedas`}>
         ● {data?.coins ?? '–'}
       </span>
     </div>

@@ -11,6 +11,7 @@ import {
   type WorldSkin,
   composeWorld,
 } from '@boia/world';
+import { t } from '../i18n';
 
 /**
  * El mundo con los cambios del Admin de la demo (T26, D-20), sin E/S: el
@@ -38,9 +39,9 @@ export type MapPointKey = keyof typeof MAP_POINTS;
 export const MAP_POINT_KEYS = Object.keys(MAP_POINTS) as MapPointKey[];
 
 export const MAP_POINT_LABELS: Record<MapPointKey, string> = {
-  spawn: 'Salida del barco',
-  port: 'Puerto',
-  introLanding: 'Aterrizaje de la entrada',
+  spawn: t('admin.world.salidaDelBarco'),
+  port: t('admin.world.puerto'),
+  introLanding: t('admin.world.aterrizajeDeLaEntrada'),
 };
 
 export function isMapPointId(id: string): boolean {

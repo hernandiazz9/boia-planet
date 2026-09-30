@@ -9,6 +9,7 @@ import {
   joystickZone,
 } from '@boia/engine/ui';
 import type { BottleView } from '@boia/store';
+import { t } from '../../../lib/i18n';
 
 /**
  * Barra de botellas del HUD (T22): justo encima de la zona del joystick,
@@ -55,8 +56,8 @@ export function BottleBar({
         type="button"
         className="juego-hud-button juego-bottle-own"
         data-testid="botella-propia"
-        aria-label={hasOwn ? 'Tu botella' : 'Echar una botella'}
-        title={hasOwn ? 'Tu botella' : 'Echar una botella'}
+        aria-label={hasOwn ? t('bottle.title.own') : t('juego.bottleBar.echarUnaBotella')}
+        title={hasOwn ? t('bottle.title.own') : t('juego.bottleBar.echarUnaBotella')}
         onClick={onOwn}
       >
         <span aria-hidden="true">✉️</span>
@@ -70,7 +71,9 @@ export function BottleBar({
           onClick={() => onRead(b.id)}
         >
           <span aria-hidden="true">🍾</span>{' '}
-          {b.isMine ? 'Tu botella' : `Botella de ${b.authorNickname ?? 'alguien'}`}
+          {b.isMine
+            ? t('bottle.title.own')
+            : t('bottle.title.from', { name: b.authorNickname ?? 'alguien' })}
         </button>
       ))}
     </div>

@@ -1,4 +1,5 @@
 import { placeHref } from '../world-handoff';
+import { t } from '../i18n/web';
 
 /**
  * Accesos de la landing que llevan el barco a su lugar (T44, REQ-ENT-034,
@@ -30,22 +31,22 @@ export const CARNET_PAGE = '/carnet';
 export const CARNET_CREATE_HREF = '/juego?menu=carnet';
 
 export const ACCESS_COPY = {
-  carnet: 'Mi Carnet',
-  sound: 'Sonido',
-  soundOn: 'Sonido activado',
-  soundOff: 'Sonido apagado',
-  instagram: 'Instagram',
-  instagramAria: 'Instagram de BOIA (se abre en otra pestaña)',
+  carnet: t('nav.carnet'),
+  sound: t('landing.access.sonido'),
+  soundOn: t('nav.sound.on'),
+  soundOff: t('nav.sound.off'),
+  instagram: t('footer.instagram'),
+  instagramAria: t('instagram.cta.aria'),
   whatsapp: 'WhatsApp',
-  whatsappCta: 'Entrar en el WhatsApp',
-  whatsappAria: 'Entrar en el WhatsApp de BOIA (se abre en otra pestaña)',
+  whatsappCta: t('landing.access.entrarEnElWhatsapp'),
+  whatsappAria: t('landing.access.entrarEnElWhatsapp2'),
   /** `footer.invite.carnet`, `footer.invite.whatsapp` (zona 24 y 22). */
-  footerCarnet: '¿Aún sin Carnet? Hazte el tuyo: es gratis y sin email.',
-  footerCarnetCta: 'Crear mi Carnet',
-  footerWhatsapp: 'Entérate antes que nadie de la próxima fiesta en el WhatsApp de BOIA.',
-  footerInviteLabel: 'Únete a BOIA',
+  footerCarnet: t('footer.invite.carnet'),
+  footerCarnetCta: t('carnet.create'),
+  footerWhatsapp: t('footer.invite.whatsapp'),
+  footerInviteLabel: t('invite.join.title'),
   /** «Ir en barco»: el mismo contenido, en su isla del mar. */
-  sailTickets: 'Ver su isla en el mar',
-  sailPhotos: 'Ir en barco al Puerto de Fotos',
-  sailStore: 'Ir en barco a la isla tienda',
+  sailTickets: t('landing.access.verSuIslaEn'),
+  sailPhotos: t('landing.access.irEnBarcoAl'),
+  sailStore: t('landing.access.irEnBarcoA'),
 } as const;

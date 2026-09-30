@@ -17,6 +17,7 @@ import type { ProgressApi } from '@boia/store';
 import { CIRCUIT_ID, type ComposedWorld } from '@boia/world';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { recordSignal } from './achievements';
+import { t as msg } from '../../lib/i18n';
 
 /**
  * El Freu en /juego (T20, REQ-AVE-026…033): la carrera del motor
@@ -66,8 +67,12 @@ export function lapNotices(ms: number, r: LapResult): Notice[] {
     {
       id: `circuito:meta:${Date.now()}`,
       kind: 'info',
-      title: r.best ? `¡Récord! ${formatRaceTime(ms)}` : `Meta: ${formatRaceTime(ms)}`,
-      body: r.best ? 'Tu mejor vuelta en El Freu.' : `Tu récord: ${formatRaceTime(r.bestMs)}`,
+      title: r.best
+        ? msg('circuit.finish.record.title', { time: formatRaceTime(ms) })
+        : msg('circuit.finish.title', { time: formatRaceTime(ms) }),
+      body: r.best
+        ? msg('juego.circuitHud.tuMejorVueltaEn')
+        : msg('circuit.finish.body', { time: formatRaceTime(r.bestMs) }),
     },
   ];
   out.push(...r.achievements);
@@ -77,10 +82,10 @@ export function lapNotices(ms: number, r: LapResult): Notice[] {
 const now = () => performance.now() / 1000;
 
 const INVALID_TEXT: Record<InvalidReason, string> = {
-  panel: 'Vuelta anulada: abriste un panel',
-  hidden: 'Vuelta anulada: saliste de la pestaña',
-  teleport: 'Vuelta anulada',
-  timeout: 'Vuelta anulada: demasiado tiempo',
+  panel: msg('circuit.void.panel'),
+  hidden: msg('circuit.void.tab'),
+  teleport: msg('circuit.void'),
+  timeout: msg('circuit.void.slow'),
 };
 
 export interface CircuitState {
@@ -171,8 +176,10 @@ export function useCircuit(
         void readRecord(p, spec).then((rec) =>
           setStartInfo(
             rec
-              ? `El Freu · récord ${formatRaceTime(rec.bestMs)} · pasa por el arco`
-              : 'El Freu · pasa por el arco para empezar',
+              ? msg('juego.circuitHud.elFreuRecordPasa', {
+                  formatRaceTime: formatRaceTime(rec.bestMs),
+                })
+              : msg('juego.circuitHud.elFreuPasaPor'),
           ),
         );
       } else if (e.type === 'proximity_exit' && e.objectId === startId) {

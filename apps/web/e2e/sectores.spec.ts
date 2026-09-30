@@ -11,7 +11,8 @@ const FIRST_PLAY_BUDGET = 5 * 1024 * 1024;
 
 const juego = (page: Page) => page.getByTestId('juego');
 const attr = async (page: Page, name: string) => (await juego(page).getAttribute(name)) ?? '';
-const ship = async (page: Page) => (await attr(page, 'data-barco')).split(',').map(Number) as [number, number];
+const ship = async (page: Page) =>
+  (await attr(page, 'data-barco')).split(',').map(Number) as [number, number];
 
 /** Bytes de cada respuesta terminada (páginas, JS, arte; también las de los workers). */
 function recordTransfers(page: Page) {
@@ -53,8 +54,12 @@ test('del puerto a la última isla: sólo el primer sector antes de jugar, el re
   expect(bytes).toBeLessThanOrEqual(FIRST_PLAY_BUDGET);
   // Con atlas: el arte del puerto sale de su hoja, no de sus PNG sueltos (la
   // tripulante de la Fiestera va aparte, con el barco).
-  const artBefore = before.filter((t) => /\/api\/art\/mundos\/[^/]+\/(puerto|costa_[a-z]+)\/.+\.png/.test(t.url));
-  const sheets = before.filter((t) => /\/atlas\/.+\/puerto\.alta\.\d+\.[0-9a-f]+\.webp/.test(t.url));
+  const artBefore = before.filter((t) =>
+    /\/api\/art\/mundos\/[^/]+\/(puerto|costa_[a-z]+)\/.+\.png/.test(t.url),
+  );
+  const sheets = before.filter((t) =>
+    /\/atlas\/.+\/puerto\.alta\.\d+\.[0-9a-f]+\.webp/.test(t.url),
+  );
   expect(sheets.length).toBeGreaterThan(0);
   expect(artBefore).toHaveLength(0);
 
@@ -76,7 +81,9 @@ test('del puerto a la última isla: sólo el primer sector antes de jugar, el re
   expect(later.length).toBeGreaterThan(0);
 });
 
-test('calidad baja: atlas a media resolución y el mismo mundo sin arte ausente', async ({ page }) => {
+test('calidad baja: atlas a media resolución y el mismo mundo sin arte ausente', async ({
+  page,
+}) => {
   const transfers = recordTransfers(page);
   await page.goto('/juego?calidad=baja&cerca=allday');
   await expect(juego(page)).toHaveAttribute('data-calidad', 'baja', { timeout: 30_000 });

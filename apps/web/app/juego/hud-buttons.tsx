@@ -3,6 +3,7 @@
 import type { Rect } from '@boia/engine/ui';
 import { ClaimBadge, claimLabel } from '../../lib/logros/claim-badge';
 import { useReadyCount } from '../../lib/logros/use-logros';
+import { t } from '../../lib/i18n';
 
 /**
  * Botones fijos del HUD: brújula y ancla del Menú de a bordo. Se colocan en
@@ -40,12 +41,12 @@ export function Compass({
       onClick={onClick}
       aria-label={
         angle === null
-          ? 'Brújula: todo descubierto'
+          ? t('hud.compass.done')
           : selected
-            ? 'Brújula: señala el sitio elegido'
-            : 'Brújula: señala lo siguiente sin explorar'
+            ? t('hud.compass.target')
+            : t('hud.compass.next')
       }
-      title="Brújula"
+      title={t('juego.hudButtons.brujula')}
     >
       <svg viewBox="-16 -16 32 32" width="30" height="30" aria-hidden="true">
         <circle r="14" fill="none" stroke="rgba(255,255,255,.35)" strokeWidth="1.5" />
@@ -86,10 +87,10 @@ export function MenuAnchor({
       data-hud="menu-ancla"
       className={`juego-hud-button juego-anchor${pulse ? ' juego-pulse-short' : ''}`}
       style={place(rect)}
-      aria-label={claimLabel('Menú de a bordo', ready)}
+      aria-label={claimLabel(t('menu.aria'), ready)}
       aria-expanded={open}
       aria-haspopup="dialog"
-      title={claimLabel('Menú de a bordo', ready)}
+      title={claimLabel(t('menu.aria'), ready)}
       data-por-reclamar={ready}
       onClick={onClick}
     >

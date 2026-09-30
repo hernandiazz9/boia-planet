@@ -3,7 +3,7 @@
 import type { FunnelEventProps } from '@boia/contracts/analytics';
 import { type ComponentType, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { t } from '../../../lib/i18n';
+import { t } from '../../../lib/i18n/web';
 import type { SandboxCheckout } from '../../../lib/ticketing/checkout';
 import { CHECKOUT_COPY } from '../../../lib/ticketing/copy';
 

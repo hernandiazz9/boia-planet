@@ -6,51 +6,51 @@ import {
   SENSITIVITY_RANGE,
 } from '@boia/engine/ui';
 import type { MenuSection } from '../types';
+import { t } from '../../../../lib/i18n';
 
 const MODE_LABEL: Record<KeyboardMode, { title: string; help: string }> = {
   screen: {
-    title: 'Dirección de pantalla',
-    help: 'Flecha arriba lleva el barco hacia arriba, como el joystick. Recomendado.',
+    title: t('controls.keyboard.screen'),
+    help: t('juego.controles.flechaArribaLlevaEl'),
   },
   tank: {
-    title: 'Control de tanque',
-    help: 'Arriba acelera; izquierda y derecha giran el barco; abajo suelta.',
+    title: t('controls.keyboard.tank'),
+    help: t('juego.controles.arribaAceleraIzquierdaY'),
   },
 };
 
 const SENSITIVITY_LABEL: Record<keyof ControlSensitivity, string> = {
-  keyboard: 'Teclado',
-  touch: 'Táctil',
+  keyboard: t('juego.controles.teclado'),
+  touch: t('juego.controles.tactil'),
 };
 
 const ZONE_LABEL: Record<MinimapZone, string> = {
-  'top-right': 'Arriba a la derecha',
-  'top-left': 'Arriba a la izquierda',
-  'middle-right': 'En medio, a la derecha',
-  'middle-left': 'En medio, a la izquierda',
+  'top-right': t('juego.controles.arribaALaDerecha'),
+  'top-left': t('juego.controles.arribaALaIzquierda'),
+  'middle-right': t('juego.controles.enMedioALa'),
+  'middle-left': t('juego.controles.enMedioALa2'),
 };
 
 /** 🎮 Controles (REQ-IDE-036) y modo del teclado (D-14, REQ-MUN-008). */
 export const controlesSection: MenuSection = {
   id: 'controles',
   icon: '🎮',
-  label: 'Controles',
+  label: t('controls.heading'),
   group: 'tools',
   Component: function Controles({ ctx }) {
     return (
       <>
-        <h3>Navegar</h3>
+        <h3>{t('juego.controles.navegar')}</h3>
         <ul>
-          <li>Toca en cualquier sitio y arrastra: el barco va hacia donde apuntes.</li>
+          <li>{t('world.arcilla.boia.tutorial.2')}</li>
           <li>
-            <strong>Drift:</strong> con un segundo dedo apoyado (o Shift en el teclado) el barco
-            derrapa y gira más cerrado.
+            <strong>{t('juego.controles.drift')}</strong> {t('juego.controles.conUnSegundoDedo')}
           </li>
-          <li>En el ordenador: flechas o WASD.</li>
+          <li>{t('controls.sail.keyboard')}</li>
         </ul>
 
         <fieldset className="juego-field" data-testid="modo-teclado">
-          <legend>Teclado</legend>
+          <legend>{t('juego.controles.teclado')}</legend>
           {KEYBOARD_MODES.map((m) => (
             <label key={m} className="juego-choice">
               <input
@@ -70,7 +70,7 @@ export const controlesSection: MenuSection = {
         </fieldset>
 
         <fieldset className="juego-field" data-testid="sensibilidad">
-          <legend>Sensibilidad del giro</legend>
+          <legend>{t('juego.controles.sensibilidadDelGiro')}</legend>
           {(Object.keys(SENSITIVITY_LABEL) as (keyof ControlSensitivity)[]).map((k) => (
             <label key={k} className="juego-range">
               <span>
@@ -82,7 +82,9 @@ export const controlesSection: MenuSection = {
                 max={Math.round(SENSITIVITY_RANGE.max * 100)}
                 step={Math.round(SENSITIVITY_RANGE.step * 100)}
                 value={Math.round(ctx.settings.sensitivity[k] * 100)}
-                aria-label={`Sensibilidad del giro: ${SENSITIVITY_LABEL[k].toLowerCase()}`}
+                aria-label={t('juego.controles.sensibilidadDelGiro2', {
+                  v1: SENSITIVITY_LABEL[k].toLowerCase(),
+                })}
                 onChange={(e) =>
                   ctx.updateSettings((s) => ({
                     ...s,
@@ -92,17 +94,17 @@ export const controlesSection: MenuSection = {
               />
             </label>
           ))}
-          <small>Más, el barco gira antes; menos, gira más suave.</small>
+          <small>{t('juego.controles.masElBarcoGira')}</small>
         </fieldset>
 
-        <h3>Minimapa y brújula</h3>
+        <h3>{t('controls.minimap.heading')}</h3>
         <ul>
-          <li>Toca el minimapa para ampliarlo y ver los nombres de lo que has descubierto.</li>
-          <li>Mantenlo pulsado medio segundo y arrástralo para cambiarlo de sitio.</li>
-          <li>La brújula señala lo siguiente sin explorar, o el sitio que elijas en el mapa.</li>
+          <li>{t('juego.controles.tocaElMinimapaPara')}</li>
+          <li>{t('controls.minimap.hold')}</li>
+          <li>{t('juego.controles.laBrujulaSenalaLo')}</li>
         </ul>
         <label className="juego-field">
-          <span>Sitio del minimapa</span>
+          <span>{t('juego.controles.sitioDelMinimapa')}</span>
           <select
             value={ctx.minimapZone}
             onChange={(e) => ctx.setMinimapZone(e.target.value as MinimapZone)}

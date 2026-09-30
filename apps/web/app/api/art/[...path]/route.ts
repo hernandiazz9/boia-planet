@@ -34,9 +34,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
     // `s-maxage`: la CDN de Vercel guarda la respuesta (cada despliegue empieza
     // con la caché vacía) y la función no se invoca por cada sprite.
     const cache =
-      process.env.NODE_ENV === 'production'
-        ? 'public, max-age=3600, s-maxage=86400'
-        : 'no-store';
+      process.env.NODE_ENV === 'production' ? 'public, max-age=3600, s-maxage=86400' : 'no-store';
     return new Response(body, { headers: { 'content-type': type, 'cache-control': cache } });
   } catch {
     const optional = new URL(req.url).searchParams.has('optional');

@@ -81,7 +81,11 @@ test('landing → compra de prueba → Mi Carnet; isla → compra de prueba → 
   expect(islandPlace, `la isla de ${islandEvent.id} está en el mundo`).toBeDefined();
   await page.goto(`/juego?cerca=${islandPlace!.identity.id}`);
   await gameRunning(page);
-  await page.locator('canvas:visible').first().focus().catch(() => {});
+  await page
+    .locator('canvas:visible')
+    .first()
+    .focus()
+    .catch(() => {});
   await page.keyboard.down('ArrowUp');
   const islandPanel = page.getByTestId('panel-evento');
   await expect(islandPanel).toBeVisible({ timeout: 45_000 });

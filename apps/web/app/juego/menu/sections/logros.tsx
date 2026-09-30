@@ -4,6 +4,7 @@ import { ClaimBadge, claimLabel } from '../../../../lib/logros/claim-badge';
 import { AchievementsPanel } from '../../../../lib/logros/panel';
 import { useReadyCount } from '../../../../lib/logros/use-logros';
 import type { MenuSection } from '../types';
+import { t } from '../../../../lib/i18n';
 
 /**
  * 🏅 Logros (REQ-IDE-024…028, T37): el panel de logros compartido con /mar
@@ -14,7 +15,7 @@ import type { MenuSection } from '../types';
 function LogrosIcon() {
   const ready = useReadyCount();
   return (
-    <span className="juego-menu-icon-wrap" title={claimLabel('Logros', ready)}>
+    <span className="juego-menu-icon-wrap" title={claimLabel(t('juego.logros.logros'), ready)}>
       🏅
       <ClaimBadge count={ready} testId="menu-logros-contador" />
     </span>
@@ -24,7 +25,7 @@ function LogrosIcon() {
 export const logrosSection: MenuSection = {
   id: 'logros',
   icon: <LogrosIcon />,
-  label: 'Logros',
+  label: t('juego.logros.logros'),
   group: 'progress',
   Component: function Logros({ ctx }) {
     return (
@@ -32,7 +33,7 @@ export const logrosSection: MenuSection = {
         <AchievementsPanel />
         {ctx.discovered.length > 0 ? (
           <>
-            <h3>Descubierto en esta visita</h3>
+            <h3>{t('juego.logros.descubiertoEnEstaVisita')}</h3>
             <ul data-testid="logros-sesion">
               {ctx.discovered.map((d) => (
                 <li key={d.id}>🧭 {d.name}</li>

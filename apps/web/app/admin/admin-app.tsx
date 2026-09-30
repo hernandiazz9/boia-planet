@@ -21,24 +21,25 @@ import { PhotosSection } from './sections/photos';
 import { TextsSection } from './sections/texts';
 import { WorldSection } from './sections/world';
 import { type AdminContext, useAdminContext } from './use-admin';
+import { t } from '../../lib/i18n';
 
 /** Secciones de L1 (REQ-ADM-008), con su ancla en la URL (`/admin#mundo`). */
 const SECTIONS: { id: string; label: string; Component: ComponentType<{ ctx: AdminContext }> }[] = [
-  { id: 'inicio', label: 'Página principal', Component: HomeSection },
-  { id: 'eventos', label: 'Eventos', Component: EventsSection },
-  { id: 'descuentos', label: 'Descuentos', Component: DiscountsSection },
-  { id: 'mundo', label: 'Mundo', Component: WorldSection },
-  { id: 'mision', label: 'Destino de la Fiestera', Component: MissionSection },
-  { id: 'artistas', label: 'Artistas', Component: ArtistsSection },
-  { id: 'fotos', label: 'Fotos y vídeos', Component: PhotosSection },
-  { id: 'logros', label: 'Logros y cosméticos', Component: AchievementsSection },
-  { id: 'moderacion', label: 'Moderación', Component: ModerationSection },
-  { id: 'textos', label: 'Textos y música', Component: TextsSection },
-  { id: 'temporadas', label: 'Temporadas', Component: SeasonsSection },
-  { id: 'usuarios', label: 'Usuarios de administración', Component: UsersSection },
-  { id: 'integraciones', label: 'Integraciones', Component: IntegrationsSection },
-  { id: 'papelera', label: 'Papelera', Component: TrashSection },
-  { id: 'auditoria', label: 'Auditoría y muestra', Component: AuditSection },
+  { id: 'inicio', label: t('admin.adminApp.paginaPrincipal'), Component: HomeSection },
+  { id: 'eventos', label: t('admin.adminApp.eventos'), Component: EventsSection },
+  { id: 'descuentos', label: t('admin.adminApp.descuentos'), Component: DiscountsSection },
+  { id: 'mundo', label: t('admin.adminApp.mundo'), Component: WorldSection },
+  { id: 'mision', label: t('admin.adminApp.destinoDeLaFiestera'), Component: MissionSection },
+  { id: 'artistas', label: t('admin.adminApp.artistas'), Component: ArtistsSection },
+  { id: 'fotos', label: t('admin.adminApp.fotosYVideos'), Component: PhotosSection },
+  { id: 'logros', label: t('admin.adminApp.logrosYCosmeticos'), Component: AchievementsSection },
+  { id: 'moderacion', label: t('admin.adminApp.moderacion'), Component: ModerationSection },
+  { id: 'textos', label: t('admin.adminApp.textosYMusica'), Component: TextsSection },
+  { id: 'temporadas', label: t('admin.adminApp.temporadas'), Component: SeasonsSection },
+  { id: 'usuarios', label: t('admin.adminApp.usuariosDeAdministracion'), Component: UsersSection },
+  { id: 'integraciones', label: t('admin.adminApp.integraciones'), Component: IntegrationsSection },
+  { id: 'papelera', label: t('admin.adminApp.papelera'), Component: TrashSection },
+  { id: 'auditoria', label: t('admin.adminApp.auditoriaYMuestra'), Component: AuditSection },
 ];
 
 function sectionFromHash(): string {
@@ -71,18 +72,18 @@ export function AdminApp() {
         {storage?.message ? <span className="admin-banner__warn"> {storage.message}</span> : null}
       </div>
       <header className="admin-top">
-        <h1>BOIA · Admin</h1>
-        <nav className="admin-top__links" aria-label="Ver los cambios">
+        <h1>{t('admin.adminApp.boiaAdmin')}</h1>
+        <nav className="admin-top__links" aria-label={t('admin.adminApp.verLosCambios')}>
           <Link href="/?intro=0" prefetch={false} data-testid="admin-ver-web">
-            Ver la web
+            {t('admin.adminApp.verLaWeb')}
           </Link>
           <Link href="/juego" prefetch={false} data-testid="admin-ver-mundo">
-            Ver el mundo
+            {t('admin.adminApp.verElMundo')}
           </Link>
         </nav>
       </header>
       <div className="admin-layout">
-        <nav className="admin-nav" aria-label="Secciones del Admin">
+        <nav className="admin-nav" aria-label={t('admin.adminApp.seccionesDelAdmin')}>
           <ul>
             {SECTIONS.map((s) => (
               <li key={s.id}>
@@ -99,7 +100,7 @@ export function AdminApp() {
           </ul>
         </nav>
         <main className="admin-main" data-testid={`admin-seccion-${section.id}`}>
-          {ctx ? <section.Component ctx={ctx} /> : <p>Cargando el Admin…</p>}
+          {ctx ? <section.Component ctx={ctx} /> : <p>{t('admin.adminApp.cargandoElAdmin')}</p>}
         </main>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { ShipCatalog } from '../../lib/barco/catalog';
 import { BarcoShop } from '../../lib/barco/shop';
 import type { ShipLook } from '../../lib/barco/shop-model';
+import { t } from '../../lib/i18n';
 
 /**
  * La tienda «Barco» en /mar (T40), abierta desde el menú: la misma tienda que
@@ -34,7 +35,7 @@ export function MarTienda({
         className="mar-logros__sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="Barco"
+        aria-label={t('mar.tienda.barco')}
         data-testid="mar-tienda"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
@@ -43,12 +44,12 @@ export function MarTienda({
         }}
       >
         <header className="mar-logros__head">
-          <h2>⛵ Barco</h2>
+          <h2>{t('mar.tienda.barco2')}</h2>
           <button
             type="button"
             className="mar-logros__x"
             data-testid="mar-tienda-cerrar"
-            aria-label="Cerrar la tienda del barco"
+            aria-label={t('mar.tienda.cerrarLaTiendaDel')}
             onClick={onClose}
           >
             ×

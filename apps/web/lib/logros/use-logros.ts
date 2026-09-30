@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { type AchievementFacts, achievementFacts } from '../../app/juego/achievements';
 import { useRepoData } from '../../app/juego/repo';
 import { type CosmeticNames, readyCount } from './model';
+import { t as msg } from '../i18n';
 
 /**
  * Lo que el panel de logros lee del repositorio (T37), y se vuelve a leer con
@@ -73,10 +74,12 @@ export function useShipLocks(): ShipLock[] | undefined {
 export function lockedShipText(
   lock: Pick<ShipLock, 'achievementTitle' | 'achievementId' | 'priceCoins'>,
 ): string {
-  if (lock.achievementTitle) return `Se gana con el logro «${lock.achievementTitle}»`;
-  if (lock.achievementId) return 'Se gana con un logro oculto';
-  if (lock.priceCoins !== null) return `En la tienda: ${lock.priceCoins} 🪙`;
-  return 'Bloqueado';
+  if (lock.achievementTitle)
+    return msg('shop.lockedAchievement', { achievement: lock.achievementTitle });
+  if (lock.achievementId) return msg('logros.useLogros.seGanaConUn');
+  if (lock.priceCoins !== null)
+    return msg('logros.useLogros.enLaTienda', { priceCoins: lock.priceCoins });
+  return msg('logros.useLogros.bloqueado');
 }
 
 function reducedMotion(): boolean {

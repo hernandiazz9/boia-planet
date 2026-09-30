@@ -4,6 +4,7 @@ import { MinimapGesture, TAP_SLOP_PX } from '@boia/engine/ui';
 import { type PointerEvent, type RefObject, useEffect, useRef } from 'react';
 import { type GlobePin, drawGlobe } from './engine/globe';
 import type { Mar3D, PinSpec } from './engine/mar3d';
+import { t as msg } from '../../lib/i18n';
 
 /**
  * Minimapa redondo de /mar (T34): el planeta entero como un globo pequeño y
@@ -110,7 +111,7 @@ export function MarMinimap({
       type="button"
       className={`mar-minimap${mapMode ? ' is-on' : ''}`}
       data-testid="mar-minimapa"
-      aria-label={mapMode ? 'Cerrar el mapa y volver al barco' : 'Abrir el mapa del planeta'}
+      aria-label={mapMode ? msg('mar.minimap.cerrarElMapaY') : msg('mar.minimap.abrirElMapaDel')}
       aria-pressed={mapMode}
       onPointerDown={onPointerDown}
       onPointerMove={(e) => gesture.current.move(performance.now(), e.clientX, e.clientY)}
@@ -123,7 +124,7 @@ export function MarMinimap({
     >
       <canvas ref={canvasRef} aria-hidden="true" />
       <span className="mar-minimap__tag" aria-hidden="true">
-        {mapMode ? 'Barco' : 'Mapa'}
+        {mapMode ? msg('mar.minimap.barco') : msg('mar.minimap.mapa')}
       </span>
     </button>
   );

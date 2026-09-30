@@ -1,4 +1,5 @@
 import type { PurchaseOutcome } from './adapter';
+import { t } from '../i18n/web';
 
 /**
  * Textos de la compra de prueba (D-20, REQ-COM-035). Borrador `muestra`,
@@ -6,37 +7,36 @@ import type { PurchaseOutcome } from './adapter';
  * se emite ninguna entrada, y todo se guarda en este navegador (REQ-IDE-051).
  */
 export const CHECKOUT_COPY = {
-  buy: 'Comprar entradas',
-  buyAria: (name: string) => `Comprar entradas para ${name} (compra de prueba)`,
-  islandBuy: 'Comprar entrada',
-  kicker: 'Compra de prueba',
-  title: 'Comprar entrada',
-  testNotice:
-    'Versión de prueba: no se cobra nada ni se emite una entrada real. Al confirmar, el sello del evento se añade a tu Carnet, guardado sólo en este navegador.',
-  ticketLine: 'Entrada · precio de muestra',
-  discountLine: (code: string) => `Descuento ${code}`,
-  noDiscount: 'Sin descuento. Algunos se esconden en el mar.',
-  total: 'Total de prueba',
-  confirm: 'Confirmar compra de prueba',
-  confirming: 'Confirmando…',
-  cancel: 'Cancelar',
-  close: 'Cerrar',
-  loading: 'Preparando la compra de prueba…',
-  notFound: 'No encontramos este evento.',
-  notOnSale: 'Este evento ya no está a la venta.',
-  failed: 'No se pudo completar la compra de prueba. Inténtalo de nuevo.',
-  loadFailed: 'No se pudo abrir la compra de prueba.',
-  seeCarnet: 'Ver Mi Carnet',
+  buy: t('event.buy'),
+  buyAria: (name: string) => t('ticketing.copy.comprarEntradasParaCompra', { name }),
+  islandBuy: t('island.buy'),
+  kicker: t('checkout.title'),
+  title: t('island.buy'),
+  testNotice: t('ticketing.copy.versionDePruebaNo'),
+  ticketLine: t('checkout.price'),
+  discountLine: (code: string) => t('checkout.discount.line', { code }),
+  noDiscount: t('checkout.noDiscount'),
+  total: t('checkout.total'),
+  confirm: t('checkout.confirm'),
+  confirming: t('checkout.confirming'),
+  cancel: t('carnet.cancel'),
+  close: t('tickets.close'),
+  loading: t('ticketing.copy.preparandoLaCompraDe'),
+  notFound: t('ticketing.copy.noEncontramosEsteEvento'),
+  notOnSale: t('ticketing.copy.esteEventoYaNo'),
+  failed: t('ticketing.copy.noSePudoCompletar'),
+  loadFailed: t('ticketing.copy.noSePudoAbrir'),
+  seeCarnet: t('checkout.viewCarnet'),
   stamp: {
-    granted: '¡Sello añadido a tu Carnet!',
-    duplicate: 'Esta compra ya estaba confirmada: su sello ya está en tu Carnet.',
-    already_stamped: 'Ya tenías el sello de este evento: cada evento deja uno.',
+    granted: t('checkout.stampAdded'),
+    duplicate: t('ticketing.copy.estaCompraYaEstaba'),
+    already_stamped: t('ticketing.copy.yaTeniasElSello'),
   } satisfies Record<PurchaseOutcome['stamp'], string>,
-  achievement: (title: string) => `Logro conseguido: ${title}`,
+  achievement: (title: string) => t('ticketing.copy.logroConseguido', { title }),
   /** Aviso de descuento al comprar en la isla o la ficha del evento (D-23, REQ-COM-036). */
   banner: {
-    title: 'Tienes un código de descuento para este evento',
-    saving: (euros: string) => `Ahorras ${euros}`,
-    applied: 'Se aplica solo al comprar.',
+    title: t('checkout.discount.banner.title'),
+    saving: (euros: string) => t('ticketing.copy.ahorras', { euros }),
+    applied: t('ticketing.copy.seAplicaSoloAl'),
   },
 } as const;

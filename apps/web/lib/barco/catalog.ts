@@ -1,6 +1,7 @@
 import { readShipStyleIndex, shipSkins } from '@boia/engine/ui';
 import { findShipImage, parseShipManifest } from '@boia/world';
 import { resolveRef, scriptConstants, toHex } from './python-constants';
+import { t } from '../i18n';
 
 /**
  * Catálogo de la sección «Barco» del Menú de a bordo (T12): los estilos del
@@ -52,9 +53,9 @@ export interface ShipCatalog {
 }
 
 export const SKIN_LABELS: Record<string, string> = {
-  base: 'Base',
-  fiesta: 'Fiesta',
-  noche: 'Noche',
+  base: t('barco.catalog.base'),
+  fiesta: t('barco.catalog.fiesta'),
+  noche: t('barco.catalog.noche'),
 };
 const SKIN_ORDER = ['base', 'fiesta', 'noche'];
 

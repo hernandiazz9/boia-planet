@@ -1,6 +1,7 @@
 'use client';
 
 import './logros.css';
+import { t } from '../i18n';
 
 /**
  * El numerito sobre el icono de logros (T37) mientras haya logros
@@ -18,5 +19,5 @@ export function ClaimBadge({ count, testId }: { count: number; testId: string })
 /** El nombre accesible del icono con su número. muestra */
 export function claimLabel(base: string, count: number): string {
   if (count <= 0) return base;
-  return `${base}: ${count === 1 ? '1 premio' : `${count} premios`} por reclamar`;
+  return `${base}: ${count === 1 ? t('logros.claimBadge.n1Premio') : `${count} premios`} por reclamar`;
 }
