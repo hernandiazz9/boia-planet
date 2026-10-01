@@ -8,7 +8,7 @@ firma Álvaro. Estado a 2026-09-30 (T49).
 | # | Elemento | Dónde | Estado |
 |---:|---|---|---|
 | 1 | Repositorio exportable | Este repo (`git clone`; monorepo pnpm, sin submódulos ni binarios fuera de `art/`) | ✅ |
-| 2 | URL pública | La de producción del proyecto en Vercel (`README.md`, «Desplegar la versión de prueba») | ✅ versión de prueba; el dominio de BOIA llega con la versión final (REQ-ARQ-022) |
+| 2 | URL pública | https://boia-planet.vercel.app (producción en Vercel; `README.md`, «Desplegar la versión de prueba») | ✅ versión de prueba; el dominio de BOIA llega con la versión final (REQ-ARQ-022) |
 | 3 | URL del Admin | `<URL pública>/admin` («Probar admin» en el pie) | ✅ sin login en la prueba (D-20) |
 | 4 | Manual para BOIA | [manual-alvaro.md](manual-alvaro.md) (uso del Admin, en llano) y [manual-admin.md](manual-admin.md) (publicar, papelera, peticiones de datos) | ✅ |
 | 5 | Manual técnico | [README.md](../README.md) (arrancar, probar, desplegar), [CLAUDE.md](../CLAUDE.md), [spec/00-indice.md](spec/00-indice.md), [DECISIONES.md](DECISIONES.md) | ✅ |

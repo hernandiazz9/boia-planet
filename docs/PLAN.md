@@ -1,5 +1,10 @@
 # Plan
 
+> **Histórico (ronda 1, 2026-09-28).** Este archivo ya no se mantiene: desde
+> la ronda 2 el trabajo va por `plans/NNN-*.md` con la skill `/orchestrator`.
+> Lo de abajo («Fase 0. No hay código») describe el arranque, no el estado
+> actual. Para eso: [`docs/TRASPASO.md`](TRASPASO.md).
+
 Última ronda: 2026-09-28 — arranque. El orquestador leyó la v14 entera
 (docs/fuente/v14-maestro.md), escribió docs/DECISIONES.md (alcance L1/L2,
 stack, pipeline de arte, contradicciones resueltas), completó la ficha de
