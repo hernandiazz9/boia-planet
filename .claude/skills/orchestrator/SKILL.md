@@ -30,10 +30,10 @@ Paths used below:
 This is the repository's copy of Hernán's personal skill (`~/.claude/skills/orchestrator`,
 copied 2026-10-01 with the paths pointed at the repo), kept so any agent can run plans 005+ the
 same way plans 001–004 were run. If both exist, the personal one wins; keep them in step.
-Two parts depend on Hernán's machine: Telegram needs `TELEGRAM_CONFIG` pointing at a config with
-`telegram.bot_token` and `telegram.chat_id` (without it, `tg.py check` fails: ask everything in
-the session instead and skip the Telegram steps), and the interview uses the `grilling` skill
-(without it, run the interview yourself with `AskUserQuestion`, same rules).
+The `grilling` skill it uses for the interview is in the repo too (`.claude/skills/grilling`).
+Telegram depends on Hernán's machine: it needs `TELEGRAM_CONFIG` pointing at a config with
+`telegram.bot_token` and `telegram.chat_id` (see `.claude/skills/README.md`). Without it,
+`tg.py check` fails: ask everything in the session instead and skip the Telegram steps.
 
 The guard hook of this skill is active for the rest of the session, agents included: it blocks
 `git push`, deploys and publishes, `git reset --hard`, `git clean` and recursive `rm` outside the

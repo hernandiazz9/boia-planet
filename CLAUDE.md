@@ -39,7 +39,8 @@ Fuente de requisitos, en este orden de precedencia:
 
 Desde la ronda 2 el trabajo va por **planes**: `plans/NNN-<slug>.md`, lotes
 de ~10 tareas grandes (T00, T01…, la numeración sigue entre planes) que la
-skill `/orchestrator` (`.claude/skills/orchestrator/`) planifica con Hernán y
+skill `/orchestrator` (`.claude/skills/orchestrator/`; qué necesita, en
+`.claude/skills/README.md`) planifica con Hernán y
 corre con agentes en worktrees, integrando cada tarea en `main` con sus
 pruebas. Los planes 001–004 están terminados; el siguiente es el 005.
 
